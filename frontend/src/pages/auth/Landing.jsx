@@ -29,6 +29,7 @@ import {
 } from '../../lib/landingCopy'
 import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -52,6 +53,8 @@ export default function Landing() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuthStore()
+  const theme = useUiStore((s) => s.theme)
+  const isDark = theme === 'dark'
 
   useEffect(() => {
     setPageSeo({
@@ -204,7 +207,12 @@ export default function Landing() {
   const demoAttendance = arrayFromT(t, 'landing.demo.attendance')
 
   return (
-    <div className="min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden bg-[#f4f6fb]">
+    <div
+      className={[
+        'mx-public-page min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden',
+        isDark ? 'theme-dark bg-[#0b0b0b]' : 'theme-light bg-[#f4f6fb]',
+      ].join(' ')}
+    >
       <PublicMarketingNav onLogin={() => goLogin('nav')} onStart={() => goRegister('nav')} />
 
       <div className="w-full max-w-5xl mx-auto px-4 pt-8 sm:pt-10 pb-8 space-y-12 sm:space-y-16 min-w-0 box-border overflow-x-hidden">

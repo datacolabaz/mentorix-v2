@@ -6,9 +6,10 @@ import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
-import LanguageSwitcher from '../../components/LanguageSwitcher'
+import LocaleThemeBar from '../../components/LocaleThemeBar'
 import { setPageSeo } from '../../lib/pageSeo'
 import { postAuthNavigate, rememberReturnAfterLogin } from '../../lib/postAuth'
+import useUiStore from '../../hooks/useUi'
 
 /** Tam səhifə giriş / qeydiyyat (/login, /register) */
 export default function AuthPage() {
@@ -23,7 +24,9 @@ export default function AuthPage() {
   )
 
   const [authTab, setAuthTab] = useState(initialTab)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { theme } = useUiStore()
+  const isDark = theme === 'dark'
+  const tone = isDark ? 'dark' : 'light'
 
   useEffect(() => {
     setAuthTab(initialTab)
@@ -90,71 +93,74 @@ export default function AuthPage() {
   const authGreeting = authTab === 'signup' ? t('auth.createAccount') : t('auth.welcome')
 
   return (
-    <div className="login-wrapper theme-light flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden">
-      <header className="relative shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4">
-        <div className="flex w-full items-center justify-between gap-3">
+    <div
+      className={[
+        'login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden',
+        isDark ? 'theme-dark' : 'theme-light',
+      ].join(' ')}
+    >
+      <header className="relative z-[30] shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4">
+        <div className="flex w-full items-center justify-between gap-2 sm:gap-3">
           <Link
             to="/"
-            className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors whitespace-nowrap min-w-0"
+            className={[
+              'inline-flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-w-0',
+              isDark ? 'text-gray-400 hover:text-white' : 'text-slate-600 hover:text-slate-900',
+            ].join(' ')}
           >
             {t('auth.backHome')}
           </Link>
-          <div className="hidden sm:block">
-            <LanguageSwitcher tone="light" className="h-8 shrink-0" />
-          </div>
-          <button
-            type="button"
-            className="sm:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/35 bg-primary/15 text-primary hover:bg-primary/25"
-            aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? t('common.closeMenu') : t('common.menu')}
-            onClick={() => setMobileMenuOpen((open) => !open)}
-          >
-            {mobileMenuOpen ? (
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            )}
-          </button>
+          <LocaleThemeBar tone={tone} />
         </div>
-        {mobileMenuOpen ? (
-          <div className="sm:hidden mt-3 ml-auto w-fit rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
-            <LanguageSwitcher tone="light" className="h-8" />
-          </div>
-        ) : null}
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
       <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
-        <div className="mx-login-card rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+        <div
+          className={[
+            'mx-login-card rounded-2xl border p-5 sm:p-6',
+            isDark ? 'border-white/20 bg-surface-2' : 'border-slate-200 bg-white shadow-sm',
+          ].join(' ')}
+        >
           {!isAdmin ? (
             <div className="mb-3 text-center space-y-2">
               <div className="flex justify-center">
-                <Brand size="login" tone="light" />
+                <Brand size="login" tone={tone === 'dark' ? 'dark' : 'light'} />
               </div>
               <div className="h-0.5 w-10 mx-auto rounded-full bg-primary" aria-hidden />
-              <h1 className="text-sm font-semibold text-slate-800">{authGreeting}</h1>
+              <h1 className={['text-sm font-semibold', isDark ? 'text-gray-200' : 'text-slate-800'].join(' ')}>
+                {authGreeting}
+              </h1>
             </div>
           ) : (
             <div className="text-center mb-6 sm:mb-8">
               <div className="flex justify-center pt-1 pb-2 bg-transparent">
-                <Brand size="login" tone="light" />
+                <Brand size="login" tone={tone === 'dark' ? 'dark' : 'light'} />
               </div>
               <div className="h-0.5 w-10 mx-auto rounded-full bg-primary mb-3" aria-hidden />
-              <div className="text-slate-500 text-sm">{t('auth.loginToAccount')}</div>
+              <div className={['text-sm', isDark ? 'text-gray-400' : 'text-slate-500'].join(' ')}>
+                {t('auth.loginToAccount')}
+              </div>
             </div>
           )}
 
           {isAdmin ? (
             <form onSubmit={handleEmailLogin} className="space-y-4" autoComplete="on">
-              <div className="text-center text-red-700 text-xs py-2 px-3 bg-red-50 border border-red-200 rounded-xl mb-4">
+              <div
+                className={[
+                  'text-center text-xs py-2 px-3 rounded-xl mb-4 border',
+                  isDark
+                    ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                    : 'text-red-700 bg-red-50 border-red-200',
+                ].join(' ')}
+              >
                 {t('auth.adminPanel')}
               </div>
               <div>
                 <label
-                  className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2"
+                  className={[
+                    'block text-xs font-semibold uppercase tracking-wider mb-2',
+                    isDark ? 'text-gray-400' : 'text-slate-500',
+                  ].join(' ')}
                   htmlFor="admin-username"
                 >
                   {t('auth.phoneOrEmail')}
@@ -162,7 +168,12 @@ export default function AuthPage() {
                 <input
                   id="admin-username"
                   name="username"
-                  className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
+                  className={[
+                    'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
+                    isDark
+                      ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
+                      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+                  ].join(' ')}
                   type="text"
                   inputMode="email"
                   autoComplete="username"
@@ -174,7 +185,10 @@ export default function AuthPage() {
               </div>
               <div>
                 <label
-                  className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2"
+                  className={[
+                    'block text-xs font-semibold uppercase tracking-wider mb-2',
+                    isDark ? 'text-gray-400' : 'text-slate-500',
+                  ].join(' ')}
                   htmlFor="admin-password"
                 >
                   {t('auth.password')}
@@ -182,7 +196,12 @@ export default function AuthPage() {
                 <input
                   id="admin-password"
                   name="password"
-                  className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
+                  className={[
+                    'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
+                    isDark
+                      ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
+                      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+                  ].join(' ')}
                   type="password"
                   autoComplete="current-password"
                   value={password}
@@ -208,3 +227,4 @@ export default function AuthPage() {
     </div>
   )
 }
+

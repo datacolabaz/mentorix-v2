@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../common/Brand'
+import LocaleThemeBar from '../LocaleThemeBar'
 import LanguageSwitcher from '../LanguageSwitcher'
 import { COMPACT_PUBLIC_NAV_MQ, isCompactPublicNav } from '../../lib/compactPublicNav'
+import useUiStore from '../../hooks/useUi'
 
 const NAV_LINK =
   'mx-landing-nav-link text-gray-300 hover:text-white px-2 py-1.5 rounded-lg text-xs lg:text-sm font-semibold whitespace-nowrap'
@@ -25,8 +27,12 @@ const LINKS = [
   { to: '/imtahanlar', labelKey: 'landing.nav.examsTests' },
 ]
 
-function linkClass(pathname, to) {
-  return `${NAV_LINK}${pathname === to ? ` ${NAV_LINK_ACTIVE}` : ''}`
+function linkClass(pathname, to, isDark) {
+  const base = isDark
+    ? 'mx-landing-nav-link text-gray-300 hover:text-white px-2 py-1.5 rounded-lg text-xs lg:text-sm font-semibold whitespace-nowrap'
+    : 'mx-landing-nav-link text-slate-600 hover:text-slate-900 px-2 py-1.5 rounded-lg text-xs lg:text-sm font-semibold whitespace-nowrap'
+  const active = isDark ? ' text-white bg-white/5' : ' text-slate-900 bg-slate-100'
+  return `${base}${pathname === to ? active : ''}`
 }
 
 function useCompactPublicNav() {
@@ -53,6 +59,17 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
   const compact = useCompactPublicNav()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const onHome = location.pathname === '/'
+  const { theme } = useUiStore()
+  const isDark = theme === 'dark'
+  const tone = isDark ? 'dark' : 'light'
+
+  const loginBtn = isDark
+    ? 'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-primary px-2.5 sm:px-3 py-2 min-h-11 lg:min-h-[36px] lg:px-3 lg:py-1.5 text-xs sm:text-sm font-semibold hover:bg-primary/25'
+    : 'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-emerald-800 px-2.5 sm:px-3 py-2 min-h-11 lg:min-h-[36px] lg:px-3 lg:py-1.5 text-xs sm:text-sm font-semibold hover:bg-primary/25'
+
+  const menuBtn = isDark
+    ? 'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/35 bg-primary/15 text-primary hover:bg-primary/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80'
+    : 'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80'
 
   useEffect(() => {
     if (!compact) setMobileNavOpen(false)
@@ -110,16 +127,22 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
             {mobileNavOpen ? (
               <div
                 id="mx-landing-mobile-nav"
-                className="fixed inset-x-0 bottom-0 z-[2010] border-t border-white/10 bg-[#111]/98 backdrop-blur-md rounded-t-2xl px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+                className={
+                  isDark
+                    ? 'fixed inset-x-0 bottom-0 z-[2010] border-t border-white/10 bg-[#111]/98 backdrop-blur-md rounded-t-2xl px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]'
+                    : 'fixed inset-x-0 bottom-0 z-[2010] border-t border-slate-200 bg-white rounded-t-2xl px-4 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-[0_-12px_40px_rgba(15,23,42,0.12)]'
+                }
                 role="dialog"
                 aria-modal="true"
                 aria-label={t('landing.nav.mainNav')}
               >
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" aria-hidden />
-                <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                <div className={`mx-auto mb-3 h-1 w-10 rounded-full ${isDark ? 'bg-white/20' : 'bg-slate-300'}`} aria-hidden />
+                <p
+                  className={`text-sm font-semibold uppercase tracking-wider mb-2 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}
+                >
                   {t('landing.nav.language')}
                 </p>
-                <LanguageSwitcher tone="dark" size="comfortable" className="mb-3" />
+                <LanguageSwitcher tone={tone} size="comfortable" className="mb-3" />
                 <div className="space-y-1">
                   {LINKS.map((item) => (
                     <Link
@@ -127,7 +150,13 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
                       to={item.to}
                       onClick={closeMobileNav}
                       className={`flex items-center min-h-[48px] text-base font-semibold px-2 py-2 rounded-lg ${
-                        location.pathname === item.to ? 'text-white bg-white/5' : 'text-gray-100 hover:text-white'
+                        location.pathname === item.to
+                          ? isDark
+                            ? 'text-white bg-white/5'
+                            : 'text-slate-900 bg-slate-100'
+                          : isDark
+                            ? 'text-gray-100 hover:text-white'
+                            : 'text-slate-800 hover:bg-slate-50'
                       }`}
                     >
                       {t(item.labelKey)}
@@ -151,7 +180,11 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
   return (
     <>
       <nav
-        className="sticky top-0 z-[2020] border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80"
+        className={
+          isDark
+            ? 'sticky top-0 z-[2020] border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80'
+            : 'sticky top-0 z-[2020] border-b border-slate-200 bg-white/92 backdrop-blur-md supports-[backdrop-filter]:bg-white/85'
+        }
         aria-label={t('landing.nav.mainNav')}
       >
         <div className="max-w-5xl mx-auto pl-2 sm:pl-3 pr-3 sm:pr-4 py-3 flex items-center justify-between gap-2 min-w-0">
@@ -161,27 +194,25 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
             className="shrink-0 min-w-0 rounded-lg transition-opacity duration-200 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             aria-label="Mentorix"
           >
-            <Brand size="nav" />
+            <Brand size="nav" tone={isDark ? 'dark' : 'light'} />
           </button>
 
           <div className="flex items-center gap-1.5 lg:gap-2 shrink-0 min-w-0">
             <div className="hidden lg:flex items-center gap-0.5 lg:gap-1">
               {LINKS.map((item) => (
-                <Link key={item.to} to={item.to} className={linkClass(location.pathname, item.to)}>
+                <Link key={item.to} to={item.to} className={linkClass(location.pathname, item.to, isDark)}>
                   {t(item.labelKey)}
                 </Link>
               ))}
             </div>
-            <div className="hidden lg:block">
-              <LanguageSwitcher tone="dark" />
-            </div>
-            <button type="button" onClick={goLogin} className={LOGIN_BTN}>
+            <LocaleThemeBar tone={tone} />
+            <button type="button" onClick={goLogin} className={loginBtn}>
               {t('landing.nav.login')}
             </button>
             <button
               type="button"
               data-landing-menu-fab=""
-              className={MENU_BTN}
+              className={menuBtn}
               aria-expanded={mobileNavOpen}
               aria-controls="mx-landing-mobile-nav"
               aria-label={mobileNavOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}

@@ -4,6 +4,8 @@ function normalizeLocale(raw) {
     .toLowerCase();
   if (s.startsWith('ru')) return 'ru';
   if (s.startsWith('en')) return 'en';
+  if (s.startsWith('tr')) return 'tr';
+  if (s.startsWith('de')) return 'de';
   if (s.startsWith('az')) return 'az';
   return 'az';
 }

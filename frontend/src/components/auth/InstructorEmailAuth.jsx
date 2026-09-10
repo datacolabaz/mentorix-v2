@@ -11,9 +11,16 @@ import { getAttributionPayload } from '../../lib/analytics'
 import { postAuthNavigate } from '../../lib/postAuth'
 import { googleAuthWithAutoRole, googleSignup } from '../../lib/googleAuth'
 import { loginWithEmailPassword } from '../../lib/emailLogin'
+import useUiStore from '../../hooks/useUi'
 
-const inputClass =
-  'mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none'
+function authInputClass(isDark) {
+  return [
+    'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
+    isDark
+      ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
+      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+  ].join(' ')
+}
 
 const AUTH_ROLE_KEYS = ['instructor', 'student', 'course', 'parent']
 
@@ -25,25 +32,28 @@ function useAuthRoles(keys) {
   )
 }
 
-function AuthDivider() {
+function AuthDivider({ isDark }) {
   const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 border-t border-slate-200" aria-hidden />
-      <span className="text-[11px] text-slate-500 shrink-0">{t('auth.or')}</span>
-      <div className="flex-1 border-t border-slate-200" aria-hidden />
+      <div className={`flex-1 border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`} aria-hidden />
+      <span className={`text-[11px] shrink-0 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>{t('auth.or')}</span>
+      <div className={`flex-1 border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`} aria-hidden />
     </div>
   )
 }
 
-function AuthModeTabs({ tab, onTab }) {
+function AuthModeTabs({ tab, onTab, isDark }) {
   const { t } = useTranslation()
+  const idle = isDark
+    ? 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
   return (
-    <div className="flex rounded-xl border border-slate-200 overflow-hidden text-sm font-semibold">
+    <div className={`flex rounded-xl overflow-hidden text-sm font-semibold border ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
       <button
         type="button"
         className={`flex-1 py-2.5 transition-colors ${
-          tab === 'login' ? 'bg-primary/15 text-primary' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+          tab === 'login' ? 'bg-primary/15 text-primary' : idle
         }`}
         onClick={() => onTab('login')}
       >
@@ -52,7 +62,7 @@ function AuthModeTabs({ tab, onTab }) {
       <button
         type="button"
         className={`flex-1 py-2.5 transition-colors ${
-          tab === 'signup' ? 'bg-primary/15 text-primary' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+          tab === 'signup' ? 'bg-primary/15 text-primary' : idle
         }`}
         onClick={() => onTab('signup')}
       >
@@ -62,7 +72,7 @@ function AuthModeTabs({ tab, onTab }) {
   )
 }
 
-function LoginPasswordInput({ value, onChange }) {
+function LoginPasswordInput({ value, onChange, inputClass }) {
   const { t } = useTranslation()
   return (
     <input
@@ -160,6 +170,8 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const toast = useToast()
   const { signupWithEmail, verifyEmailCode, resendVerificationEmail, requestPasswordReset, setSession } = useAuthStore()
   const navigate = useNavigate()
+  const isDark = useUiStore((s) => s.theme) === 'dark'
+  const inputClass = authInputClass(isDark)
 
   const [tab, setTab] = useState(initialTab)
   const pickTab = (next) => {
@@ -394,7 +406,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   if (phase === 'verify') {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-slate-600 text-center leading-relaxed">
+        <p className={`text-sm text-center leading-relaxed ${isDark ? 'text-gray-300' : 'text-slate-600'}`}>
           {t('auth.verifySent', { email: verifyEmail || signupEmail })}
         </p>
         <form onSubmit={handleVerifyCode} className="space-y-3" autoComplete="off">
@@ -426,7 +438,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             setPhase('form')
             pickTab('login')
           }}
-          className="w-full text-center text-xs text-slate-500 hover:text-slate-900"
+          className={`w-full text-center text-xs ${isDark ? 'text-gray-500 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
         >
           {t('auth.afterVerifyLogin')}
         </button>
@@ -436,7 +448,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
 
   return (
     <div className="space-y-4">
-      <AuthModeTabs tab={tab} onTab={pickTab} />
+      <AuthModeTabs tab={tab} onTab={pickTab} isDark={isDark} />
 
       {tab === 'login' ? (
       <div className="space-y-4">
@@ -463,7 +475,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               onChange={(e) => setLoginEmail(e.target.value)}
               required
             />
-            <LoginPasswordInput value={loginPassword} onChange={setLoginPassword} />
+            <LoginPasswordInput value={loginPassword} onChange={setLoginPassword} inputClass={inputClass} />
             <Button type="submit" loading={loading} className="w-full justify-center">
               {t('auth.login')}
             </Button>
@@ -479,7 +491,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
 
           {loginRoleFallback ? (
             <div className="space-y-1.5">
-              <label htmlFor="mx-login-role-fallback" className="text-xs font-medium text-slate-500">
+              <label htmlFor="mx-login-role-fallback" className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
                 {t('auth.accountType')}
               </label>
               <select
@@ -497,7 +509,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             </div>
           ) : null}
 
-          <AuthDivider />
+          <AuthDivider isDark={isDark} />
 
           <GoogleSignInButton
             key="login-google"
@@ -507,7 +519,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             context="signin"
           />
 
-          <p className="text-xs text-center text-slate-500">
+          <p className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
             {t('auth.noAccount')}{' '}
             <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('signup')}>
               {t('auth.signupLink')}
@@ -516,7 +528,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       </div>
       ) : (
       <div className="space-y-4">
-          <p className="text-sm text-slate-500 text-center leading-relaxed">{t('auth.signupLead')}</p>
+          <p className={`text-sm text-center leading-relaxed ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{t('auth.signupLead')}</p>
 
           <GoogleSignInButton
             key="signup-google"
@@ -526,7 +538,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             context="signup"
           />
 
-          <AuthDivider />
+          <AuthDivider isDark={isDark} />
 
           <form
             key="mentorix-signup-form"
@@ -581,7 +593,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             </Button>
           </form>
 
-          <p className="text-xs text-center text-slate-500">
+          <p className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
             {t('auth.hasAccount')}{' '}
             <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('login')}>
               {t('auth.loginLink')}

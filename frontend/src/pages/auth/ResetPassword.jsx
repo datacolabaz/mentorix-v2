@@ -5,12 +5,15 @@ import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { setPageSeo } from '../../lib/pageSeo'
+import useUiStore from '../../hooks/useUi'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
   const token = useMemo(() => String(searchParams.get('token') || '').trim(), [searchParams])
   const toast = useToast()
   const navigate = useNavigate()
+  const theme = useUiStore((s) => s.theme)
+  const isDark = theme === 'dark'
 
   const [loading, setLoading] = useState(false)
   const [pass1, setPass1] = useState('')
@@ -51,40 +54,80 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="login-wrapper theme-light min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div
+      className={[
+        'login-wrapper min-h-screen flex items-center justify-center p-4',
+        isDark ? 'theme-dark' : 'theme-light',
+      ].join(' ')}
+    >
+      <div
+        className={[
+          'w-full max-w-lg rounded-2xl border p-6',
+          isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white shadow-sm',
+        ].join(' ')}
+      >
         <div className="flex items-center justify-center mb-4">
-          <Brand size="login" tone="light" />
+          <Brand size="login" tone={isDark ? 'dark' : 'light'} />
         </div>
-        <h1 className="text-center font-display font-extrabold text-xl text-slate-900 mb-2">
+        <h1
+          className={[
+            'text-center font-display font-extrabold text-xl mb-2',
+            isDark ? 'text-white' : 'text-slate-900',
+          ].join(' ')}
+        >
           Parol bərpası
         </h1>
-        <p className="text-center text-sm text-slate-600 leading-relaxed">
+        <p
+          className={[
+            'text-center text-sm leading-relaxed',
+            isDark ? 'text-gray-300' : 'text-slate-600',
+          ].join(' ')}
+        >
           Yeni şifrənizi daxil edin.
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            <label
+              className={[
+                'block text-xs font-semibold uppercase tracking-wider mb-2',
+                isDark ? 'text-gray-400' : 'text-slate-500',
+              ].join(' ')}
+            >
               Yeni şifrə
             </label>
             <input
               type="password"
               autoComplete="new-password"
-              className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
+              className={[
+                'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
+                isDark
+                  ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
+                  : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+              ].join(' ')}
               value={pass1}
               onChange={(e) => setPass1(e.target.value)}
               placeholder="ən azı 8 simvol"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            <label
+              className={[
+                'block text-xs font-semibold uppercase tracking-wider mb-2',
+                isDark ? 'text-gray-400' : 'text-slate-500',
+              ].join(' ')}
+            >
               Yeni şifrə (təkrar)
             </label>
             <input
               type="password"
               autoComplete="new-password"
-              className="mx-auth-input w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm outline-none"
+              className={[
+                'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
+                isDark
+                  ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
+                  : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+              ].join(' ')}
               value={pass2}
               onChange={(e) => setPass2(e.target.value)}
               placeholder="şifrəni yenidən yazın"
