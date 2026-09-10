@@ -8,8 +8,8 @@ function AudiencePlanGrid({ title, intro, plans, onCta }) {
   return (
     <section className="space-y-3">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
-        {intro ? <p className="text-sm text-gray-400 leading-relaxed">{intro}</p> : null}
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        {intro ? <p className="text-base text-slate-600 leading-relaxed">{intro}</p> : null}
       </div>
       <div className={`grid gap-3 ${plans.length > 1 ? 'sm:grid-cols-2' : ''}`}>
         {plans.map((plan) => (

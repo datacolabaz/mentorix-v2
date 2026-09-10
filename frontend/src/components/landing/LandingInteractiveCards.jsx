@@ -11,18 +11,18 @@ export function LandingHoverCard({ className = '', children }) {
 export function LandingProblemSolution({ heading, lead, cards }) {
   return (
     <section id="mx-why" className="space-y-4 scroll-mt-24">
-      <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h2>
-      {lead ? <p className="text-sm sm:text-base text-gray-300 leading-relaxed max-w-2xl">{lead}</p> : null}
+      <h2 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{heading}</h2>
+      {lead ? <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">{lead}</p> : null}
       <div className="grid sm:grid-cols-2 gap-3">
         {(cards || []).map((x, i) => (
           <div
             key={`why-${i}-${String(x.title).slice(0, 24)}`}
-            className={`rounded-2xl border bg-[#121212]/90 p-4 sm:p-5 space-y-2 ${
-              i === 1 ? 'border-primary/35' : 'border-white/10'
+            className={`rounded-2xl border bg-white p-5 space-y-2 shadow-sm ${
+              i === 1 ? 'border-emerald-200' : 'border-slate-200'
             } ${HOVER_LIFT}`}
           >
-            <div className="text-[11px] font-bold uppercase tracking-wider text-primary">{x.title}</div>
-            <p className="text-sm text-gray-300 leading-relaxed">{x.body}</p>
+            <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">{x.title}</div>
+            <p className="text-base text-slate-700 leading-relaxed">{x.body}</p>
           </div>
         ))}
       </div>
@@ -33,15 +33,15 @@ export function LandingProblemSolution({ heading, lead, cards }) {
 export function LandingAudienceGrid({ heading, items }) {
   return (
     <section id="mx-audiences" className="space-y-4 scroll-mt-24">
-      <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h2>
+      <h2 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{heading}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl">
         {(items || []).map((item, i) => (
           <LandingHoverCard
             key={`audience-${i}-${String(item.title).slice(0, 24)}`}
-            className={`rounded-2xl border p-4 sm:p-5 space-y-2 ${
+            className={`rounded-2xl border p-5 space-y-2 shadow-sm ${
               item.highlight
-                ? 'border-primary/40 bg-primary/5'
-                : 'border-white/10 bg-[#121212]/90'
+                ? 'border-emerald-200 bg-emerald-50/70'
+                : 'border-slate-200 bg-white'
             }`}
           >
             {item.emoji ? (
@@ -49,8 +49,8 @@ export function LandingAudienceGrid({ heading, items }) {
                 {item.emoji}
               </div>
             ) : null}
-            <div className="text-sm font-semibold text-white leading-snug">{item.title}</div>
-            <p className="text-xs text-gray-400 leading-relaxed">{item.body}</p>
+            <div className="text-base font-semibold text-slate-900 leading-snug">{item.title}</div>
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">{item.body}</p>
           </LandingHoverCard>
         ))}
       </div>
@@ -71,7 +71,7 @@ export function LandingFeatureTabs({ heading, items }) {
 
   return (
     <section id="mx-features" className="space-y-4 scroll-mt-24">
-      <h2 className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{heading}</h2>
+      <h2 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{heading}</h2>
       <div className="flex flex-wrap gap-2" role="tablist" aria-label={heading}>
         {items.map((x, i) => {
           const on = i === active
@@ -82,10 +82,10 @@ export function LandingFeatureTabs({ heading, items }) {
               role="tab"
               aria-selected={on}
               onClick={() => setActive(i)}
-              className={`rounded-full px-3 py-2 min-h-[40px] text-xs sm:text-sm font-semibold transition-colors ${
+              className={`rounded-lg px-3 py-2 min-h-[44px] text-sm font-semibold transition-colors ${
                 on
                   ? 'bg-primary text-[#041018] shadow-lg shadow-primary/20'
-                  : 'border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
               {x.title}
@@ -96,10 +96,10 @@ export function LandingFeatureTabs({ heading, items }) {
       <div
         key={`feat-panel-${active}`}
         role="tabpanel"
-        className={`rounded-2xl border border-white/10 bg-gradient-to-br ${current.accent || 'from-sky-500/15'} to-[#101010] p-5 sm:p-6 space-y-2 min-h-[7.5rem] motion-safe:animate-demo-enter`}
+        className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 space-y-2 min-h-[7.5rem] shadow-sm motion-safe:animate-demo-enter"
       >
-        <h3 className="text-base sm:text-lg font-semibold text-white leading-snug">{current.title}</h3>
-        <p className="text-sm text-gray-300 leading-relaxed max-w-2xl">{current.body}</p>
+        <h3 className="text-lg sm:text-xl font-semibold text-slate-900 leading-snug">{current.title}</h3>
+        <p className="text-base text-slate-600 leading-relaxed max-w-2xl">{current.body}</p>
       </div>
     </section>
   )

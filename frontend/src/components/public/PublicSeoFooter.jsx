@@ -46,43 +46,52 @@ export default function PublicSeoFooter({ className = '' }) {
 
   return (
     <footer
-      className={`border-t border-white/10 bg-[#080808] text-gray-500 ${className}`.trim()}
+      className={`border-t border-slate-200 bg-white text-slate-600 ${className}`.trim()}
       aria-label={t('publicFooter.ariaLabel')}
     >
-      <div className="max-w-5xl mx-auto px-4 py-8 sm:py-10 space-y-8">
-        <nav className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('publicFooter.navAriaLabel')}>
+      <div className="max-w-5xl mx-auto px-4 py-10 sm:py-12 space-y-8">
+        <nav className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('publicFooter.navAriaLabel')}>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
               {t('publicFooter.findTeacher')}
             </p>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-base">
               <li>
-                <Link to="/search" className="text-gray-300 hover:text-primary transition-colors">
+                <Link to="/search" className="text-slate-800 hover:text-emerald-700 transition-colors">
                   {t('publicFooter.mapSearch')}
                 </Link>
               </li>
               <li>
-                <Link to="/universities" className="text-gray-300 hover:text-primary transition-colors">
+                <Link to="/universities" className="text-slate-800 hover:text-emerald-700 transition-colors">
                   {t('publicFooter.universityPrograms')}
                 </Link>
               </li>
-              {searchPages.map((l) => (
-                <li key={l.path}>
-                  <Link to={l.path} className="text-gray-400 hover:text-primary transition-colors">
-                    {footerSearchLabel(l, t)}
-                  </Link>
-                </li>
-              ))}
             </ul>
+            {searchPages.length ? (
+              <details className="mt-4">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-500">
+                  Daha çox axtarış səhifəsi
+                </summary>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {searchPages.map((l) => (
+                    <li key={l.path}>
+                      <Link to={l.path} className="text-slate-600 hover:text-emerald-700 transition-colors">
+                        {footerSearchLabel(l, t)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
               {t('publicFooter.platform')}
             </p>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-base">
               {platformNav.slice(0, 5).map((item) => (
                 <li key={item.path}>
-                  <Link to={item.path} className="text-gray-400 hover:text-primary transition-colors">
+                  <Link to={item.path} className="text-slate-800 hover:text-emerald-700 transition-colors">
                     {footerNavLabel(item, t)}
                   </Link>
                 </li>
@@ -90,19 +99,19 @@ export default function PublicSeoFooter({ className = '' }) {
             </ul>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
               {t('publicFooter.info')}
             </p>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-base">
               {platformNav.slice(5).map((item) => (
                 <li key={item.path}>
-                  <Link to={item.path} className="text-gray-400 hover:text-primary transition-colors">
+                  <Link to={item.path} className="text-slate-800 hover:text-emerald-700 transition-colors">
                     {footerNavLabel(item, t)}
                   </Link>
                 </li>
               ))}
               <li>
-                <Link to="/login" className="text-gray-300 hover:text-primary transition-colors">
+                <Link to="/login" className="text-slate-800 font-semibold hover:text-emerald-700 transition-colors">
                   {t('publicFooter.loginRegister')}
                 </Link>
               </li>
@@ -110,17 +119,17 @@ export default function PublicSeoFooter({ className = '' }) {
           </div>
         </nav>
 
-        <p className="text-sm text-gray-400 font-medium leading-relaxed">{t('publicFooter.tagline')}</p>
+        <p className="text-base text-slate-600 font-medium leading-relaxed">{t('publicFooter.tagline')}</p>
 
-        <div className="border-t border-white/10 pt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="border-t border-slate-200 pt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1 text-center sm:text-left">
-            <p className="text-xs text-gray-400">{t('publicFooter.copyright')}</p>
-            <p className="text-[11px] text-gray-600">
+            <p className="text-sm text-slate-500">{t('publicFooter.copyright')}</p>
+            <p className="text-sm text-slate-400">
               <a
                 href="https://datacolab.az"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-gray-400 transition-colors"
+                className="hover:text-slate-600 transition-colors"
               >
                 {t('publicFooter.byDatacolab')}
               </a>
@@ -134,7 +143,7 @@ export default function PublicSeoFooter({ className = '' }) {
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label={item.label}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 hover:border-primary/35 hover:bg-primary/10 hover:text-primary transition-colors"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
               >
                 {item.icon}
               </a>
