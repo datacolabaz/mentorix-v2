@@ -116,17 +116,19 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
                 aria-label={t('landing.nav.mainNav')}
               >
                 <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" aria-hidden />
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-2">
                   {t('landing.nav.language')}
                 </p>
                 <LanguageSwitcher tone="dark" size="comfortable" className="mb-3" />
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   {LINKS.map((item) => (
                     <Link
                       key={item.to}
                       to={item.to}
                       onClick={closeMobileNav}
-                      className={`flex items-center min-h-[44px] ${linkClass(location.pathname, item.to)}`}
+                      className={`flex items-center min-h-[48px] text-base font-semibold px-2 py-2 rounded-lg ${
+                        location.pathname === item.to ? 'text-white bg-white/5' : 'text-gray-100 hover:text-white'
+                      }`}
                     >
                       {t(item.labelKey)}
                     </Link>
@@ -135,7 +137,7 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
                 <button
                   type="button"
                   onClick={goStart}
-                  className="mt-3 w-full inline-flex justify-center items-center rounded-xl bg-primary px-4 py-3 min-h-[44px] text-sm font-bold text-[#041018]"
+                  className="mt-3 w-full inline-flex justify-center items-center rounded-xl bg-primary px-4 py-3.5 min-h-[52px] text-base font-bold text-[#041018]"
                 >
                   {t('landing.nav.startFree')}
                 </button>

@@ -69,8 +69,8 @@ export default function PublicSeoFooter({ className = '' }) {
             </ul>
             {searchPages.length ? (
               <details className="mt-4">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-500">
-                  Daha çox axtarış səhifəsi
+                <summary className="cursor-pointer text-base font-semibold text-slate-500">
+                  {t('publicFooter.moreSearch')}
                 </summary>
                 <ul className="mt-3 space-y-2 text-sm">
                   {searchPages.map((l) => (
