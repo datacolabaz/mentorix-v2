@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import useUiStore from '../hooks/useUi'
 import { UI_LOCALES, uiLocaleMeta } from '../lib/uiLocales'
@@ -21,13 +21,21 @@ function Chevron({ open, className = 'h-3.5 w-3.5' }) {
 }
 
 /** Bayraq + AZ ▾ dil menyusu — auth, landing navbar və sidebar. */
-export default function LanguageSwitcher({ className = '', tone = 'auto', size = 'compact' }) {
+export default function LanguageSwitcher({
+  className = '',
+  tone = 'auto',
+  size = 'compact',
+  /** 'auto' flips upward near the viewport bottom (sidebar footer). */
+  menuPlacement = 'auto',
+}) {
   const { t, i18n } = useTranslation()
   const { locale, setLocale, theme } = useUiStore()
   const isDark = tone === 'dark' || (tone === 'auto' && theme === 'dark')
   const comfortable = size === 'comfortable'
   const active = uiLocaleMeta(locale || i18n.language || 'az')
   const [open, setOpen] = useState(false)
+  const [placement, setPlacement] = useState(menuPlacement === 'top' ? 'top' : 'bottom')
+  const [hAlign, setHAlign] = useState('end')
   const wrapRef = useRef(null)
 
   useEffect(() => {
@@ -46,11 +54,34 @@ export default function LanguageSwitcher({ className = '', tone = 'auto', size =
     }
   }, [open])
 
+  useLayoutEffect(() => {
+    if (!open) return
+    const el = wrapRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const menuH = 200
+    const menuW = 220
+
+    if (menuPlacement === 'top') setPlacement('top')
+    else if (menuPlacement === 'bottom') setPlacement('bottom')
+    else {
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      setPlacement(spaceBelow < menuH && spaceAbove > spaceBelow ? 'top' : 'bottom')
+    }
+
+    const spaceRight = window.innerWidth - rect.left
+    const spaceLeft = rect.right
+    setHAlign(spaceRight < menuW && spaceLeft > spaceRight ? 'end' : 'start')
+  }, [open, menuPlacement])
+
   const pick = (code) => {
     setOpen(false)
     if (code === active.code) return
     setLocale(code)
   }
+
+  const openUp = placement === 'top'
 
   return (
     <div ref={wrapRef} className={['relative', comfortable ? 'w-full' : 'w-fit', className].join(' ')}>
@@ -81,8 +112,9 @@ export default function LanguageSwitcher({ className = '', tone = 'auto', size =
           role="listbox"
           aria-label={t('layout.language')}
           className={[
-            'absolute z-[80] mt-2 min-w-[13.5rem] overflow-hidden rounded-2xl border py-1.5 shadow-xl',
-            comfortable ? 'left-0 right-0' : 'right-0',
+            'absolute z-[120] min-w-[13.5rem] overflow-hidden rounded-2xl border py-1.5 shadow-xl',
+            openUp ? 'bottom-full mb-2' : 'top-full mt-2',
+            comfortable ? 'left-0 right-0' : hAlign === 'end' ? 'right-0' : 'left-0',
             isDark ? 'border-white/10 bg-[#1c1c1c] text-white' : 'border-slate-200 bg-white text-slate-900',
           ].join(' ')}
         >
