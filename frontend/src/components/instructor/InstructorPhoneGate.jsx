@@ -70,12 +70,18 @@ export default function InstructorPhoneGate() {
     }
   }
 
+  const closeModal = useCallback(() => {
+    if (busy) return
+    setOpen(false)
+    resetForm()
+  }, [busy, resetForm])
+
   if (user?.role !== 'instructor') return null
 
   return (
     <Modal
       open={open}
-      onClose={() => {}}
+      onClose={closeModal}
       title={step === 'phone' ? 'SMS üçün mobil nömrə' : 'OTP kodu'}
       size="sm"
       zIndex={10300}
