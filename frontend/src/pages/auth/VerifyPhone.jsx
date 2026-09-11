@@ -100,7 +100,14 @@ export default function VerifyPhone() {
           </div>
 
           {step === 'phone' ? (
-            <>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (busy) return
+                void sendOtp()
+              }}
+            >
               <label
                 htmlFor="verify-phone-input"
                 className="block text-xs font-semibold uppercase tracking-wider text-zinc-400"
@@ -116,12 +123,19 @@ export default function VerifyPhone() {
                 Bu mobil nömrə başqa müəllim hesabında qeydiyyatdadırsa, sistem xəbərdarlıq edəcək. Təsdiqdən sonra
                 yenidən soruşulmayacaq.
               </p>
-              <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void sendOtp()}>
+              <Button type="submit" className="w-full justify-center" loading={busy}>
                 OTP göndər
               </Button>
-            </>
+            </form>
           ) : (
-            <>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (busy) return
+                void verifyOtp()
+              }}
+            >
               <p className="text-sm text-zinc-300 text-center">
                 <strong className="text-white">{phone}</strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
               </p>
@@ -136,7 +150,7 @@ export default function VerifyPhone() {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               />
-              <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void verifyOtp()}>
+              <Button type="submit" className="w-full justify-center" loading={busy}>
                 Təsdiqlə və davam et
               </Button>
               <button
@@ -147,7 +161,7 @@ export default function VerifyPhone() {
               >
                 Nömrəni dəyiş
               </button>
-            </>
+            </form>
           )}
 
           <button
