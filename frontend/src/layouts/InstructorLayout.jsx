@@ -23,7 +23,10 @@ import ConfirmDialog from '../components/common/ConfirmDialog'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 import InstructorAvatar from '../components/common/InstructorAvatar'
-import { localizeDiscoverProfileAlert } from '../lib/discoverProfileAlert'
+import {
+  localizeDiscoverProfileAlert,
+  shouldShowDiscoverSubjectsModal,
+} from '../lib/discoverProfileAlert'
 import { DISCOVER_SUBJECT_INPUT_ID } from '../lib/scrollIntoAppView'
 
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
@@ -192,7 +195,9 @@ export default function InstructorLayout() {
   }, [billing?.messages?.suppress_limit_bar, t, i18n.language])
 
   useEffect(() => {
-    if (!user?.id || !discoverProfileAlert) {
+    // Subject modal is only for missing discover categories (fənnlər).
+    // Other gaps (map pin / formats) use the banner — do not re-ask for subjects.
+    if (!user?.id || !shouldShowDiscoverSubjectsModal(discoverProfileAlert)) {
       setDiscoverModalOpen(false)
       return
     }
@@ -591,7 +596,11 @@ export default function InstructorLayout() {
               }`}
             >
               <div className="min-w-0">
-                <div className="font-semibold">{t('layout.discover.bannerTitle')}</div>
+                <div className="font-semibold">
+                  {shouldShowDiscoverSubjectsModal(discoverProfileAlert)
+                    ? t('layout.discover.bannerTitle')
+                    : t('layout.discover.completeProfile')}
+                </div>
                 <div className="break-words mt-0.5 opacity-90">{discoverProfileAlert.message}</div>
                 <button
                   type="button"

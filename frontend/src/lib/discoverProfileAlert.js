@@ -1,3 +1,10 @@
+/** True only when discover search subjects (fənnlər / categories) are still missing. */
+export function shouldShowDiscoverSubjectsModal(alert) {
+  if (!alert) return false
+  const missing = Array.isArray(alert.missing) ? alert.missing : []
+  return missing.includes('categories')
+}
+
 /** Build localized discover-profile banner copy from API missing[] flags. */
 export function localizeDiscoverProfileAlert(alert, t, lang = 'az') {
   if (!alert) return null
@@ -19,7 +26,7 @@ export function localizeDiscoverProfileAlert(alert, t, lang = 'az') {
       ? t('layout.discover.fillInSettings', { focus, parts: parts.join(', ') })
       : focus
 
-  const addSubject = !missing.length || missing.includes('categories')
+  const addSubject = missing.includes('categories')
   return {
     ...alert,
     message,
