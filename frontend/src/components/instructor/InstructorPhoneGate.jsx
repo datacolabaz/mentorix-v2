@@ -76,6 +76,18 @@ export default function InstructorPhoneGate() {
     resetForm()
   }, [busy, resetForm])
 
+  const onPhoneSubmit = (e) => {
+    e.preventDefault()
+    if (busy) return
+    void sendOtp()
+  }
+
+  const onOtpSubmit = (e) => {
+    e.preventDefault()
+    if (busy) return
+    void verifyOtp()
+  }
+
   if (user?.role !== 'instructor') return null
 
   return (
@@ -87,12 +99,12 @@ export default function InstructorPhoneGate() {
       zIndex={10300}
       footer={
         step === 'phone' ? (
-          <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void sendOtp()}>
+          <Button type="submit" form="instructor-phone-form" className="w-full justify-center" loading={busy}>
             OTP göndər
           </Button>
         ) : (
           <div className="flex flex-col gap-2 w-full">
-            <Button type="button" className="w-full justify-center" loading={busy} onClick={() => void verifyOtp()}>
+            <Button type="submit" form="instructor-otp-form" className="w-full justify-center" loading={busy}>
               Təsdiqlə
             </Button>
             <button
@@ -111,7 +123,7 @@ export default function InstructorPhoneGate() {
         <p className="text-sm text-amber-200/90 mb-3 leading-relaxed">{hint}</p>
       ) : null}
       {step === 'phone' ? (
-        <>
+        <form id="instructor-phone-form" onSubmit={onPhoneSubmit}>
           <p className="text-sm text-zinc-300 leading-relaxed mb-4">
             SMS göndərmək üçün mobil nömrənizi <strong className="text-white">bir dəfə</strong> OTP ilə təsdiqləyin.
             Bu nömrə Google hesabınıza bağlanacaq; eyni nömrə ilə ikinci müəllim hesabı açıla bilməz.
@@ -120,9 +132,9 @@ export default function InstructorPhoneGate() {
             Mobil telefon *
           </label>
           <PhoneInput value={phone} onChange={setPhone} persistLoginDefaults={false} />
-        </>
+        </form>
       ) : (
-        <>
+        <form id="instructor-otp-form" onSubmit={onOtpSubmit}>
           <p className="text-sm text-zinc-300 mb-3">
             <strong className="text-white">{phone}</strong> nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
           </p>
@@ -134,7 +146,7 @@ export default function InstructorPhoneGate() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
           />
-        </>
+        </form>
       )}
     </Modal>
   )
