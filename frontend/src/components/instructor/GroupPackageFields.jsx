@@ -95,7 +95,7 @@ export default function GroupPackageFields({ value, onChange, compact }) {
   }
 
   return (
-    <div className={compact ? 'space-y-3' : 'space-y-4 rounded-xl border border-indigo-500/20 bg-[#0f0c29]/40 p-3'}>
+    <div className={compact ? 'space-y-3' : 'space-y-4'}>
       {!compact && (
         <p className="text-xs text-gray-400 leading-relaxed">{t('teachingGroups.packageFields.inviteHint')}</p>
       )}
@@ -206,7 +206,7 @@ export default function GroupPackageFields({ value, onChange, compact }) {
                 <input
                   type="time"
                   title={t('teachingGroups.packageFields.startTime')}
-                  className="bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-sm"
+                  className={`${inp} w-auto min-w-[7.5rem] py-1`}
                   value={v.default_lesson_times?.[String(d.v)] || ''}
                   onChange={(e) => {
                     const key = String(d.v)
@@ -223,7 +223,7 @@ export default function GroupPackageFields({ value, onChange, compact }) {
                 <input
                   type="time"
                   title={t('teachingGroups.packageFields.endTime')}
-                  className="bg-[#13112e] border border-indigo-500/20 rounded-lg px-2 py-1 text-white text-sm"
+                  className={`${inp} w-auto min-w-[7.5rem] py-1`}
                   value={v.default_lesson_end_times?.[String(d.v)] || ''}
                   onChange={(e) =>
                     set({

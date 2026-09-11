@@ -503,7 +503,7 @@ function StudentFormFields({
       ) : null}
 
       {!lightSetup ? (
-      <div className="rounded-xl border border-white/10 bg-surface-2/40 p-3 space-y-2">
+      <div className="space-y-2">
         <p className="text-xs font-semibold text-gray-200 uppercase tracking-wider">{t('students.form.registrationType')}</p>
         <p className="text-[10px] text-gray-400 leading-relaxed">
           <span className="text-gray-200">{t('students.form.registrationTypeDesc')}</span>{' '}
@@ -543,7 +543,7 @@ function StudentFormFields({
 
       {!lightSetup ? (
       <>
-        <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
+        <div className="space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.firstLessonDate')}</p>
           {mode === 'setup' && data.enrollment_date && paymentDateHint(data.enrollment_date) ? (
             <p className="text-[10px] text-gray-500 leading-relaxed">
@@ -599,7 +599,7 @@ function StudentFormFields({
 
       {!lightSetup ? (
       <>
-      <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
+      <div className="space-y-2">
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.weekdaysTitle')}</p>
         <p className="text-[10px] text-gray-500 leading-relaxed">{t('students.form.weekdaysHint')}</p>
         <div className="flex flex-wrap gap-2">
@@ -643,7 +643,7 @@ function StudentFormFields({
           })}
         </div>
       </div>
-      <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
+      <div className="space-y-3">
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.paymentScheme')}</p>
         <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -665,7 +665,7 @@ function StudentFormFields({
         </div>
       </div>
       {Array.isArray(teachingSubjects) && (
-        <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
+        <div className="space-y-3">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.subjectGroup')}</p>
           {!teachingSubjects.length ? (
             <p className="text-[11px] text-gray-500">
@@ -820,7 +820,7 @@ function StudentFormFields({
         </div>
       </Modal>
       {(mode === 'add' || mode === 'edit') && (
-        <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-2">
+        <div className="space-y-2">
           <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.lessonSlot')}</p>
           {data.billing_type === '8_lessons' && (
             <p className="text-[10px] text-gray-500">{t('students.form.pack8Counter')}</p>
@@ -831,7 +831,7 @@ function StudentFormFields({
           <p className="text-[10px] text-gray-500">{t('students.form.slotHint')}</p>
           <div className="space-y-2">
             {localizedWeekdays.filter((d) => (data.lesson_weekdays?.length ? data.lesson_weekdays.includes(d.v) : false)).map((d) => (
-              <div key={d.v} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/15 bg-[#13112e]/60 px-3 py-2">
+              <div key={d.v} className="flex items-center justify-between gap-3 px-0 py-1">
                 <div className="text-xs text-gray-300 font-semibold shrink-0">{d.full}</div>
                 <div className="flex items-center gap-2">
                   <label className="text-[10px] text-gray-500">{t('students.form.startTime')}</label>
@@ -875,7 +875,7 @@ function StudentFormFields({
           </div>
         </div>
       )}
-      <div className="rounded-xl border border-indigo-500/20 bg-[#0f0c29]/60 p-3 space-y-3">
+      <div className="space-y-3">
         <p className="text-xs font-semibold text-indigo-200/90 uppercase tracking-wider">{t('students.form.marketing')}</p>
         {referralSources.length > 0 && (
           <div>

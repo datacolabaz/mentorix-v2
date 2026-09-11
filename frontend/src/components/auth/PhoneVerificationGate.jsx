@@ -78,12 +78,18 @@ export default function PhoneVerificationGate() {
     }
   }
 
+  const closeModal = useCallback(() => {
+    if (busy) return
+    setOpen(false)
+    resetForm()
+  }, [busy, resetForm])
+
   if (!VERIFY_ROLES.has(user?.role)) return null
 
   return (
     <Modal
       open={open}
-      onClose={() => {}}
+      onClose={closeModal}
       title={step === 'phone' ? 'Mobil nömrə təsdiqi' : 'OTP kodu'}
       size="sm"
       zIndex={10300}
