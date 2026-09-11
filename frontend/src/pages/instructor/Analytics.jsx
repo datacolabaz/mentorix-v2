@@ -71,6 +71,19 @@ export default function InstructorAnalytics() {
   const [studentReviewModal, setStudentReviewModal] = useState(null)
   const theme = useUiStore((s) => s.theme)
   const gridStroke = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.10)'
+  const chartTooltipStyle = {
+    background: `rgb(var(--surface-card) / ${theme === 'dark' ? '0.96' : '0.98'})`,
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 12,
+    color: 'rgb(var(--text-primary))',
+    fontSize: 12,
+  }
+  const chartTooltipLabelStyle = {
+    color: 'rgb(var(--text-secondary))',
+  }
+  const chartTooltipItemStyle = {
+    color: 'rgb(var(--text-primary))',
+  }
 
   useEffect(() => {
     Promise.all([
@@ -493,13 +506,9 @@ export default function InstructorAnalytics() {
                 />
                 <Tooltip
                   cursor={{ fill: 'rgba(34,224,136,0.08)' }}
-                  contentStyle={{
-                    background: 'rgba(11,11,11,0.92)',
-                    border: '1px solid rgba(255,255,255,0.10)',
-                    borderRadius: 12,
-                    color: '#fff',
-                  }}
-                  labelStyle={{ color: 'rgba(229,231,235,0.9)' }}
+                  contentStyle={chartTooltipStyle}
+                  labelStyle={chartTooltipLabelStyle}
+                  itemStyle={chartTooltipItemStyle}
                   formatter={(value, _name, item) => {
                     const n = Math.round(Number(value) * 10) / 10
                     const taken = item?.payload?.examsTaken
@@ -555,18 +564,9 @@ export default function InstructorAnalytics() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{
-                      background: theme === 'dark' ? 'rgba(11,11,11,0.92)' : 'rgba(255,255,255,0.96)',
-                      border:
-                        theme === 'dark'
-                          ? '1px solid rgba(255,255,255,0.10)'
-                          : '1px solid rgba(15,23,42,0.10)',
-                      borderRadius: 12,
-                      color: theme === 'dark' ? '#fff' : '#0B1220',
-                      fontSize: 12,
-                    }}
-                    itemStyle={{ color: theme === 'dark' ? '#fff' : '#0B1220' }}
-                    labelStyle={{ color: theme === 'dark' ? 'rgba(229,231,235,0.9)' : '#0B1220' }}
+                    contentStyle={chartTooltipStyle}
+                    itemStyle={chartTooltipItemStyle}
+                    labelStyle={chartTooltipLabelStyle}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -594,12 +594,9 @@ export default function InstructorAnalytics() {
               <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} tickLine={false} axisLine={false} width={34} />
               <Tooltip
                 cursor={{ fill: 'rgba(34,224,136,0.08)' }}
-                contentStyle={{
-                  background: 'rgba(11,11,11,0.92)',
-                  border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: 12,
-                  color: '#fff',
-                }}
+                contentStyle={chartTooltipStyle}
+                itemStyle={chartTooltipItemStyle}
+                labelStyle={chartTooltipLabelStyle}
               />
               <Bar dataKey="ders" fill="#10b981" radius={[6, 6, 0, 0]} name={t('analytics.lessonCount')} />
             </BarChart>
@@ -814,7 +811,11 @@ export default function InstructorAnalytics() {
                       <Cell key={entry.key} fill={entry.key === 'crm' ? '#22c55e' : '#6366f1'} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    itemStyle={chartTooltipItemStyle}
+                    labelStyle={chartTooltipLabelStyle}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
