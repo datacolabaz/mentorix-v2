@@ -1,6 +1,9 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { localizeDiscoverProfileAlert } from './discoverProfileAlert.js'
+import {
+  localizeDiscoverProfileAlert,
+  shouldShowDiscoverSubjectsModal,
+} from './discoverProfileAlert.js'
 
 const KEYS = {
   'layout.discover.partCategories': 'subjects',
@@ -37,5 +40,19 @@ describe('localizeDiscoverProfileAlert', () => {
     const out = localizeDiscoverProfileAlert({ missing: ['map_pin'], cta: {} }, t, 'en')
     assert.equal(out.cta.label, 'Complete profile')
     assert.match(out.message, /map pin/)
+  })
+
+  it('uses complete-profile CTA when missing is empty', () => {
+    const out = localizeDiscoverProfileAlert({ missing: [], cta: {} }, t, 'en')
+    assert.equal(out.cta.label, 'Complete profile')
+  })
+
+  it('opens subjects modal only when categories are missing', () => {
+    assert.equal(shouldShowDiscoverSubjectsModal(null), false)
+    assert.equal(shouldShowDiscoverSubjectsModal({ missing: ['categories'] }), true)
+    assert.equal(shouldShowDiscoverSubjectsModal({ missing: ['categories', 'map_pin'] }), true)
+    assert.equal(shouldShowDiscoverSubjectsModal({ missing: ['map_pin'] }), false)
+    assert.equal(shouldShowDiscoverSubjectsModal({ missing: ['delivery_formats'] }), false)
+    assert.equal(shouldShowDiscoverSubjectsModal({ missing: [] }), false)
   })
 })
