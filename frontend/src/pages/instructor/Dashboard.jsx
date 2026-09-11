@@ -334,10 +334,10 @@ export default function InstructorDashboard() {
     const n = Number(p.examCount) || 0
     const pct = Math.round(Number(p.bal))
     return (
-      <div className="rounded-xl border border-white/10 bg-[#0b0b0b] px-3 py-2 text-xs shadow-lg max-w-[240px]">
-        <div className="font-semibold text-white mb-1">{p.fullName || p.name}</div>
-        <div className="text-emerald-300">{t('dashboard.tooltipAvgPct', { pct })}</div>
-        <div className="text-gray-400 mt-1 leading-snug">
+      <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2 text-xs shadow-lg max-w-[240px]">
+        <div className="font-semibold text-token-textMain mb-1">{p.fullName || p.name}</div>
+        <div className="text-primary">{t('dashboard.tooltipAvgPct', { pct })}</div>
+        <div className="text-token-textMuted mt-1 leading-snug">
           {n > 0 ? t('dashboard.tooltipAvgExams', { n }) : t('dashboard.tooltipNoExams')}
         </div>
       </div>
@@ -410,9 +410,9 @@ export default function InstructorDashboard() {
                       const p = payload[0]?.payload
                       if (!p) return null
                       return (
-                        <div className="rounded-xl border border-white/10 bg-[#0b0b0b] px-3 py-2 text-xs shadow-lg">
-                          <div className="font-semibold text-white mb-1">{p.label}</div>
-                          <div className="text-emerald-300 tabular-nums">₼ {moneyFmt.format(p.amount)}</div>
+                        <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2 text-xs shadow-lg">
+                          <div className="font-semibold text-token-textMain mb-1">{p.label}</div>
+                          <div className="text-primary tabular-nums">₼ {moneyFmt.format(p.amount)}</div>
                         </div>
                       )
                     }}
