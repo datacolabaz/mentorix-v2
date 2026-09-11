@@ -1,16 +1,17 @@
-/** Canonical UI language: az | ru | en. */
+/** Canonical UI language: az | ru | en | tr | de. */
+import { normalizeUiLocale } from './uiLocales'
+
 export function resolveUiLocale(lang) {
-  const l = String(lang || 'az').toLowerCase()
-  if (l.startsWith('ru')) return 'ru'
-  if (l.startsWith('en')) return 'en'
-  return 'az'
+  return normalizeUiLocale(lang)
 }
 
-/** Intl locale tag for dates/numbers from i18n language (az | ru | en). */
+/** Intl locale tag for dates/numbers from i18n language. */
 export function intlLocale(lang) {
   const l = resolveUiLocale(lang)
   if (l === 'ru') return 'ru-RU'
   if (l === 'en') return 'en-GB'
+  if (l === 'tr') return 'tr-TR'
+  if (l === 'de') return 'de-DE'
   return 'az-AZ'
 }
 
@@ -22,5 +23,7 @@ export function moneyLocale(lang) {
   const l = resolveUiLocale(lang)
   if (l === 'ru') return 'ru-RU'
   if (l === 'en') return 'en-GB'
+  if (l === 'tr') return 'tr-TR'
+  if (l === 'de') return 'de-DE'
   return 'az-Latn-AZ'
 }

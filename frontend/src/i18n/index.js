@@ -6,6 +6,7 @@ import ru from '../locales/ru/translation.json'
 import en from '../locales/en/translation.json'
 import { universityCatalogAz, universityCatalogEn, universityCatalogRu } from '../locales/universityCatalog'
 import { publicLandingsAz, publicLandingsEn, publicLandingsRu } from '../locales/publicLandings'
+import { normalizeUiLocale, UI_LOCALE_CODES } from '../lib/uiLocales'
 
 function withUniversityCatalog(base, catalog) {
   return {
@@ -30,7 +31,7 @@ export function readStoredLocale() {
       String(localStorage.getItem(LOCALE_KEY) || localStorage.getItem(LEGACY_LOCALE_KEY) || '')
         .trim()
         .toLowerCase()
-    return v === 'ru' ? 'ru' : v === 'en' ? 'en' : 'az'
+    return normalizeUiLocale(v)
   } catch {
     return 'az'
   }
@@ -38,7 +39,7 @@ export function readStoredLocale() {
 
 export function writeStoredLocale(locale) {
   try {
-    const next = locale === 'ru' ? 'ru' : locale === 'en' ? 'en' : 'az'
+    const next = normalizeUiLocale(locale)
     localStorage.setItem(LOCALE_KEY, next)
     localStorage.removeItem(LEGACY_LOCALE_KEY)
   } catch {
@@ -48,7 +49,7 @@ export function writeStoredLocale(locale) {
 
 export function applyDocumentLocale(locale) {
   if (typeof document === 'undefined') return
-  const lang = locale === 'ru' ? 'ru' : locale === 'en' ? 'en' : 'az'
+  const lang = normalizeUiLocale(locale)
   document.documentElement.lang = lang
 }
 
@@ -70,10 +71,16 @@ i18n
       az: { translation: azResources },
       ru: { translation: ruResources },
       en: { translation: enResources },
+      tr: { translation: enResources },
+      de: { translation: enResources },
     },
     lng: initialLocale,
-    fallbackLng: 'az',
-    supportedLngs: ['az', 'ru', 'en'],
+    fallbackLng: {
+      tr: ['en', 'az'],
+      de: ['en', 'az'],
+      default: ['az'],
+    },
+    supportedLngs: UI_LOCALE_CODES,
     interpolation: { escapeValue: false },
     returnEmptyString: false,
   })

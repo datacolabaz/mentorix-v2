@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../common/Brand'
-import LanguageSwitcher from '../LanguageSwitcher'
+import LocaleThemeBar from '../LocaleThemeBar'
+import useUiStore from '../../hooks/useUi'
 
 /** İctimai marketinq səhifələri — geri, başlıq (mobil uyğun). */
-export default function PublicPageTopBar({ backTo = '/', title, subtitle, children, tone = 'dark' }) {
+export default function PublicPageTopBar({ backTo = '/', title, subtitle, children }) {
   const { t } = useTranslation()
-  const light = tone === 'light'
+  const theme = useUiStore((s) => s.theme)
+  const light = theme !== 'dark'
 
   return (
     <header
@@ -31,7 +33,7 @@ export default function PublicPageTopBar({ backTo = '/', title, subtitle, childr
             </span>
             <span className="truncate max-w-[min(100%,14rem)] sm:max-w-none">{t('publicNav.backHome')}</span>
           </Link>
-          <LanguageSwitcher tone={light ? 'light' : 'dark'} className="h-8 shrink-0" />
+          <LocaleThemeBar tone={light ? 'light' : 'dark'} />
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -62,7 +62,7 @@ export default function Brand({
   if (size === 'nav') {
     return (
       <BrandWordmark
-        tone="dark"
+        tone={tone}
         textSizeClass={SIZE_CLASSES.nav}
         className={`gap-1.5 ${className}`}
         textClassName={textClassName}

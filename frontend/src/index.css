@@ -156,13 +156,25 @@
   .login-wrapper {
     min-height: 100vh;
     min-height: 100svh;
+  }
+  .login-wrapper.theme-light,
+  .mx-login-bg.theme-light {
     background:
       radial-gradient(ellipse at 50% 35%, rgba(var(--primary-accent), 0.08) 0%, transparent 60%),
       #f4f6fb;
   }
+  .login-wrapper.theme-dark,
+  .mx-login-bg.theme-dark {
+    background:
+      radial-gradient(ellipse at 50% 35%, rgba(var(--primary-accent), 0.07) 0%, transparent 60%),
+      #0d0d0d;
+  }
 
-  body:has(.login-wrapper) {
+  body:has(.login-wrapper.theme-light) {
     background: #f4f6fb;
+  }
+  body:has(.login-wrapper.theme-dark) {
+    background: #0d0d0d;
   }
   .mx-auth-input {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -201,11 +213,11 @@
     border-color: rgba(255, 255, 255, 0.2);
     color: rgb(229 231 235);
   }
-  .login-wrapper .mx-role-btn {
+  .login-wrapper.theme-light .mx-role-btn {
     border-color: rgb(226 232 240);
     color: rgb(71 85 105);
   }
-  .login-wrapper .mx-role-btn:hover {
+  .login-wrapper.theme-light .mx-role-btn:hover {
     border-color: rgb(203 213 225);
     background: rgb(248 250 252);
     color: rgb(15 23 42);
@@ -513,41 +525,87 @@
   box-shadow: 0 0 0 1000px rgb(var(--field-bg)) inset !important;
 }
 
-/* Public login/register stays light even if html is theme-dark */
-.theme-dark .login-wrapper input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
-.theme-dark .login-wrapper textarea,
-.theme-dark .login-wrapper select,
-.login-wrapper input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
-.login-wrapper textarea,
-.login-wrapper select {
+/* Login fields follow the wrapper theme, not a forced light canvas */
+.login-wrapper.theme-light input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
+.login-wrapper.theme-light textarea,
+.login-wrapper.theme-light select {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
   background-color: #ffffff !important;
   border-color: rgb(226 232 240) !important;
   caret-color: #0b1220;
 }
-.theme-dark .login-wrapper input::placeholder,
-.theme-dark .login-wrapper textarea::placeholder,
-.login-wrapper input::placeholder,
-.login-wrapper textarea::placeholder {
+.login-wrapper.theme-dark input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
+.login-wrapper.theme-dark textarea,
+.login-wrapper.theme-dark select {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  background-color: rgb(var(--surface-secondary)) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  caret-color: #f8fafc;
+}
+.login-wrapper.theme-light input::placeholder,
+.login-wrapper.theme-light textarea::placeholder {
   color: rgb(148 163 184) !important;
   -webkit-text-fill-color: rgb(148 163 184) !important;
   opacity: 1;
 }
-.theme-dark .login-wrapper select option,
-.login-wrapper select option {
+.login-wrapper.theme-dark input::placeholder,
+.login-wrapper.theme-dark textarea::placeholder {
+  color: rgb(148 163 184) !important;
+  -webkit-text-fill-color: rgb(148 163 184) !important;
+  opacity: 1;
+}
+.login-wrapper.theme-light select option {
   background-color: #ffffff;
   color: #0b1220;
 }
-.theme-dark .login-wrapper input:-webkit-autofill,
-.theme-dark .login-wrapper input:-webkit-autofill:hover,
-.theme-dark .login-wrapper input:-webkit-autofill:focus,
-.login-wrapper input:-webkit-autofill,
-.login-wrapper input:-webkit-autofill:hover,
-.login-wrapper input:-webkit-autofill:focus {
+.login-wrapper.theme-dark select option {
+  background-color: #161616;
+  color: #f8fafc;
+}
+.login-wrapper.theme-light input:-webkit-autofill,
+.login-wrapper.theme-light input:-webkit-autofill:hover,
+.login-wrapper.theme-light input:-webkit-autofill:focus {
   -webkit-text-fill-color: #0b1220 !important;
   -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
   box-shadow: 0 0 0 1000px #ffffff inset !important;
+}
+.login-wrapper.theme-dark input:-webkit-autofill,
+.login-wrapper.theme-dark input:-webkit-autofill:hover,
+.login-wrapper.theme-dark input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0 1000px #161616 inset !important;
+  box-shadow: 0 0 0 1000px #161616 inset !important;
+}
+
+/* Public marketing canvas follows night/day */
+.mx-public-page.theme-dark {
+  background-color: #0b0b0b;
+  color: #e2e8f0;
+}
+.mx-public-page.theme-light {
+  background-color: #f4f6fb;
+}
+.mx-public-page.theme-dark .text-slate-900,
+.mx-public-page.theme-dark .text-slate-800 {
+  color: #f8fafc;
+}
+.mx-public-page.theme-dark .text-slate-700,
+.mx-public-page.theme-dark .text-slate-600 {
+  color: #cbd5e1;
+}
+.mx-public-page.theme-dark .text-slate-500 {
+  color: #94a3b8;
+}
+.mx-public-page.theme-dark .bg-white {
+  background-color: #161616;
+}
+.mx-public-page.theme-dark .border-slate-200 {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.mx-public-page.theme-dark .hover\:bg-slate-50:hover {
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 @layer components {
