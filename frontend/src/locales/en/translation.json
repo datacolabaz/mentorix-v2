@@ -3117,6 +3117,7 @@
       "categoryKeywords": "{{category}}, tutor, find a teacher, Baku, Mentorix"
     },
     "filters": {
+      "mobileToggle": "Filters",
       "categoryQuestion": "What do you want to learn?",
       "categoryPlaceholder": "Mathematics, Python, IELTS…",
       "popular": "Popular",
@@ -3146,6 +3147,11 @@
       "bakuDistrictTitle": "Baku district",
       "bakuDistrictPlaceholder": "All of Baku (no district selected)",
       "includeNeighbors": "Also show neighboring districts"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "pageOf": "{{page}} / {{total}}"
     },
     "categories": {
       "allSubjects": "All subjects ▾",

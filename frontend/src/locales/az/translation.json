@@ -3117,6 +3117,7 @@
       "categoryKeywords": "{{category}}, repetitor, müəllim tap, Bakı, Mentorix"
     },
     "filters": {
+      "mobileToggle": "Filterlər",
       "categoryQuestion": "Nə öyrənmək istəyirsiniz?",
       "categoryPlaceholder": "Riyaziyyat, Python, IELTS…",
       "popular": "Populyar",
@@ -3146,6 +3147,11 @@
       "bakuDistrictTitle": "Bakı rayonu",
       "bakuDistrictPlaceholder": "Bütün Bakı (rayon seçmədən)",
       "includeNeighbors": "Qonşu rayonları da göstər"
+    },
+    "pagination": {
+      "prev": "Əvvəlki",
+      "next": "Növbəti",
+      "pageOf": "{{page}} / {{total}}"
     },
     "categories": {
       "allSubjects": "Bütün fənlər ▾",
