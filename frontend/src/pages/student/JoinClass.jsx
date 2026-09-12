@@ -11,6 +11,7 @@ import { formatAzn } from '../../lib/groupPaymentTerms'
 import JoinGroupTermsOverview from '../../components/student/JoinGroupTermsOverview'
 import { parseJoinInviteInput } from '../../lib/joinInvite'
 import { consumeReturnAfterLogin, rememberReturnAfterLogin } from '../../lib/inviteReturn'
+import { ensureStudentInviteSession, completeStudentInviteOnboarding } from '../../lib/ensureStudentInviteSession'
 
 const inp =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-3 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/55'
@@ -178,14 +179,12 @@ export default function JoinClass() {
     let cancelled = false
     ;(async () => {
       try {
-        const subject = String(joinInfo.subject_name || '').trim() || 'Dərs'
-        const done = await api.post('/auth/onboarding/persona', {
-          persona: 'student',
-          profile: { education_level: 'other', subject_interest: subject.slice(0, 120) },
+        const done = await completeStudentInviteOnboarding(user, {
+          setSession: persistAuth,
+          subjectHint: String(joinInfo.subject_name || '').trim() || 'Dərs',
         })
-        if (cancelled || !done?.token || !done?.user) return
-        persistAuth(done.token, { ...done.user, needs_phone_verification: false })
-        applyNameFromUser(done.user)
+        if (cancelled || !done) return
+        applyNameFromUser(done)
       } catch {
         /* forma görünsün — Qoşul zamanı yenidən cəhd olunacaq */
       }
@@ -208,34 +207,12 @@ export default function JoinClass() {
   /** QR/WhatsApp join: Google yeni hesabı onboarding-də rol=null saxlayır — tələbə sessiyasını burada bağla. */
   const ensureStudentJoinSession = useCallback(
     async (authResult) => {
-      if (authResult?.needs_phone_link) {
-        toast('Bu Google hesabı mövcud telefon hesabına bağlanmalıdır — dəstək ilə əlaqə saxlayın.', 'error')
-        return null
-      }
-      if (!authResult?.token || !authResult?.user) {
-        toast(authResult?.message || 'Google girişi tamamlanmadı', 'error')
-        return null
-      }
-      if (authResult.user.role && authResult.user.role !== 'student') {
-        toast('Bu hesab tələbə deyil — müəllim panelinə daxil olun.', 'error')
-        return null
-      }
-      persistAuth(authResult.token, { ...authResult.user, needs_phone_verification: false })
-      let authUser = authResult.user
-      if (authUser.role !== 'student') {
-        const subject = String(joinInfo?.subject_name || '').trim() || 'Dərs'
-        const done = await api.post('/auth/onboarding/persona', {
-          persona: 'student',
-          profile: { education_level: 'other', subject_interest: subject.slice(0, 120) },
-        })
-        if (!done?.token || !done?.user) {
-          toast(done?.message || 'Tələbə sessiyası tamamlanmadı', 'error')
-        } else {
-          persistAuth(done.token, { ...done.user, needs_phone_verification: false })
-          authUser = done.user
-        }
-      }
-      applyNameFromUser(authUser)
+      const authUser = await ensureStudentInviteSession(authResult, {
+        setSession: persistAuth,
+        toast,
+        subjectHint: String(joinInfo?.subject_name || '').trim() || 'Dərs',
+      })
+      if (authUser) applyNameFromUser(authUser)
       return authUser
     },
     [applyNameFromUser, joinInfo?.subject_name, persistAuth, toast],

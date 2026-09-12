@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -56,7 +56,12 @@ function renderPreview(url) {
 }
 
 export default function StudentAssignments() {
-  const { activeEnrollmentId, activeEnrollment } = useStudentGroups()
+  const { activeEnrollmentId, setActiveEnrollmentId, enrollments, refreshEnrollments } =
+    useStudentGroups()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const deepLinkOpenId = searchParams.get('open')
+  const deepLinkTaskId = searchParams.get('task')
+  const deepLinkHandledRef = useRef('')
   const [loading, setLoading] = useState(true)
   const [tasks, setTasks] = useState([])
   const [err, setErr] = useState(null)
@@ -128,7 +133,7 @@ export default function StudentAssignments() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [assignmentMaterials, setAssignmentMaterials] = useState([])
 
-  const openWorkspace = async (assignmentId) => {
+  const openWorkspace = useCallback(async (assignmentId) => {
     setOpenId(assignmentId)
     setPreviewOpen(false)
     setDetail(null)
@@ -157,7 +162,74 @@ export default function StudentAssignments() {
     } finally {
       setDetailLoading(false)
     }
-  }
+  }, [])
+
+  /** Paylaşım linki: /student/assignments?open=saId | ?task=assignmentUuid */
+  useEffect(() => {
+    const openTarget = deepLinkOpenId ? String(deepLinkOpenId).trim() : ''
+    const taskTarget = deepLinkTaskId ? String(deepLinkTaskId).trim() : ''
+    if (!openTarget && !taskTarget) return
+    if (loading || openId) return
+    const handleKey = openTarget ? `open:${openTarget}` : `task:${taskTarget}`
+    if (deepLinkHandledRef.current === handleKey) return
+
+    const matchInList = (list) => {
+      if (openTarget) {
+        return list.find((t) => t?.assignment_id != null && String(t.assignment_id) === openTarget) || null
+      }
+      return list.find((t) => t?.task_id != null && String(t.task_id) === taskTarget) || null
+    }
+
+    let cancelled = false
+    ;(async () => {
+      let hit = matchInList(tasks)
+      if (!hit) {
+        try {
+          await refreshEnrollments()
+          const d = await api.get('/tasks/my')
+          const all = (Array.isArray(d.tasks) ? d.tasks : []).filter((t) => t && t.assignment_id != null)
+          hit = matchInList(all)
+          if (hit?.instructor_id && enrollments?.length) {
+            const enr = enrollments.find(
+              (e) => e && String(e.instructor_id) === String(hit.instructor_id),
+            )
+            if (enr?.enrollment_id && String(enr.enrollment_id) !== String(activeEnrollmentId)) {
+              setActiveEnrollmentId(enr.enrollment_id)
+            }
+          }
+          if (hit && !cancelled) setTasks(all)
+        } catch {
+          /* fall through */
+        }
+      }
+      if (cancelled) return
+      deepLinkHandledRef.current = handleKey
+      setSearchParams({}, { replace: true })
+      if (hit?.assignment_id) {
+        void openWorkspace(hit.assignment_id)
+      } else if (openTarget) {
+        void openWorkspace(openTarget)
+      } else {
+        toast('Tapşırıq siyahıda tapılmadı — bir az sonra yeniləyin', 'error')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    deepLinkOpenId,
+    deepLinkTaskId,
+    loading,
+    openId,
+    tasks,
+    enrollments,
+    activeEnrollmentId,
+    refreshEnrollments,
+    setActiveEnrollmentId,
+    setSearchParams,
+    openWorkspace,
+    toast,
+  ])
 
   const locked =
     Boolean(detail?.submitted_at) ||
