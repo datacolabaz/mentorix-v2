@@ -8,6 +8,7 @@ import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { setPageSeo } from '../../lib/pageSeo'
 import { rememberReturnAfterLogin, consumeReturnAfterLogin } from '../../lib/inviteReturn'
+import { rememberPendingStudentDeepLink } from '../../lib/pendingStudentDeepLink'
 import {
   completeStudentInviteOnboarding,
   ensureStudentInviteSession,
@@ -66,10 +67,9 @@ export default function TaskInvite() {
     })
   }, [info?.task, id])
 
-  /** Email/Google return: session exists but role is still null until persona is set. */
+  /** Email/Google return: finish light student persona before access-from-link. */
   useEffect(() => {
     if (!user?.id || !info?.task) return
-    if (user.role === 'student') return
     if (user.role && user.role !== 'student') return
     if (onboardingRef.current) return
     onboardingRef.current = true
@@ -94,9 +94,14 @@ export default function TaskInvite() {
     setJoinBusy(true)
     try {
       const sub = await api.post(`/tasks/${encodeURIComponent(id)}/access-from-link`, {})
+      const openId = sub?.student_assignment_id ? String(sub.student_assignment_id) : ''
+      rememberPendingStudentDeepLink({
+        kind: 'task',
+        openId: openId || null,
+        taskId: id,
+      })
       consumeReturnAfterLogin()
       toast(sub?.message || 'Tapşırıqa daxil ola bilərsiniz', 'success')
-      const openId = sub?.student_assignment_id
       const dest = openId
         ? `/student/assignments?open=${encodeURIComponent(openId)}`
         : `/student/assignments?task=${encodeURIComponent(id)}`

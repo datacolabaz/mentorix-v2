@@ -15,6 +15,10 @@ import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { bumpStudentAlerts } from '../../hooks/useStudentAlerts'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import {
+  consumePendingStudentDeepLink,
+  peekPendingStudentDeepLink,
+} from '../../lib/pendingStudentDeepLink'
+import {
   assignmentStatusClass,
   assignmentStatusLabel,
   filterTasksByTab,
@@ -164,10 +168,13 @@ export default function StudentAssignments() {
     }
   }, [])
 
-  /** Paylaşım linki: /student/assignments?open=saId | ?task=assignmentUuid */
+  /** Paylaşım linki: ?open=saId | ?task=assignmentUuid | pending deep link after invite join */
   useEffect(() => {
-    const openTarget = deepLinkOpenId ? String(deepLinkOpenId).trim() : ''
-    const taskTarget = deepLinkTaskId ? String(deepLinkTaskId).trim() : ''
+    const pending = peekPendingStudentDeepLink()
+    const pendingOpen = pending?.kind === 'task' && pending.openId ? String(pending.openId) : ''
+    const pendingTask = pending?.kind === 'task' && pending.taskId ? String(pending.taskId) : ''
+    const openTarget = String(deepLinkOpenId || pendingOpen || '').trim()
+    const taskTarget = String(deepLinkTaskId || pendingTask || '').trim()
     if (!openTarget && !taskTarget) return
     if (loading || openId) return
     const handleKey = openTarget ? `open:${openTarget}` : `task:${taskTarget}`
@@ -183,35 +190,49 @@ export default function StudentAssignments() {
     let cancelled = false
     ;(async () => {
       let hit = matchInList(tasks)
+      let latestEnrollments = enrollments
       if (!hit) {
         try {
-          await refreshEnrollments()
+          latestEnrollments = await refreshEnrollments()
           const d = await api.get('/tasks/my')
           const all = (Array.isArray(d.tasks) ? d.tasks : []).filter((t) => t && t.assignment_id != null)
           hit = matchInList(all)
-          if (hit?.instructor_id && enrollments?.length) {
-            const enr = enrollments.find(
-              (e) => e && String(e.instructor_id) === String(hit.instructor_id),
-            )
-            if (enr?.enrollment_id && String(enr.enrollment_id) !== String(activeEnrollmentId)) {
-              setActiveEnrollmentId(enr.enrollment_id)
-            }
-          }
           if (hit && !cancelled) setTasks(all)
         } catch {
           /* fall through */
         }
       }
       if (cancelled) return
-      deepLinkHandledRef.current = handleKey
-      setSearchParams({}, { replace: true })
-      if (hit?.assignment_id) {
-        void openWorkspace(hit.assignment_id)
-      } else if (openTarget) {
-        void openWorkspace(openTarget)
-      } else {
-        toast('Tapşırıq siyahıda tapılmadı — bir az sonra yeniləyin', 'error')
+
+      if (hit?.instructor_id && Array.isArray(latestEnrollments) && latestEnrollments.length) {
+        const enr =
+          latestEnrollments.find(
+            (e) =>
+              e &&
+              String(e.instructor_id) === String(hit.instructor_id) &&
+              (String(e.system_ref_id || '') === String(hit.task_id || '') ||
+                String(e.system_kind || '') === 'assignment_participants' ||
+                String(e.enrollment_source || '').toLowerCase() === 'task'),
+          ) ||
+          latestEnrollments.find((e) => e && String(e.instructor_id) === String(hit.instructor_id))
+        if (enr?.enrollment_id && String(enr.enrollment_id) !== String(activeEnrollmentId)) {
+          setActiveEnrollmentId(enr.enrollment_id)
+        }
       }
+
+      const workspaceId = hit?.assignment_id || openTarget
+      if (!workspaceId) {
+        deepLinkHandledRef.current = handleKey
+        consumePendingStudentDeepLink()
+        setSearchParams({}, { replace: true })
+        toast('Tapşırıq siyahıda tapılmadı — bir az sonra yeniləyin', 'error')
+        return
+      }
+
+      deepLinkHandledRef.current = handleKey
+      consumePendingStudentDeepLink()
+      setSearchParams({}, { replace: true })
+      void openWorkspace(workspaceId)
     })()
     return () => {
       cancelled = true

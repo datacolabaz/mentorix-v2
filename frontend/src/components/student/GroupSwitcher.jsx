@@ -1,9 +1,30 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 
+function pathForEnrollment(enrollment) {
+  if (!enrollment) return ''
+  const kind = String(enrollment.system_kind || '').trim()
+  const refId = String(enrollment.system_ref_id || '').trim()
+  const source = String(enrollment.enrollment_source || '').trim().toLowerCase()
+  if (kind === 'assignment_participants' && refId) {
+    return `/student/assignments?task=${encodeURIComponent(refId)}`
+  }
+  if (kind === 'exam_participants' && refId) {
+    return `/student/exams?exam=${encodeURIComponent(refId)}`
+  }
+  if (source === 'task' && refId) {
+    return `/student/assignments?task=${encodeURIComponent(refId)}`
+  }
+  if (source === 'exam' && refId) {
+    return `/student/exams?exam=${encodeURIComponent(refId)}`
+  }
+  return ''
+}
+
 export default function GroupSwitcher({ className = '' }) {
+  const navigate = useNavigate()
   const { enrollments, activeEnrollmentId, activeEnrollment, setActiveEnrollmentId, loading } =
     useStudentGroups()
   const [open, setOpen] = useState(false)
@@ -34,12 +55,27 @@ export default function GroupSwitcher({ className = '' }) {
   const activeDisplay = studentEnrollmentDisplay(activeEnrollment)
   const label = activeDisplay.title || 'Qrup seçin'
   const sub = activeDisplay.subtitle
+  const activeOpenPath = pathForEnrollment(activeEnrollment)
+
+  const selectEnrollment = (enrollment) => {
+    if (!enrollment?.enrollment_id) return
+    setActiveEnrollmentId(enrollment.enrollment_id)
+    setOpen(false)
+    const dest = pathForEnrollment(enrollment)
+    if (dest) navigate(dest)
+  }
 
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open && activeOpenPath && enrollments.length === 1) {
+            navigate(activeOpenPath)
+            return
+          }
+          setOpen((o) => !o)
+        }}
         className={[
           'flex items-center gap-2 min-w-0 max-w-full rounded-xl border px-3 py-2 text-left transition-colors',
           'border-[color:var(--border-subtle)] bg-token-surfaceCard/60 hover:border-primary/30',
@@ -76,10 +112,7 @@ export default function GroupSwitcher({ className = '' }) {
               <button
                 key={g.enrollment_id}
                 type="button"
-                onClick={() => {
-                  setActiveEnrollmentId(g.enrollment_id)
-                  setOpen(false)
-                }}
+                onClick={() => selectEnrollment(g)}
                 className={[
                   'w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors',
                   active ? 'bg-primary/10' : 'hover:bg-black/[0.04] dark:hover:bg-white/5',
@@ -108,7 +141,6 @@ export default function GroupSwitcher({ className = '' }) {
             >
               Bütün qruplar
             </Link>
-
           </div>
         </div>
       )}

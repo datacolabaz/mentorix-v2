@@ -19,6 +19,10 @@ import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
+import {
+  pathForPendingStudentDeepLink,
+  peekPendingStudentDeepLink,
+} from '../../lib/pendingStudentDeepLink'
 
 const PIE_COLORS = [
   '#3b82f6',
@@ -89,6 +93,13 @@ export default function StudentDashboard() {
   )
 
   const pieSliceStroke = theme === 'dark' ? 'rgba(15,12,41,0.9)' : 'rgba(255,255,255,0.85)'
+
+  useEffect(() => {
+    if (!user?.id) return
+    const pendingPath = pathForPendingStudentDeepLink(peekPendingStudentDeepLink())
+    if (!pendingPath) return
+    navigate(pendingPath, { replace: true })
+  }, [user?.id, navigate])
 
   useEffect(() => {
     if (!user?.id) return
