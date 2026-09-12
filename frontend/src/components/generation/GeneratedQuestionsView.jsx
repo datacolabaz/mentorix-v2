@@ -4,9 +4,13 @@ import { useTranslation } from 'react-i18next'
 const DIFFICULTY_KEYS = { easy: 'easy', medium: 'medium', hard: 'hard' }
 
 function difficultyBadgeClass(difficulty) {
-  if (difficulty === 'hard') return 'bg-red-500/15 text-red-300 border-red-500/25'
-  if (difficulty === 'easy') return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
-  return 'bg-amber-500/15 text-amber-300 border-amber-500/25'
+  if (difficulty === 'hard') {
+    return 'bg-red-500/15 text-red-700 border-red-500/25 [.theme-dark_&]:text-red-300'
+  }
+  if (difficulty === 'easy') {
+    return 'bg-emerald-500/15 text-emerald-700 border-emerald-500/25 [.theme-dark_&]:text-emerald-300'
+  }
+  return 'bg-amber-500/15 text-amber-800 border-amber-500/25 [.theme-dark_&]:text-amber-300'
 }
 
 /**
@@ -32,7 +36,9 @@ export default function GeneratedQuestionsView({
   if (!Array.isArray(questions) || questions.length === 0) return null
 
   return (
-    <div className={`rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3 ${className}`.trim()}>
+    <div
+      className={`rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3 ${className}`.trim()}
+    >
       <button
         type="button"
         className="w-full flex items-center justify-between gap-2 text-left"
@@ -42,7 +48,7 @@ export default function GeneratedQuestionsView({
         <span className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider">
           {t('generation.view.heading')} · {t('generation.view.count', { count: questions.length })}
         </span>
-        <span className="text-xs text-violet-300 shrink-0">
+        <span className="text-xs text-primary shrink-0">
           {open ? t('generation.view.hide') : t('generation.view.show')}
         </span>
       </button>
@@ -53,7 +59,10 @@ export default function GeneratedQuestionsView({
             const isMcq = Array.isArray(q.options) && q.options.length > 0
             const diffKey = DIFFICULTY_KEYS[q.difficulty]
             return (
-              <li key={q.id || i} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+              <li
+                key={q.id || i}
+                className="rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 p-3"
+              >
                 <div className="flex items-start gap-2">
                   <span className="shrink-0 w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold inline-flex items-center justify-center">
                     {i + 1}
@@ -70,7 +79,7 @@ export default function GeneratedQuestionsView({
                         </span>
                       ) : null}
                       {isMcq ? (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-white/10 text-token-textMuted">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[color:var(--border-subtle)] text-token-textMuted">
                           {t('generation.view.mcq')}
                         </span>
                       ) : null}
@@ -87,8 +96,8 @@ export default function GeneratedQuestionsView({
                               key={`${q.id || i}-o-${oi}`}
                               className={`text-sm rounded-lg border px-3 py-1.5 break-words ${
                                 correct
-                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                  : 'border-white/10 bg-white/[0.02] text-token-textMuted'
+                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 [.theme-dark_&]:text-emerald-200'
+                                  : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40 text-token-textMuted'
                               }`}
                             >
                               <span className="font-semibold mr-1.5">{String.fromCharCode(65 + oi)}.</span>
@@ -102,18 +111,22 @@ export default function GeneratedQuestionsView({
                       </ul>
                     ) : showCorrectAnswers && q.correctAnswer ? (
                       <div className="mt-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300/80 mb-1">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 [.theme-dark_&]:text-emerald-300/80 mb-1">
                           {t('generation.view.sampleAnswer')}
                         </div>
-                        <p className="text-sm text-emerald-100 whitespace-pre-wrap break-words">{q.correctAnswer}</p>
+                        <p className="text-sm text-emerald-800 [.theme-dark_&]:text-emerald-100 whitespace-pre-wrap break-words">
+                          {q.correctAnswer}
+                        </p>
                       </div>
                     ) : null}
                     {showCorrectAnswers && q.explanation ? (
                       <div className="mt-2 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-300/80 mb-1">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 [.theme-dark_&]:text-indigo-300/80 mb-1">
                           {t('generation.view.explanation')}
                         </div>
-                        <p className="text-sm text-indigo-100 whitespace-pre-wrap break-words">{q.explanation}</p>
+                        <p className="text-sm text-indigo-900 [.theme-dark_&]:text-indigo-100 whitespace-pre-wrap break-words">
+                          {q.explanation}
+                        </p>
                       </div>
                     ) : null}
                   </div>

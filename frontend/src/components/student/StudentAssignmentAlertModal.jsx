@@ -121,7 +121,7 @@ export default function StudentAssignmentAlertModal() {
   return (
     <Modal open={open} onClose={dismissSession} title={headline} size="md" zIndex={10200}>
       <div className="space-y-4 -mt-2">
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-token-textMuted">
           Müəlliminiz ev tapşırığı göndərib. Aşağıdakı mesajları oxuyub Tapşırıqlarım bölməsinə keçə bilərsiniz.
         </p>
         <ul className="space-y-3 max-h-[min(50vh,20rem)] overflow-y-auto pr-1">
@@ -130,22 +130,22 @@ export default function StudentAssignmentAlertModal() {
             return (
               <li
                 key={n.id}
-                className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-4 text-left"
+                className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-4 text-left"
               >
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <span className="text-lg" aria-hidden>
                     📋
                   </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-violet-200">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-primary">
                     {typeLabel(n.type)}
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-white break-words">{n.title || 'Tapşırıq'}</p>
+                <p className="text-sm font-semibold text-token-textMain break-words">{n.title || 'Tapşırıq'}</p>
                 {n.body ? (
-                  <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap break-words">{n.body}</p>
+                  <p className="text-sm text-token-textMuted mt-2 whitespace-pre-wrap break-words">{n.body}</p>
                 ) : null}
                 {meta.instructor_name ? (
-                  <p className="text-xs text-gray-500 mt-2">Müəllim: {meta.instructor_name}</p>
+                  <p className="text-xs text-token-textMuted mt-2">Müəllim: {meta.instructor_name}</p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button size="sm" variant="secondary" onClick={() => void markRead(n.id)}>
@@ -156,7 +156,7 @@ export default function StudentAssignmentAlertModal() {
             )
           })}
         </ul>
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-white/10">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-[color:var(--border-subtle)]">
           <Button variant="secondary" onClick={dismissSession}>
             Bağla
           </Button>

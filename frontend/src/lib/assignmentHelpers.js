@@ -14,11 +14,20 @@ export function assignmentStatusLabel(status, displayStatus) {
 
 export function assignmentStatusClass(status, displayStatus) {
   const key = displayStatus || status
-  if (key === 'reviewed') return 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200'
-  if (key === 'submitted' || key === 'late') return 'bg-blue-500/15 border-blue-400/35 text-blue-200'
-  if (key === 'late_rejected') return 'bg-red-500/15 border-red-400/35 text-red-200'
-  if (key === 'overdue') return 'bg-amber-500/15 border-amber-400/35 text-amber-100'
-  return 'bg-indigo-500/15 border-indigo-400/35 text-indigo-200'
+  // Light-mode text uses darker shades; dark theme overrides via [.theme-dark_&]
+  if (key === 'reviewed') {
+    return 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 [.theme-dark_&]:text-emerald-200 [.theme-dark_&]:border-emerald-400/40'
+  }
+  if (key === 'submitted' || key === 'late') {
+    return 'bg-blue-500/15 border-blue-500/30 text-blue-700 [.theme-dark_&]:text-blue-200 [.theme-dark_&]:border-blue-400/35'
+  }
+  if (key === 'late_rejected') {
+    return 'bg-red-500/15 border-red-500/30 text-red-700 [.theme-dark_&]:text-red-200 [.theme-dark_&]:border-red-400/35'
+  }
+  if (key === 'overdue') {
+    return 'bg-amber-500/15 border-amber-500/30 text-amber-800 [.theme-dark_&]:text-amber-100 [.theme-dark_&]:border-amber-400/35'
+  }
+  return 'bg-indigo-500/15 border-indigo-500/30 text-indigo-700 [.theme-dark_&]:text-indigo-200 [.theme-dark_&]:border-indigo-400/35'
 }
 
 export function filterTasksByTab(tasks, tab) {

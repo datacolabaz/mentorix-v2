@@ -45,14 +45,20 @@ function fmtDue(d) {
 function renderPreview(url) {
   const s = String(url || '').toLowerCase()
   if (s.endsWith('.pdf')) {
-    return <iframe title="pdf" src={url} className="w-full h-[min(40vh,360px)] rounded-xl border border-indigo-500/15" />
+    return (
+      <iframe
+        title="pdf"
+        src={url}
+        className="w-full h-[min(40vh,360px)] rounded-xl border border-[color:var(--border-subtle)]"
+      />
+    )
   }
   if (s.endsWith('.png') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.webp') || s.endsWith('.gif')) {
     return (
       <img
         src={url}
         alt="preview"
-        className="w-full max-h-[min(40vh,360px)] object-contain rounded-xl border border-indigo-500/15 bg-black/20"
+        className="w-full max-h-[min(40vh,360px)] object-contain rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/60"
       />
     )
   }
@@ -361,26 +367,26 @@ export default function StudentAssignments() {
       </div>
 
       {err && (
-        <Card className="p-4 border border-red-500/30 bg-red-500/10 text-red-200 mb-4">
+        <Card className="p-4 border border-red-500/30 bg-red-500/10 text-red-700 [.theme-dark_&]:text-red-200 mb-4">
           {err}
         </Card>
       )}
 
       {newTaskCount > 0 && (
-        <Card className="p-4 mb-4 border border-violet-500/35 bg-gradient-to-r from-violet-500/15 to-indigo-500/10">
+        <Card className="p-4 mb-4 border border-primary/25 bg-primary/5">
           <div className="flex flex-wrap items-start gap-3">
             <span className="text-2xl" aria-hidden>
               📋
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-violet-100">
+              <p className="text-sm font-semibold text-token-textMain">
                 {newTaskCount === 1 ? 'Yeni tapşırıq' : `${newTaskCount} yeni tapşırıq`}
               </p>
-              <p className="text-xs text-gray-300 mt-1">
+              <p className="text-xs text-token-textMuted mt-1">
                 Bu qrupda gözləyən tapşırıqlar var — aşağıdakı siyahıdan açın və təslim edin.
               </p>
             </div>
-            <span className="shrink-0 text-xs font-bold tabular-nums px-2.5 py-1 rounded-full bg-violet-500 text-white">
+            <span className="shrink-0 text-xs font-bold tabular-nums px-2.5 py-1 rounded-full bg-primary text-white">
               {newTaskCount}
             </span>
           </div>
@@ -399,8 +405,8 @@ export default function StudentAssignments() {
             onClick={() => setTab(x.id)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
               tab === x.id
-                ? 'bg-indigo-600/45 border-indigo-400/55 text-white'
-                : 'border-indigo-500/20 text-gray-500'
+                ? 'bg-primary/15 border-primary/40 text-token-textMain'
+                : 'border-[color:var(--border-subtle)] text-token-textMuted hover:border-primary/25'
             }`}
           >
             {x.label}
@@ -429,7 +435,7 @@ export default function StudentAssignments() {
                 className={[
                   'p-5 border hover:border-primary/20',
                   isNew
-                    ? 'border-violet-500/40 ring-1 ring-violet-400/25 bg-violet-500/5'
+                    ? 'border-primary/35 ring-1 ring-primary/20 bg-primary/5'
                     : 'border-[color:var(--border-subtle)]',
                 ].join(' ')}
               >
@@ -438,13 +444,13 @@ export default function StudentAssignments() {
                     <p className="text-token-textMain font-semibold break-words flex flex-wrap items-center gap-2">
                       {t.title}
                       {isNew ? (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-violet-200 bg-violet-500/30 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/15 px-2 py-0.5 rounded-full">
                           Yeni
                         </span>
                       ) : null}
                     </p>
                     {t.topic ? (
-                      <p className="text-sm text-indigo-200/90 mt-1 break-words">Mövzu: {t.topic}</p>
+                      <p className="text-sm text-token-textMuted mt-1 break-words">Mövzu: {t.topic}</p>
                     ) : null}
                     <p className="text-xs text-token-textMuted mt-1">
                       Müəllim: <span className="text-token-textMain">{t.instructor_name}</span>
@@ -526,33 +532,41 @@ export default function StudentAssignments() {
         }
       >
         {detailLoading ? (
-          <div className="min-h-[min(60vh,520px)] flex items-center justify-center text-sm text-gray-500">
+          <div className="min-h-[min(60vh,520px)] flex items-center justify-center text-sm text-token-textMuted">
             Yüklənir…
           </div>
         ) : detailErr ? (
-          <p className="text-sm text-amber-200/90">{detailErr}</p>
+          <p className="text-sm text-amber-700 [.theme-dark_&]:text-amber-200/90">{detailErr}</p>
         ) : detail ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/50 p-3">
-              <p className="text-sm text-white font-semibold break-words">{detail.title}</p>
-              {detail.topic ? <p className="text-sm text-indigo-200/90 mt-1">Mövzu: {detail.topic}</p> : null}
+            <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
+              <p className="text-sm text-token-textMain font-semibold break-words">{detail.title}</p>
+              {detail.topic ? (
+                <p className="text-sm text-token-textMuted mt-1">Mövzu: {detail.topic}</p>
+              ) : null}
               {detail.question_file_url ? (
                 <div className="mt-2">
-                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tapşırıq faylı</p>
+                  <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider">
+                    Tapşırıq faylı
+                  </p>
                   <a
-                    className="inline-flex items-center gap-2 mt-1 text-sm font-semibold text-blue-300 hover:text-blue-200"
+                    className="inline-flex items-center gap-2 mt-1 text-sm font-semibold text-primary hover:opacity-90"
                     href={assignmentFileOpenUrl(detail.question_file_url)}
                     target="_blank"
                     rel="noreferrer"
                   >
                     📎 {assignmentFileLabel(detail.question_file_url)}
                   </a>
-                  <p className="text-[11px] text-gray-500 mt-1">Yeni pəncərədə açılır və ya yüklənir (Word/PDF).</p>
+                  <p className="text-[11px] text-token-textMuted mt-1">
+                    Yeni pəncərədə açılır və ya yüklənir (Word/PDF).
+                  </p>
                 </div>
               ) : null}
               {assignmentMaterials.length > 0 ? (
                 <div className="mt-3 space-y-2">
-                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Əlavə materiallar</p>
+                  <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider">
+                    Əlavə materiallar
+                  </p>
                   <div className="flex flex-col gap-2">
                     {assignmentMaterials.map((m) => (
                       <a
@@ -560,11 +574,11 @@ export default function StudentAssignments() {
                         href={materialFileOpenUrl(m.file_url)}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2 text-sm text-violet-200 hover:bg-violet-500/10"
+                        className="flex items-center gap-2 rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard/60 px-3 py-2 text-sm text-token-textMain hover:border-primary/30"
                       >
                         <span>📎</span>
                         <span className="flex-1 truncate font-medium">{m.title}</span>
-                        <span className="text-[10px] text-gray-500 shrink-0">
+                        <span className="text-[10px] text-token-textMuted shrink-0">
                           {materialFileKind(m.file_type, m.file_url)} · {formatMaterialsBytes(m.file_size)}
                         </span>
                       </a>
@@ -572,48 +586,61 @@ export default function StudentAssignments() {
                   </div>
                 </div>
               ) : null}
-              <p className="text-xs text-gray-500 mt-1">
-                Müəllim: <span className="text-gray-300">{detail.instructor_name}</span>
+              <p className="text-xs text-token-textMuted mt-1">
+                Müəllim: <span className="text-token-textMain">{detail.instructor_name}</span>
                 {detail.assignment_created_at ? (
                   <>
                     {' '}
-                    · Yaradılıb: <span className="text-gray-300 font-mono">{fmtAzBakuField(detail, 'assignment_created_at')}</span>
+                    · Yaradılıb:{' '}
+                    <span className="text-token-textMain font-mono">
+                      {fmtAzBakuField(detail, 'assignment_created_at')}
+                    </span>
                   </>
                 ) : null}
                 {detail.due_date ? (
                   <>
                     {' '}
-                    · Son tarix: <span className="text-gray-300 font-mono">{fmtDue(detail.due_date)}</span>
+                    · Son tarix: <span className="text-token-textMain font-mono">{fmtDue(detail.due_date)}</span>
                   </>
                 ) : null}
                 {detail.submitted_at ? (
                   <>
                     {' '}
-                    · Təslim: <span className="text-gray-300 font-mono">{fmtAzBakuField(detail, 'submitted_at')}</span>
+                    · Təslim:{' '}
+                    <span className="text-token-textMain font-mono">
+                      {fmtAzBakuField(detail, 'submitted_at')}
+                    </span>
                   </>
                 ) : null}
                 {detail.reviewed_at ? (
                   <>
                     {' '}
-                    · Yoxlama: <span className="text-gray-300 font-mono">{fmtAzBakuField(detail, 'reviewed_at')}</span>
+                    · Yoxlama:{' '}
+                    <span className="text-token-textMain font-mono">
+                      {fmtAzBakuField(detail, 'reviewed_at')}
+                    </span>
                   </>
                 ) : null}
               </p>
               {detail.score != null ? (
-                <p className="text-sm text-emerald-200/95 mt-2 font-semibold">
+                <p className="text-sm text-emerald-700 [.theme-dark_&]:text-emerald-200/95 mt-2 font-semibold">
                   Bal: {detail.score}
                   {detail.max_score != null ? ` / ${detail.max_score}` : ''}
                 </p>
               ) : null}
               {detail.feedback ? (
-                <div className="mt-2 text-sm text-gray-200 whitespace-pre-wrap rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <span className="text-xs font-semibold text-emerald-300/90 uppercase">Müəllim rəyi</span>
+                <div className="mt-2 text-sm text-token-textMain whitespace-pre-wrap rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3">
+                  <span className="text-xs font-semibold text-emerald-700 [.theme-dark_&]:text-emerald-300/90 uppercase">
+                    Müəllim rəyi
+                  </span>
                   <div className="mt-1">{detail.feedback}</div>
                 </div>
               ) : null}
               {detail.description ? (
-                <div className="mt-3 text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Müəllim qeydi</span>
+                <div className="mt-3 text-sm text-token-textMain whitespace-pre-wrap leading-relaxed">
+                  <span className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">
+                    Müəllim qeydi
+                  </span>
                   <div className="mt-1">{detail.description}</div>
                 </div>
               ) : null}
@@ -624,19 +651,21 @@ export default function StudentAssignments() {
             ) : null}
 
             {detail.question_file_url && isAssignmentPreviewable(detail.question_file_url) && (
-              <div className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3">
+              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3">
                 <button
                   type="button"
                   className="w-full flex items-center justify-between gap-2 text-left"
                   onClick={() => setPreviewOpen((o) => !o)}
                 >
-                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                  <p className="text-[10px] font-semibold text-token-textMuted uppercase tracking-wider">
                     Tapşırıq faylı — ön baxış
                   </p>
-                  <span className="text-xs text-violet-300 shrink-0">{previewOpen ? 'Gizlət ▲' : 'Göstər ▼'}</span>
+                  <span className="text-xs text-primary shrink-0">
+                    {previewOpen ? 'Gizlət ▲' : 'Göstər ▼'}
+                  </span>
                 </button>
                 {previewOpen ? (
-                  <div className="mt-2 max-h-[45vh] overflow-auto rounded-lg border border-indigo-500/10">
+                  <div className="mt-2 max-h-[45vh] overflow-auto rounded-lg border border-[color:var(--border-subtle)]">
                     {renderPreview(assignmentFileOpenUrl(detail.question_file_url))}
                   </div>
                 ) : null}
@@ -644,11 +673,15 @@ export default function StudentAssignments() {
             )}
 
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cavab</p>
-              <p className="text-[11px] text-gray-500 mb-2">
+              <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">
+                Cavab
+              </p>
+              <p className="text-[11px] text-token-textMuted mb-2">
                 Mətn yazın və ya aşağıdan fayl yükləyin — hər ikisi də qəbul edilir.
               </p>
-              <div className={`assignment-answer-editor rounded-xl overflow-hidden border border-indigo-500/20 ${locked ? 'opacity-95 pointer-events-none' : ''}`}>
+              <div
+                className={`assignment-answer-editor rounded-xl overflow-hidden border border-[color:var(--border-subtle)] ${locked ? 'opacity-95 pointer-events-none' : ''}`}
+              >
                 <ErrorBoundary title="Cavab redaktoru açılmadı">
                   <AssignmentAnswerEditor
                     value={editorHtml}
@@ -657,29 +690,15 @@ export default function StudentAssignments() {
                   />
                 </ErrorBoundary>
               </div>
-              <style>{`
-                .assignment-answer-editor .ql-toolbar {
-                  border-color: rgba(99, 102, 241, 0.25);
-                  background: rgba(15, 12, 41, 0.6);
-                }
-                .assignment-answer-editor .ql-container {
-                  border-color: rgba(99, 102, 241, 0.25);
-                  background: rgba(19, 17, 46, 0.85);
-                  min-height: 280px;
-                  font-size: 15px;
-                }
-                .assignment-answer-editor .ql-editor {
-                  min-height: 240px;
-                  color: #f3f4f6;
-                }
-              `}</style>
               {locked ? (
-                <p className="text-xs text-amber-200/90 mt-2">Bu tapşırıq təslim edilib — redaktə bağlanıb.</p>
+                <p className="text-xs text-amber-700 [.theme-dark_&]:text-amber-200/90 mt-2">
+                  Bu tapşırıq təslim edilib — redaktə bağlanıb.
+                </p>
               ) : null}
             </div>
 
             <div
-              className="rounded-xl border border-indigo-500/15 bg-[#0f0c29]/40 p-3"
+              className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-3"
               onDragOver={(e) => {
                 if (locked) return
                 e.preventDefault()
@@ -691,9 +710,9 @@ export default function StudentAssignments() {
               }}
             >
               <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fayllar</p>
+                <p className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">Fayllar</p>
                 {!locked && (
-                  <label className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer">
+                  <label className="text-xs font-semibold text-primary hover:opacity-90 cursor-pointer">
                     + Yüklə (PDF, Word, şəkil, ZIP)
                     <input
                       type="file"
@@ -706,18 +725,18 @@ export default function StudentAssignments() {
                 )}
               </div>
               {!locked && (
-                <p className="text-[11px] text-gray-500 mb-2">
+                <p className="text-[11px] text-token-textMuted mb-2">
                   Buraya sürüşdürüb-buraxın (drag & drop) və ya yuxarıdan seçin.
                 </p>
               )}
               {!attachments.length ? (
-                <p className="text-sm text-gray-500">Fayl yoxdur.</p>
+                <p className="text-sm text-token-textMuted">Fayl yoxdur.</p>
               ) : (
                 <ul className="space-y-2">
                   {attachments.map((u) => (
                     <li key={u} className="flex items-center justify-between gap-2">
                       <a
-                        className="text-sm text-blue-300 hover:text-blue-200 break-all"
+                        className="text-sm text-primary hover:opacity-90 break-all"
                         href={assignmentFileOpenUrl(u)}
                         target="_blank"
                         rel="noreferrer"
@@ -727,7 +746,7 @@ export default function StudentAssignments() {
                       {!locked && (
                         <button
                           type="button"
-                          className="text-xs font-semibold text-red-300 hover:text-red-200 shrink-0"
+                          className="text-xs font-semibold text-red-600 [.theme-dark_&]:text-red-300 hover:opacity-90 shrink-0"
                           onClick={() => removeAttachment(u)}
                         >
                           Sil

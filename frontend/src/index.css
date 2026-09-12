@@ -709,3 +709,49 @@ input.mx-auth-tel-input::placeholder {
   height: 100% !important;
   min-height: 52px !important;
 }
+
+/* Student assignment answer editor (Quill) — theme tokens, not hardcoded dark panels */
+.assignment-answer-editor .ql-toolbar.ql-snow {
+  border-color: var(--border-subtle);
+  background: rgb(var(--surface-card));
+}
+.assignment-answer-editor .ql-container.ql-snow {
+  border-color: var(--border-subtle);
+  background: rgb(var(--surface-card));
+  min-height: 280px;
+  font-size: 15px;
+}
+.assignment-answer-editor .ql-editor {
+  min-height: 240px;
+  color: rgb(var(--text-main));
+}
+.assignment-answer-editor .ql-editor.ql-blank::before {
+  color: rgb(var(--text-muted));
+  font-style: normal;
+}
+.assignment-answer-editor .ql-snow .ql-stroke {
+  stroke: rgb(var(--text-muted));
+}
+.assignment-answer-editor .ql-snow .ql-fill {
+  fill: rgb(var(--text-muted));
+}
+.assignment-answer-editor .ql-snow .ql-picker {
+  color: rgb(var(--text-main));
+}
+.assignment-answer-editor .ql-snow .ql-picker-options {
+  background: rgb(var(--surface-card));
+  border-color: var(--border-subtle);
+  color: rgb(var(--text-main));
+}
+.assignment-answer-editor .ql-snow.ql-toolbar button:hover .ql-stroke,
+.assignment-answer-editor .ql-snow .ql-toolbar button:hover .ql-stroke,
+.assignment-answer-editor .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.assignment-answer-editor .ql-snow .ql-toolbar button.ql-active .ql-stroke {
+  stroke: rgb(var(--text-main));
+}
+.assignment-answer-editor .ql-snow.ql-toolbar button:hover .ql-fill,
+.assignment-answer-editor .ql-snow .ql-toolbar button:hover .ql-fill,
+.assignment-answer-editor .ql-snow.ql-toolbar button.ql-active .ql-fill,
+.assignment-answer-editor .ql-snow .ql-toolbar button.ql-active .ql-fill {
+  fill: rgb(var(--text-main));
+}

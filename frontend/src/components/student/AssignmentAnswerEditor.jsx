@@ -46,7 +46,7 @@ class QuillErrorBoundary extends Component {
     if (this.state.failed) {
       return (
         <textarea
-          className="w-full min-h-[280px] rounded-xl border border-indigo-500/20 bg-[#13112e] px-4 py-3 text-sm text-gray-100 outline-none focus:border-blue-500 resize-y"
+          className="w-full min-h-[280px] rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-4 py-3 text-sm text-token-textMain outline-none focus:border-primary/40 resize-y placeholder:text-token-textMuted"
           value={this.props.value || ''}
           onChange={(e) => this.props.onChange?.(e.target.value)}
           readOnly={this.props.readOnly}
