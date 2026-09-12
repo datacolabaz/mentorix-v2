@@ -293,7 +293,13 @@ const getTeaching = async (req, res) => {
     const teachingSubjects = [...byId.values()]
       .filter((s) => s && !s.is_system)
       .map((s) => {
-        const groups = (s.groups || []).filter((g) => g && !g.is_system);
+        // Keep CRM groups even if is_system is stale; drop only true participant cohorts.
+        const groups = (s.groups || []).filter((g) => {
+          if (!g) return false;
+          if (!g.is_system) return true;
+          const kind = String(g.system_kind || '');
+          return kind !== 'exam_participants' && kind !== 'assignment_participants';
+        });
         const nameSet = new Set();
         for (const g of groups) {
           for (const n of g.student_names || []) {

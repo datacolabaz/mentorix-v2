@@ -9,8 +9,20 @@ const SYSTEM_GROUP_IMMUTABLE_MSG =
 const SYSTEM_SUBJECT_IMMUTABLE_MSG =
   'Sistem iştirakçı sahəsi dəyişdirilə bilməz.';
 
-/** SQL: yalnız real tədris qrupları (sistem iştirakçı qrupları istisna) */
-const SQL_WHERE_TEACHING_GROUP_ONLY = `COALESCE(ig.is_system, FALSE) = FALSE`;
+/**
+ * SQL: real CRM tədris qrupları.
+ * Yalnız "Link iştirakçıları" / exam|assignment participant cohort-ları istisna edir.
+ * Çılpaq `is_system=TRUE` (system_kind və sistem sahəsi olmadan) tədris qrupunu
+ * gizlətməsin — əks halda səhv flaqlanmış CRM qrupları dropdown-dan itir.
+ * Alias tələbləri: `ig` = instructor_groups, `s` = instructor_subjects (LEFT JOIN).
+ */
+const SQL_WHERE_TEACHING_GROUP_ONLY = `NOT (
+  COALESCE(ig.is_system, FALSE) = TRUE
+  AND (
+    ig.system_kind IN ('exam_participants', 'assignment_participants')
+    OR COALESCE(s.is_system, FALSE) = TRUE
+  )
+)`;
 
 /** SQL: CRM ödəniş/bildirişlərə aid OLMAYAN enrollment-lar */
 const SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS = `

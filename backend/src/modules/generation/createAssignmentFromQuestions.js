@@ -92,20 +92,34 @@ async function resolvePublishTeachingGroupId(groupId, instructorId, client) {
   const trimmed = groupId != null ? String(groupId).trim() : '';
   if (!trimmed) return null;
 
+  const instructorIdNorm = String(instructorId || '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, '');
   const { rows } = await client.query(
-    `SELECT ig.id, COALESCE(ig.is_system, FALSE) AS is_system
+    `SELECT ig.id,
+            COALESCE(ig.is_system, FALSE) AS is_system,
+            ig.system_kind,
+            COALESCE(s.is_system, FALSE) AS subject_is_system
      FROM instructor_groups ig
+     LEFT JOIN instructor_subjects s ON s.id = ig.subject_id
      WHERE ig.id = $1::uuid
-       AND ig.instructor_id = $2::uuid
+       AND REPLACE(LOWER(TRIM(ig.instructor_id::text)), '-', '') = $2
      LIMIT 1`,
-    [trimmed, instructorId],
+    [trimmed, instructorIdNorm],
   );
   const group = rows[0];
   if (!group) {
     throw new AssignmentPublishNotFoundError();
   }
-  // System link/exam/assignment participant cohorts are not teaching groups.
-  if (group.is_system) {
+  // Only exclude true Link-iştirakçıları / exam / assignment participant cohorts.
+  const kind = String(group.system_kind || '');
+  const isParticipantCohort =
+    group.is_system &&
+    (kind === 'exam_participants' ||
+      kind === 'assignment_participants' ||
+      group.subject_is_system);
+  if (isParticipantCohort) {
     throw new AssignmentPublishInvalidGroupError();
   }
   return group.id;
