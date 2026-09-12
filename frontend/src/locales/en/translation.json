@@ -1941,6 +1941,7 @@
     "toasts": {
       "questionUpdated": "Question updated.",
       "published": "Assignment published successfully.",
+      "publishedWithLink": "Assignment published. Student share link copied to clipboard.",
       "allRegenerated": "All questions were regenerated."
     },
     "errors": {
@@ -2016,6 +2017,7 @@
       "groupSelect": "Select a group",
       "groupLoading": "Loading…",
       "noGroups": "You have no active groups. Create a group first.",
+      "createGroup": "Create a group",
       "taskTitle": "Assignment title",
       "taskTitlePh": "e.g. Trigonometry — short quiz",
       "dueDate": "Due date",

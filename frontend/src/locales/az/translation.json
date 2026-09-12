@@ -1941,6 +1941,7 @@
     "toasts": {
       "questionUpdated": "Sual yeniləndi.",
       "published": "Tapşırıq uğurla dərc edildi.",
+      "publishedWithLink": "Tapşırıq dərc edildi. Tələbə paylaşım linki buferə kopyalandı.",
       "allRegenerated": "Bütün suallar yeniləndi."
     },
     "errors": {
@@ -2016,6 +2017,7 @@
       "groupSelect": "Qrup seçin",
       "groupLoading": "Yüklənir…",
       "noGroups": "Aktiv qrupunuz yoxdur. Əvvəlcə qrup yaradın.",
+      "createGroup": "Qrup yarat",
       "taskTitle": "Tapşırığın adı",
       "taskTitlePh": "Məs: Triqonometriya — qısa test",
       "dueDate": "Son tarix",

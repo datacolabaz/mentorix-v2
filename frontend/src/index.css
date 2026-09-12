@@ -276,9 +276,11 @@
     color: rgb(var(--text-muted)) !important;
   }
   /* Charcoal leftover panels (bg-[#1c1c1c]) stay dark — restore pale text so
-     light-theme remaps above do not leave slate-700 on charcoal (ixtisas list). */
-  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"].text-white,
-  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"] .text-white {
+     light-theme remaps above do not leave slate-700 on charcoal (ixtisas list).
+     Exclude native form controls: global field CSS forces a light surface on
+     input/select/textarea, so white fill-color would make selected values invisible. */
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"].text-white:not(input):not(textarea):not(select),
+  .theme-light .mx-app-content [class*="bg-[#1c1c1c]"] .text-white:not(input):not(textarea):not(select) {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
   }
@@ -476,13 +478,16 @@
   --border-color: rgba(15, 23, 42, 0.1);
 }
 
-/* Form controls: gündüz = ağ fon + tünd mətn (bütün panel) */
+/* Form controls: gündüz = ağ fon + tünd mətn (bütün panel).
+   Select keeps enough specificity to beat leftover charcoal `.text-white` fills. */
 .theme-light input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
 .theme-light textarea,
 .theme-light select,
 .theme-dark input:not(.mx-auth-tel-input):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
 .theme-dark textarea,
-.theme-dark select {
+.theme-dark select,
+.theme-light .mx-app-content select,
+.theme-dark .mx-app-content select {
   color: rgb(var(--field-text)) !important;
   -webkit-text-fill-color: rgb(var(--field-text)) !important;
   background-color: rgb(var(--field-bg)) !important;

@@ -19,6 +19,7 @@ import {
   generationErrorMessage,
 } from '../../lib/generationApi'
 import { normalizeGenerationLanguage } from '../../lib/generationLanguage'
+import { copyStudentTaskLink } from '../../lib/taskShare'
 
 /** Reduce a question object to the persisted shape the PATCH endpoint accepts. */
 function toPersisted(q) {
@@ -207,7 +208,19 @@ export default function AIQuestionGenerator() {
         await updateDraftContent(draftId, questions.map(toPersisted))
         const result = await publishDraft(draftId, { groupId, title, dueDate })
         setPublishOpen(false)
-        toast(t('generation.toasts.published'), 'success')
+        let linkCopied = false
+        if (result.assignmentId) {
+          try {
+            await copyStudentTaskLink(result.assignmentId)
+            linkCopied = true
+          } catch {
+            linkCopied = false
+          }
+        }
+        toast(
+          linkCopied ? t('generation.toasts.publishedWithLink') : t('generation.toasts.published'),
+          'success',
+        )
         navigate('/instructor/tasks', {
           state: { highlightAssignmentId: result.assignmentId, from: 'ai-generator' },
         })

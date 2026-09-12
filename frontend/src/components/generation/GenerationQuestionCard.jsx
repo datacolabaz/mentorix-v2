@@ -5,8 +5,7 @@ import Button from '../common/Button'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 
-const INPUT_CLS =
-  'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 disabled:opacity-50'
+const INPUT_CLS = 'mx-field py-2.5'
 const LABEL_CLS = 'text-[11px] font-semibold uppercase tracking-wide text-token-textMuted block mb-1.5'
 
 function difficultyBadgeClass(difficulty) {
@@ -278,7 +277,7 @@ export default function GenerationQuestionCard({
             <select
               value={draft.difficulty}
               onChange={(e) => setDraft((d) => ({ ...d, difficulty: e.target.value }))}
-              className={`${INPUT_CLS} cursor-pointer [color-scheme:dark]`}
+              className={`${INPUT_CLS} cursor-pointer`}
             >
               {DIFFICULTIES.map((d) => (
                 <option key={d} value={d}>

@@ -463,6 +463,7 @@ function createPublishRepositoryMock(status = 'draft') {
 describe('publishDraft', () => {
   it('creates assignment and marks draft published', async () => {
     const repo = createPublishRepositoryMock('draft');
+    const notifyCalls = [];
     const createAssignmentFromQuestions = async (input, client) => {
       assert.equal(input.instructorId, TEACHER_ID);
       assert.equal(input.groupId, GROUP_ID);
@@ -474,12 +475,16 @@ describe('publishDraft', () => {
         title: input.title,
         dueDate: input.dueDate,
         groupId: input.groupId,
+        studentIds: ['student-1'],
       };
     };
 
     const result = await publishDraft(TEACHER_ID, DRAFT_ID, PUBLISH_INPUT, {
       repository: repo,
       createAssignmentFromQuestions,
+      notifyStudentsAfterAiPublish: async (assignment, instructorId) => {
+        notifyCalls.push({ assignment, instructorId });
+      },
       client: repo,
     });
 
@@ -488,6 +493,9 @@ describe('publishDraft', () => {
     assert.equal(repo.calls.updateDraft[0].updates.publishedAssignmentId, ASSIGNMENT_ID);
     assert.equal(result.assignment.assignmentId, ASSIGNMENT_ID);
     assert.equal(result.draft.status, 'published');
+    assert.equal(notifyCalls.length, 1);
+    assert.equal(notifyCalls[0].instructorId, TEACHER_ID);
+    assert.equal(notifyCalls[0].assignment.assignmentId, ASSIGNMENT_ID);
   });
 
   it('throws GenerationForbiddenError for non-owner', async () => {
