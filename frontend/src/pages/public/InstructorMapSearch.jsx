@@ -9,6 +9,7 @@ import {
   instructorLocationBadgeI18n,
 } from '../../lib/azerbaijanRegionI18n'
 import useActiveLocale from '../../hooks/useActiveLocale'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
@@ -22,6 +23,8 @@ import useAuthStore from '../../hooks/useAuth'
 import { useToast } from '../../components/common/Toast'
 import { sortInstructorsForMapListing } from '../../lib/mapListingSort'
 
+const MOBILE_PAGE_SIZE = 4
+
 function mapFilterParams(filters) {
   const p = {}
   if (filters?.category_id) p.category_id = filters.category_id
@@ -33,6 +36,7 @@ function mapFilterParams(filters) {
 export default function InstructorMapSearch() {
   const { t } = useTranslation()
   const locale = useActiveLocale()
+  const isLgUp = useMediaQuery('(min-width: 1024px)')
   const { user, token } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
   const toast = useToast()
@@ -52,6 +56,8 @@ export default function InstructorMapSearch() {
   const [includeNeighbors, setIncludeNeighbors] = useState(false)
   const loadSeqRef = useRef(0)
   const skipReloadRef = useRef(true)
+  const [mobilePage, setMobilePage] = useState(1)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [discoverFilters, setDiscoverFilters] = useState({
     format: 'any',
     category_id: null,
@@ -214,6 +220,24 @@ export default function InstructorMapSearch() {
     return sortInstructorsForMapListing(instructors, () => 0)
   }, [instructors])
 
+  const count = instructorsSorted.length
+  const mobileTotalPages = Math.max(1, Math.ceil(count / MOBILE_PAGE_SIZE))
+  const visibleInstructors = useMemo(() => {
+    if (isLgUp) return instructorsSorted
+    const start = (mobilePage - 1) * MOBILE_PAGE_SIZE
+    return instructorsSorted.slice(start, start + MOBILE_PAGE_SIZE)
+  }, [instructorsSorted, isLgUp, mobilePage])
+
+  useEffect(() => {
+    setMobilePage(1)
+  }, [instructorsSorted, kind, discoverFilters, region, bakuDistrict, includeNeighbors])
+
+  useEffect(() => {
+    if (!isLgUp && mobilePage > mobileTotalPages) {
+      setMobilePage(mobileTotalPages)
+    }
+  }, [isLgUp, mobilePage, mobileTotalPages])
+
   const requireContactAuth = (action) => {
     if (isAuthenticated) {
       action()
@@ -230,12 +254,18 @@ export default function InstructorMapSearch() {
   const focusInstructor = useCallback(
     (p) => {
       if (!p?.id) return
+      if (!isLgUp) {
+        const idx = instructorsSorted.findIndex((x) => String(x.id) === String(p.id))
+        if (idx >= 0) {
+          setMobilePage(Math.floor(idx / MOBILE_PAGE_SIZE) + 1)
+        }
+      }
       setSelectedId(p.id)
       setHighlightId(p.id)
       window.setTimeout(() => scrollToCard(p.id), 80)
       window.setTimeout(() => setHighlightId(null), 2600)
     },
-    [scrollToCard],
+    [scrollToCard, isLgUp, instructorsSorted],
   )
 
   const onInquiryClick = (p) => {
@@ -292,7 +322,6 @@ export default function InstructorMapSearch() {
     setIncludeNeighbors(Boolean(inc))
   }, [])
 
-  const count = instructorsSorted.length
   const isEmpty = hasFetched && !loading && count === 0 && !fetchError
 
   const kindOptions = useMemo(
@@ -302,6 +331,109 @@ export default function InstructorMapSearch() {
       ['trainer', t('marketplace.kind.trainer')],
     ],
     [t],
+  )
+
+  const filtersBody = (
+    <>
+      <MarketplaceAiSearchPanel
+        userLat={null}
+        userLng={null}
+        defaultExpanded={isLgUp}
+        onApplyFilters={handleAiApplyFilters}
+        onInquiry={onInquiryClick}
+        onWhatsApp={onWhatsAppClick}
+        onFocusTutor={handleAiFocusTutor}
+        whatsappBusy={whatsappBusy}
+      />
+      {!isLgUp ? (
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen((v) => !v)}
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-slate-50"
+          >
+            <span className="text-sm font-bold text-slate-900">{t('marketplace.filters.mobileToggle')}</span>
+            <span className="text-slate-400 text-xs shrink-0">{mobileFiltersOpen ? '▲' : '▼'}</span>
+          </button>
+          {mobileFiltersOpen ? (
+            <div className="px-4 pb-4 space-y-3 border-t border-slate-200">
+              <CategoryMegaMenu
+                activeCategoryId={discoverFilters.category_id}
+                onPick={handleCategoryPick}
+              />
+              <DiscoverSearchFilters
+                value={discoverFilters}
+                onChange={(next) => {
+                  setDiscoverFilters(next)
+                }}
+              />
+              <RegionSearchFilter
+                region={region}
+                bakuDistrict={bakuDistrict}
+                includeNeighbors={includeNeighbors}
+                onChange={handleRegionChange}
+              />
+              <div className="flex flex-wrap gap-2">
+                {kindOptions.map(([k, lab]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKind(k)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                      kind === k
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    {lab}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <CategoryMegaMenu
+            activeCategoryId={discoverFilters.category_id}
+            onPick={handleCategoryPick}
+          />
+          <DiscoverSearchFilters
+            value={discoverFilters}
+            onChange={(next) => {
+              setDiscoverFilters(next)
+            }}
+          />
+          <RegionSearchFilter
+            region={region}
+            bakuDistrict={bakuDistrict}
+            includeNeighbors={includeNeighbors}
+            onChange={handleRegionChange}
+          />
+          <div className="flex flex-wrap gap-2">
+            {kindOptions.map(([k, lab]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                  kind === k
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
+                }`}
+              >
+                {lab}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {hasFetched && !fetchError && count > 0 ? (
+        <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+          {resultCountLabel(count, kind)} · {locationPhrase}
+        </p>
+      ) : null}
+    </>
   )
 
   return (
@@ -362,83 +494,78 @@ export default function InstructorMapSearch() {
             ) : null}
 
             {count > 0 ? (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                {instructorsSorted.map((p) => (
-                  <TeacherMapListCard
-                    key={String(p.id)}
-                    instructor={p}
-                    comfortable
-                    selected={selectedId === p.id}
-                    highlighted={highlightId === p.id}
-                    locationBadge={
-                      p.region_user_set
-                        ? instructorLocationBadgeI18n(p.region, p.baku_district, locale)
-                        : null
-                    }
-                    cardRef={(el) => {
-                      if (el) cardRefs.current.set(String(p.id), el)
-                      else cardRefs.current.delete(String(p.id))
-                    }}
-                    onFocus={focusInstructor}
-                    onInquiry={onInquiryClick}
-                    onWhatsApp={onWhatsAppClick}
-                    whatsappBusy={whatsappBusy}
-                  />
-                ))}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  {visibleInstructors.map((p) => (
+                    <TeacherMapListCard
+                      key={String(p.id)}
+                      instructor={p}
+                      comfortable
+                      selected={selectedId === p.id}
+                      highlighted={highlightId === p.id}
+                      locationBadge={
+                        p.region_user_set
+                          ? instructorLocationBadgeI18n(p.region, p.baku_district, locale)
+                          : null
+                      }
+                      cardRef={(el) => {
+                        if (el) cardRefs.current.set(String(p.id), el)
+                        else cardRefs.current.delete(String(p.id))
+                      }}
+                      onFocus={focusInstructor}
+                      onInquiry={onInquiryClick}
+                      onWhatsApp={onWhatsAppClick}
+                      whatsappBusy={whatsappBusy}
+                    />
+                  ))}
+                </div>
+
+                {!isLgUp && mobileTotalPages > 1 ? (
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+                    <button
+                      type="button"
+                      disabled={mobilePage <= 1}
+                      onClick={() => {
+                        setMobilePage((p) => Math.max(1, p - 1))
+                        listScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+                      }}
+                      className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {t('marketplace.pagination.prev')}
+                    </button>
+                    <p className="text-xs font-semibold text-slate-600 tabular-nums">
+                      {t('marketplace.pagination.pageOf', {
+                        page: mobilePage,
+                        total: mobileTotalPages,
+                      })}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={mobilePage >= mobileTotalPages}
+                      onClick={() => {
+                        setMobilePage((p) => Math.min(mobileTotalPages, p + 1))
+                        listScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+                      }}
+                      className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {t('marketplace.pagination.next')}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
         </main>
 
-        <aside className="order-2 flex-1 lg:flex-none lg:w-[42%] flex flex-col min-h-0 overflow-hidden bg-white border-t lg:border-t-0 border-slate-200 shrink-0">
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-            <MarketplaceAiSearchPanel
-              userLat={null}
-              userLng={null}
-              onApplyFilters={handleAiApplyFilters}
-              onInquiry={onInquiryClick}
-              onWhatsApp={onWhatsAppClick}
-              onFocusTutor={handleAiFocusTutor}
-              whatsappBusy={whatsappBusy}
-            />
-            <CategoryMegaMenu
-              activeCategoryId={discoverFilters.category_id}
-              onPick={handleCategoryPick}
-            />
-            <DiscoverSearchFilters
-              value={discoverFilters}
-              onChange={(next) => {
-                setDiscoverFilters(next)
-              }}
-            />
-            <RegionSearchFilter
-              region={region}
-              bakuDistrict={bakuDistrict}
-              includeNeighbors={includeNeighbors}
-              onChange={handleRegionChange}
-            />
-            <div className="flex flex-wrap gap-2">
-              {kindOptions.map(([k, lab]) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setKind(k)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
-                    kind === k
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                      : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
-                  }`}
-                >
-                  {lab}
-                </button>
-              ))}
-            </div>
-            {hasFetched && !fetchError && count > 0 ? (
-              <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200">
-                {resultCountLabel(count, kind)} · {locationPhrase}
-              </p>
-            ) : null}
-          </div>
+        <aside
+          className={[
+            'order-2 flex flex-col min-h-0 overflow-hidden bg-white border-t lg:border-t-0 border-slate-200 shrink-0',
+            'lg:flex-none lg:w-[42%]',
+            // Mobile: content-sized bottom panel (not half the viewport) so cards stay visible
+            isLgUp ? '' : mobileFiltersOpen ? 'max-h-[min(48vh,26rem)]' : 'max-h-[min(38vh,18rem)]',
+          ].join(' ')}
+        >
+          <div className="min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 lg:flex-1">{filtersBody}</div>
         </aside>
       </div>
 

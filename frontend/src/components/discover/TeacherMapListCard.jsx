@@ -45,8 +45,8 @@ export default function TeacherMapListCard({
     <div
       ref={cardRef}
       className={[
-        'group relative w-full rounded-2xl border bg-white shadow-sm flex gap-3 items-start transition-all duration-300',
-        comfortable ? 'p-4' : 'p-3',
+        'group relative w-full max-w-full rounded-2xl border bg-white shadow-sm flex flex-col gap-3 sm:flex-row sm:items-start transition-all duration-300',
+        comfortable ? 'p-3.5 sm:p-4' : 'p-3',
         highlighted
           ? 'border-emerald-400 ring-2 ring-emerald-300/70 shadow-md'
           : selected
@@ -66,7 +66,7 @@ export default function TeacherMapListCard({
           lastActivityAt={p.last_activity_at}
         />
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <div className="min-w-0">
               {topBadge ? (
                 <span className="mb-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">
@@ -78,16 +78,18 @@ export default function TeacherMapListCard({
                 </span>
               ) : null}
               <h3
-                className={`font-display font-bold text-slate-900 truncate ${comfortable ? 'text-base' : 'text-sm'}`}
+                className={`font-display font-bold text-slate-900 break-words [overflow-wrap:anywhere] sm:truncate ${comfortable ? 'text-base' : 'text-sm'}`}
               >
                 {p.full_name}
               </h3>
-              <p className={`mt-0.5 font-semibold text-slate-600 truncate ${comfortable ? 'text-sm' : 'text-xs'}`}>
+              <p
+                className={`mt-0.5 font-semibold text-slate-600 break-words [overflow-wrap:anywhere] sm:truncate ${comfortable ? 'text-sm' : 'text-xs'}`}
+              >
                 {subjectLine || t('marketplace.card.noSubject')}
               </p>
             </div>
             {p.discover_hourly_rate != null ? (
-              <p className="shrink-0 text-right text-sm font-medium tabular-nums text-slate-700 leading-tight">
+              <p className="shrink-0 text-left sm:text-right text-sm font-medium tabular-nums text-slate-700 leading-tight">
                 {t('marketplace.card.ratePerHour', { rate: p.discover_hourly_rate })}
               </p>
             ) : null}
@@ -103,7 +105,7 @@ export default function TeacherMapListCard({
         </div>
       </button>
 
-      <div className="flex flex-col gap-1.5 shrink-0 self-center min-w-[6.5rem] sm:min-w-[7.5rem]">
+      <div className="grid grid-cols-2 gap-1.5 w-full sm:flex sm:flex-col sm:w-auto sm:shrink-0 sm:self-center sm:min-w-[7.5rem]">
         <button
           type="button"
           onClick={() => onInquiry?.(p)}

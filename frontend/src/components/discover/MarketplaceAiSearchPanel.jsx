@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
@@ -86,6 +86,7 @@ export default function MarketplaceAiSearchPanel({
   onWhatsApp,
   onFocusTutor,
   whatsappBusy,
+  defaultExpanded = true,
 }) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
@@ -93,7 +94,11 @@ export default function MarketplaceAiSearchPanel({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(Boolean(defaultExpanded))
+
+  useEffect(() => {
+    setExpanded(Boolean(defaultExpanded))
+  }, [defaultExpanded])
 
   const runSearch = async () => {
     const q = query.trim()
