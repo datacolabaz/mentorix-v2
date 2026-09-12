@@ -6,6 +6,7 @@ const {
   createAssignmentFromQuestions,
   notifyStudentsAfterAiPublish,
   AssignmentPublishNotFoundError,
+  AssignmentPublishInvalidGroupError,
 } = require('./createAssignmentFromQuestions');
 const repository = require('./generation.repository');
 
@@ -403,6 +404,7 @@ module.exports = {
   GenerationNotFoundError,
   GenerationConflictError,
   AssignmentPublishNotFoundError,
+  AssignmentPublishInvalidGroupError,
   assignQuestionIds,
   mergeRegeneratedQuestion,
   generateQuestions,

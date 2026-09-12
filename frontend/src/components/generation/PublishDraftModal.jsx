@@ -18,7 +18,7 @@ function defaultDueDate() {
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
- *   onPublish: (payload: { groupId: string, title: string, dueDate: string }) => Promise<void> | void,
+ *   onPublish: (payload: { groupId: string | null, title: string, dueDate: string }) => Promise<void> | void,
  *   groups: Array<{ id: string, name: string, subject_name?: string }>,
  *   groupsLoading?: boolean,
  *   defaultTitle?: string,
@@ -46,26 +46,33 @@ export default function PublishDraftModal({
     if (open) {
       setTitle(defaultTitle || '')
       setDueDate(defaultDueDate())
-      setGroupId((prev) => prev || (groups.length === 1 ? groups[0].id : ''))
+      // Only auto-select when there is exactly one real teaching group.
+      setGroupId((prev) => {
+        if (prev && groups.some((g) => g.id === prev)) return prev
+        return groups.length === 1 ? groups[0].id : ''
+      })
       setAttempted(false)
     }
   }, [open, defaultTitle, groups])
 
   const errors = useMemo(() => {
     const e = {}
-    if (!groupId) e.groupId = 'generation.publishModal.errGroup'
     if (!String(title).trim()) e.title = 'generation.publishModal.errTitle'
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) e.dueDate = 'generation.publishModal.errDue'
     return e
-  }, [groupId, title, dueDate])
+  }, [title, dueDate])
 
   const valid = Object.keys(errors).length === 0
   const noGroups = !groupsLoading && groups.length === 0
 
   const submit = () => {
     setAttempted(true)
-    if (!valid || noGroups) return
-    void onPublish({ groupId, title: String(title).trim(), dueDate })
+    if (!valid) return
+    void onPublish({
+      groupId: groupId || null,
+      title: String(title).trim(),
+      dueDate,
+    })
   }
 
   return (
@@ -79,7 +86,7 @@ export default function PublishDraftModal({
           <Button type="button" variant="ghost" onClick={onClose} disabled={publishing}>
             {t('generation.publishModal.cancel')}
           </Button>
-          <Button type="button" onClick={submit} loading={publishing} disabled={publishing || noGroups}>
+          <Button type="button" onClick={submit} loading={publishing} disabled={publishing}>
             {t('generation.publishModal.publish')}
           </Button>
         </div>
@@ -87,7 +94,12 @@ export default function PublishDraftModal({
     >
       <div className="space-y-4">
         <p className="text-sm text-token-textMuted">
-          {t('generation.publishModal.description', { count: questionCount })}
+          {t(
+            groupId
+              ? 'generation.publishModal.description'
+              : 'generation.publishModal.descriptionLinkOnly',
+            { count: questionCount },
+          )}
         </p>
 
         <div>
@@ -99,7 +111,11 @@ export default function PublishDraftModal({
             className={`${INPUT_CLS} cursor-pointer`}
           >
             <option value="">
-              {groupsLoading ? t('generation.publishModal.groupLoading') : t('generation.publishModal.groupSelect')}
+              {groupsLoading
+                ? t('generation.publishModal.groupLoading')
+                : noGroups
+                  ? t('generation.publishModal.groupNone')
+                  : t('generation.publishModal.groupOptional')}
             </option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
@@ -107,12 +123,9 @@ export default function PublishDraftModal({
               </option>
             ))}
           </select>
-          {attempted && errors.groupId ? (
-            <p className="text-[11px] text-red-400 mt-1">{t(errors.groupId)}</p>
-          ) : null}
           {noGroups ? (
-            <p className="text-[11px] text-amber-600 [.theme-dark_&]:text-amber-400 mt-1">
-              {t('generation.publishModal.noGroups')}{' '}
+            <p className="text-[11px] text-token-textMuted mt-1">
+              {t('generation.publishModal.noGroupsLinkHint')}{' '}
               <Link
                 to="/instructor/teaching-groups"
                 className="text-primary font-semibold underline underline-offset-2"
@@ -121,7 +134,11 @@ export default function PublishDraftModal({
                 {t('generation.publishModal.createGroup')}
               </Link>
             </p>
-          ) : null}
+          ) : (
+            <p className="text-[11px] text-token-textMuted mt-1">
+              {t('generation.publishModal.groupHint')}
+            </p>
+          )}
         </div>
 
         <div>

@@ -498,6 +498,35 @@ describe('publishDraft', () => {
     assert.equal(notifyCalls[0].assignment.assignmentId, ASSIGNMENT_ID);
   });
 
+  it('allows link-only publish when groupId is null', async () => {
+    const repo = createPublishRepositoryMock('draft');
+    const createAssignmentFromQuestions = async (input) => {
+      assert.equal(input.groupId, null);
+      return {
+        assignmentId: ASSIGNMENT_ID,
+        title: input.title,
+        dueDate: input.dueDate,
+        groupId: null,
+        studentIds: [],
+      };
+    };
+
+    const result = await publishDraft(
+      TEACHER_ID,
+      DRAFT_ID,
+      { ...PUBLISH_INPUT, groupId: null },
+      {
+        repository: repo,
+        createAssignmentFromQuestions,
+        notifyStudentsAfterAiPublish: async () => {},
+        client: repo,
+      },
+    );
+
+    assert.equal(result.assignment.groupId, null);
+    assert.equal(repo.calls.updateDraft[0].updates.groupId, null);
+  });
+
   it('throws GenerationForbiddenError for non-owner', async () => {
     const repo = createPublishRepositoryMock('draft');
 
