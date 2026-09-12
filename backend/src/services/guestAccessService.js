@@ -226,9 +226,16 @@ async function autoGrantTaskAccessForStudent(studentId, taskId) {
 
   const status = await getStudentTaskAccessStatus(studentId, taskId);
   if (status.assigned) {
+    const { rows: existingSa } = await db.query(
+      `SELECT id FROM student_assignments
+       WHERE assignment_id = $1::uuid AND student_id = $2::uuid
+       LIMIT 1`,
+      [taskId, studentId],
+    );
     return {
       already_assigned: true,
       assigned: true,
+      student_assignment_id: existingSa[0]?.id || null,
       task: status.task,
       message: 'Bu tapşırıq artıq sizə açıqdır.',
     };
@@ -237,22 +244,36 @@ async function autoGrantTaskAccessForStudent(studentId, taskId) {
   const { trackInstructorStudentLink } = require('./instructorStudentService');
   const { addStudentToAssignmentParticipantGroup } = require('./participantGroupService');
 
+  let studentAssignmentId = null;
   await db.transaction(async (client) => {
     await ensureLightInstructorEnrollment(client, task.instructor_id, studentId, 'task', {
       activate: true,
     });
     await trackInstructorStudentLink(task.instructor_id, studentId, { skipLimitCheck: true }, client);
-    await client.query(
+    const { rows: inserted } = await client.query(
       `INSERT INTO student_assignments (assignment_id, student_id, status)
        VALUES ($1::uuid, $2::uuid, 'pending')
-       ON CONFLICT (assignment_id, student_id) DO NOTHING`,
+       ON CONFLICT (assignment_id, student_id) DO NOTHING
+       RETURNING id`,
       [taskId, studentId],
     );
+    if (inserted[0]?.id) {
+      studentAssignmentId = inserted[0].id;
+    } else {
+      const { rows: existing } = await client.query(
+        `SELECT id FROM student_assignments
+         WHERE assignment_id = $1::uuid AND student_id = $2::uuid
+         LIMIT 1`,
+        [taskId, studentId],
+      );
+      studentAssignmentId = existing[0]?.id || null;
+    }
     await addStudentToAssignmentParticipantGroup(client, taskId, studentId);
   });
 
   return {
     assigned: true,
+    student_assignment_id: studentAssignmentId,
     task: {
       id: task.id,
       title: task.title,
