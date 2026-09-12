@@ -388,9 +388,8 @@ function validatePublishDraftInput(input) {
   const body = input && typeof input === 'object' ? input : {};
 
   const groupId = String(body.groupId ?? '').trim();
-  if (!groupId) {
-    errors.groupId = 'groupId mütləqdir.';
-  } else if (!isUuid(groupId)) {
+  // Optional: omit/empty → link-only assignment (same as manual task create).
+  if (groupId && !isUuid(groupId)) {
     errors.groupId = 'groupId etibarlı UUID olmalıdır.';
   }
 
@@ -426,8 +425,9 @@ function parsePublishDraftInput(input) {
   }
 
   const body = /** @type {Record<string, unknown>} */ (input);
+  const groupId = String(body.groupId ?? '').trim();
   return {
-    groupId: String(body.groupId).trim(),
+    groupId: groupId || null,
     title: String(body.title).trim(),
     dueDate: parsePublishDueDate(body.dueDate),
   };

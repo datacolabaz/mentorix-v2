@@ -8,6 +8,7 @@ const {
   resolveGroupStudentIds,
   notifyStudentsOfNewAssignment,
 } = require('../../services/assignmentHomeworkService');
+const { SYSTEM_GROUP_IMMUTABLE_MSG } = require('../../services/systemGroupGuards');
 
 /**
  * @typedef {import('./generation.types').GeneratedQuestion} GeneratedQuestion
@@ -16,7 +17,7 @@ const {
 /**
  * @typedef {Object} CreateAssignmentFromQuestionsInput
  * @property {string} instructorId
- * @property {string} groupId
+ * @property {string | null | undefined} groupId - Real teaching group, or null/omit for link-only.
  * @property {string} title
  * @property {string} dueDate - YYYY-MM-DD
  * @property {GeneratedQuestion[]} questions
@@ -37,6 +38,15 @@ class AssignmentPublishNotFoundError extends Error {
     super(message);
     this.name = 'AssignmentPublishNotFoundError';
     this.code = 'NOT_FOUND';
+  }
+}
+
+class AssignmentPublishInvalidGroupError extends Error {
+  constructor(message = SYSTEM_GROUP_IMMUTABLE_MSG) {
+    super(message);
+    this.name = 'AssignmentPublishInvalidGroupError';
+    this.code = 'SYSTEM_GROUP_IMMUTABLE';
+    this.statusCode = 400;
   }
 }
 
@@ -70,6 +80,38 @@ function mapGeneratedQuestionsToExamQuestionRows(questions) {
 }
 
 /**
+ * Resolves an optional teaching-group target. Empty/null → link-only publish.
+ * System link-participant cohorts are never valid publish targets.
+ *
+ * @param {string | null | undefined} groupId
+ * @param {string} instructorId
+ * @param {typeof db} client
+ * @returns {Promise<string | null>}
+ */
+async function resolvePublishTeachingGroupId(groupId, instructorId, client) {
+  const trimmed = groupId != null ? String(groupId).trim() : '';
+  if (!trimmed) return null;
+
+  const { rows } = await client.query(
+    `SELECT ig.id, COALESCE(ig.is_system, FALSE) AS is_system
+     FROM instructor_groups ig
+     WHERE ig.id = $1::uuid
+       AND ig.instructor_id = $2::uuid
+     LIMIT 1`,
+    [trimmed, instructorId],
+  );
+  const group = rows[0];
+  if (!group) {
+    throw new AssignmentPublishNotFoundError();
+  }
+  // System link/exam/assignment participant cohorts are not teaching groups.
+  if (group.is_system) {
+    throw new AssignmentPublishInvalidGroupError();
+  }
+  return group.id;
+}
+
+/**
  * @param {CreateAssignmentFromQuestionsInput} input
  * @param {typeof db} [client]
  * @returns {Promise<CreatedAssignmentReference>}
@@ -77,17 +119,7 @@ function mapGeneratedQuestionsToExamQuestionRows(questions) {
 async function createAssignmentFromQuestions(input, client = db) {
   const { instructorId, groupId, title, dueDate, questions, topic } = input;
 
-  const { rows: groupRows } = await client.query(
-    `SELECT id
-     FROM instructor_groups
-     WHERE id = $1::uuid
-       AND instructor_id = $2::uuid
-     LIMIT 1`,
-    [groupId, instructorId],
-  );
-  if (!groupRows[0]) {
-    throw new AssignmentPublishNotFoundError();
-  }
+  const resolvedGroupId = await resolvePublishTeachingGroupId(groupId, instructorId, client);
 
   // Interface hook for exams epic — maps rows without persisting to exam_questions yet.
   mapGeneratedQuestionsToExamQuestionRows(questions);
@@ -101,7 +133,7 @@ async function createAssignmentFromQuestions(input, client = db) {
       title,
       topic ?? null,
       dueDate,
-      groupId,
+      resolvedGroupId,
       JSON.stringify({
         source: 'ai_generation',
         questions,
@@ -119,7 +151,9 @@ async function createAssignmentFromQuestions(input, client = db) {
   } = require('../../services/participantGroupService');
   await ensureAssignmentParticipantGroup(client, instructorId, assignment.id, assignment.title);
 
-  const studentIds = await resolveGroupStudentIds(instructorId, groupId);
+  const studentIds = resolvedGroupId
+    ? await resolveGroupStudentIds(instructorId, resolvedGroupId)
+    : [];
   if (studentIds.length) {
     await client.query(
       `INSERT INTO student_assignments (assignment_id, student_id, status)
@@ -172,7 +206,9 @@ async function notifyStudentsAfterAiPublish(assignment, instructorId, database =
 
 module.exports = {
   AssignmentPublishNotFoundError,
+  AssignmentPublishInvalidGroupError,
   mapGeneratedQuestionsToExamQuestionRows,
+  resolvePublishTeachingGroupId,
   createAssignmentFromQuestions,
   notifyStudentsAfterAiPublish,
 };

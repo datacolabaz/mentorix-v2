@@ -17,6 +17,7 @@ const {
   GenerationNotFoundError,
   GenerationConflictError,
   AssignmentPublishNotFoundError,
+  AssignmentPublishInvalidGroupError,
 } = require('../modules/generation/generation.service');
 const { AIGenerationError } = require('../providers/errors');
 const { defaultClaudeProvider } = require('../providers/aiProviderService');
@@ -104,6 +105,17 @@ function mapGenerationError(err, res, correlationId) {
 
   if (err instanceof GenerationNotFoundError || err instanceof AssignmentPublishNotFoundError) {
     return res.status(404).json({
+      success: false,
+      error: {
+        code: err.code,
+        message: err.message,
+        correlationId,
+      },
+    });
+  }
+
+  if (err instanceof AssignmentPublishInvalidGroupError) {
+    return res.status(400).json({
       success: false,
       error: {
         code: err.code,

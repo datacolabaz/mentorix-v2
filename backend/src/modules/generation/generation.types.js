@@ -46,7 +46,7 @@
 /**
  * Request body for POST /api/generation/drafts/:draftId/publish (Technical Spec §5.4).
  * @typedef {Object} PublishDraftInput
- * @property {string} groupId - Target instructor_groups.id UUID.
+ * @property {string | null} groupId - Real teaching group UUID, or null for link-only publish.
  * @property {string} title - Assignment title shown to students.
  * @property {string} dueDate - Due date in YYYY-MM-DD format.
  */

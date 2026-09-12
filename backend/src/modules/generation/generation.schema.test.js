@@ -295,8 +295,14 @@ describe('validatePublishDraftInput', () => {
     assert.deepEqual(result.errors, {});
   });
 
-  it('rejects missing groupId', () => {
+  it('accepts missing groupId for link-only publish', () => {
     const result = validatePublishDraftInput({ ...VALID_PUBLISH_INPUT, groupId: '' });
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.errors, {});
+  });
+
+  it('rejects invalid groupId UUID', () => {
+    const result = validatePublishDraftInput({ ...VALID_PUBLISH_INPUT, groupId: 'not-a-uuid' });
     assert.equal(result.valid, false);
     assert.ok(result.errors.groupId);
   });
@@ -323,6 +329,14 @@ describe('parsePublishDraftInput', () => {
     assert.equal(parsed.groupId, VALID_PUBLISH_INPUT.groupId);
     assert.equal(parsed.title, 'Trimmed title');
     assert.equal(parsed.dueDate, '2026-08-15');
+  });
+
+  it('coerces empty groupId to null for link-only publish', () => {
+    const parsed = parsePublishDraftInput({
+      ...VALID_PUBLISH_INPUT,
+      groupId: '   ',
+    });
+    assert.equal(parsed.groupId, null);
   });
 });
 

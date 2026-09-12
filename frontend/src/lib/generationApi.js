@@ -77,8 +77,8 @@ export async function updateDraftContent(draftId, questions) {
 
 /**
  * @param {string} draftId
- * @param {{ groupId: string, title: string, dueDate: string }} payload
- * @returns {Promise<{ assignmentId: string, title: string, dueDate: string, groupId: string }>}
+ * @param {{ groupId?: string | null, title: string, dueDate: string }} payload
+ * @returns {Promise<{ assignmentId: string, title: string, dueDate: string, groupId: string | null }>}
  */
 export async function publishDraft(draftId, payload) {
   const res = await api.post(`/generation/drafts/${draftId}/publish`, payload)
