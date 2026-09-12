@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 
-const INPUT_CLS =
-  'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 disabled:opacity-50'
+/** Theme tokens via `.mx-field` — readable in light and dark mode. */
+const INPUT_CLS = 'mx-field py-2.5'
 const LABEL_CLS = 'text-xs font-semibold text-token-textMuted block mb-1.5'
 
 function defaultDueDate() {
@@ -59,10 +60,11 @@ export default function PublishDraftModal({
   }, [groupId, title, dueDate])
 
   const valid = Object.keys(errors).length === 0
+  const noGroups = !groupsLoading && groups.length === 0
 
   const submit = () => {
     setAttempted(true)
-    if (!valid) return
+    if (!valid || noGroups) return
     void onPublish({ groupId, title: String(title).trim(), dueDate })
   }
 
@@ -77,7 +79,7 @@ export default function PublishDraftModal({
           <Button type="button" variant="ghost" onClick={onClose} disabled={publishing}>
             {t('generation.publishModal.cancel')}
           </Button>
-          <Button type="button" onClick={submit} loading={publishing} disabled={!valid || publishing}>
+          <Button type="button" onClick={submit} loading={publishing} disabled={publishing || noGroups}>
             {t('generation.publishModal.publish')}
           </Button>
         </div>
@@ -93,8 +95,8 @@ export default function PublishDraftModal({
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
-            disabled={publishing || groupsLoading}
-            className={`${INPUT_CLS} cursor-pointer [color-scheme:dark]`}
+            disabled={publishing || groupsLoading || noGroups}
+            className={`${INPUT_CLS} cursor-pointer`}
           >
             <option value="">
               {groupsLoading ? t('generation.publishModal.groupLoading') : t('generation.publishModal.groupSelect')}
@@ -108,8 +110,17 @@ export default function PublishDraftModal({
           {attempted && errors.groupId ? (
             <p className="text-[11px] text-red-400 mt-1">{t(errors.groupId)}</p>
           ) : null}
-          {!groupsLoading && groups.length === 0 ? (
-            <p className="text-[11px] text-amber-400 mt-1">{t('generation.publishModal.noGroups')}</p>
+          {noGroups ? (
+            <p className="text-[11px] text-amber-600 [.theme-dark_&]:text-amber-400 mt-1">
+              {t('generation.publishModal.noGroups')}{' '}
+              <Link
+                to="/instructor/teaching-groups"
+                className="text-primary font-semibold underline underline-offset-2"
+                onClick={onClose}
+              >
+                {t('generation.publishModal.createGroup')}
+              </Link>
+            </p>
           ) : null}
         </div>
 
@@ -136,7 +147,7 @@ export default function PublishDraftModal({
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             disabled={publishing}
-            className={`${INPUT_CLS} block appearance-none [-webkit-appearance:none] leading-tight [color-scheme:dark]`}
+            className={`${INPUT_CLS} block appearance-none [-webkit-appearance:none] leading-tight`}
           />
           {attempted && errors.dueDate ? (
             <p className="text-[11px] text-red-400 mt-1">{t(errors.dueDate)}</p>

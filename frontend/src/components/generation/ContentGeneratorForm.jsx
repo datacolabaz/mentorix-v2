@@ -19,9 +19,9 @@ export const CONTENT_GENERATOR_DEFAULT_VALUES = {
   difficulty: 'medium',
 }
 
-const INPUT_CLS =
-  'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed'
-const SELECT_CLS = `${INPUT_CLS} cursor-pointer [color-scheme:dark]`
+/** Theme tokens via `.mx-field` — avoids light-mode white-on-white selects. */
+const INPUT_CLS = 'mx-field py-2.5'
+const SELECT_CLS = `${INPUT_CLS} cursor-pointer`
 const LABEL_CLS = 'text-xs font-semibold text-token-textMuted block mb-1.5'
 const ERROR_CLS = 'text-[11px] text-red-400 mt-1'
 

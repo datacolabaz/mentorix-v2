@@ -4,7 +4,10 @@
  */
 
 const db = require('../../utils/db');
-const { resolveGroupStudentIds } = require('../../services/assignmentHomeworkService');
+const {
+  resolveGroupStudentIds,
+  notifyStudentsOfNewAssignment,
+} = require('../../services/assignmentHomeworkService');
 
 /**
  * @typedef {import('./generation.types').GeneratedQuestion} GeneratedQuestion
@@ -26,6 +29,7 @@ const { resolveGroupStudentIds } = require('../../services/assignmentHomeworkSer
  * @property {string} title
  * @property {string | null} dueDate
  * @property {string | null} groupId
+ * @property {string[]} studentIds
  */
 
 class AssignmentPublishNotFoundError extends Error {
@@ -135,11 +139,40 @@ async function createAssignmentFromQuestions(input, client = db) {
     title: assignment.title,
     dueDate: assignment.due_date,
     groupId: assignment.group_id,
+    studentIds,
   };
+}
+
+/**
+ * Best-effort student notifications after a successful publish transaction.
+ * Kept separate so it never rolls back the assignment insert.
+ *
+ * @param {CreatedAssignmentReference} assignment
+ * @param {string} instructorId
+ * @param {typeof db} [database]
+ */
+async function notifyStudentsAfterAiPublish(assignment, instructorId, database = db) {
+  const studentIds = Array.isArray(assignment?.studentIds) ? assignment.studentIds : [];
+  if (!studentIds.length || !assignment?.assignmentId) return;
+
+  const { rows: iu } = await database.query(
+    `SELECT full_name FROM users WHERE id = $1::uuid LIMIT 1`,
+    [instructorId],
+  );
+  await notifyStudentsOfNewAssignment(
+    {
+      id: assignment.assignmentId,
+      title: assignment.title,
+      due_date: assignment.dueDate,
+    },
+    studentIds,
+    iu[0]?.full_name || '',
+  );
 }
 
 module.exports = {
   AssignmentPublishNotFoundError,
   mapGeneratedQuestionsToExamQuestionRows,
   createAssignmentFromQuestions,
+  notifyStudentsAfterAiPublish,
 };

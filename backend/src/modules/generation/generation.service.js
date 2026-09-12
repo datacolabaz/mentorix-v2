@@ -4,6 +4,7 @@ const { defaultClaudeProvider } = require('../../providers/aiProviderService');
 const { AIGenerationError } = require('../../providers/errors');
 const {
   createAssignmentFromQuestions,
+  notifyStudentsAfterAiPublish,
   AssignmentPublishNotFoundError,
 } = require('./createAssignmentFromQuestions');
 const repository = require('./generation.repository');
@@ -278,6 +279,7 @@ async function publishDraft(
   {
     repository: repo = repository,
     createAssignmentFromQuestions: createAssignment = createAssignmentFromQuestions,
+    notifyStudentsAfterAiPublish: notifyAfterPublish = notifyStudentsAfterAiPublish,
     db: database = db,
     client,
   } = {},
@@ -332,11 +334,16 @@ async function publishDraft(
     return { draft: updatedDraft, assignment };
   };
 
-  if (client) {
-    return runPublish(client);
+  const result = client ? await runPublish(client) : await database.transaction(runPublish);
+
+  // Notify after the transaction commits (or immediately when an external client is provided).
+  try {
+    await notifyAfterPublish(result.assignment, teacherId, database);
+  } catch (err) {
+    console.error('[generation publish notify]', err?.message || err);
   }
 
-  return database.transaction(runPublish);
+  return result;
 }
 
 /**
