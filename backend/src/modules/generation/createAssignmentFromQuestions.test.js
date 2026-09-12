@@ -62,8 +62,21 @@ describe('resolvePublishTeachingGroupId', () => {
     const client = {
       async query(_sql, params) {
         assert.equal(params[0], GROUP_ID);
-        assert.equal(params[1], INSTRUCTOR_ID);
-        return { rows: [{ id: GROUP_ID, is_system: false }] };
+        assert.equal(params[1], INSTRUCTOR_ID.replace(/-/g, ''));
+        return {
+          rows: [{ id: GROUP_ID, is_system: false, system_kind: null, subject_is_system: false }],
+        };
+      },
+    };
+    assert.equal(await resolvePublishTeachingGroupId(GROUP_ID, INSTRUCTOR_ID, client), GROUP_ID);
+  });
+
+  it('allows CRM group with stale is_system when not a participant cohort', async () => {
+    const client = {
+      async query() {
+        return {
+          rows: [{ id: GROUP_ID, is_system: true, system_kind: null, subject_is_system: false }],
+        };
       },
     };
     assert.equal(await resolvePublishTeachingGroupId(GROUP_ID, INSTRUCTOR_ID, client), GROUP_ID);
@@ -72,7 +85,16 @@ describe('resolvePublishTeachingGroupId', () => {
   it('rejects system link-participant cohorts', async () => {
     const client = {
       async query() {
-        return { rows: [{ id: GROUP_ID, is_system: true }] };
+        return {
+          rows: [
+            {
+              id: GROUP_ID,
+              is_system: true,
+              system_kind: 'assignment_participants',
+              subject_is_system: true,
+            },
+          ],
+        };
       },
     };
     await assert.rejects(
@@ -95,8 +117,15 @@ describe('resolvePublishTeachingGroupId', () => {
 });
 
 describe('teaching-group SQL guard used by /tasks/groups', () => {
-  it('excludes system participant cohorts via is_system', () => {
-    assert.match(SQL_WHERE_TEACHING_GROUP_ONLY, /is_system/);
-    assert.match(SQL_WHERE_TEACHING_GROUP_ONLY, /FALSE/);
+  it('excludes participant cohorts via system_kind / system subject, not bare is_system', () => {
+    assert.match(SQL_WHERE_TEACHING_GROUP_ONLY, /system_kind/);
+    assert.match(SQL_WHERE_TEACHING_GROUP_ONLY, /exam_participants/);
+    assert.match(SQL_WHERE_TEACHING_GROUP_ONLY, /assignment_participants/);
+    assert.match(SQL_WHERE_TEACHING_GROUP_ONLY, /s\.is_system/);
+    // Must NOT be the overly-aggressive bare flag check alone.
+    assert.doesNotMatch(
+      SQL_WHERE_TEACHING_GROUP_ONLY.replace(/\s+/g, ' '),
+      /^COALESCE\(ig\.is_system, FALSE\) = FALSE$/,
+    );
   });
 });

@@ -65,11 +65,11 @@ export default function PublishDraftModal({
   const valid = Object.keys(errors).length === 0
   const noGroups = !groupsLoading && groups.length === 0
 
-  const submit = () => {
+  const submit = (forceLinkOnly = false) => {
     setAttempted(true)
     if (!valid) return
     void onPublish({
-      groupId: groupId || null,
+      groupId: forceLinkOnly ? null : groupId || null,
       title: String(title).trim(),
       dueDate,
     })
@@ -82,11 +82,20 @@ export default function PublishDraftModal({
       title={t('generation.publishModal.title')}
       size="md"
       footer={
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={publishing}>
             {t('generation.publishModal.cancel')}
           </Button>
-          <Button type="button" onClick={submit} loading={publishing} disabled={publishing}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => submit(true)}
+            disabled={publishing}
+            title={t('generation.publishModal.shareLinkHint')}
+          >
+            {t('generation.publishModal.shareLink')}
+          </Button>
+          <Button type="button" onClick={() => submit(false)} loading={publishing} disabled={publishing}>
             {t('generation.publishModal.publish')}
           </Button>
         </div>
@@ -123,22 +132,18 @@ export default function PublishDraftModal({
               </option>
             ))}
           </select>
-          {noGroups ? (
-            <p className="text-[11px] text-token-textMuted mt-1">
-              {t('generation.publishModal.noGroupsLinkHint')}{' '}
-              <Link
-                to="/instructor/teaching-groups"
-                className="text-primary font-semibold underline underline-offset-2"
-                onClick={onClose}
-              >
-                {t('generation.publishModal.createGroup')}
-              </Link>
-            </p>
-          ) : (
-            <p className="text-[11px] text-token-textMuted mt-1">
-              {t('generation.publishModal.groupHint')}
-            </p>
-          )}
+          <p className="text-[11px] text-token-textMuted mt-1">
+            {noGroups
+              ? t('generation.publishModal.noGroupsLinkHint')
+              : t('generation.publishModal.groupHint')}{' '}
+            <Link
+              to="/instructor/teaching-groups"
+              className="text-primary font-medium underline underline-offset-2"
+              onClick={onClose}
+            >
+              {t('generation.publishModal.createGroupOptional')}
+            </Link>
+          </p>
         </div>
 
         <div>

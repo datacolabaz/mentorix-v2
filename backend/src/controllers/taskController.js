@@ -897,16 +897,20 @@ const serveAssignmentFile = async (req, res) => {
 
 const listInstructorGroups = async (req, res) => {
   try {
-    // Only real teaching groups — never system link/exam/assignment participant cohorts
-    // ("Link iştirakçıları"). Those are analytics audiences, not assignable CRM groups.
+    // Same instructor-id matching as /instructor/teaching (JWT UUID dash/case variants).
+    // Only real CRM teaching groups — never Link-iştirakçıları / exam / assignment cohorts.
+    const instructorIdNorm = String(req.user.id || '')
+      .trim()
+      .toLowerCase()
+      .replace(/-/g, '');
     const { rows } = await db.query(
       `SELECT ig.id, ig.name, ig.subject_id, s.name AS subject_name
        FROM instructor_groups ig
        LEFT JOIN instructor_subjects s ON s.id = ig.subject_id
-       WHERE ig.instructor_id = $1
+       WHERE REPLACE(LOWER(TRIM(ig.instructor_id::text)), '-', '') = $1
          AND ${SQL_WHERE_TEACHING_GROUP_ONLY}
        ORDER BY s.name NULLS LAST, ig.name`,
-      [req.user.id],
+      [instructorIdNorm],
     );
     res.json({ success: true, groups: rows });
   } catch (err) {

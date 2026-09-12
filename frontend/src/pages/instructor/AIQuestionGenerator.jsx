@@ -63,18 +63,55 @@ export default function AIQuestionGenerator() {
   useEffect(() => {
     let cancelled = false
     setGroupsLoading(true)
-    api
-      .get('/tasks/groups')
-      .then((d) => {
+
+    const flattenTeachingGroups = (subjects) => {
+      const out = []
+      for (const s of Array.isArray(subjects) ? subjects : []) {
+        if (!s || s.is_system) continue
+        for (const g of s.groups || []) {
+          // Include groups even if is_system is stale — /tasks/groups is authoritative,
+          // but teaching can fill gaps when UUID matching previously missed rows.
+          if (!g || !g.id) continue
+          if (g.system_kind === 'exam_participants' || g.system_kind === 'assignment_participants') {
+            continue
+          }
+          out.push({
+            id: g.id,
+            name: g.name,
+            subject_id: s.id,
+            subject_name: s.name,
+          })
+        }
+      }
+      return out
+    }
+
+    const mergeById = (primary, secondary) => {
+      const map = new Map()
+      for (const g of [...primary, ...secondary]) {
+        if (!g?.id) continue
+        if (!map.has(String(g.id))) map.set(String(g.id), g)
+      }
+      return [...map.values()]
+    }
+
+    ;(async () => {
+      try {
+        const [tasksRes, teachingRes] = await Promise.all([
+          api.get('/tasks/groups').catch(() => null),
+          api.get('/instructor/teaching').catch(() => null),
+        ])
         if (cancelled) return
-        setGroups(Array.isArray(d?.groups) ? d.groups : [])
-      })
-      .catch(() => {
+        const fromTasks = Array.isArray(tasksRes?.groups) ? tasksRes.groups : []
+        const fromTeaching = flattenTeachingGroups(teachingRes?.subjects)
+        setGroups(mergeById(fromTasks, fromTeaching))
+      } catch {
         if (!cancelled) setGroups([])
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setGroupsLoading(false)
-      })
+      }
+    })()
+
     return () => {
       cancelled = true
     }
