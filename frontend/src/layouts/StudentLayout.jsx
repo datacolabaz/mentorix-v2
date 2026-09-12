@@ -11,6 +11,10 @@ import SidebarPreferences from '../components/common/SidebarPreferences'
 import { StudentGroupProvider, useStudentGroups } from '../contexts/StudentGroupContext'
 import { useStudentAlerts } from '../hooks/useStudentAlerts'
 import { isInviteResumePath, peekReturnAfterLogin } from '../lib/inviteReturn'
+import {
+  pathForPendingStudentDeepLink,
+  peekPendingStudentDeepLink,
+} from '../lib/pendingStudentDeepLink'
 import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
 
 function NavBadge({ count }) {
@@ -97,6 +101,15 @@ function StudentLayoutInner() {
   }, [location.pathname])
 
   useEffect(() => {
+    const pendingPath = pathForPendingStudentDeepLink(peekPendingStudentDeepLink())
+    if (pendingPath) {
+      const onAssignments = location.pathname.startsWith('/student/assignments')
+      const onExams = location.pathname.startsWith('/student/exams')
+      if (!onAssignments && !onExams) {
+        navigate(pendingPath, { replace: true })
+        return
+      }
+    }
     const invite = peekReturnAfterLogin()
     if (!isInviteResumePath(invite)) return
     if (location.pathname.startsWith('/join')) return

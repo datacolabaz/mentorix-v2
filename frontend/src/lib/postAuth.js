@@ -4,6 +4,10 @@ import {
   isInviteResumePath,
   peekReturnAfterLogin,
 } from './inviteReturn'
+import {
+  pathForPendingStudentDeepLink,
+  peekPendingStudentDeepLink,
+} from './pendingStudentDeepLink'
 
 export {
   RETURN_AFTER_LOGIN_KEY,
@@ -42,6 +46,8 @@ export function resolvePostAuthPath(user, { nextQuery = '', stored = peekReturnA
   const ret = fromQuery && fromQuery !== '/login' && fromQuery !== '/register' ? fromQuery : stored
   if (isInviteResumePath(ret)) return ret
   if (userNeedsOnboarding(user)) return ONBOARDING_PATH
+  const pendingPath = pathForPendingStudentDeepLink(peekPendingStudentDeepLink())
+  if (pendingPath) return pendingPath
   if (ret && ret !== ONBOARDING_PATH) return ret
   return dashboardPathForUser(user)
 }

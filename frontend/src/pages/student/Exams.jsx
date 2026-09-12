@@ -17,6 +17,10 @@ import PhoneInput from '../../components/auth/PhoneInput'
 import GroupSwitcher from '../../components/student/GroupSwitcher'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
+import {
+  consumePendingStudentDeepLink,
+  peekPendingStudentDeepLink,
+} from '../../lib/pendingStudentDeepLink'
 
 /** API JSON: { key, text } və ya string; boş text olanda `opt.text || opt` obyekti render edirdi (React #31) */
 function optionDisplayLabel(opt) {
@@ -847,9 +851,12 @@ export default function StudentExams() {
     }
   }
 
-  /** Paylaşım linki: /student/exams?exam=uuid */
+  /** Paylaşım linki: /student/exams?exam=uuid | pending deep link after invite join */
   useEffect(() => {
-    const targetId = deepLinkExamId ? String(deepLinkExamId).trim() : ''
+    const pending = peekPendingStudentDeepLink()
+    const pendingExam =
+      pending?.kind === 'exam' && pending.examId ? String(pending.examId).trim() : ''
+    const targetId = String(deepLinkExamId || pendingExam || '').trim()
     if (!targetId || listLoading || activeExam) return
     if (deepLinkHandledRef.current === targetId) return
 
@@ -865,6 +872,7 @@ export default function StudentExams() {
             return
           }
           deepLinkHandledRef.current = targetId
+          consumePendingStudentDeepLink()
           if (d?.exam) {
             try {
               const sub = await api.post(`/exams/${encodeURIComponent(targetId)}/access-from-link`)
@@ -893,6 +901,7 @@ export default function StudentExams() {
           }
         } catch (err) {
           deepLinkHandledRef.current = targetId
+          consumePendingStudentDeepLink()
           toast(err?.message || 'Bu imtahan tapılmadı və ya sizə təyin edilməyib', 'error')
         }
         setSearchParams({}, { replace: true })
@@ -901,6 +910,7 @@ export default function StudentExams() {
     }
 
     deepLinkHandledRef.current = targetId
+    consumePendingStudentDeepLink()
     setSearchParams({}, { replace: true })
 
     const now = new Date()

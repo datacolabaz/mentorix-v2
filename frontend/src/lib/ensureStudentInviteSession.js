@@ -1,10 +1,25 @@
 import api from './api'
+import { userNeedsOnboarding } from '../constants/personas'
 
 /**
  * Invite pages (task/exam/material/join): Google/email often returns a token with
- * role=null while onboarding is incomplete. Student APIs require role=student, so
+ * role=null until onboarding is incomplete. Student APIs require role=student, so
  * finish a light student persona here before join/access-from-link.
+ *
+ * Also covers role=student with onboarding_completed=false — ProtectedRoute would
+ * otherwise bounce /student/assignments to /onboarding → home and drop the open deep link.
  */
+async function finishStudentPersona(setSession, subjectHint) {
+  const subject = String(subjectHint || '').trim() || 'Tapşırıq'
+  const done = await api.post('/auth/onboarding/persona', {
+    persona: 'student',
+    profile: { education_level: 'other', subject_interest: subject.slice(0, 120) },
+  })
+  if (!done?.token || !done?.user) return null
+  setSession(done.token, { ...done.user, needs_phone_verification: false })
+  return done.user
+}
+
 export async function ensureStudentInviteSession(
   authResult,
   { setSession, toast, subjectHint = 'Tapşırıq' } = {},
@@ -25,18 +40,13 @@ export async function ensureStudentInviteSession(
   setSession(authResult.token, { ...authResult.user, needs_phone_verification: false })
   let authUser = authResult.user
 
-  if (authUser.role !== 'student') {
-    const subject = String(subjectHint || '').trim() || 'Tapşırıq'
-    const done = await api.post('/auth/onboarding/persona', {
-      persona: 'student',
-      profile: { education_level: 'other', subject_interest: subject.slice(0, 120) },
-    })
-    if (!done?.token || !done?.user) {
-      toast?.(done?.message || 'Tələbə sessiyası tamamlanmadı', 'error')
+  if (authUser.role !== 'student' || userNeedsOnboarding(authUser)) {
+    const doneUser = await finishStudentPersona(setSession, subjectHint)
+    if (!doneUser) {
+      toast?.(authResult?.message || 'Tələbə sessiyası tamamlanmadı', 'error')
       return null
     }
-    setSession(done.token, { ...done.user, needs_phone_verification: false })
-    authUser = done.user
+    authUser = doneUser
   }
 
   return authUser
@@ -48,15 +58,8 @@ export async function completeStudentInviteOnboarding(
   { setSession, subjectHint = 'Tapşırıq' } = {},
 ) {
   if (!user?.id) return null
-  if (user.role === 'student') return user
   if (user.role && user.role !== 'student') return null
+  if (user.role === 'student' && !userNeedsOnboarding(user)) return user
 
-  const subject = String(subjectHint || '').trim() || 'Tapşırıq'
-  const done = await api.post('/auth/onboarding/persona', {
-    persona: 'student',
-    profile: { education_level: 'other', subject_interest: subject.slice(0, 120) },
-  })
-  if (!done?.token || !done?.user) return null
-  setSession(done.token, { ...done.user, needs_phone_verification: false })
-  return done.user
+  return finishStudentPersona(setSession, subjectHint)
 }

@@ -8,6 +8,7 @@ import { useToast } from '../../components/common/Toast'
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton'
 import { CERTIFIED_OG_IMAGE, setPageSeo } from '../../lib/pageSeo'
 import { rememberReturnAfterLogin, consumeReturnAfterLogin } from '../../lib/inviteReturn'
+import { rememberPendingStudentDeepLink } from '../../lib/pendingStudentDeepLink'
 import {
   completeStudentInviteOnboarding,
   ensureStudentInviteSession,
@@ -66,7 +67,6 @@ export default function ExamInvite() {
 
   useEffect(() => {
     if (!user?.id || !info?.exam) return
-    if (user.role === 'student') return
     if (user.role && user.role !== 'student') return
     if (onboardingRef.current) return
     onboardingRef.current = true
@@ -91,6 +91,7 @@ export default function ExamInvite() {
     setJoinBusy(true)
     try {
       const sub = await api.post(`/exams/${encodeURIComponent(id)}/access-from-link`, {})
+      rememberPendingStudentDeepLink({ kind: 'exam', examId: id })
       consumeReturnAfterLogin()
       toast(sub?.message || 'İmtahana daxil ola bilərsiniz', 'success')
       navigate(`/student/exams?exam=${encodeURIComponent(id)}`, { replace: true })

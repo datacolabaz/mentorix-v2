@@ -197,6 +197,8 @@ async function listActiveEnrollmentsForStudent(studentId) {
        ig.join_code,
        COALESCE(ig.is_system, FALSE) AS is_system_group,
        ig.system_kind,
+       ig.system_ref_id,
+       COALESCE(e.enrollment_source, 'manual') AS enrollment_source,
        COALESCE(NULLIF(TRIM(ist.name), ''), 'Sahəsiz') AS subject_name,
        u.full_name AS instructor_name,
        u.phone AS instructor_phone,
