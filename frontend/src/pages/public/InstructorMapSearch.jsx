@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { setPageSeo } from '../../lib/pageSeo'
@@ -11,7 +11,6 @@ import {
 import useActiveLocale from '../../hooks/useActiveLocale'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
-import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import DiscoverSearchFilters from '../../components/discover/DiscoverSearchFilters'
 import RegionSearchFilter from '../../components/discover/RegionSearchFilter'
 import CategoryMegaMenu from '../../components/discover/CategoryMegaMenu'
@@ -443,19 +442,8 @@ export default function InstructorMapSearch() {
         backTo="/"
         title={t('marketplace.title')}
         subtitle={t('marketplace.subtitle')}
-      >
-        {isAuthenticated ? null : (
-          <div className="w-full sm:w-[min(100%,18rem)]">
-            <PublicGoogleSignIn />
-          </div>
-        )}
-        <Link
-          to="/login"
-          className="flex-1 sm:flex-initial text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200 min-h-[40px] inline-flex items-center justify-center bg-white"
-        >
-          {t('marketplace.backToLogin')}
-        </Link>
-      </PublicPageTopBar>
+        compactOnMobile
+      />
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
         <main className="order-1 flex-1 flex flex-col min-h-0 lg:w-[58%] lg:border-r border-slate-200">
