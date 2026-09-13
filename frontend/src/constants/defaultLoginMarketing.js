@@ -190,7 +190,7 @@ export function defaultLoginMarketingPayload() {
       section_enabled: true,
       heading: 'Təhsil bir ekosistem kimi işləsin.',
       subtitle:
-        'Müəllim idarə etsin, tələbə öyrənsin, valideyn izləsin — əvvəl dəyəri gör, sonra 14 günlük sınaqla başla.',
+        'Müəllim idarə etsin, tələbə öyrənsin, valideyn izləsin — əvvəl dəyəri gör, sonra 21 günlük sınaqla başla.',
     },
     marketplace: {
       section_enabled: true,

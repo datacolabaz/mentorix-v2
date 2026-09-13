@@ -22,10 +22,11 @@ function liveParticipantLimitLabel(planSlug) {
   return `${max} iştirakçı`;
 }
 
+/** Live lesson COUNT is unlimited; participants + recording are plan-gated. */
 function liveMarketingLine(planSlug) {
   const max = liveLimitsForPlan(planSlug).maxParticipants;
-  if (max == null) return 'Canlı dərs — Limitsiz iştirakçı · Record: ✓ (local)';
-  return `Canlı dərs — ${max} iştirakçı · Record: ✓ (local)`;
+  const participants = max == null ? 'Limitsiz iştirakçı' : `${max} iştirakçı`;
+  return `Limitsiz canlı dərslər · ${participants}`;
 }
 
 module.exports = {

@@ -90,7 +90,7 @@ async function ensureSubscriptionRow(dbConn, userId) {
   return ins[0] || { user_id: userId, plan: 'basic', status: 'active' };
 }
 
-/** Köhnə SADƏ sətirlərində period_end NULL olanda 14 günlük sınağı DB-yə yazır. */
+/** Köhnə SADƏ sətirlərində period_end NULL olanda BASIC_TRIAL_DAYS sınağı DB-yə yazır. */
 async function backfillBasicTrialPeriodIfMissing(dbConn, userId) {
   const { rows } = await dbConn.query(
     `SELECT plan, current_period_start, current_period_end, created_at

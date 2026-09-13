@@ -1,9 +1,10 @@
-/** SADƏ (basic) paket — legacy fallback (14 gün).
- * Yeni trial müddəti: billing_settings.trial_duration_days (default 21) və ya
- * env TRIAL_DURATION_DAYS. Attribution + campaign varsa campaign.trial_days.
- * Mövcud mid-trial istifadəçilər: COALESCE(current_period_end, …) sayəsində
- * period_end dəyişmir — yalnız yeni grant-lər yeni gün sayını alır.
+/** SADƏ (basic) paket — platform default trial length for NEW grants.
+ * Also overridable by: env TRIAL_DURATION_DAYS → billing_settings.trial_duration_days
+ * → partner campaign.trial_days when attributed.
+ *
+ * Mid-trial users: existing current_period_end is kept (COALESCE / resolveBasicTrialWindow).
+ * Changing BASIC_TRIAL_DAYS only affects new trials and rows with NULL period_end.
  */
-const BASIC_TRIAL_DAYS = 14;
+const BASIC_TRIAL_DAYS = 21;
 
 module.exports = { BASIC_TRIAL_DAYS };

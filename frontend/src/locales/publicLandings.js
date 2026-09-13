@@ -67,7 +67,7 @@ function pagesAz() {
         'Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, tələbə və valideyn — hamısı bir yerdə. Pulsuz başlayın.',
       ],
       bullets: [],
-      ctaLabel: 'Pulsuz başla — 14 günlük sınaq',
+      ctaLabel: 'Pulsuz başla — 21 günlük sınaq',
     },
     imtahanlar: {
       title: 'İmtahan və test sistemi — Mentorix',
@@ -144,7 +144,7 @@ function pagesAz() {
         'Mentorix haqqında sualınız, texniki dəstək və ya paket seçimi üçün bizimlə əlaqə saxlayın.',
         'Komanda Azərbaycan, rus və ingilis dillərində dəstək göstərir.',
       ],
-      bullets: ['WhatsApp', 'E-poçt', 'Müəllimlər üçün pulsuz 14 günlük sınaq'],
+      bullets: ['WhatsApp', 'E-poçt', 'Müəllimlər üçün pulsuz 21 günlük sınaq'],
       ctaLabel: 'WhatsApp ilə yazın',
     },
     repetitor_baki: {
@@ -205,7 +205,7 @@ function pagesRu() {
         'Создавайте тесты, проводите экзамены и смотрите результаты на одной платформе. Преподаватель, ученик и родитель — вместе. Начните бесплатно.',
       ],
       bullets: [],
-      ctaLabel: 'Начать бесплатно — 14 дней',
+      ctaLabel: 'Начать бесплатно — 21 день',
     },
     imtahanlar: {
       title: 'Экзамены и тесты — Mentorix',
@@ -282,7 +282,7 @@ function pagesRu() {
         'Вопросы о платформе, поддержка или выбор пакета — напишите нам.',
         'Команда отвечает на азербайджанском, русском и английском.',
       ],
-      bullets: ['WhatsApp', 'Email', '14 дней бесплатно для преподавателей'],
+      bullets: ['WhatsApp', 'Email', '21 день бесплатно для преподавателей'],
       ctaLabel: 'Написать в WhatsApp',
     },
     repetitor_baki: {
@@ -343,7 +343,7 @@ function pagesEn() {
         'Create tests, run exams, and track results in one place. Teacher, student, and parent — together. Start free.',
       ],
       bullets: [],
-      ctaLabel: 'Start free — 14-day trial',
+      ctaLabel: 'Start free — 21-day trial',
     },
     imtahanlar: {
       title: 'Exams and tests — Mentorix',
@@ -420,7 +420,7 @@ function pagesEn() {
         'Questions about the platform, support, or plan choice — get in touch.',
         'The team supports Azerbaijani, Russian, and English.',
       ],
-      bullets: ['WhatsApp', 'Email', '14-day free trial for teachers'],
+      bullets: ['WhatsApp', 'Email', '21-day free trial for teachers'],
       ctaLabel: 'Message on WhatsApp',
     },
     repetitor_baki: {

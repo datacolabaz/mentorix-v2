@@ -210,13 +210,13 @@ export function isBasicPlan(billing) {
   return String(billing?.plan || '').toLowerCase() === 'basic'
 }
 
-/** SADƏ yalnız 14 günlük sınaqdır — yenilənmir. */
+/** SADƏ yalnız 21 günlük sınaqdır — yenilənmir. */
 export function canRenewBasicPlan(billing) {
   if (billing?.can_renew_basic === false) return false
   return !isBasicPlan(billing)
 }
 
-/** 14 günlük SADƏ sınaq hələ aktivdirsə (pulsuz paket «yenilənmir»). */
+/** 21 günlük SADƏ sınaq hələ aktivdirsə (pulsuz paket «yenilənmir»). */
 export function isBasicTrialActive(billing) {
   if (!isBasicPlan(billing)) return false
   if (String(billing?.status || '') === 'expired') return false
@@ -349,7 +349,7 @@ export function higherPaidPlansSuffix(plans, currentSlug = 'basic') {
 }
 
 export function basicTrialExpiredMessage(plans) {
-  return `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plans, 'basic')} seçin.`
+  return `21 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plans, 'basic')} seçin.`
 }
 
 /** Fərdi çat üçün minimum paket adı (admin `title`: STANDART və s.). */

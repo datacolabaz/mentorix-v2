@@ -129,6 +129,7 @@ router.get('/subscription-plans', async (_req, res) => {
       highlight: p.highlight,
       items: Array.isArray(p.features) ? p.features : null,
       limits: p.limits,
+      recording_limits: p.recording_limits,
       marketing_features: p.marketing_features,
       plan_subtitle: p.plan_subtitle,
       plan_cta: p.plan_cta,

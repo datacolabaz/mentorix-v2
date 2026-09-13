@@ -5,7 +5,7 @@ const { BASIC_TRIAL_DAYS } = require('../../config/billingTrial');
 
 /**
  * Platform default trial for NEW grants.
- * Priority: env TRIAL_DURATION_DAYS → billing_settings.trial_duration_days → 21 → BASIC_TRIAL_DAYS(14) fallback.
+ * Priority: env TRIAL_DURATION_DAYS → billing_settings.trial_duration_days → PARTNER_DEFAULTS(21) → BASIC_TRIAL_DAYS.
  *
  * Existing mid-trial users: provision paths use COALESCE(current_period_end, NOW()+days),
  * so changing this setting does NOT shorten/extend already-started trials.
@@ -23,7 +23,7 @@ async function getConfigurableTrialDays() {
   } catch {
     // ignore
   }
-  return PARTNER_DEFAULTS.trial_days || BASIC_TRIAL_DAYS || 14;
+  return PARTNER_DEFAULTS.trial_days || BASIC_TRIAL_DAYS || 21;
 }
 
 /**
