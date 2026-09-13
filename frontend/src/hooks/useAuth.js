@@ -56,8 +56,22 @@ const useAuthStore = create((set) => ({
     return data.user
   },
 
-  signupWithEmail: async (body) =>
-    api.post('/auth/signup', body, { timeout: AUTH_REQUEST_TIMEOUT_MS }),
+  signupWithEmail: async (body) => {
+    let ref
+    let session_key
+    try {
+      const { readStoredPartnerRef, readPartnerSessionKey } = await import('../pages/PartnerReferralLanding')
+      ref = body?.ref || body?.partner_ref || readStoredPartnerRef()
+      session_key = body?.session_key || readPartnerSessionKey()
+    } catch {
+      ref = body?.ref || body?.partner_ref
+    }
+    return api.post(
+      '/auth/signup',
+      { ...body, ref: ref || undefined, session_key: session_key || undefined },
+      { timeout: AUTH_REQUEST_TIMEOUT_MS },
+    )
+  },
 
   loginWithEmail: async ({ email, password, role } = {}) => {
     const body = { email, password }
