@@ -5,6 +5,7 @@ import {
   pathForPendingStudentDeepLink,
   rememberPendingStudentDeepLink,
 } from './pendingStudentDeepLink.js'
+import { PERSONAS, isPersonaId, DEFAULT_APP_PATH } from '../../../shared/personas.mjs'
 
 describe('isInviteResumePath', () => {
   it('matches join/exam/task/library invites', () => {
@@ -49,5 +50,96 @@ describe('isAllowedReturnPathForUser', () => {
     assert.equal(isAllowedReturnPathForUser({ role: 'course' }, '/admin/partners'), false)
     assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/admin/partners'), true)
     assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/admin/partners?tab=1'), true)
+  })
+})
+
+/** Mirrors frontend/src/lib/postAuth.js partner-primary routing contract. */
+const ROLE_HOME = {
+  admin: '/admin',
+  instructor: '/instructor',
+  student: '/student',
+  parent: '/parent',
+  course: '/org',
+}
+
+function dashboardPathForRole(role) {
+  return ROLE_HOME[role] || DEFAULT_APP_PATH
+}
+
+function isPartnerPersona(user) {
+  return String(user?.persona || '').trim() === PERSONAS.PARTNER
+}
+
+function dashboardPathForUser(user) {
+  if (!user) return '/login'
+  if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
+  if (isPartnerPersona(user)) return '/partner/dashboard'
+  if (isPersonaId(user.persona)) return dashboardPathForRole(user.role)
+  if (user.onboarding_completed) return DEFAULT_APP_PATH
+  return dashboardPathForRole(user.role)
+}
+
+function secondaryPanelPathForUser(user) {
+  if (!user) return '/login'
+  if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
+  return dashboardPathForRole(user.role)
+}
+
+function isRoleHomePath(pathname) {
+  const p = String(pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/'
+  return p === '/student' || p === '/instructor' || p === '/parent' || p === '/org' || p === '/app'
+}
+
+function resolvePostAuthPath(user, { stored = '' } = {}) {
+  const ret = stored
+  if (isInviteResumePath(ret)) return ret
+  if (isPartnerPersona(user)) {
+    const retPath = String(ret || '').split(/[?#]/)[0]
+    if (retPath.startsWith('/partner') && isAllowedReturnPathForUser(user, ret)) return ret
+    return dashboardPathForUser(user)
+  }
+  if (ret) {
+    if (!isAllowedReturnPathForUser(user, ret)) return dashboardPathForUser(user)
+    return ret
+  }
+  return dashboardPathForUser(user)
+}
+
+describe('partner persona primary home', () => {
+  it('routes partner persona to partner cabinet regardless of auth role', () => {
+    assert.equal(dashboardPathForUser({ role: 'student', persona: 'partner' }), '/partner/dashboard')
+    assert.equal(dashboardPathForUser({ role: 'instructor', persona: 'partner' }), '/partner/dashboard')
+    assert.equal(secondaryPanelPathForUser({ role: 'student', persona: 'partner' }), '/student')
+    assert.equal(secondaryPanelPathForUser({ role: 'instructor', persona: 'partner' }), '/instructor')
+  })
+
+  it('ignores stale role-panel return paths for partner persona', () => {
+    assert.equal(
+      resolvePostAuthPath({ role: 'student', persona: 'partner', onboarding_completed: true }, { stored: '/student' }),
+      '/partner/dashboard',
+    )
+    assert.equal(
+      resolvePostAuthPath(
+        { role: 'student', persona: 'partner', onboarding_completed: true },
+        { stored: '/partner/dashboard' },
+      ),
+      '/partner/dashboard',
+    )
+    assert.equal(
+      resolvePostAuthPath({ role: 'student', persona: 'partner', onboarding_completed: true }, { stored: '/join/ABC' }),
+      '/join/ABC',
+    )
+  })
+
+  it('keeps teacher/student persona on role homes', () => {
+    assert.equal(dashboardPathForUser({ role: 'instructor', persona: 'teacher' }), '/instructor')
+    assert.equal(dashboardPathForUser({ role: 'student', persona: 'student' }), '/student')
+  })
+
+  it('flags role-home paths for partner redirect', () => {
+    assert.equal(isRoleHomePath('/student'), true)
+    assert.equal(isRoleHomePath('/student/exams'), false)
+    assert.equal(isPartnerPersona({ persona: 'partner' }) && isRoleHomePath('/student'), true)
+    assert.equal(isPartnerPersona({ persona: 'student' }) && isRoleHomePath('/student'), false)
   })
 })

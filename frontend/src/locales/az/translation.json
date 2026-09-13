@@ -59,6 +59,7 @@
     "trainer": "Təlimçi",
     "parentRole": "Valideyn",
     "studentRole": "Tələbə",
+    "partnerRole": "Partner",
     "adminRole": "Admin",
     "footer": {
       "copyright": "© 2026 Mentorix. Bütün hüquqlar qorunur.",
@@ -3886,6 +3887,7 @@
   "partner": {
     "title": "Partner paneli",
     "backToApp": "Panelə qayıt",
+    "secondaryPanel": "Digər panel",
     "disabled": "Partner proqramı hazırda aktiv deyil.",
     "applyDesc": "Mentorix Partner proqramına qoşulun: referral link paylaşın, endirimli qeydiyyat və komissiya qazanın.",
     "applyCta": "Müraciət et",

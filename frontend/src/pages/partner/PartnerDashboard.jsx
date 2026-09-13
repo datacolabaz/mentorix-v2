@@ -7,7 +7,8 @@ import Brand from '../../components/common/Brand'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
-import { dashboardPathForUser } from '../../lib/postAuth'
+import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
+import { allowRolePanelVisit, secondaryPanelPathForUser } from '../../lib/postAuth'
 
 function centsToAzn(cents) {
   return (Math.round(Number(cents) || 0) / 100).toFixed(2)
@@ -23,25 +24,58 @@ function statusBadge(status) {
 
 function PartnerShell({ children }) {
   const { t } = useTranslation()
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const { theme } = useUiStore()
-  const home = dashboardPathForUser(user) || '/'
+  const secondaryHome = secondaryPanelPathForUser(user) || '/'
+  const initials = String(user?.full_name || '')
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
   return (
     <div className={`theme-${theme} min-h-screen bg-token-surfaceMain text-token-textMain`}>
       <header className="border-b border-[color:var(--border-subtle)] px-4 py-3 flex items-center justify-between gap-3">
-        <Link to="/" className="shrink-0">
-          <Brand size="nav" tone={theme === 'dark' ? 'dark' : 'light'} />
-        </Link>
-        <div className="flex items-center gap-3 text-sm">
-          <Link to="/partner" className="text-token-textMuted hover:text-token-textMain">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link to="/partner/dashboard" className="shrink-0">
+            <Brand size="nav" tone={theme === 'dark' ? 'dark' : 'light'} />
+          </Link>
+          <div className="hidden sm:flex items-center gap-2 min-w-0">
+            <div
+              className={[
+                'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border shrink-0',
+                theme === 'dark'
+                  ? 'bg-white/5 border-white/10 text-white'
+                  : 'bg-slate-900/5 border-black/[0.06] text-slate-900',
+              ].join(' ')}
+            >
+              {initials || 'P'}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate">{user?.full_name || '—'}</div>
+              <div className="text-xs text-token-textMuted">
+                {t('layout.partnerRole', { defaultValue: 'Partner' })}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 text-sm">
+          <Link to="/partner" className="text-token-textMuted hover:text-token-textMain whitespace-nowrap">
             {t('partner.public.nav', { defaultValue: 'Partner proqramı' })}
           </Link>
           <Link
-            to={home}
-            className="rounded-lg bg-primary/15 border border-primary/30 px-3 py-1.5 font-semibold text-primary"
+            to={secondaryHome}
+            onClick={() => allowRolePanelVisit()}
+            className="rounded-lg bg-primary/15 border border-primary/30 px-3 py-1.5 font-semibold text-primary whitespace-nowrap"
           >
-            {t('partner.backToApp', { defaultValue: 'Panelə qayıt' })}
+            {t('partner.secondaryPanel', { defaultValue: 'Digər panel' })}
           </Link>
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="hidden sm:inline text-token-textMuted hover:text-token-textMain"
+          >
+            {t('layout.logout')}
+          </button>
         </div>
       </header>
       {children}
@@ -159,12 +193,15 @@ export default function PartnerDashboard() {
   if (data?.needApply) {
     return (
       <PartnerShell>
-        <div className="mx-auto max-w-4xl px-4 py-10">
-          <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
-          <p className="mt-3 max-w-xl text-token-textMuted">{t('partner.applyDesc')}</p>
-          <Button className="mt-6" onClick={handleApply} disabled={applying}>
-            {applying ? t('common.loading') : t('partner.applyCta')}
-          </Button>
+        <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
+            <p className="mt-3 max-w-xl text-token-textMuted">{t('partner.applyDesc')}</p>
+            <Button className="mt-6" onClick={handleApply} disabled={applying}>
+              {applying ? t('common.loading') : t('partner.applyCta')}
+            </Button>
+          </div>
+          <PersonaSettingsCard />
         </div>
       </PartnerShell>
     )
@@ -173,12 +210,15 @@ export default function PartnerDashboard() {
   if (data?.pending) {
     return (
       <PartnerShell>
-        <div className="mx-auto max-w-4xl px-4 py-10">
-          <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
-          <p className="mt-3 text-token-textMuted">{t('partner.pendingReview')}</p>
-          <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-sm ${statusBadge(data.partner?.status)}`}>
-            {data.partner?.status}
-          </span>
+        <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
+            <p className="mt-3 text-token-textMuted">{t('partner.pendingReview')}</p>
+            <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-sm ${statusBadge(data.partner?.status)}`}>
+              {data.partner?.status}
+            </span>
+          </div>
+          <PersonaSettingsCard />
         </div>
       </PartnerShell>
     )
@@ -196,6 +236,8 @@ export default function PartnerDashboard() {
           {partner.campaign_title || t('partner.defaultCampaign')}
         </p>
       </header>
+
+      <PersonaSettingsCard />
 
       <section className="rounded-2xl border border-token-border bg-token-surface/60 p-5 sm:p-6">
         <h2 className="font-semibold text-token-textMain">{t('partner.yourLink')}</h2>

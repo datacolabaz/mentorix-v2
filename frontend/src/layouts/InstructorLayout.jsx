@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
@@ -28,6 +28,14 @@ import {
   shouldShowDiscoverSubjectsModal,
 } from '../lib/discoverProfileAlert'
 import { DISCOVER_SUBJECT_INPUT_ID } from '../lib/scrollIntoAppView'
+import {
+  isPartnerPersona,
+  shouldRedirectPartnerToCabinet,
+  dashboardPathForUser,
+  consumeRolePanelOverride,
+  peekRolePanelOverride,
+  isRoleHomePath,
+} from '../lib/postAuth'
 
 const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
 
@@ -76,8 +84,11 @@ export default function InstructorLayout() {
   const showMobileSidebar = navOpen && !sidebarHidden
   const { sections: navSections } = useInstructorNavSections()
 
-  const instructorRoleLabel =
-    user?.public_label === 'trainer' ? t('layout.trainer') : t('layout.teacher')
+  const instructorRoleLabel = isPartnerPersona(user)
+    ? t('layout.partnerRole', { defaultValue: 'Partner' })
+    : user?.public_label === 'trainer'
+      ? t('layout.trainer')
+      : t('layout.teacher')
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -293,6 +304,16 @@ export default function InstructorLayout() {
     window.addEventListener('mx:subscription-inactive', onSubscriptionInactive)
     return () => window.removeEventListener('mx:subscription-inactive', onSubscriptionInactive)
   }, [])
+
+  useEffect(() => {
+    if (peekRolePanelOverride() && isRoleHomePath(location.pathname)) {
+      consumeRolePanelOverride()
+    }
+  }, [location.pathname])
+
+  if (shouldRedirectPartnerToCabinet(user, location.pathname)) {
+    return <Navigate to={dashboardPathForUser(user)} replace />
+  }
 
   return (
     <>

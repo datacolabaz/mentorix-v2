@@ -5,6 +5,7 @@ import useUiStore from '../hooks/useUi'
 import { buildMentorContext, loc } from './knowledge'
 import { flowForRole } from './flows'
 import { fetchOnboarding, saveOnboarding, askMentor } from './mentorApi'
+import { isPartnerPersona } from '../lib/postAuth'
 
 const DigitalMentorContext = createContext(null)
 
@@ -13,6 +14,7 @@ const HIDE_PATHS = new Set(['/login', '/register', '/', '/onboarding', '/onboard
 function shouldHidePath(pathname) {
   if (HIDE_PATHS.has(pathname)) return true
   if (pathname.startsWith('/live')) return true
+  if (pathname.startsWith('/partner')) return true
   return false
 }
 
@@ -31,7 +33,10 @@ export function DigitalMentorProvider({ children }) {
   const user = useAuthStore((s) => s.user)
   const overlayLock = useUiStore((s) => s.overlayLock)
   const locale = useUiStore((s) => s.locale) || 'az'
-  const flow = useMemo(() => flowForRole(user?.role), [user?.role])
+  const flow = useMemo(() => {
+    if (isPartnerPersona(user)) return null
+    return flowForRole(user?.role)
+  }, [user])
   const eligible = Boolean(user && flow && ['instructor', 'student', 'admin'].includes(user.role))
 
   const [progress, setProgress] = useState(null)

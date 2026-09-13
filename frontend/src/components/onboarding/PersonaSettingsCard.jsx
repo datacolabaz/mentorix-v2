@@ -7,8 +7,14 @@ import NavIcon from '../common/NavIcon'
 import { useToast } from '../common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import api from '../../lib/api'
-import { dashboardPathForUser, consumeReturnAfterLogin, isInviteResumePath, peekReturnAfterLogin } from '../../lib/postAuth'
 import {
+  dashboardPathForUser,
+  consumeReturnAfterLogin,
+  isInviteResumePath,
+  peekReturnAfterLogin,
+} from '../../lib/postAuth'
+import {
+  PERSONAS,
   PERSONA_UI,
   pickerPersonaIds,
   resolveUserPersona,
@@ -29,6 +35,13 @@ export default function PersonaSettingsCard({ className = '' }) {
     [current, t],
   )
 
+  const goPrimaryHome = (nextUser) => {
+    const nextPath = dashboardPathForUser(nextUser)
+    if (!nextPath) return
+    const here = String(window.location.pathname || '').replace(/\/+$/, '') || '/'
+    if (here !== nextPath) navigate(nextPath, { replace: true })
+  }
+
   const save = async () => {
     if (!picked) return
     const pendingInvite = peekReturnAfterLogin()
@@ -37,6 +50,12 @@ export default function PersonaSettingsCard({ className = '' }) {
       if (resumeInvite) {
         consumeReturnAfterLogin()
         navigate(pendingInvite, { replace: true })
+        return
+      }
+      // Partner already selected but user may still be stuck in role shell — land on cabinet.
+      if (picked === PERSONAS.PARTNER) {
+        goPrimaryHome(user)
+        toast(t('personaSettings.alreadySaved'), 'success')
         return
       }
       toast(t('personaSettings.alreadySaved'), 'success')
@@ -55,10 +74,7 @@ export default function PersonaSettingsCard({ className = '' }) {
         navigate(invite, { replace: true })
         return
       }
-      const nextPath = dashboardPathForUser(r.user)
-      if (nextPath && nextPath !== window.location.pathname.replace(/\/settings$/, '')) {
-        navigate(nextPath, { replace: true })
-      }
+      goPrimaryHome(r.user)
     } catch (e) {
       toast(e?.message || t('personaSettings.failed'), 'error')
     } finally {

@@ -59,6 +59,7 @@
     "trainer": "Trainer",
     "parentRole": "Parent",
     "studentRole": "Student",
+    "partnerRole": "Partner",
     "adminRole": "Admin",
     "footer": {
       "copyright": "© 2026 Mentorix. All rights reserved.",
@@ -3886,6 +3887,7 @@
   "partner": {
     "title": "Partner dashboard",
     "backToApp": "Back to app",
+    "secondaryPanel": "Other panel",
     "disabled": "Partner program is currently disabled.",
     "applyDesc": "Join Mentorix Partner: share your referral link, offer discounts, earn commission.",
     "applyCta": "Apply",

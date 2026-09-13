@@ -59,6 +59,7 @@
     "trainer": "Тренер",
     "parentRole": "Родитель",
     "studentRole": "Ученик",
+    "partnerRole": "Партнёр",
     "adminRole": "Админ",
     "footer": {
       "copyright": "© 2026 Mentorix. Все права защищены.",
@@ -3886,6 +3887,7 @@
   "partner": {
     "title": "Панель партнёра",
     "backToApp": "В кабинет",
+    "secondaryPanel": "Другая панель",
     "disabled": "Партнёрская программа сейчас отключена.",
     "applyDesc": "Присоединяйтесь к Mentorix Partner: делитесь ссылкой, давайте скидку, получайте комиссию.",
     "applyCta": "Подать заявку",

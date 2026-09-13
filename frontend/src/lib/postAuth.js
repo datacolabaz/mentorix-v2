@@ -32,11 +32,66 @@ export function dashboardPathForRole(role) {
   return ROLE_HOME[role] || DEFAULT_APP_PATH
 }
 
+/** Partner purpose is active (auth role may still be student/instructor). */
+export function isPartnerPersona(user) {
+  return String(user?.persona || '').trim() === PERSONAS.PARTNER
+}
+
+/** Secondary role panel (exams/invite shell) — ignores partner purpose overlay. */
+export function secondaryPanelPathForUser(user) {
+  if (!user) return '/login'
+  if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
+  return dashboardPathForRole(user.role)
+}
+
+/** Role-home index paths that should yield to Partner cabinet when persona=partner. */
+export function isRoleHomePath(pathname) {
+  const p = String(pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/'
+  return p === '/student' || p === '/instructor' || p === '/parent' || p === '/org' || p === '/app'
+}
+
+const ROLE_PANEL_OVERRIDE_KEY = 'mx_role_panel_override'
+
+/** Allow one visit to the auth-role panel while partner purpose stays active. */
+export function allowRolePanelVisit() {
+  try {
+    sessionStorage.setItem(ROLE_PANEL_OVERRIDE_KEY, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function peekRolePanelOverride() {
+  try {
+    return Boolean(sessionStorage.getItem(ROLE_PANEL_OVERRIDE_KEY))
+  } catch {
+    return false
+  }
+}
+
+export function consumeRolePanelOverride() {
+  try {
+    const v = sessionStorage.getItem(ROLE_PANEL_OVERRIDE_KEY)
+    if (!v) return false
+    sessionStorage.removeItem(ROLE_PANEL_OVERRIDE_KEY)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** True when partner users should leave the role-home index for Partner cabinet. */
+export function shouldRedirectPartnerToCabinet(user, pathname, { allowOverride = true } = {}) {
+  if (!isPartnerPersona(user) || !isRoleHomePath(pathname)) return false
+  if (allowOverride && peekRolePanelOverride()) return false
+  return true
+}
+
 /** Persona yoxdursa xüsusi role panelinə məcburi getmə — ümumi /app. */
 export function dashboardPathForUser(user) {
   if (!user) return '/login'
   if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
-  if (String(user.persona || '').trim() === PERSONAS.PARTNER) return '/partner/dashboard'
+  if (isPartnerPersona(user)) return '/partner/dashboard'
   if (isPersonaId(user.persona)) return dashboardPathForRole(user.role)
   if (user.onboarding_completed) return DEFAULT_APP_PATH
   return dashboardPathForRole(user.role)
@@ -52,6 +107,12 @@ export function resolvePostAuthPath(user, { nextQuery = '', stored = peekReturnA
   if (userNeedsOnboarding(user)) return ONBOARDING_PATH
   const pendingPath = pathForPendingStudentDeepLink(peekPendingStudentDeepLink())
   if (pendingPath) return pendingPath
+  // Partner purpose owns primary home; do not resume stale role-panel returns.
+  if (isPartnerPersona(user)) {
+    const retPath = String(ret || '').split(/[?#]/)[0]
+    if (retPath.startsWith('/partner') && isAllowedReturnPathForUser(user, ret)) return ret
+    return dashboardPathForUser(user)
+  }
   if (ret && ret !== ONBOARDING_PATH) {
     if (!isAllowedReturnPathForUser(user, ret)) return dashboardPathForUser(user)
     return ret
