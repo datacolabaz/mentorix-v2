@@ -1,14 +1,18 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import useAuthStore from '../../hooks/useAuth'
+import { dashboardPathForUser, isPartnerPersona } from '../../lib/postAuth'
 
 export default function GenericAppHome() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const firstName = user?.full_name?.split(' ')[0] || ''
 
+  if (isPartnerPersona(user)) {
+    return <Navigate to={dashboardPathForUser(user)} replace />
+  }
   return (
     <div className="min-h-screen bg-[#07090c] text-white">
       <header className="px-4 sm:px-6 py-4 border-b border-white/10">

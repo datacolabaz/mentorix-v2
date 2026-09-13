@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
@@ -16,6 +16,14 @@ import {
   peekPendingStudentDeepLink,
 } from '../lib/pendingStudentDeepLink'
 import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
+import {
+  isPartnerPersona,
+  shouldRedirectPartnerToCabinet,
+  dashboardPathForUser,
+  consumeRolePanelOverride,
+  peekRolePanelOverride,
+  isRoleHomePath,
+} from '../lib/postAuth'
 
 function NavBadge({ count }) {
   if (!count || count < 1) return null
@@ -73,6 +81,11 @@ function StudentLayoutInner() {
   const location = useLocation()
   const [navOpen, setNavOpen] = useState(false)
   const { focusMode, setFocusMode, theme } = useUiStore()
+  const partnerPurpose = isPartnerPersona(user)
+  const roleBadge = partnerPurpose
+    ? t('layout.partnerRole', { defaultValue: 'Partner' })
+    : t('layout.studentRole', { defaultValue: 'Tələbə' })
+
   const navGroups = useMemo(
     () =>
       NAV_GROUP_DEFS.map((g) => ({
@@ -132,6 +145,17 @@ function StudentLayoutInner() {
     el.scrollLeft = 0
     el.scrollTop = 0
   }, [location.pathname])
+
+  useEffect(() => {
+    if (peekRolePanelOverride() && isRoleHomePath(location.pathname)) {
+      consumeRolePanelOverride()
+    }
+  }, [location.pathname])
+
+  // Partner purpose: primary home is partner cabinet (role shell remains for invites/deep links).
+  if (shouldRedirectPartnerToCabinet(user, location.pathname)) {
+    return <Navigate to={dashboardPathForUser(user)} replace />
+  }
 
   return (
     <>
@@ -239,7 +263,7 @@ function StudentLayoutInner() {
                 <div className={`text-sm font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                   {user?.full_name}
                 </div>
-                <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>Tələbə</div>
+                <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>{roleBadge}</div>
               </div>
             </div>
 
