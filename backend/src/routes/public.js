@@ -160,6 +160,10 @@ router.get('/r/:code', async (req, res) => {
       ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
       userAgent: req.headers['user-agent'],
       landingPath: req.query.redirect || '/signup',
+      utmSource: req.query.utm_source,
+      utmMedium: req.query.utm_medium,
+      referrerUrl: req.query.referrer_url || req.query.referrer,
+      refererHeader: req.headers.referer || req.headers.referrer,
     });
     if (!out) {
       return res.status(404).json({ success: false, message: 'Referral kodu tapılmadı', code: 'REF_NOT_FOUND' });

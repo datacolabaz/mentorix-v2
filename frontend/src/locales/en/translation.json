@@ -3952,6 +3952,30 @@
       "approved": "Approved balance",
       "paid": "Paid out"
     },
+    "analytics": {
+      "title": "Analytics",
+      "tabs": {
+        "timeline": "Timeline",
+        "sources": "Sources",
+        "funnel": "Conversion funnel"
+      },
+      "period": {
+        "7d": "7 days",
+        "30d": "30 days",
+        "year": "Year",
+        "all": "All"
+      },
+      "seriesClicks": "Clicks",
+      "seriesEarnings": "Commission (AZN)",
+      "emptyTimeline": "No clicks or earnings for this period yet.",
+      "emptySources": "No source data yet. Add UTM params or social referrers to your referral link.",
+      "funnelClicks": "Clicks",
+      "funnelSignups": "Sign-ups",
+      "funnelPaid": "Paid customers",
+      "funnelEarnings": "Earnings",
+      "clickToSignup": "Click → Sign-up",
+      "signupToPaid": "Sign-up → Paid"
+    },
     "col": {
       "plan": "Plan",
       "period": "Period",

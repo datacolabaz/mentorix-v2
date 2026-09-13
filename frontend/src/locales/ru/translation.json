@@ -3952,6 +3952,30 @@
       "approved": "Одобренный баланс",
       "paid": "Выплачено"
     },
+    "analytics": {
+      "title": "Аналитика",
+      "tabs": {
+        "timeline": "График по времени",
+        "sources": "Источники",
+        "funnel": "Воронка конверсии"
+      },
+      "period": {
+        "7d": "7 дней",
+        "30d": "30 дней",
+        "year": "Год",
+        "all": "Все"
+      },
+      "seriesClicks": "Клики",
+      "seriesEarnings": "Комиссия (AZN)",
+      "emptyTimeline": "За этот период пока нет кликов или дохода.",
+      "emptySources": "Данных по источникам пока нет. Добавьте UTM или реферер соцсетей к referral-ссылке.",
+      "funnelClicks": "Клики",
+      "funnelSignups": "Регистрации",
+      "funnelPaid": "Платящие клиенты",
+      "funnelEarnings": "Доход",
+      "clickToSignup": "Клик → Регистрация",
+      "signupToPaid": "Регистрация → Оплата"
+    },
     "col": {
       "plan": "План",
       "period": "Период",

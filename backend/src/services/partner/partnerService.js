@@ -6,6 +6,181 @@ const {
   logPartnerAudit,
   normalizeRefCode,
 } = require('./partnerAttributionService');
+const { labelForSource } = require('../../utils/referrerSource');
+
+const ANALYTICS_PERIODS = new Set(['7d', '30d', 'year', 'all']);
+
+function normalizeAnalyticsPeriod(raw) {
+  const p = String(raw || '30d').toLowerCase();
+  return ANALYTICS_PERIODS.has(p) ? p : '30d';
+}
+
+function periodStartSql(period, alias = 'created_at') {
+  if (period === 'all') return 'TRUE';
+  if (period === '7d') return `${alias} >= (CURRENT_DATE - INTERVAL '6 days')`;
+  if (period === 'year') return `${alias} >= (CURRENT_DATE - INTERVAL '364 days')`;
+  return `${alias} >= (CURRENT_DATE - INTERVAL '29 days')`;
+}
+
+function addDaysYmd(ymd, delta) {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+function monthKey(ymd) {
+  return String(ymd || '').slice(0, 7);
+}
+
+function fillTimeSeries(clickRows, earnRows, period, todayYmd) {
+  const clicksBy = new Map((clickRows || []).map((r) => [String(r.bucket), Number(r.clicks) || 0]));
+  const earnBy = new Map((earnRows || []).map((r) => [String(r.bucket), Number(r.earnings_cents) || 0]));
+  const keys = new Set([...clicksBy.keys(), ...earnBy.keys()]);
+  const out = [];
+
+  if (period === '7d' || period === '30d') {
+    const n = period === '7d' ? 7 : 30;
+    for (let i = n - 1; i >= 0; i -= 1) {
+      const day = addDaysYmd(todayYmd, -i);
+      out.push({
+        date: day,
+        label: day.slice(5),
+        clicks: clicksBy.get(day) || 0,
+        earnings_cents: earnBy.get(day) || 0,
+      });
+    }
+    return out;
+  }
+
+  // year / all → monthly buckets
+  const months = [...keys].filter(Boolean).sort();
+  if (period === 'year') {
+    const start = monthKey(addDaysYmd(todayYmd, -364));
+    const end = monthKey(todayYmd);
+    let cur = start;
+    while (cur <= end) {
+      out.push({
+        date: `${cur}-01`,
+        label: cur,
+        clicks: clicksBy.get(cur) || 0,
+        earnings_cents: earnBy.get(cur) || 0,
+      });
+      const [y, m] = cur.split('-').map(Number);
+      const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+      cur = next;
+    }
+    return out;
+  }
+
+  if (!months.length) return out;
+  let cur = months[0];
+  const end = months[months.length - 1];
+  while (cur <= end) {
+    out.push({
+      date: `${cur}-01`,
+      label: cur,
+      clicks: clicksBy.get(cur) || 0,
+      earnings_cents: earnBy.get(cur) || 0,
+    });
+    const [y, m] = cur.split('-').map(Number);
+    cur = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+  }
+  return out;
+}
+
+async function getPartnerAnalytics(partnerId, periodRaw = '30d') {
+  const period = normalizeAnalyticsPeriod(periodRaw);
+  const clickFilter = periodStartSql(period, 'created_at');
+  const attrFilter = periodStartSql(period, 'attributed_at');
+  const commissionFilter = periodStartSql(period, 'created_at');
+  const bucketExpr =
+    period === 'year' || period === 'all'
+      ? `to_char(date_trunc('month', created_at), 'YYYY-MM')`
+      : `to_char(date_trunc('day', created_at), 'YYYY-MM-DD')`;
+
+  const [
+    { rows: clickSeries },
+    { rows: earnSeries },
+    { rows: sourceRows },
+    { rows: funnelRows },
+    { rows: todayRows },
+  ] = await Promise.all([
+    db.query(
+      `SELECT ${bucketExpr} AS bucket, COUNT(*)::int AS clicks
+       FROM partner_referral_clicks
+       WHERE partner_id = $1 AND ${clickFilter}
+       GROUP BY 1
+       ORDER BY 1`,
+      [partnerId]
+    ),
+    db.query(
+      `SELECT ${bucketExpr} AS bucket,
+              COALESCE(SUM(commission_cents),0)::int AS earnings_cents
+       FROM partner_commissions
+       WHERE partner_id = $1
+         AND status IN ('pending', 'approved', 'paid')
+         AND ${commissionFilter}
+       GROUP BY 1
+       ORDER BY 1`,
+      [partnerId]
+    ),
+    db.query(
+      `SELECT COALESCE(NULLIF(TRIM(referrer_source), ''), 'direct') AS source,
+              COUNT(*)::int AS clicks
+       FROM partner_referral_clicks
+       WHERE partner_id = $1 AND ${clickFilter}
+       GROUP BY 1
+       ORDER BY clicks DESC, source ASC`,
+      [partnerId]
+    ),
+    db.query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM partner_referral_clicks
+          WHERE partner_id = $1 AND ${clickFilter}) AS clicks,
+         (SELECT COUNT(*)::int FROM partner_attributions
+          WHERE partner_id = $1 AND self_referral_blocked = FALSE AND ${attrFilter}) AS signups,
+         (SELECT COUNT(DISTINCT invited_user_id)::int FROM partner_commissions
+          WHERE partner_id = $1
+            AND status IN ('approved', 'paid')
+            AND ${commissionFilter}) AS paid_customers,
+         (SELECT COALESCE(SUM(commission_cents),0)::int FROM partner_commissions
+          WHERE partner_id = $1
+            AND status IN ('approved', 'paid')
+            AND ${commissionFilter}) AS earnings_cents`,
+      [partnerId]
+    ),
+    db.query(`SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS today`),
+  ]);
+
+  const funnel = funnelRows[0] || {
+    clicks: 0,
+    signups: 0,
+    paid_customers: 0,
+    earnings_cents: 0,
+  };
+  const clicks = Number(funnel.clicks) || 0;
+  const signups = Number(funnel.signups) || 0;
+  const paidCustomers = Number(funnel.paid_customers) || 0;
+  const earningsCents = Number(funnel.earnings_cents) || 0;
+
+  return {
+    period,
+    time_series: fillTimeSeries(clickSeries, earnSeries, period, todayRows[0]?.today),
+    sources: (sourceRows || []).map((r) => ({
+      source: r.source,
+      label: labelForSource(r.source),
+      clicks: Number(r.clicks) || 0,
+    })),
+    funnel: {
+      clicks,
+      signups,
+      paid_customers: paidCustomers,
+      earnings_cents: earningsCents,
+      click_to_signup_pct: clicks > 0 ? Math.round((signups / clicks) * 1000) / 10 : 0,
+      signup_to_paid_pct: signups > 0 ? Math.round((paidCustomers / signups) * 1000) / 10 : 0,
+    },
+  };
+}
 
 async function getPartnerByUserId(userId, client = db) {
   const { rows } = await client.query(
@@ -190,7 +365,7 @@ async function listPartnersAdmin({ status, limit = 50, offset = 0 } = {}) {
   return rows;
 }
 
-async function getPartnerDashboard(partnerId) {
+async function getPartnerDashboard(partnerId, { period } = {}) {
   const { rows: partnerRows } = await db.query(
     `SELECT p.*, pr.display_name, pr.phone, pr.city,
             c.slug AS campaign_slug, c.title AS campaign_title, c.commission_pct, c.commission_duration_months,
@@ -242,6 +417,8 @@ async function getPartnerDashboard(partnerId) {
     [partnerId]
   );
 
+  const analytics = await getPartnerAnalytics(partnerId, period);
+
   // Never expose bank/receipt details of customers
   return {
     partner: {
@@ -267,6 +444,7 @@ async function getPartnerDashboard(partnerId) {
       path: `/r/${l.code}`,
     })),
     stats: stats[0] || {},
+    analytics,
     commissions,
     payouts,
   };
@@ -342,6 +520,8 @@ module.exports = {
   adminSetPartnerStatus,
   listPartnersAdmin,
   getPartnerDashboard,
+  getPartnerAnalytics,
   updatePartnerPayoutProfile,
   createExtraLink,
+  normalizeAnalyticsPeriod,
 };

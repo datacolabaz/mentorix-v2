@@ -8,6 +8,7 @@ import Brand from '../components/common/Brand'
 import { resolveApiAssetUrl } from '../lib/apiAssetUrl'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
+import { FIXED_MOBILE_TOP_BAR } from '../lib/stickyTopBar'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 
@@ -90,7 +91,7 @@ export default function CourseLayout() {
       <header
         className={[
           'lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
-          'bg-token-surfaceMain/95 backdrop-blur-sm supports-[backdrop-filter]:bg-token-surfaceMain/90 border-b border-[color:var(--border-subtle)] text-token-textMain',
+          FIXED_MOBILE_TOP_BAR,
         ].join(' ')}
       >
         <button

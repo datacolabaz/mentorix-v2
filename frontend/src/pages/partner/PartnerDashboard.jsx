@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import Brand from '../../components/common/Brand'
@@ -10,6 +21,7 @@ import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import { allowRolePanelVisit, secondaryPanelPathForUser } from '../../lib/postAuth'
+import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
 
 function centsToAzn(cents) {
   return (Math.round(Number(cents) || 0) / 100).toFixed(2)
@@ -21,6 +33,23 @@ function statusBadge(status) {
   if (s === 'pending') return 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
   if (s === 'rejected' || s === 'suspended' || s === 'void') return 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
   return 'bg-token-border/40 text-token-textMuted'
+}
+
+const PERIODS = ['7d', '30d', 'year', 'all']
+const ANALYTICS_TABS = ['timeline', 'sources', 'funnel']
+
+function PartnerChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-lg border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2 text-xs shadow-xl">
+      <div className="text-token-textMuted mb-1">{label}</div>
+      {payload.map((p) => (
+        <div key={p.dataKey || p.name} className="text-token-textMain font-medium tabular-nums">
+          {p.name}: {p.value}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function PartnerShell({ children }) {
@@ -35,7 +64,12 @@ function PartnerShell({ children }) {
     .slice(0, 2)
   return (
     <div className={`theme-${theme} min-h-screen bg-token-surfaceMain text-token-textMain`}>
-      <header className="sticky top-0 z-50 border-b border-[color:var(--border-subtle)] bg-token-surfaceMain/95 backdrop-blur-sm supports-[backdrop-filter]:bg-token-surfaceMain/90 px-4 py-3 flex items-center justify-between gap-3">
+      <header
+        className={[
+          STICKY_TOP_BAR,
+          'px-4 py-3 flex items-center justify-between gap-3',
+        ].join(' ')}
+      >
         <div className="flex items-center gap-3 min-w-0">
           <Link to="/partner/dashboard" className="shrink-0">
             <Brand size="nav" tone={theme === 'dark' ? 'dark' : 'light'} />
@@ -88,17 +122,224 @@ function PartnerShell({ children }) {
   )
 }
 
+function PartnerAnalyticsPanel({ analytics, period, onPeriodChange, theme }) {
+  const { t } = useTranslation()
+  const [tab, setTab] = useState('timeline')
+  const axisTick = theme === 'dark' ? '#94a3b8' : '#64748b'
+  const gridStroke = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)'
+
+  const series = useMemo(() => {
+    return (analytics?.time_series || []).map((row) => ({
+      ...row,
+      earnings: Number(((Number(row.earnings_cents) || 0) / 100).toFixed(2)),
+    }))
+  }, [analytics?.time_series])
+
+  const sources = analytics?.sources || []
+  const funnel = analytics?.funnel || {}
+  const hasSeriesActivity = series.some((r) => (r.clicks || 0) > 0 || (r.earnings || 0) > 0)
+  const hasSources = sources.some((s) => (s.clicks || 0) > 0)
+  const funnelSteps = [
+    { key: 'clicks', label: t('partner.analytics.funnelClicks'), value: funnel.clicks ?? 0 },
+    { key: 'signups', label: t('partner.analytics.funnelSignups'), value: funnel.signups ?? 0 },
+    { key: 'paid', label: t('partner.analytics.funnelPaid'), value: funnel.paid_customers ?? 0 },
+    {
+      key: 'earnings',
+      label: t('partner.analytics.funnelEarnings'),
+      value: `${centsToAzn(funnel.earnings_cents)} AZN`,
+    },
+  ]
+  const maxFunnel = Math.max(1, ...funnelSteps.slice(0, 3).map((s) => Number(s.value) || 0))
+
+  return (
+    <section className="rounded-2xl border border-token-border bg-token-surface/40 p-4 sm:p-5 space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-semibold text-token-textMain">{t('partner.analytics.title')}</h2>
+        <div className="flex flex-wrap gap-1.5">
+          {PERIODS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onPeriodChange(p)}
+              className={[
+                'rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors',
+                period === p
+                  ? 'bg-primary/15 border-primary/40 text-primary'
+                  : 'border-token-border text-token-textMuted hover:text-token-textMain hover:bg-token-bg',
+              ].join(' ')}
+            >
+              {t(`partner.analytics.period.${p}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 border-b border-token-border pb-2">
+        {ANALYTICS_TABS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={[
+              'rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors',
+              tab === id
+                ? 'bg-token-bg text-token-textMain'
+                : 'text-token-textMuted hover:text-token-textMain',
+            ].join(' ')}
+          >
+            {t(`partner.analytics.tabs.${id}`)}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'timeline' ? (
+        hasSeriesActivity ? (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="partnerClicksGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22e088" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#22e088" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={gridStroke} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: axisTick, fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  minTickGap={20}
+                />
+                <YAxis
+                  yAxisId="clicks"
+                  tick={{ fill: axisTick, fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={32}
+                />
+                <YAxis
+                  yAxisId="earn"
+                  orientation="right"
+                  tick={{ fill: axisTick, fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={40}
+                />
+                <Tooltip content={<PartnerChartTooltip />} />
+                <Area
+                  yAxisId="clicks"
+                  type="monotone"
+                  dataKey="clicks"
+                  name={t('partner.analytics.seriesClicks')}
+                  stroke="#22e088"
+                  fill="url(#partnerClicksGrad)"
+                  strokeWidth={2}
+                />
+                <Area
+                  yAxisId="earn"
+                  type="monotone"
+                  dataKey="earnings"
+                  name={t('partner.analytics.seriesEarnings')}
+                  stroke="#6366f1"
+                  fill="none"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="py-10 text-center text-sm text-token-textMuted">{t('partner.analytics.emptyTimeline')}</p>
+        )
+      ) : null}
+
+      {tab === 'sources' ? (
+        hasSources ? (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sources} layout="vertical" margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
+                <CartesianGrid stroke={gridStroke} horizontal={false} />
+                <XAxis type="number" tick={{ fill: axisTick, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  width={88}
+                  tick={{ fill: axisTick, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<PartnerChartTooltip />} />
+                <Bar
+                  dataKey="clicks"
+                  name={t('partner.analytics.seriesClicks')}
+                  fill="#22e088"
+                  radius={[0, 6, 6, 0]}
+                  barSize={18}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="py-10 text-center text-sm text-token-textMuted">{t('partner.analytics.emptySources')}</p>
+        )
+      ) : null}
+
+      {tab === 'funnel' ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {funnelSteps.map((step) => (
+              <div key={step.key} className="rounded-xl border border-token-border bg-token-bg/50 p-3">
+                <div className="text-[11px] text-token-textMuted">{step.label}</div>
+                <div className="mt-1 text-base font-semibold text-token-textMain tabular-nums">{step.value}</div>
+                {step.key !== 'earnings' ? (
+                  <div
+                    className="mt-2 h-1.5 rounded-full bg-token-border/50 overflow-hidden"
+                    aria-hidden
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.max(4, ((Number(step.value) || 0) / maxFunnel) * 100)}%` }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="rounded-xl border border-token-border px-3 py-2">
+              <span className="text-token-textMuted">{t('partner.analytics.clickToSignup')}: </span>
+              <span className="font-semibold text-token-textMain tabular-nums">
+                {funnel.click_to_signup_pct ?? 0}%
+              </span>
+            </div>
+            <div className="rounded-xl border border-token-border px-3 py-2">
+              <span className="text-token-textMuted">{t('partner.analytics.signupToPaid')}: </span>
+              <span className="font-semibold text-token-textMain tabular-nums">
+                {funnel.signup_to_paid_pct ?? 0}%
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
 export default function PartnerDashboard() {
   const { t } = useTranslation()
   const toast = useToast()
   const { user } = useAuthStore()
+  const { theme } = useUiStore()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
   const [applying, setApplying] = useState(false)
   const [payoutBusy, setPayoutBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [period, setPeriod] = useState('30d')
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (periodOverride) => {
+    const p = periodOverride || period
     setLoading(true)
     try {
       const st = await api.get('/partner/status')
@@ -114,7 +355,7 @@ export default function PartnerDashboard() {
         setData({ pending: true, partner: st.partner })
         return
       }
-      const dash = await api.get('/partner/dashboard')
+      const dash = await api.get('/partner/dashboard', { params: { period: p } })
       setData(dash)
     } catch (e) {
       if (e?.response?.status === 404) setData({ needApply: true })
@@ -122,7 +363,7 @@ export default function PartnerDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [t, toast])
+  }, [period, t, toast])
 
   useEffect(() => {
     load()
@@ -176,7 +417,11 @@ export default function PartnerDashboard() {
     }
   }
 
-  if (loading) {
+  function handlePeriodChange(next) {
+    setPeriod(next)
+  }
+
+  if (loading && !data) {
     return (
       <PartnerShell>
         <div className="mx-auto max-w-4xl px-4 py-10 text-token-textMuted">{t('common.loading')}</div>
@@ -299,6 +544,13 @@ export default function PartnerDashboard() {
           </div>
         ))}
       </section>
+
+      <PartnerAnalyticsPanel
+        analytics={data?.analytics}
+        period={period}
+        onPeriodChange={handlePeriodChange}
+        theme={theme}
+      />
 
       <section className="flex flex-wrap items-center gap-3">
         <Button onClick={requestPayout} disabled={payoutBusy || !(stats.approved_cents > 0)}>

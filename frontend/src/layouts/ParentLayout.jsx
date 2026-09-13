@@ -5,6 +5,7 @@ import useAuthStore from '../hooks/useAuth'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
+import { FIXED_MOBILE_TOP_BAR } from '../lib/stickyTopBar'
 import useUiStore from '../hooks/useUi'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
@@ -44,7 +45,7 @@ export default function ParentLayout() {
       <header
         className={[
           'md:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
-          'bg-token-surfaceMain/95 backdrop-blur-sm supports-[backdrop-filter]:bg-token-surfaceMain/90 border-b border-[color:var(--border-subtle)] text-token-textMain',
+          FIXED_MOBILE_TOP_BAR,
         ].join(' ')}
       >
         <button

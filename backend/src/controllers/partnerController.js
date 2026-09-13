@@ -91,7 +91,7 @@ async function dashboard(req, res) {
         message: 'Müraciətiniz baxılır',
       });
     }
-    const data = await getPartnerDashboard(partner.id);
+    const data = await getPartnerDashboard(partner.id, { period: req.query?.period });
     res.json({ success: true, ...data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

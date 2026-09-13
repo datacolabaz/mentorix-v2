@@ -57,7 +57,16 @@ export default function PartnerReferralLanding() {
       const redirect = search.get('redirect') || '/register'
       try {
         const res = await api.get(`/public/r/${encodeURIComponent(code)}`, {
-          params: { session_key: sessionKey, redirect },
+          params: {
+            session_key: sessionKey,
+            redirect,
+            utm_source: search.get('utm_source') || undefined,
+            utm_medium: search.get('utm_medium') || undefined,
+            referrer_url:
+              search.get('referrer') ||
+              search.get('referrer_url') ||
+              (typeof document !== 'undefined' ? document.referrer || undefined : undefined),
+          },
         })
         if (cancelled) return
         if (res?.code) {

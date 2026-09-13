@@ -5,6 +5,7 @@ import useAuthStore from '../hooks/useAuth'
 import Brand from '../components/common/Brand'
 import Footer from '../components/common/Footer'
 import { sidebarNavClass } from '../lib/sidebarNavClass'
+import { FIXED_MOBILE_TOP_BAR } from '../lib/stickyTopBar'
 import useUiStore from '../hooks/useUi'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
@@ -79,7 +80,8 @@ export default function AdminLayout() {
         className={[
           'md:hidden fixed top-0 left-0 right-0 z-[1000] min-h-[72px] grid grid-cols-[auto_1fr_auto] items-center gap-3 overflow-visible',
           'px-4 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]',
-          'pt-[env(safe-area-inset-top,0px)] bg-token-surfaceMain/95 backdrop-blur-sm supports-[backdrop-filter]:bg-token-surfaceMain/90 border-b border-[color:var(--border-subtle)] text-token-textMain shadow-sm',
+          'pt-[env(safe-area-inset-top,0px)]',
+          FIXED_MOBILE_TOP_BAR,
         ].join(' ')}
       >
         <button

@@ -10,6 +10,7 @@ import LocaleThemeBar from '../../components/LocaleThemeBar'
 import { setPageSeo } from '../../lib/pageSeo'
 import { postAuthNavigate, rememberReturnAfterLogin } from '../../lib/postAuth'
 import useUiStore from '../../hooks/useUi'
+import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
 
 /** Tam səhifə giriş / qeydiyyat (/login, /register) */
 export default function AuthPage() {
@@ -100,7 +101,13 @@ export default function AuthPage() {
         isDark ? 'theme-dark' : 'theme-light',
       ].join(' ')}
     >
-      <header className="relative z-[30] shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4">
+      <header
+        className={[
+          STICKY_TOP_BAR,
+          'shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4',
+          isDark ? 'border-white/10' : 'border-slate-200/80',
+        ].join(' ')}
+      >
         <div className="flex w-full items-center justify-between gap-2 sm:gap-3">
           <Link
             to="/"
