@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ResponsiveContainer, AreaChart, Area } from 'recharts'
 import Card from './Card'
+import KpiValue from './KpiValue'
 import useUiStore from '../../hooks/useUi'
 
 function DeltaBadge({ deltaPct, theme }) {
@@ -83,13 +84,11 @@ export default function KpiCard({
   const inner = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2.5">
             {title}
           </div>
-          <div className="font-display font-extrabold text-3xl text-token-textMain tabular-nums">
-            {value}
-          </div>
+          <KpiValue>{value}</KpiValue>
         </div>
 
         <div className="shrink-0 flex items-center gap-2">
@@ -111,7 +110,7 @@ export default function KpiCard({
         </div>
       </div>
 
-      <div className="mt-4 flex items-end justify-between gap-3">
+      <div className="mt-5 flex items-end justify-between gap-3">
         <div className="min-w-0">
           {secondary ? (
             <div className="text-xs text-token-textMuted leading-snug">
@@ -147,7 +146,7 @@ export default function KpiCard({
     </>
   )
 
-  const cardClass = ['p-4 sm:p-5 min-w-0 w-full max-w-full overflow-hidden box-border', className].join(' ')
+  const cardClass = ['p-5 sm:p-6 min-w-0 w-full max-w-full overflow-hidden box-border', className].join(' ')
 
   if (onClick) {
     return (
