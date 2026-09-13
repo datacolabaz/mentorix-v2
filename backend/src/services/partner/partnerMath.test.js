@@ -5,6 +5,7 @@ const {
   computeCommissionCents,
   splitPaymentCents,
   isWithinDurationMonths,
+  resolveDurationMonths,
   clampPct,
 } = require('./partnerMath');
 
@@ -43,10 +44,19 @@ describe('partnerMath — money in qəpik', () => {
     assert.equal(clampPct(150), 100);
   });
 
-  it('duration window: first 3 periods only', () => {
+  it('duration window: first 3 periods only; 0 = unlimited', () => {
     assert.equal(isWithinDurationMonths(1, 3), true);
     assert.equal(isWithinDurationMonths(3, 3), true);
     assert.equal(isWithinDurationMonths(4, 3), false);
-    assert.equal(isWithinDurationMonths(1, 0), false);
+    assert.equal(isWithinDurationMonths(1, 0), true);
+    assert.equal(isWithinDurationMonths(99, 0), true);
+    assert.equal(isWithinDurationMonths(1, null), false);
+  });
+
+  it('resolveDurationMonths treats 0 as valid unlimited', () => {
+    assert.equal(resolveDurationMonths(0, 3), 0);
+    assert.equal(resolveDurationMonths(null, 0), 0);
+    assert.equal(resolveDurationMonths(undefined, 3), 3);
+    assert.equal(resolveDurationMonths(5, 0), 5);
   });
 });

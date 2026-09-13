@@ -83,9 +83,9 @@ export default function PersonaSettingsCard({ className = '' }) {
   }
 
   return (
-    <Card className={`w-full p-5 border border-indigo-500/20 space-y-4 ${className}`.trim()}>
+    <Card className={`w-full p-5 border border-token-border space-y-4 ${className}`.trim()}>
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-indigo-200/90">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-token-textMuted">
           {t('personaSettings.title')}
         </h2>
         <p className="text-sm text-token-textMuted mt-1">{t('personaSettings.subtitle', { current: currentTitle })}</p>
@@ -103,13 +103,13 @@ export default function PersonaSettingsCard({ className = '' }) {
               className={[
                 'text-left rounded-xl border px-3 py-3 transition-colors',
                 selected
-                  ? 'border-primary bg-primary/10 text-white'
-                  : 'border-white/10 bg-white/[0.03] text-gray-200 hover:border-white/20',
+                  ? 'border-primary bg-primary/15 text-token-textMain'
+                  : 'border-token-border bg-token-bg/50 text-token-textMain hover:border-primary/40 hover:bg-token-bg',
               ].join(' ')}
             >
               <span className="flex items-center gap-2">
-                <NavIcon name={meta.icon} className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold">{t(meta.titleKey)}</span>
+                <NavIcon name={meta.icon} className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold text-token-textMain">{t(meta.titleKey)}</span>
               </span>
             </button>
           )

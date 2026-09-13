@@ -29,6 +29,8 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
   const payriffEnabled = Boolean(billingConfigQ.data?.payriff_enabled)
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const curRank = planRank(currentPlan)
+  /** Partner discount is for first paid months on the original package — not for upgrades. */
+  const convertingFromTrial = curRank <= planRank('basic')
 
   useEffect(() => {
     if (!open) return
@@ -53,7 +55,11 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
     if (!isPaid)
       return { line1: 'Pulsuz', line2: null, suffix: '', isPaid: false, amountLabel: '', periodLabel: '' }
     const discountPct =
-      billingInterval === 'monthly' && partnerOffer?.discount_pct > 0 ? Number(partnerOffer.discount_pct) : 0
+      convertingFromTrial &&
+      billingInterval === 'monthly' &&
+      partnerOffer?.discount_pct > 0
+        ? Number(partnerOffer.discount_pct)
+        : 0
     if (billingInterval === 'monthly') {
       const discounted =
         discountPct > 0 ? Math.round(monthly * (100 - discountPct)) / 100 : monthly
@@ -138,10 +144,14 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
           <p className="text-sm text-token-textMuted">
             Plan seçin və ödəniş üsulunu təyin edin. Kartla ödəniş dərhal aktivləşir; köçürmə admin təsdiqi ilə.
           </p>
-          {partnerOffer?.discount_pct > 0 ? (
+          {convertingFromTrial && partnerOffer?.discount_pct > 0 ? (
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
               Partner endirimi: ilk {partnerOffer.discount_duration_months || 3} ödənişli ay üçün −
-              {partnerOffer.discount_pct}% (aylıq paketlər).
+              {partnerOffer.discount_pct}% (qoşulduğunuz paketdə; yüksəltmədə endirim itirilir).
+            </div>
+          ) : !convertingFromTrial && partnerOffer?.discount_pct > 0 ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+              Paket yüksəldəndə partner endirimi tətbiq olunmur (endirim yalnız ilkin paketə aiddir).
             </div>
           ) : null}
           <PricingBillingIntervalToggle value={billingInterval} onChange={setBillingInterval} theme={theme} />

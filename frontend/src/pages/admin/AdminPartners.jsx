@@ -484,7 +484,11 @@ export default function AdminPartners() {
               </div>
               <div className="mt-1 text-token-textMuted">
                 Trial {c.trial_days}g · Discount {c.user_discount_pct}% × {c.discount_duration_months}ay · Commission{' '}
-                {c.commission_pct}% × {c.commission_duration_months}ay · Window {c.attribution_window_days}g · Min payout{' '}
+                {c.commission_pct}% ×{' '}
+                {Number(c.commission_duration_months) > 0
+                  ? `${c.commission_duration_months}ay`
+                  : 'unlimited'}{' '}
+                · Window {c.attribution_window_days}g · Min payout{' '}
                 {centsToAzn(c.minimum_payout_cents)} AZN
               </div>
             </div>

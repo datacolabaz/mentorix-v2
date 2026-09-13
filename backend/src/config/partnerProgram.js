@@ -9,9 +9,14 @@ function isPartnerProgramEnabled() {
 const PARTNER_DEFAULTS = Object.freeze({
   trial_days: 21,
   user_discount_pct: 10,
+  /** First N paid months on the original joined package (upgrade forfeits). */
   discount_duration_months: 3,
   commission_pct: 20,
-  commission_duration_months: 3,
+  /**
+   * Paid-period window for partner commission.
+   * 0 = unlimited / recurring while the referred user keeps paying.
+   */
+  commission_duration_months: 0,
   attribution_window_days: 90,
   minimum_payout_cents: 2000,
   cookie_name: 'mx_partner_ref',
