@@ -49,14 +49,31 @@ export default function MentorixLive() {
   const [admissionDenied, setAdmissionDenied] = useState(false)
   const [connectionLost, setConnectionLost] = useState(false)
   const [rejoining, setRejoining] = useState(false)
+  const [recordingUsage, setRecordingUsage] = useState(null)
   const intentionalLeaveRef = useRef(false)
 
   const recording = useLocalRecording()
-  const canRecord = recording.supported
-
   const isInstructor = Boolean(room?.is_instructor)
+  const canRecord =
+    Boolean(isInstructor && recording.supported) && recordingUsage?.recording_enabled !== false
 
   const code = String(roomCode || '').trim().toUpperCase()
+
+  useEffect(() => {
+    if (user?.role !== 'instructor') return
+    let cancelled = false
+    api
+      .get('/live/recording-usage')
+      .then((res) => {
+        if (!cancelled) setRecordingUsage(res?.usage || null)
+      })
+      .catch(() => {
+        if (!cancelled) setRecordingUsage(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.role])
 
   const roomOptions = useMemo(
     () => ({
@@ -278,6 +295,12 @@ export default function MentorixLive() {
       if (blob) await finishRecording(blob)
       return
     }
+    if (recordingUsage?.at_limit || recordingUsage?.recording_enabled === false) {
+      toast(recordingUsage?.recording_enabled === false
+        ? 'Bu paketdə dərs yazısı yoxdur'
+        : 'Yazı limiti dolub', 'error')
+      return
+    }
     const result = await recording.startRecording()
     if (result?.status === 'started') {
       toast('Yazılış başladı — ekran/tab seçin')
@@ -387,7 +410,20 @@ export default function MentorixLive() {
         </div>
       </header>
 
-      {canRecord && !recording.isRecording ? (
+      {isInstructor && recordingUsage && !recordingUsage.recording_enabled ? (
+        <div className="shrink-0 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-200 text-center">
+          Bu paketdə dərs yazısı yoxdur — paketi yüksəldin.
+        </div>
+      ) : null}
+      {isInstructor && recordingUsage?.recording_enabled ? (
+        <div className="shrink-0 px-4 py-2 bg-white/5 border-b border-white/10 text-[11px] text-gray-300 text-center tabular-nums">
+          Yazı: {recordingUsage.hours_used}/{recordingUsage.hours_limit} saat ·{' '}
+          {Math.round((recordingUsage.storage_used_bytes || 0) / (1024 * 1024))} MB /{' '}
+          {Math.round((recordingUsage.storage_limit_bytes || 0) / (1024 * 1024 * 1024))} GB
+          {recordingUsage.at_limit ? ' · Limit dolub' : recordingUsage.near_limit ? ' · Limitə yaxın' : ''}
+        </div>
+      ) : null}
+      {canRecord && !recording.isRecording && recordingUsage?.recording_enabled !== false ? (
         <div className="shrink-0 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-200 text-center">
           <strong>Record</strong> ilə dərs yazısı platformaya yüklənir — «Canlı dərslər» səhifəsində saxlanılır.
         </div>

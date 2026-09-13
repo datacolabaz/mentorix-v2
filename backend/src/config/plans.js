@@ -10,6 +10,11 @@ const PLANS = {
     exams_monthly: 2,
     homeworks_monthly: 5,
     live_participants: 5,
+    recording_hours_monthly: 0,
+    recording_storage_bytes: 0,
+    recording_retention_days: 0,
+    recording_max_duration_sec: 0,
+    recording_max_quality: null,
   },
   pro: {
     price_azn: 5,
@@ -21,6 +26,11 @@ const PLANS = {
     exams_monthly: 20,
     homeworks_monthly: 40,
     live_participants: 20,
+    recording_hours_monthly: 5,
+    recording_storage_bytes: 5 * 1024 * 1024 * 1024,
+    recording_retention_days: 30,
+    recording_max_duration_sec: 7200,
+    recording_max_quality: '720p',
   },
   growth: {
     price_azn: 10,
@@ -32,6 +42,11 @@ const PLANS = {
     exams_monthly: 50,
     homeworks_monthly: 120,
     live_participants: 50,
+    recording_hours_monthly: 20,
+    recording_storage_bytes: 20 * 1024 * 1024 * 1024,
+    recording_retention_days: 90,
+    recording_max_duration_sec: 7200,
+    recording_max_quality: '720p',
   },
   premium: {
     price_azn: 19,
@@ -43,6 +58,11 @@ const PLANS = {
     exams_monthly: null,
     homeworks_monthly: null,
     live_participants: null,
+    recording_hours_monthly: 50,
+    recording_storage_bytes: 50 * 1024 * 1024 * 1024,
+    recording_retention_days: 180,
+    recording_max_duration_sec: 10800,
+    recording_max_quality: '1080p',
   },
 };
 

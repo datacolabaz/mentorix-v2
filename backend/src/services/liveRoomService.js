@@ -201,19 +201,10 @@ async function getLiveRoomForRecordingUpload(roomCode, user) {
     err.status = 404;
     throw err;
   }
-  const ok = await userCanAccessLiveRoom(user, room);
-  if (!ok) {
-    const err = new Error('Bu otağa giriş icazəniz yoxdur');
+  if (!user || user.role !== 'instructor' || String(room.instructor_id) !== String(user.id)) {
+    const err = new Error('Yalnız müəllim dərs yazısı yükləyə bilər');
     err.status = 403;
-    throw err;
-  }
-  const { rows } = await db.query(
-    `SELECT 1 FROM live_sessions WHERE room_id = $1 AND user_id = $2 LIMIT 1`,
-    [room.id, user.id],
-  );
-  if (!rows[0]) {
-    const err = new Error('Bu dərsə qoşulmamısınız');
-    err.status = 403;
+    err.code = 'RECORDING_TEACHER_ONLY';
     throw err;
   }
   return room;
@@ -349,8 +340,12 @@ async function deleteLiveRoomForInstructor(instructorId, roomCode) {
     throw err;
   }
   const { getLiveRecordingForRoom, deleteLiveRecordingFile } = require('./liveRecordingStorage');
+  const { releaseRecordingQuota } = require('./liveRecordingQuotaService');
   const recording = await getLiveRecordingForRoom(room.id);
-  if (recording) await deleteLiveRecordingFile(recording);
+  if (recording) {
+    await releaseRecordingQuota(recording);
+    await deleteLiveRecordingFile(recording);
+  }
   const { deleteLiveChatFilesForRoom } = require('./liveChatAttachmentStorage');
   await deleteLiveChatFilesForRoom(room.id);
   await db.query(`DELETE FROM live_rooms WHERE id = $1`, [room.id]);
@@ -370,7 +365,7 @@ async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
             (SELECT COALESCE(SUM(ls.duration_minutes), 0)::int FROM live_sessions ls WHERE ls.room_id = lr.id AND ls.duration_minutes IS NOT NULL) AS total_minutes
      FROM live_rooms lr
      LEFT JOIN instructor_groups ig ON ig.id = lr.group_id
-     LEFT JOIN live_recordings lrec ON lrec.room_id = lr.id
+     LEFT JOIN live_recordings lrec ON lrec.room_id = lr.id AND lrec.deleted_at IS NULL AND (lrec.expires_at IS NULL OR lrec.expires_at > NOW())
      LEFT JOIN users uploader ON uploader.id = lrec.uploaded_by_user_id
      WHERE lr.instructor_id = $1
      ORDER BY COALESCE(lr.scheduled_at, lr.started_at, lr.created_at) DESC

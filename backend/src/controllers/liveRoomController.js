@@ -24,6 +24,7 @@ const {
   ensureRecordingShareTokenByRoomId,
 } = require('../services/liveRecordingStorage');
 const { listGuestsForRoom } = require('../services/liveGuestService');
+const { getRecordingUsageSnapshot } = require('../services/liveRecordingQuotaService');
 const { requestUserAdmission, assertUserMayEnter, mapAdmission } = require('../services/liveAdmissionService');
 
 const liveRecordingsDir = ensureLiveRecordingsUploadDir();
@@ -282,10 +283,32 @@ const postRecording = async (req, res) => {
         share_url: row.share_token ? `/lr/${row.share_token}` : null,
         duration_sec: row.duration_sec,
         byte_size: row.byte_size,
+        expires_at: row.expires_at || null,
       },
     });
   } catch (e) {
-    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+    if (req.file?.path) {
+      try {
+        const fs = require('fs');
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+    }
+    res.status(e.status || e.statusCode || 500).json({
+      success: false,
+      code: e.code || null,
+      message: e.message || 'Xəta',
+    });
+  }
+};
+
+const getRecordingUsage = async (req, res) => {
+  try {
+    const usage = await getRecordingUsageSnapshot(req.user.id);
+    res.json({ success: true, usage });
+  } catch (e) {
+    res.status(e.status || e.statusCode || 500).json({ success: false, message: e.message || 'Xəta' });
   }
 };
 
@@ -335,7 +358,7 @@ const getRecordingFile = async (req, res) => {
     const filename = String(req.params.filename || '').trim();
     const { rows } = await db.query(`SELECT * FROM live_recordings WHERE filename = $1 LIMIT 1`, [filename]);
     const recording = rows[0];
-    if (!recording) {
+    if (!recording || recording.deleted_at || (recording.expires_at && new Date(recording.expires_at) <= new Date())) {
       return res.status(404).json({ success: false, message: 'Yazı tapılmadı' });
     }
     const ok = await userCanAccessLiveRecording(req.user, recording);
@@ -358,6 +381,7 @@ module.exports = {
   getHistory,
   postRecording,
   getRecordingFile,
+  getRecordingUsage,
   deleteRoom,
   getPublicRecording,
   getPublicRecordingInfo,
