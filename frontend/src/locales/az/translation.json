@@ -226,6 +226,7 @@
       "googleIncomplete": "Google girişi tamamlanmadı",
       "googleSelectRole": "Google girişi üçün hesab növünü seçin",
       "accountExists": "Bu email artıq qeydiyyatdadır. Zəhmət olmasa «Daxil ol» bölməsindən giriş edin.",
+      "googleAccountExists": "Bu Google hesabı ilə artıq qeydiyyat mövcuddur. Daxil olun.",
       "invalidServer": "Server cavabı etibarsızdır"
     },
     "toasts": {

@@ -226,6 +226,7 @@
       "googleIncomplete": "Google sign-in was not completed",
       "googleSelectRole": "Select an account type for Google sign-in",
       "accountExists": "This email is already registered. Please sign in from the «Sign in» tab.",
+      "googleAccountExists": "An account already exists with this Google identity. Please sign in.",
       "invalidServer": "Invalid server response"
     },
     "toasts": {

@@ -26,5 +26,12 @@ export function authLoginErrorMessage(err, t) {
   if (code === 'GOOGLE_LOGIN_REQUIRED') {
     return t('auth.toasts.googleLoginRequired')
   }
+  if (code === 'ACCOUNT_ALREADY_EXISTS') {
+    return t('auth.errors.googleAccountExists')
+  }
+  const raw = String(err?.message || '')
+  if (/duplicate key|violates unique constraint/i.test(raw)) {
+    return t('auth.errors.googleAccountExists')
+  }
   return err?.message || t('auth.toasts.loginError')
 }

@@ -226,6 +226,7 @@
       "googleIncomplete": "Вход через Google не завершён",
       "googleSelectRole": "Выберите тип аккаунта для входа через Google",
       "accountExists": "Этот email уже зарегистрирован. Войдите через раздел «Войти».",
+      "googleAccountExists": "С этим Google-аккаунтом уже есть регистрация. Войдите.",
       "invalidServer": "Недействительный ответ сервера"
     },
     "toasts": {
