@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('../../utils/db');
 const { isPartnerProgramEnabled, PARTNER_DEFAULTS } = require('../../config/partnerProgram');
+const { resolveReferrerSource } = require('../../utils/referrerSource');
 
 async function logPartnerAudit({ actorUserId = null, partnerId = null, action, entityType = null, entityId = null, context = null }, client = db) {
   try {
@@ -97,6 +98,10 @@ async function recordClick({
   ip,
   userAgent,
   landingPath,
+  utmSource = null,
+  utmMedium = null,
+  referrerUrl = null,
+  refererHeader = null,
 }) {
   if (!isPartnerProgramEnabled()) return null;
   const resolved = await resolveCodeRow(codeRaw);
@@ -108,11 +113,21 @@ async function recordClick({
     campaignId = def?.id || null;
   }
 
+  const utm = utmSource != null ? String(utmSource).trim().slice(0, 128) : null;
+  const refUrl = referrerUrl != null ? String(referrerUrl).trim().slice(0, 1024) : null;
+  const referrerSource = resolveReferrerSource({
+    utm_source: utm,
+    utm_medium: utmMedium,
+    referrer_url: refUrl,
+    referer_header: refererHeader,
+  });
+
   const { rows } = await db.query(
     `INSERT INTO partner_referral_clicks (
-       link_id, code_id, partner_id, campaign_id, session_key, ip_hash, user_agent, landing_path
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-     RETURNING id, partner_id, link_id, code_id, campaign_id, created_at`,
+       link_id, code_id, partner_id, campaign_id, session_key, ip_hash, user_agent, landing_path,
+       referrer_source, utm_source, referrer_url
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+     RETURNING id, partner_id, link_id, code_id, campaign_id, referrer_source, created_at`,
     [
       resolved.link_id,
       resolved.code_id,
@@ -122,6 +137,9 @@ async function recordClick({
       hashIp(ip),
       userAgent ? String(userAgent).slice(0, 512) : null,
       landingPath ? String(landingPath).slice(0, 512) : null,
+      referrerSource,
+      utm || null,
+      refUrl || null,
     ]
   );
   return {

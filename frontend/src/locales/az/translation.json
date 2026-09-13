@@ -3952,6 +3952,30 @@
       "approved": "Təsdiqli balans",
       "paid": "Ödənilmiş"
     },
+    "analytics": {
+      "title": "Analitika",
+      "tabs": {
+        "timeline": "Zaman qrafiki",
+        "sources": "Mənbələr",
+        "funnel": "Konversiya qıfı"
+      },
+      "period": {
+        "7d": "7 gün",
+        "30d": "30 gün",
+        "year": "İl",
+        "all": "Hamısı"
+      },
+      "seriesClicks": "Klik",
+      "seriesEarnings": "Komissiya (AZN)",
+      "emptyTimeline": "Bu dövr üçün hələ klik və ya qazanc yoxdur.",
+      "emptySources": "Mənbə məlumatı hələ yoxdur. Referral linkə UTM və ya sosial referrer əlavə edin.",
+      "funnelClicks": "Kliklər",
+      "funnelSignups": "Qeydiyyatlar",
+      "funnelPaid": "Ödənişli müştərilər",
+      "funnelEarnings": "Qazanc",
+      "clickToSignup": "Klik → Qeydiyyat",
+      "signupToPaid": "Qeydiyyat → Ödəniş"
+    },
     "col": {
       "plan": "Plan",
       "period": "Period",
