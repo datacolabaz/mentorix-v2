@@ -209,7 +209,8 @@ export default function Landing() {
   return (
     <div
       className={[
-        'mx-public-page min-h-[100svh] w-full min-w-0 max-w-full overflow-x-hidden',
+        // overflow-x must not wrap sticky PublicMarketingNav (overflow-x:hidden forces a scrollport and kills sticky).
+        'mx-public-page min-h-[100svh] w-full min-w-0 max-w-full',
         isDark ? 'theme-dark bg-[#0b0b0b]' : 'theme-light bg-[#f4f6fb]',
       ].join(' ')}
     >

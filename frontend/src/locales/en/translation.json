@@ -1207,10 +1207,10 @@
       "pro": {
         "title": "STANDARD",
         "subtitle": "For private teachers",
-        "cta": "Start free",
+        "cta": "Choose plan",
         "bullets": [
           "20 students",
-          "1,250 documents",
+          "5 GB cloud storage",
           "20 SMS / mo.",
           "20 exams / mo.",
           "40 assignments / mo.",
@@ -1223,10 +1223,10 @@
       "growth": {
         "title": "PROFESSIONAL",
         "subtitle": "For growing groups",
-        "cta": "Start free",
+        "cta": "Choose plan",
         "bullets": [
           "50 students",
-          "5,000 documents",
+          "20 GB cloud storage",
           "50 SMS / mo.",
           "50 exams / mo.",
           "120 assignments / mo.",
@@ -1240,10 +1240,10 @@
       "premium": {
         "title": "PREMIUM",
         "subtitle": "For active teachers",
-        "cta": "Start free",
+        "cta": "Choose plan",
         "bullets": [
           "Unlimited students",
-          "Unlimited documents",
+          "Unlimited storage",
           "200 SMS / mo.",
           "Unlimited exams",
           "Unlimited assignments",
@@ -2873,6 +2873,8 @@
       "students": "{{count}} students",
       "documentsUnlimited": "Unlimited documents",
       "documents": "{{count}} documents",
+      "cloudStorageGb": "{{size}} GB cloud storage",
+      "cloudStorageUnlimited": "Unlimited storage",
       "storage5mb": "5 MB document storage",
       "storage256mb": "256 MB document storage",
       "storage1gb": "1 GB document storage",

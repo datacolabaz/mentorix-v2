@@ -1207,10 +1207,10 @@
       "pro": {
         "title": "STANDART",
         "subtitle": "Fərdi müəllimlər üçün",
-        "cta": "Pulsuz başla",
+        "cta": "Planı seç",
         "bullets": [
           "20 tələbə",
-          "1 250 sənəd",
+          "5 GB Bulud Yaddaşı",
           "20 SMS / ay",
           "20 imtahan / ay",
           "40 tapşırıq / ay",
@@ -1223,10 +1223,10 @@
       "growth": {
         "title": "PROFESSİONAL",
         "subtitle": "Böyüyən qruplar üçün",
-        "cta": "Pulsuz başla",
+        "cta": "Planı seç",
         "bullets": [
           "50 tələbə",
-          "5 000 sənəd",
+          "20 GB Bulud Yaddaşı",
           "50 SMS / ay",
           "50 imtahan / ay",
           "120 tapşırıq / ay",
@@ -1240,10 +1240,10 @@
       "premium": {
         "title": "PREMİUM",
         "subtitle": "Aktiv müəllimlər üçün",
-        "cta": "Pulsuz başla",
+        "cta": "Planı seç",
         "bullets": [
           "Limitsiz tələbə",
-          "Limitsiz sənəd",
+          "Limitsiz Yaddaş",
           "200 SMS / ay",
           "Limitsiz imtahan",
           "Limitsiz tapşırıq",
@@ -2873,6 +2873,8 @@
       "students": "{{count}} tələbə",
       "documentsUnlimited": "Limitsiz sənəd",
       "documents": "{{count}} sənəd",
+      "cloudStorageGb": "{{size}} GB Bulud Yaddaşı",
+      "cloudStorageUnlimited": "Limitsiz Yaddaş",
       "storage5mb": "5 MB Sənəd Yaddaşı",
       "storage256mb": "256 MB Sənəd Yaddaşı",
       "storage1gb": "1 GB Sənəd Yaddaşı",
