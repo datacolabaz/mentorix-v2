@@ -332,6 +332,7 @@ export default function App() {
         <Route path="payments" element={<AdminPayments />} />
         <Route path="billing" element={<AdminBilling />} />
         <Route path="partners" element={<AdminPartners />} />
+        <Route path="partners/partners" element={<Navigate to="/admin/partners" replace />} />
         <Route path="inventory" element={<AdminInventory />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />

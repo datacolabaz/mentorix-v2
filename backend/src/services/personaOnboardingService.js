@@ -154,15 +154,13 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
   if (!isPersonaId(personaId)) {
     throw badRequest('İstifadə məqsədini seçin', 'INVALID_PERSONA');
   }
-  const authRole = authRoleForPersona(personaId);
-  if (!authRole) {
-    throw badRequest('İstifadə məqsədi etibarsızdır', 'INVALID_PERSONA');
-  }
 
   const sanitized = sanitizePersonaProfile(personaId, profile);
   if (requireComplete && !requiredProfileComplete(personaId, sanitized)) {
     throw badRequest('Zəhmət olmasa bütün məlumatları doldurun', 'INCOMPLETE_PROFILE');
   }
+
+  let authRole = authRoleForPersona(personaId);
 
   await db.transaction(async (client) => {
     const { rows } = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [userId]);
@@ -177,12 +175,23 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
       ? mergePersonaProfile(me.persona_profile, personaId, sanitized)
       : { [personaId]: sanitized, current: personaId };
 
+    // Partner = referral purpose only. Keep existing auth role so users can switch
+    // back to teacher/participant later without losing cabinet access.
+    if (personaId === PERSONAS.PARTNER || !authRole) {
+      const current = String(me.role || '').trim().toLowerCase();
+      authRole = current && current !== 'admin' ? current : 'student';
+    }
+
     const alreadyInstructor = me.role === 'instructor';
     const { rows: instRows } = await client.query(
       'SELECT 1 FROM instructor_profiles WHERE user_id = $1 LIMIT 1',
       [userId],
     );
-    const grantTrial = authRole === 'instructor' && !alreadyInstructor && !instRows[0];
+    const grantTrial =
+      personaId !== PERSONAS.PARTNER &&
+      authRole === 'instructor' &&
+      !alreadyInstructor &&
+      !instRows[0];
 
     await client.query(
       `UPDATE users
@@ -196,15 +205,17 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
     );
 
     await grantUserRole(userId, authRole, client);
-    await provisionForAuthRole(client, {
-      userId,
-      authRole,
-      fullName: me.full_name,
-      persona: personaId,
-      profile: sanitized,
-      req,
-      grantTrial,
-    });
+    if (personaId !== PERSONAS.PARTNER) {
+      await provisionForAuthRole(client, {
+        userId,
+        authRole,
+        fullName: me.full_name,
+        persona: personaId,
+        profile: sanitized,
+        req,
+        grantTrial,
+      });
+    }
   });
 
   return { persona: personaId, authRole };

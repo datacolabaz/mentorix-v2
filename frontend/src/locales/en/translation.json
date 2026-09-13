@@ -253,6 +253,7 @@
     "continue": "Continue",
     "continueHintSkip": "A choice is optional. You can also pick this later in Settings.",
     "continueHintSelected": "Continue to add a few details.",
+    "continueHintPartner": "Continue — you’ll open the Partner cabinet.",
     "detailsHint": "A few details help us set up the right workspace.",
     "unauthorizedTitle": "Sign in",
     "unauthorizedBody": "Please sign in first to continue.",
@@ -280,6 +281,10 @@
       "hr_company": {
         "title": "Company / HR",
         "desc": "Assess candidates and employees."
+      },
+      "partner": {
+        "title": "Partner",
+        "desc": "Share your referral link and earn commission on confirmed payments."
       },
       "other": {
         "title": "Other",
@@ -405,6 +410,45 @@
       "exams": "Exams",
       "tests": "Tests",
       "results": "Results"
+    },
+    "partner": {
+      "cabinet": "Partner cabinet",
+      "program": "Partner program"
+    }
+  },
+  "adminPartners": {
+    "title": "Partner program",
+    "subtitle": "Select a partner and manage applications and payouts",
+    "selectLabel": "Select partner",
+    "selectPlaceholder": "— Choose from list —",
+    "clearSelection": "Clear selection",
+    "select": "Select",
+    "detailTitle": "Selected partner",
+    "loading": "Loading…",
+    "loadError": "Failed to load",
+    "detailError": "Partner not found",
+    "error": "Error",
+    "status": "Status",
+    "empty": "No partners yet",
+    "filterAll": "All",
+    "refresh": "Refresh",
+    "approve": "Approve",
+    "reject": "Reject",
+    "restore": "Restore",
+    "paid": "Paid",
+    "pendingCommission": "Pending",
+    "referralLinks": "Referral links",
+    "tabs": {
+      "partners": "Partners",
+      "commissions": "Commissions",
+      "payouts": "Payouts",
+      "campaigns": "Campaigns"
+    },
+    "col": {
+      "name": "Name",
+      "status": "Status",
+      "commission": "Commission",
+      "actions": "Actions"
     }
   },
   "appHome": {

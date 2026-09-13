@@ -21,8 +21,16 @@ describe('personas config', () => {
     assert.equal(authRoleForPersona(PERSONAS.PARENT), 'parent');
     assert.equal(authRoleForPersona(PERSONAS.HR_COMPANY), 'instructor');
     assert.equal(authRoleForPersona(PERSONAS.OTHER), 'instructor');
+    assert.equal(authRoleForPersona(PERSONAS.PARTNER), null);
     assert.equal(isPersonaId('course'), false);
+    assert.equal(isPersonaId(PERSONAS.PARTNER), true);
     assert.equal(PERSONA_ORDER.includes('course'), false);
+    assert.equal(PERSONA_ORDER.includes(PERSONAS.PARTNER), true);
+  });
+
+  it('treats partner profile as complete without extra fields', () => {
+    assert.equal(requiredProfileComplete(PERSONAS.PARTNER, {}), true);
+    assert.deepEqual(sanitizePersonaProfile(PERSONAS.PARTNER, { note: '  hi  ', extra: 1 }), { note: 'hi' });
   });
 
   it('maps legacy signup roles to personas', () => {
