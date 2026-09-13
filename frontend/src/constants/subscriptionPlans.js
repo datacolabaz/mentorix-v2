@@ -52,7 +52,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
     },
     marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
     plan_subtitle: null,
-    plan_cta: 'Standart seç',
+    plan_cta: 'Planı seç',
     popular_label: '⭐ Ən populyar',
   },
   {
@@ -77,7 +77,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
     },
     marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar'],
     plan_subtitle: null,
-    plan_cta: 'Professional seç',
+    plan_cta: 'Planı seç',
     popular_label: null,
   },
   {
@@ -108,7 +108,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       'Prioritet texniki dəstək',
     ],
     plan_subtitle: null,
-    plan_cta: 'Premium seç',
+    plan_cta: 'Planı seç',
     popular_label: null,
   },
 ]

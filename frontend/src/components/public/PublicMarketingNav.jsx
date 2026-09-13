@@ -183,8 +183,8 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
       <nav
         className={
           isDark
-            ? 'sticky top-0 z-[2020] border-b border-white/10 bg-[#0b0b0b]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/80'
-            : 'sticky top-0 z-[2020] border-b border-slate-200 bg-white/92 backdrop-blur-md supports-[backdrop-filter]:bg-white/85'
+            ? 'sticky top-0 z-[2020] border-b border-white/10 bg-[#0b0b0b]/95 backdrop-blur-md supports-[backdrop-filter]:bg-[#0b0b0b]/90'
+            : 'sticky top-0 z-[2020] border-b border-slate-200 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/90'
         }
         aria-label={t('landing.nav.mainNav')}
       >

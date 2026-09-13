@@ -42,7 +42,7 @@ export function PricingPlanCard({ plan, onCta }) {
         onClick={onCta}
         className="inline-flex justify-center items-center rounded-xl bg-primary px-4 py-2.5 min-h-[44px] text-xs font-bold text-[#041018] hover:brightness-95"
       >
-        {t('landing.pricingPage.cta')}
+        {display.meta.cta || t('landing.pricingPage.cta')}
       </Link>
     </article>
   )

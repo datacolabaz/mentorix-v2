@@ -97,7 +97,8 @@ export default function AuthPage() {
   return (
     <div
       className={[
-        'login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col overflow-x-hidden',
+        // Keep overflow off the sticky header ancestor so AuthPage top bar sticks while scrolling.
+        'login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col',
         isDark ? 'theme-dark' : 'theme-light',
       ].join(' ')}
     >

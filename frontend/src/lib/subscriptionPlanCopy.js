@@ -34,6 +34,21 @@ function documentLineFromLimits(lim, opts) {
   return pt(opts, 'limits.documents', { count: fmtNum(docs, opts) }, `${fmtNum(docs, opts)} sənəd`)
 }
 
+/** Marketing cards: cloud storage (recording_storage) instead of document counts. */
+function cloudStorageLineFromPlan(p, lim, planId, opts) {
+  const id = String(planId || '').toLowerCase()
+  const normId = id === 'business' ? 'premium' : id
+  if (normId === 'premium') {
+    return pt(opts, 'limits.cloudStorageUnlimited', {}, 'Limitsiz Yaddaş')
+  }
+  const rec = resolveRecordingFromPlan(p, lim, normId)
+  const gb = Number(formatRecordingStorageGb(rec.storageBytes, opts))
+  if (Number.isFinite(gb) && gb > 0) {
+    return pt(opts, 'limits.cloudStorageGb', { size: gb }, `${gb} GB Bulud Yaddaşı`)
+  }
+  return documentLineFromLimits(lim, opts)
+}
+
 function storageLabelFromBytes(bytes, opts) {
   const b = Number(bytes)
   if (!Number.isFinite(b) || b <= 0) return null
@@ -282,18 +297,8 @@ export function planPricingLimitLines(p, opts = {}) {
   if (lim.students == null) lines.push(pt(opts, 'limits.studentsUnlimited', {}, 'Limitsiz tələbə'))
   else lines.push(pt(opts, 'limits.students', { count: fmtNum(lim.students, opts) }, `${fmtNum(lim.students, opts)} tələbə`))
 
-  const docLine = documentLineFromLimits(lim, opts)
-  if (docLine) lines.push(docLine)
-  else {
-    const storage = formatStorageFromLimits(lim, opts)
-    if (storage) {
-      const t = pickT(opts)
-      if (t) lines.push(storage)
-      else lines.push(storage.replace(/Sənəd Yaddaşı/gi, 'sənəd').replace(/yaddaş/gi, 'sənəd'))
-    } else if (lim.storage_mb == null && lim.storage_limit_bytes == null) {
-      lines.push(pt(opts, 'limits.documentsUnlimited', {}, 'Limitsiz sənəd'))
-    }
-  }
+  const cloudLine = cloudStorageLineFromPlan(p, lim, id, opts)
+  if (cloudLine) lines.push(cloudLine)
 
   if (lim.sms_monthly == null) lines.push(pt(opts, 'limits.smsUnlimited', {}, 'Limitsiz SMS / ay'))
   else if (isTrial) {

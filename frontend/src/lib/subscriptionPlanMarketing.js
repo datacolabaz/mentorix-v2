@@ -42,17 +42,17 @@ const FALLBACK_META_BY_SLUG = {
   pro: {
     subtitle: 'Fərdi müəllimlər üçün',
     popularLabel: '⭐ Ən populyar',
-    cta: 'Standart seç',
+    cta: 'Planı seç',
   },
   growth: {
     subtitle: 'Böyüyən müəllimlər üçün',
     popularLabel: null,
-    cta: 'Professional seç',
+    cta: 'Planı seç',
   },
   premium: {
     subtitle: 'Aktiv müəllimlər üçün',
     popularLabel: null,
-    cta: 'Premium seç',
+    cta: 'Planı seç',
   },
 }
 
