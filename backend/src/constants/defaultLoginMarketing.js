@@ -21,7 +21,7 @@ function defaultLoginMarketingPayload() {
       headline: 'Müəllim, tələbə və valideyn — bir təhsil platformasında',
       subheadline:
         'Tapşırıq və imtahan, çat, ödəniş izləmə, valideyn bildirişləri və müəllim axtarışı — hamısı bir yerdə.',
-      primary_cta_label: 'Pulsuz başla (14 günlük sınaq)',
+      primary_cta_label: 'Pulsuz başla (21 günlük sınaq)',
       marketplace_cta_label: 'Müəllim / Təlimçi tap (Xəritə ilə)',
       secondary_how: 'Necə işləyir?',
       secondary_demo: 'Demo bax',
@@ -204,7 +204,7 @@ function defaultLoginMarketingPayload() {
       section_enabled: true,
       heading: 'Təhsil bir ekosistem kimi işləsin.',
       subtitle:
-        'Müəllim idarə etsin, tələbə öyrənsin, valideyn izləsin — əvvəl dəyəri gör, sonra 14 günlük sınaqla başla.',
+        'Müəllim idarə etsin, tələbə öyrənsin, valideyn izləsin — əvvəl dəyəri gör, sonra 21 günlük sınaqla başla.',
     },
     marketplace: {
       section_enabled: true,

@@ -175,7 +175,7 @@ async function enforceActiveSubscription(req, res, next) {
         code: 'SUBSCRIPTION_INACTIVE',
         message:
           e.messages?.banner ||
-          `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${e.upgrade_labels?.higher_paid_label || 'ödənişli paket'} seçin.`,
+          `21 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${e.upgrade_labels?.higher_paid_label || 'ödənişli paket'} seçin.`,
         status: e.status,
       });
     }

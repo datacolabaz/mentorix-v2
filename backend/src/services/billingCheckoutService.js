@@ -68,7 +68,7 @@ async function createPlanCheckout({
     throw err;
   } else if (normalizePlanSlug(plan) === 'basic') {
     const err = new Error(
-      `SADƏ paketi yenilənmir — yalnız 14 günlük sınaqdır. ${higherPaidPlansLabel(plansMap, 'basic')} seçin.`,
+      `SADƏ paketi yenilənmir — yalnız 21 günlük sınaqdır. ${higherPaidPlansLabel(plansMap, 'basic')} seçin.`,
     );
     err.code = 'BASIC_NOT_RENEWABLE';
     err.statusCode = 400;

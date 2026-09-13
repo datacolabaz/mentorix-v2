@@ -58,8 +58,11 @@ function PartnerShell({ children }) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 text-sm">
-          <Link to="/partner" className="text-token-textMuted hover:text-token-textMain whitespace-nowrap">
+        <div className="flex items-center gap-2 sm:gap-3 text-sm flex-wrap justify-end">
+          <Link to="/" className="text-token-textMuted hover:text-token-textMain whitespace-nowrap">
+            {t('auth.backHome')}
+          </Link>
+          <Link to="/partner" className="text-token-textMuted hover:text-token-textMain whitespace-nowrap hidden sm:inline">
             {t('partner.public.nav', { defaultValue: 'Partner proqramı' })}
           </Link>
           <Link
@@ -72,7 +75,7 @@ function PartnerShell({ children }) {
           <button
             type="button"
             onClick={() => logout()}
-            className="hidden sm:inline text-token-textMuted hover:text-token-textMain"
+            className="rounded-lg border border-token-border px-3 py-1.5 text-token-textMuted hover:text-token-textMain hover:bg-token-bg whitespace-nowrap"
           >
             {t('layout.logout')}
           </button>
@@ -254,6 +257,12 @@ export default function PartnerDashboard() {
           {t('partner.terms', {
             discount: partner.user_discount_pct ?? 10,
             commission: partner.commission_pct ?? 20,
+            months: partner.commission_duration_months ?? 3,
+            trial: partner.trial_days ?? 21,
+          })}
+        </p>
+        <p className="mt-1 text-[11px] leading-snug text-token-textMuted/90" title={t('partner.termsTooltip')}>
+          {t('partner.termsHint', {
             months: partner.commission_duration_months ?? 3,
             trial: partner.trial_days ?? 21,
           })}

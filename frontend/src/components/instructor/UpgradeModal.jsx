@@ -11,8 +11,11 @@ import PaymentMethodModal from './PaymentMethodModal'
 import { openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planRank } from '../../lib/subscriptionPlanGuards'
+import { planLimitFeatureLines } from '../../lib/subscriptionPlanCopy'
+import { useTranslation } from 'react-i18next'
 
 export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan }) {
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
@@ -167,6 +170,16 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
                   {pr.line2 ? (
                     <p className="mt-1 text-[11px] leading-snug text-token-textMuted">{pr.line2}</p>
                   ) : null}
+                  <ul className="mt-3 space-y-1 text-[11px] leading-snug text-token-textMuted">
+                    {planLimitFeatureLines(p, { t, lang: i18n.language })
+                      .slice(0, 8)
+                      .map((line) => (
+                        <li key={`${p.id}-${line}`} className="flex gap-1.5 min-w-0">
+                          <span className="shrink-0 text-primary">•</span>
+                          <span className="min-w-0 break-words">{line}</span>
+                        </li>
+                      ))}
+                  </ul>
                   <div className="mt-4">
                     {tgtRank <= curRank ? (
                       <div className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">

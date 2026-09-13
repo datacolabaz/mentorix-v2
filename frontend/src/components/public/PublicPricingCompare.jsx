@@ -48,6 +48,13 @@ export function PricingPlanCard({ plan, onCta }) {
   )
 }
 
+function recordingHoursLabel(plan, t) {
+  const hours = plan?.limits?.recording_hours_monthly
+  const n = hours == null ? null : Number(hours)
+  if (n == null || !Number.isFinite(n) || n <= 0) return t('landing.pricingPage.recordingNone', { defaultValue: '—' })
+  return t('landing.pricingPage.recordingHours', { hours: n, defaultValue: `${n} saat/ay` })
+}
+
 export default function PublicPricingCompare({ plans, onCta, hideIntro = false, tableOnly = false }) {
   const { t } = useTranslation()
   const list = Array.isArray(plans) && plans.length ? plans : DEFAULT_SUBSCRIPTION_PLANS
@@ -60,7 +67,9 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
     { key: 'exams', label: t('landing.pricingPage.rows.exams') },
     { key: 'assignments', label: t('landing.pricingPage.rows.assignments') },
     { key: 'sms', label: t('landing.pricingPage.rows.sms') },
+    { key: 'liveLessons', label: t('landing.pricingPage.rows.liveLessons', { defaultValue: 'Canlı dərslər' }) },
     { key: 'live', label: t('landing.pricingPage.rows.live') },
+    { key: 'recording', label: t('landing.pricingPage.rows.recording', { defaultValue: 'Dərs yazısı' }) },
   ]
 
   const cell = (plan, key) => {
@@ -76,7 +85,9 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
     if (key === 'exams') return limitLabel(lim.exams_monthly, unlimited)
     if (key === 'assignments') return limitLabel(lim.homeworks_monthly, unlimited)
     if (key === 'sms') return limitLabel(lim.sms_monthly, unlimited)
+    if (key === 'liveLessons') return unlimited
     if (key === 'live') return limitLabel(liveLimit(plan), unlimited)
+    if (key === 'recording') return recordingHoursLabel(plan, t)
     return id
   }
 

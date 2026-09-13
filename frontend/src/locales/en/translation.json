@@ -556,7 +556,7 @@
       "titleBlocked": "Limit",
       "titleExpired": "Subscription",
       "titlePending": "Payment pending",
-      "basicTrialExpired": "The 14-day BASIC trial has ended. To continue, choose {{higherPlan}}.",
+      "basicTrialExpired": "The 21-day BASIC trial has ended. To continue, choose {{higherPlan}}.",
       "basicTrialIpDenied": "A free BASIC trial has already been used from this device. To continue, choose {{higherPlan}}.",
       "subscriptionExpired": "The subscription is inactive or the payment period has ended. Choose a plan to continue."
     },
@@ -1188,10 +1188,10 @@
       "unlimited": "Unlimited",
       "basic": {
         "title": "SIMPLE",
-        "subtitle": "14-day free trial",
+        "subtitle": "21-day free trial",
         "cta": "Start free",
         "trialLines": [
-          "Try the platform for 14 days",
+          "Try the platform for 21 days",
           "No credit card required",
           "Stop whenever you want"
         ]
@@ -1251,7 +1251,7 @@
       "heading": "Pricing",
       "intro": "Learn what you can do first, then pick the package that fits. Plans are grouped by audience.",
       "compareHeading": "Compare limits",
-      "trialNote": "Simple is a 14-day trial. No credit card required.",
+      "trialNote": "Simple is a 21-day trial. No credit card required.",
       "yearlyNote": "Yearly billing applies a 20% discount on twelve monthly payments.",
       "cta": "Start free",
       "backHome": "Back to homepage",
@@ -1278,7 +1278,9 @@
         "exams": "Exams / month",
         "assignments": "Assignments / month",
         "sms": "SMS / month",
-        "live": "Live class participants"
+        "liveLessons": "Live lessons",
+        "live": "Live class participants",
+        "recording": "Lesson recording"
       }
     },
     "demo": {
@@ -2625,9 +2627,9 @@
       "perMonth": "/mo",
       "perYear": "/yr",
       "yearlyHint": "≈ {{monthly}} AZN/mo equivalent (12 months, −{{pct}}%)",
-      "trialDaysLeft": "14-day free trial — {{days}} days left (extra SMS/storage only on paid plans)",
+      "trialDaysLeft": "21-day free trial — {{days}} days left (extra SMS/storage only on paid plans)",
       "trialExpired": "The BASIC trial has ended — choose a paid plan to continue",
-      "trialExtraOnly": "14-day free trial — extra limits only on {{plans}}",
+      "trialExtraOnly": "21-day free trial — extra limits only on {{plans}}",
       "monthly": "{{amount}} AZN/mo",
       "yearly": "{{amount}} AZN/yr (approx. {{monthly}} AZN/mo)"
     },
@@ -2885,8 +2887,13 @@
       "homeworksUnlimitedMonthly": "Unlimited assignments / month",
       "homeworksTrial": "{{count}} assignments",
       "homeworksMonthly": "{{count}} assignments / month",
-      "liveUnlimited": "Live lesson — unlimited participants · Record: ✓ (local)",
-      "liveParticipants": "Live lesson — {{count}} participants · Record: ✓ (local)"
+      "liveUnlimited": "Unlimited live lessons · Unlimited participants",
+      "liveLessonsUnlimited": "Unlimited live lessons",
+      "liveParticipantsUnlimited": "Unlimited participants",
+      "liveParticipantsOnly": "{{count}} participants / live lesson",
+      "recordingNone": "No lesson recording (Basic)",
+      "recordingQuota": "Recording: {{hours}} h/mo · {{storage}} GB · {{retention}}d retention · max {{maxMin}} min · {{quality}}",
+      "liveParticipants": "{{count}} participants / live lesson"
     },
     "map": {
       "basic": "📍 Visible on the map",
@@ -2895,18 +2902,18 @@
       "premium": "🔥 Always at the top of search (TOP)"
     },
     "desc": {
-      "basic": "14-day free trial — try the platform with no risk.",
+      "basic": "21-day free trial — try the platform with no risk.",
       "pro": "The most popular {{title}} plan for small and mid-size groups.",
       "growth": "{{title}} plan — a growing teaching business and detailed reports.",
       "premium": "{{title}} plan — unlimited students/documents and priority support."
     },
     "detail": {
       "basic": {
-        "trial": "14-day free trial plan.",
+        "trial": "21-day free trial plan.",
         "limitsPeriod": "During the trial: {{limits}}.",
         "limitsFallback": "Limits follow the Starter plan.",
         "noExtraSms": "Extra SMS and storage cannot be purchased — when you hit a limit, choose STANDARD or a higher plan.",
-        "noRenew": "The Starter plan is not renewed; a paid plan is required after 14 days.",
+        "noRenew": "The Starter plan is not renewed; a paid plan is required after 21 days.",
         "oneTrialPerIp": "Only one free trial is given per device (IP)."
       },
       "paid": {
@@ -3901,6 +3908,8 @@
     "copied": "Copied",
     "copyError": "Copy failed",
     "terms": "{{discount}}% user discount · {{commission}}% commission (first {{months}} payments) · {{trial}}-day trial",
+    "termsHint": "Discount and commission both apply to the first {{months}} payments; trial is {{trial}} days (campaign).",
+    "termsTooltip": "When a user joins via your referral link, they get a discount on their first {{months}} paid months; you earn commission on those confirmed payments. Trial length follows the campaign.",
     "requestPayout": "Request payout",
     "payoutRequested": "Payout requested",
     "payoutError": "Payout request failed",

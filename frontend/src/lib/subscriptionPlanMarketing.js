@@ -3,30 +3,40 @@
 import { planPricingLimitLines } from './subscriptionPlanCopy'
 
 const BASIC_TRIAL_LANDING_LINES = [
-  'Bütün funksiyaları 14 gün tam sına',
+  'Bütün funksiyaları 21 gün tam sına',
   'Kredit kartı tələb olunmur',
   'İstənilən vaxt ləğv et',
 ]
 
 const FALLBACK_MARKETING_BY_SLUG = {
-  basic: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Mentorix Live (5 iştirakçı)'],
-  pro: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Mentorix Live (20 iştirakçı)'],
-  growth: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar', 'Mentorix Live (50 iştirakçı)'],
+  basic: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Limitsiz canlı dərslər', 'Mentorix Live (5 iştirakçı)'],
+  pro: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Limitsiz canlı dərslər', 'Mentorix Live (20 iştirakçı)', 'Yazı: 5 saat/ay'],
+  growth: [
+    'Ödəniş izləmə',
+    'Valideyn bildirişləri',
+    'Xəritədə görünmə',
+    'Ətraflı hesabatlar',
+    'Limitsiz canlı dərslər',
+    'Mentorix Live (50 iştirakçı)',
+    'Yazı: 20 saat/ay',
+  ],
   premium: [
     'Ödəniş izləmə',
     'Valideyn bildirişləri',
     'Xəritədə görünmə',
     'Ətraflı hesabatlar',
     'Prioritet texniki dəstək',
+    'Limitsiz canlı dərslər',
     'Mentorix Live (limitsiz)',
+    'Yazı: 50 saat/ay',
   ],
 }
 
 const FALLBACK_META_BY_SLUG = {
   basic: {
-    subtitle: 'Müəllimlər üçün — 14 günlük pulsuz sınaq',
+    subtitle: 'Müəllimlər üçün — 21 günlük pulsuz sınaq',
     popularLabel: null,
-    cta: '14 günlük sınağa başla',
+    cta: '21 günlük sınağa başla',
   },
   pro: {
     subtitle: 'Fərdi müəllimlər üçün',

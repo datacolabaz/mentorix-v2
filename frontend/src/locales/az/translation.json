@@ -556,7 +556,7 @@
       "titleBlocked": "Limit",
       "titleExpired": "Abunəlik",
       "titlePending": "Ödəniş gözləmədədir",
-      "basicTrialExpired": "14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün {{higherPlan}} seçin.",
+      "basicTrialExpired": "21 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün {{higherPlan}} seçin.",
       "basicTrialIpDenied": "Bu cihazdan artıq pulsuz SADƏ sınaq istifadə olunub. Davam etmək üçün {{higherPlan}} seçin.",
       "subscriptionExpired": "Abunəlik aktiv deyil və ya ödəniş müddəti keçib. Davam etmək üçün paket seçin."
     },
@@ -1188,10 +1188,10 @@
       "unlimited": "Limitsiz",
       "basic": {
         "title": "SADƏ",
-        "subtitle": "14 günlük pulsuz sınaq",
+        "subtitle": "21 günlük pulsuz sınaq",
         "cta": "Pulsuz başla",
         "trialLines": [
-          "14 gün ərzində platformanı sınayın",
+          "21 gün ərzində platformanı sınayın",
           "Kredit kartı tələb olunmur",
           "İstənilən vaxt dayandıra bilərsiniz"
         ]
@@ -1251,7 +1251,7 @@
       "heading": "Qiymətlər",
       "intro": "Əvvəlcə məhsulu tanıyın, sonra sizə uyğun paketi seçin. Paketlər auditoriyaya görə qruplaşdırılıb.",
       "compareHeading": "Limitləri müqayisə edin",
-      "trialNote": "SADƏ plan 14 günlük sınaqdır. Kredit kartı tələb olunmur.",
+      "trialNote": "SADƏ plan 21 günlük sınaqdır. Kredit kartı tələb olunmur.",
       "yearlyNote": "İllik ödəniş seçəndə aylıq məbləğin 12 qatı üzrə 20% endirim tətbiq olunur.",
       "cta": "Pulsuz başla",
       "backHome": "Ana səhifəyə qayıt",
@@ -1278,7 +1278,9 @@
         "exams": "İmtahan / ay",
         "assignments": "Tapşırıq / ay",
         "sms": "SMS / ay",
-        "live": "Canlı dərs iştirakçısı"
+        "liveLessons": "Canlı dərslər",
+        "live": "Canlı dərs iştirakçısı",
+        "recording": "Dərs yazısı"
       }
     },
     "demo": {
@@ -2625,9 +2627,9 @@
       "perMonth": "/ay",
       "perYear": "/il",
       "yearlyHint": "≈ {{monthly}} AZN/ay qarşılığında (12 ay, −{{pct}}%)",
-      "trialDaysLeft": "14 günlük pulsuz sınaq — {{days}} gün qalıb (əlavə SMS/yaddaş yalnız ödənişli paketlərdə)",
+      "trialDaysLeft": "21 günlük pulsuz sınaq — {{days}} gün qalıb (əlavə SMS/yaddaş yalnız ödənişli paketlərdə)",
       "trialExpired": "SADƏ sınaq müddəti bitib — davam üçün ödənişli paket seçin",
-      "trialExtraOnly": "14 günlük pulsuz sınaq — əlavə limit yalnız {{plans}}",
+      "trialExtraOnly": "21 günlük pulsuz sınaq — əlavə limit yalnız {{plans}}",
       "monthly": "{{amount}} AZN/ay",
       "yearly": "{{amount}} AZN/il (təxm. {{monthly}} AZN/ay)"
     },
@@ -2885,8 +2887,13 @@
       "homeworksUnlimitedMonthly": "Limitsiz tapşırıq / ay",
       "homeworksTrial": "{{count}} tapşırıq",
       "homeworksMonthly": "{{count}} tapşırıq / ay",
-      "liveUnlimited": "Canlı dərs — Limitsiz iştirakçı · Record: ✓ (local)",
-      "liveParticipants": "Canlı dərs — {{count}} iştirakçı · Record: ✓ (local)"
+      "liveUnlimited": "Limitsiz canlı dərslər · Limitsiz iştirakçı",
+      "liveLessonsUnlimited": "Limitsiz canlı dərslər",
+      "liveParticipantsUnlimited": "Limitsiz iştirakçı",
+      "liveParticipantsOnly": "{{count}} iştirakçı / canlı dərs",
+      "recordingNone": "Dərs yazısı yoxdur (SADƏ)",
+      "recordingQuota": "Yazı: {{hours}} saat/ay · {{storage}} GB · {{retention}} gün saxlama · max {{maxMin}} dəq · {{quality}}",
+      "liveParticipants": "{{count}} iştirakçı / canlı dərs"
     },
     "map": {
       "basic": "📍 Xəritədə görünür",
@@ -2895,18 +2902,18 @@
       "premium": "🔥 Axtarışda həmişə ən yuxarıda (TOP)"
     },
     "desc": {
-      "basic": "14 günlük pulsuz sınaq — platformanı risksiz sınayın.",
+      "basic": "21 günlük pulsuz sınaq — platformanı risksiz sınayın.",
       "pro": "Kiçik və orta qruplar üçün ən populyar {{title}} paket.",
       "growth": "{{title}} paket — böyüyən tədris biznesi və ətraflı hesabatlar.",
       "premium": "{{title}} paket — limitsiz tələbə/sənəd və prioritet dəstək."
     },
     "detail": {
       "basic": {
-        "trial": "14 günlük pulsuz sınaq paketi.",
+        "trial": "21 günlük pulsuz sınaq paketi.",
         "limitsPeriod": "Sınaq müddətində: {{limits}}.",
         "limitsFallback": "Limitlər Başlanğıc paketinə uyğun tətbiq olunur.",
         "noExtraSms": "Əlavə SMS və yaddaş alına bilməz — limit dolanda Standart və ya daha yüksək paket seçin.",
-        "noRenew": "Başlanğıc paketi yenilənmir; 14 gün bitəndən sonra ödənişli paket tələb olunur.",
+        "noRenew": "Başlanğıc paketi yenilənmir; 21 gün bitəndən sonra ödənişli paket tələb olunur.",
         "oneTrialPerIp": "Hər cihazdan (IP) yalnız bir dəfə pulsuz sınaq verilir."
       },
       "paid": {
@@ -3901,6 +3908,8 @@
     "copied": "Kopyalandı",
     "copyError": "Kopyalama alınmadı",
     "terms": "İstifadəçiyə {{discount}}% endirim · sizə {{commission}}% komissiya (ilk {{months}} ödəniş) · sınaq {{trial}} gün",
+    "termsHint": "Endirim və komissiya eyni ilk {{months}} ödənişə aiddir; sınaq {{trial}} gün (kampaniya).",
+    "termsTooltip": "İstifadəçi referral linklə qoşulanda ilk {{months}} ödənişli ayda endirim alır; siz həmin təsdiqlənmiş ödənişlərdən komissiya qazanırsınız. Sınaq müddəti kampaniya şərtidir.",
     "requestPayout": "Ödəniş tələb et",
     "payoutRequested": "Payout sorğusu yaradıldı",
     "payoutError": "Payout sorğusu alınmadı",

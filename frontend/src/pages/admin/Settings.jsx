@@ -46,6 +46,22 @@ function previewFeatures(p) {
   else lines.push(`${Math.max(0, Math.round(Number(p.exam_count) || 0))} imtahan / ay`)
   if (p.unlimited_homeworks) lines.push('Limitsiz tapşırıq / ay')
   else lines.push(`${Math.max(0, Math.round(Number(p.homework_count) || 0))} tapşırıq / ay`)
+  lines.push('Limitsiz canlı dərslər')
+  const recHours = Number(p.recording_hours_monthly)
+  const recStorage = Number(p.recording_storage_bytes)
+  const recRetention = Number(p.recording_retention_days)
+  const recMax = Number(p.recording_max_duration_sec)
+  const recQuality = String(p.recording_max_quality || '').trim() || '720p'
+  if (!Number.isFinite(recHours) || recHours <= 0 || !Number.isFinite(recStorage) || recStorage <= 0) {
+    lines.push('Dərs yazısı yoxdur (SADƏ)')
+  } else {
+    const gb = recStorage / (1024 * 1024 * 1024)
+    const storageLabel = gb % 1 === 0 ? `${Math.round(gb)}` : `${Math.round(gb * 10) / 10}`
+    const maxMin = Math.round(recMax / 60)
+    lines.push(
+      `Yazı: ${recHours} saat/ay · ${storageLabel} GB · ${recRetention} gün saxlama · max ${maxMin} dəq · ${recQuality}`,
+    )
+  }
   return lines
 }
 
@@ -121,6 +137,16 @@ function dbRowToEditor(p) {
     plan_subtitle: p.plan_subtitle ?? preset.plan_subtitle ?? '',
     plan_cta: p.plan_cta ?? preset.plan_cta ?? '',
     popular_label: p.popular_label ?? preset.popular_label ?? '',
+    recording_hours_monthly:
+      p.recording_hours_monthly ?? preset.recording_hours_monthly ?? 0,
+    recording_storage_bytes:
+      p.recording_storage_bytes ?? preset.recording_storage_bytes ?? 0,
+    recording_retention_days:
+      p.recording_retention_days ?? preset.recording_retention_days ?? 0,
+    recording_max_duration_sec:
+      p.recording_max_duration_sec ?? preset.recording_max_duration_sec ?? 0,
+    recording_max_quality:
+      p.recording_max_quality ?? preset.recording_max_quality ?? null,
   }
 }
 
@@ -172,9 +198,14 @@ const PRESETS = {
     highlight: false,
     ram_limit_mb: '',
     marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
-    plan_subtitle: '14 günlük pulsuz sınaq',
-    plan_cta: '14 günlük sınağa başla',
+    plan_subtitle: '21 günlük pulsuz sınaq',
+    plan_cta: '21 günlük sınağa başla',
     popular_label: '',
+    recording_hours_monthly: 0,
+    recording_storage_bytes: 0,
+    recording_retention_days: 0,
+    recording_max_duration_sec: 0,
+    recording_max_quality: null,
   },
   pro: {
     title: 'STANDART',
@@ -198,6 +229,11 @@ const PRESETS = {
     plan_subtitle: '',
     plan_cta: 'Standart seç',
     popular_label: '⭐ Ən populyar',
+    recording_hours_monthly: 5,
+    recording_storage_bytes: 5 * 1024 * 1024 * 1024,
+    recording_retention_days: 30,
+    recording_max_duration_sec: 7200,
+    recording_max_quality: '720p',
   },
   growth: {
     title: 'PROFESSİONAL',
@@ -221,6 +257,11 @@ const PRESETS = {
     plan_subtitle: '',
     plan_cta: 'Professional seç',
     popular_label: '',
+    recording_hours_monthly: 20,
+    recording_storage_bytes: 20 * 1024 * 1024 * 1024,
+    recording_retention_days: 90,
+    recording_max_duration_sec: 7200,
+    recording_max_quality: '720p',
   },
   premium: {
     title: 'PREMİUM',
@@ -250,6 +291,11 @@ const PRESETS = {
     plan_subtitle: '',
     plan_cta: 'Premium seç',
     popular_label: '',
+    recording_hours_monthly: 50,
+    recording_storage_bytes: 50 * 1024 * 1024 * 1024,
+    recording_retention_days: 180,
+    recording_max_duration_sec: 10800,
+    recording_max_quality: '1080p',
   },
 }
 
@@ -639,7 +685,7 @@ export default function AdminSettings() {
                             className={inp}
                             value={p.plan_subtitle}
                             onChange={(e) => patch(idx, { plan_subtitle: e.target.value })}
-                            placeholder="Məs: 14 günlük pulsuz sınaq"
+                            placeholder="Məs: 21 günlük pulsuz sınaq"
                           />
                         </div>
                         <div>

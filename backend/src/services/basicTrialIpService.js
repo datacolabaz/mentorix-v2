@@ -8,7 +8,7 @@ function normalizeIp(ip) {
 }
 
 /**
- * One 14-day SADƏ trial per IP. Returns granted=false when IP already used by another account.
+ * One SADƏ trial per IP (BASIC_TRIAL_DAYS). Returns granted=false when IP already used by another account.
  */
 async function grantBasicTrialForInstructor(dbConn, userId, ipRaw) {
   const ip = normalizeIp(ipRaw);
@@ -46,7 +46,7 @@ async function hasBasicTrialIpDenial(dbConn, userId) {
   return Boolean(rows[0]);
 }
 
-/** Legacy users without a denial row still receive the 14-day trial. */
+/** Legacy users without a denial row still receive the platform trial. */
 async function isBasicTrialGranted(dbConn, userId) {
   return !(await hasBasicTrialIpDenial(dbConn, userId));
 }

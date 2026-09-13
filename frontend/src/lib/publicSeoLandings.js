@@ -191,7 +191,7 @@ export const PUBLIC_SEO_LANDINGS = [
     showBenefitsList: true,
     searchCategorySlug: null,
     ctaHref: '/login',
-    ctaLabel: 'Pulsuz başla — 14 günlük sınaq',
+    ctaLabel: 'Pulsuz başla — 21 günlük sınaq',
     keywords: MENTORIX_SEO_KEYWORDS,
   },
   {
@@ -249,7 +249,7 @@ export const PUBLIC_SEO_LANDINGS = [
     bullets: [
       `WhatsApp: ${MENTORIX_CONTACT.phoneDisplay}`,
       `E-poçt: ${MENTORIX_CONTACT.email}`,
-      'Müəllim və təhsil xidməti təminatçıları üçün pulsuz 14 günlük sınaq',
+      'Müəllim və təhsil xidməti təminatçıları üçün pulsuz 21 günlük sınaq',
     ],
     ctaHref: MENTORIX_CONTACT.whatsappUrl,
     ctaLabel: 'WhatsApp ilə yazın',

@@ -1,5 +1,6 @@
 const db = require('../utils/db');
-const { normalizePlanSlug } = require('../config/plans');
+const { normalizePlanSlug, PLANS } = require('../config/plans');
+const { liveParticipantLimitLabel } = require('../constants/livePlanLimits');
 
 // Lightweight cache to avoid DB hit on every request, but still "dynamic".
 // TTL is short so admin edits reflect quickly.
@@ -53,6 +54,9 @@ function normalizeRow(r) {
   const homeworks_monthly = r.homework_limit == null ? null : Number(r.homework_limit);
   const documents = r.document_limit == null ? null : Number(r.document_limit);
   const ram_limit_mb = r.ram_limit_mb == null ? null : Number(r.ram_limit_mb);
+  const fallback = PLANS[slug] || PLANS.basic;
+  const live_participants =
+    fallback.live_participants === undefined ? null : fallback.live_participants;
   const features = Array.isArray(r.features) ? r.features : r.features ? r.features : null;
   const marketing_features = parseMarketingFeatures(r.marketing_features);
   const plan_subtitle =
@@ -78,28 +82,48 @@ function normalizeRow(r) {
       exams_monthly,
       homeworks_monthly,
       ram_limit_mb,
+      live_participants,
       recording_hours_monthly:
-        r.recording_hours_monthly == null ? null : Number(r.recording_hours_monthly),
+        r.recording_hours_monthly == null
+          ? fallback.recording_hours_monthly ?? null
+          : Number(r.recording_hours_monthly),
       recording_storage_bytes:
-        r.recording_storage_bytes == null ? null : Number(r.recording_storage_bytes),
+        r.recording_storage_bytes == null
+          ? fallback.recording_storage_bytes ?? null
+          : Number(r.recording_storage_bytes),
       recording_retention_days:
-        r.recording_retention_days == null ? null : Number(r.recording_retention_days),
+        r.recording_retention_days == null
+          ? fallback.recording_retention_days ?? null
+          : Number(r.recording_retention_days),
       recording_max_duration_sec:
-        r.recording_max_duration_sec == null ? null : Number(r.recording_max_duration_sec),
+        r.recording_max_duration_sec == null
+          ? fallback.recording_max_duration_sec ?? null
+          : Number(r.recording_max_duration_sec),
       recording_max_quality:
         r.recording_max_quality == null || String(r.recording_max_quality).trim() === ''
-          ? null
+          ? fallback.recording_max_quality ?? null
           : String(r.recording_max_quality).trim(),
     },
     recording_limits: {
-      hours_monthly: r.recording_hours_monthly == null ? 0 : Number(r.recording_hours_monthly) || 0,
-      storage_bytes: r.recording_storage_bytes == null ? 0 : Number(r.recording_storage_bytes) || 0,
-      retention_days: r.recording_retention_days == null ? 0 : Number(r.recording_retention_days) || 0,
+      hours_monthly:
+        r.recording_hours_monthly == null
+          ? Number(fallback.recording_hours_monthly) || 0
+          : Number(r.recording_hours_monthly) || 0,
+      storage_bytes:
+        r.recording_storage_bytes == null
+          ? Number(fallback.recording_storage_bytes) || 0
+          : Number(r.recording_storage_bytes) || 0,
+      retention_days:
+        r.recording_retention_days == null
+          ? Number(fallback.recording_retention_days) || 0
+          : Number(r.recording_retention_days) || 0,
       max_duration_sec:
-        r.recording_max_duration_sec == null ? 0 : Number(r.recording_max_duration_sec) || 0,
+        r.recording_max_duration_sec == null
+          ? Number(fallback.recording_max_duration_sec) || 0
+          : Number(r.recording_max_duration_sec) || 0,
       max_quality:
         r.recording_max_quality == null || String(r.recording_max_quality).trim() === ''
-          ? null
+          ? fallback.recording_max_quality ?? null
           : String(r.recording_max_quality).trim(),
     },
     highlight: Boolean(r.highlight),
@@ -184,9 +208,15 @@ function buildPlanFeaturesFromLimits({
   homework_limit,
   storage_gb,
   storage_limit_bytes,
+  recording_hours_monthly,
+  recording_storage_bytes,
+  recording_retention_days,
+  recording_max_duration_sec,
+  recording_max_quality,
 }) {
   const lines = [];
   const planSlug = normalizePlanSlug(slug);
+  const fallback = PLANS[planSlug] || PLANS.basic;
   if (student_limit == null) lines.push('Limitsiz tələbə');
   else lines.push(`${Math.max(0, Math.round(Number(student_limit)))} tələbə`);
 
@@ -212,6 +242,41 @@ function buildPlanFeaturesFromLimits({
 
   if (homework_limit == null) lines.push('Limitsiz tapşırıq / ay');
   else lines.push(`${Math.max(0, Math.round(Number(homework_limit)))} tapşırıq / ay`);
+
+  lines.push('Limitsiz canlı dərslər');
+  lines.push(`İştirakçı: ${liveParticipantLimitLabel(planSlug)}`);
+
+  const hours =
+    recording_hours_monthly == null
+      ? Number(fallback.recording_hours_monthly) || 0
+      : Number(recording_hours_monthly) || 0;
+  const storageBytes =
+    recording_storage_bytes == null
+      ? Number(fallback.recording_storage_bytes) || 0
+      : Number(recording_storage_bytes) || 0;
+  const retention =
+    recording_retention_days == null
+      ? Number(fallback.recording_retention_days) || 0
+      : Number(recording_retention_days) || 0;
+  const maxDur =
+    recording_max_duration_sec == null
+      ? Number(fallback.recording_max_duration_sec) || 0
+      : Number(recording_max_duration_sec) || 0;
+  const quality =
+    recording_max_quality == null || String(recording_max_quality).trim() === ''
+      ? fallback.recording_max_quality
+      : String(recording_max_quality).trim();
+
+  if (hours <= 0 || storageBytes <= 0) {
+    lines.push('Dərs yazısı yoxdur (SADƏ)');
+  } else {
+    const gb = storageBytes / (1024 * 1024 * 1024);
+    const storageLabel = gb % 1 === 0 ? `${Math.round(gb)}` : `${Math.round(gb * 10) / 10}`;
+    const maxMin = Math.round(maxDur / 60);
+    lines.push(
+      `Yazı: ${hours} saat/ay · ${storageLabel} GB · ${retention} gün saxlama · max ${maxMin} dəq · ${quality || '720p'}`,
+    );
+  }
   return lines;
 }
 
@@ -264,7 +329,7 @@ function resolveLimitsFromAdminPayload(payload) {
 
 async function adminListPlans() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
      FROM subscription_plans
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
   );
@@ -280,6 +345,18 @@ async function adminListPlans() {
     homework_limit: r.homework_limit == null ? null : Number(r.homework_limit),
     document_limit: r.document_limit == null ? null : Number(r.document_limit),
     ram_limit_mb: r.ram_limit_mb == null ? null : Number(r.ram_limit_mb),
+    recording_hours_monthly:
+      r.recording_hours_monthly == null ? null : Number(r.recording_hours_monthly),
+    recording_storage_bytes:
+      r.recording_storage_bytes == null ? null : Number(r.recording_storage_bytes),
+    recording_retention_days:
+      r.recording_retention_days == null ? null : Number(r.recording_retention_days),
+    recording_max_duration_sec:
+      r.recording_max_duration_sec == null ? null : Number(r.recording_max_duration_sec),
+    recording_max_quality:
+      r.recording_max_quality == null || String(r.recording_max_quality).trim() === ''
+        ? null
+        : String(r.recording_max_quality).trim(),
     features: r.features ?? null,
     marketing_features: parseMarketingFeatures(r.marketing_features),
     plan_subtitle: r.plan_subtitle == null ? null : String(r.plan_subtitle),
@@ -362,6 +439,11 @@ async function adminUpsertPlan(payload) {
       homework_limit,
       storage_gb,
       storage_limit_bytes,
+      recording_hours_monthly: payload?.recording_hours_monthly,
+      recording_storage_bytes: payload?.recording_storage_bytes,
+      recording_retention_days: payload?.recording_retention_days,
+      recording_max_duration_sec: payload?.recording_max_duration_sec,
+      recording_max_quality: payload?.recording_max_quality,
     });
   } else {
     student_limit = payload?.student_limit === '' ? null : payload?.student_limit;

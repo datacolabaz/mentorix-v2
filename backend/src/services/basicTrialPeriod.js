@@ -6,7 +6,7 @@ function addDays(date, days) {
   return new Date(d.getTime() + days * 86400000);
 }
 
-/** SADƏ paket üçün 14 günlük sınaq pəncərəsini DB sətirindən və ya defaultdan hesablayır. */
+/** SADƏ paket üçün sınaq pəncərəsini DB sətirindən və ya BASIC_TRIAL_DAYS defaultdan hesablayır. */
 function resolveBasicTrialWindow(row) {
   const startRaw = row?.current_period_start || row?.created_at || null;
   const start = startRaw ? new Date(startRaw) : new Date();

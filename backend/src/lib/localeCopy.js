@@ -103,12 +103,12 @@ function expiredBanner({ onBasic, ipDenied, higherPlan, locale }) {
   }
   if (onBasic) {
     if (l === 'ru') {
-      return `14-дневный пробный период BASIC истёк. Чтобы продолжить, выберите ${higherPlan}.`;
+      return `21-дневный пробный период BASIC истёк. Чтобы продолжить, выберите ${higherPlan}.`;
     }
     if (l === 'en') {
-      return `The 14-day BASIC trial has ended. To continue, choose ${higherPlan}.`;
+      return `The 21-day BASIC trial has ended. To continue, choose ${higherPlan}.`;
     }
-    return `14 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPlan} seçin.`;
+    return `21 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPlan} seçin.`;
   }
   if (l === 'ru') {
     return 'Подписка неактивна или срок оплаты истёк. Чтобы продолжить, выберите пакет.';
