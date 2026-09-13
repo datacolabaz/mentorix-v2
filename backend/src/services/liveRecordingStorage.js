@@ -32,27 +32,35 @@ function makeShareToken() {
 }
 
 async function upsertLiveRecording({ roomId, instructorId, uploadedByUserId, file, durationSec }) {
+  const { commitRecordingWithQuota } = require('./liveRecordingQuotaService');
+  const { getLiveRecordingStorage } = require('./storage/LocalDiskStorageProvider');
   const filename = path.basename(file.filename);
   const byteSize = Number(file.size) || 0;
   const contentType = file.mimetype || 'video/webm';
   const duration = Number(durationSec) > 0 ? Math.round(Number(durationSec)) : null;
   const shareToken = makeShareToken();
 
-  const { rows } = await db.query(
-    `INSERT INTO live_recordings (room_id, instructor_id, uploaded_by_user_id, filename, content_type, byte_size, duration_sec, share_token)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     ON CONFLICT (room_id) DO UPDATE SET
-       uploaded_by_user_id = EXCLUDED.uploaded_by_user_id,
-       filename = EXCLUDED.filename,
-       content_type = EXCLUDED.content_type,
-       byte_size = EXCLUDED.byte_size,
-       duration_sec = EXCLUDED.duration_sec,
-       share_token = COALESCE(live_recordings.share_token, EXCLUDED.share_token),
-       created_at = NOW()
-     RETURNING *`,
-    [roomId, instructorId, uploadedByUserId || null, filename, contentType, byteSize, duration, shareToken],
-  );
-  return rows[0];
+  const { recording, replaced } = await commitRecordingWithQuota({
+    roomId,
+    instructorId,
+    uploadedByUserId,
+    filename,
+    contentType,
+    byteSize,
+    durationSec: duration,
+    shareToken,
+  });
+
+  const storage = getLiveRecordingStorage();
+  try {
+    await storage.putFromPath(filename, file.path || getLiveRecordingFilePath(filename), contentType);
+  } catch {
+    /* multer already wrote into live-recordings dir */
+  }
+  if (replaced?.filename && replaced.filename !== filename) {
+    await storage.delete(replaced.filename);
+  }
+  return recording;
 }
 
 async function ensureRecordingShareTokenByRoomId(roomId) {
@@ -74,6 +82,8 @@ async function getLiveRecordingByShareToken(shareToken) {
      FROM live_recordings lr
      JOIN live_rooms rm ON rm.id = lr.room_id
      WHERE lr.share_token = $1
+       AND lr.deleted_at IS NULL
+       AND (lr.expires_at IS NULL OR lr.expires_at > NOW())
      LIMIT 1`,
     [shareToken],
   );

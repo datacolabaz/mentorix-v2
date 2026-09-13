@@ -11,6 +11,7 @@ const {
   getHistory,
   postRecording,
   getRecordingFile,
+  getRecordingUsage,
   deleteRoom,
   uploadLiveRecording,
 } = require('../controllers/liveRoomController');
@@ -126,6 +127,7 @@ router.post('/rooms/:roomCode/polls/:pollId/close', authenticate, authorize('ins
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);
 router.delete('/history/:roomCode', authenticate, authorize('instructor'), deleteRoom);
+router.get('/recording-usage', authenticate, authorize('instructor'), getRecordingUsage);
 router.get('/recording-file/:filename', authenticate, authorize('instructor', 'student'), getRecordingFile);
 
 router.post(
@@ -200,7 +202,7 @@ router.post(
 router.post(
   '/rooms/:roomCode/recording',
   authenticate,
-  authorize('instructor', 'student'),
+  authorize('instructor'),
   (req, res, next) => {
     uploadLiveRecording.single('recording')(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });
@@ -245,7 +247,7 @@ router.post(
 router.post(
   '/:roomCode/recording',
   authenticate,
-  authorize('instructor', 'student'),
+  authorize('instructor'),
   (req, res, next) => {
     uploadLiveRecording.single('recording')(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || 'Fayl qəbul edilmədi' });

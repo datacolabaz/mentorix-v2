@@ -22,6 +22,7 @@ const { ensureStarted: ensureCertificateIssueWorker } = require('./jobs/certific
 const { ensureStarted: ensureOpenExamGradingWorker } = require('./jobs/openExamGradingWorker');
 const { runOpenGradingInstructorNotifications } = require('./jobs/openGradingInstructorNotifications');
 const { runInstructorCompleteProfileReminders } = require('./jobs/instructorCompleteProfileReminders');
+const { cleanupExpiredLiveRecordings } = require('./jobs/liveRecordingCleanup');
 const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
@@ -210,6 +211,11 @@ cron.schedule('10 */2 * * *', () => {
   runInstructorCompleteProfileReminders().catch((e) =>
     console.error('instructor complete-profile reminders cron', e.message),
   );
+});
+
+// Expired live recordings soft-delete + file cleanup: hourly
+cron.schedule('40 * * * *', () => {
+  cleanupExpiredLiveRecordings().catch((e) => console.error('live recording cleanup cron', e.message));
 });
 
 module.exports = app;

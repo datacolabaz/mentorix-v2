@@ -58,6 +58,7 @@ export default function InstructorLiveHistory() {
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [recordingUsage, setRecordingUsage] = useState(null)
   const selectAllRef = useRef(null)
 
   const selectedCount = selectedIds.length
@@ -67,8 +68,12 @@ export default function InstructorLiveHistory() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.get('/live/history')
+      const [res, usageRes] = await Promise.all([
+        api.get('/live/history'),
+        api.get('/live/recording-usage').catch(() => null),
+      ])
       setSessions(Array.isArray(res.sessions) ? res.sessions : [])
+      setRecordingUsage(usageRes?.usage || null)
     } catch {
       setSessions([])
     } finally {
@@ -310,6 +315,24 @@ export default function InstructorLiveHistory() {
           </Link>
         </div>
       </div>
+
+      {recordingUsage ? (
+        <Card className="p-3 border border-[color:var(--border-subtle)]">
+          <p className="text-xs font-semibold text-token-textMain">Yazı limiti</p>
+          {!recordingUsage.recording_enabled ? (
+            <p className="text-[11px] text-amber-600 mt-1">Bu paketdə dərs yazısı yoxdur. Paketi yüksəldin.</p>
+          ) : (
+            <p className="text-[11px] text-token-textMuted mt-1 tabular-nums">
+              Saat: {recordingUsage.hours_used}/{recordingUsage.hours_limit} saat
+              {' · '}
+              Saxlama: {Math.round((recordingUsage.storage_used_bytes || 0) / (1024 * 1024))} MB /{' '}
+              {Math.round((recordingUsage.storage_limit_bytes || 0) / (1024 * 1024 * 1024))} GB
+              {recordingUsage.retention_days ? ` · Saxlanma: ${recordingUsage.retention_days} gün` : ''}
+              {recordingUsage.near_limit ? ' · Limitə yaxın' : ''}
+            </p>
+          )}
+        </Card>
+      ) : null}
 
       {loading ? (
         <p className="text-sm text-token-textMuted py-12 text-center">{t('live.loading')}</p>
