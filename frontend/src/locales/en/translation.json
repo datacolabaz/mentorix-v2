@@ -3909,7 +3909,7 @@
     "applyOk": "Application submitted",
     "applyError": "Could not apply",
     "pendingReview": "Your application is under review. Your link activates after approval.",
-    "defaultCampaign": "Mentorix Partner Launch",
+    "defaultCampaign": "Mentorix Partner Launch Campaign",
     "campaigns": {
       "mentorixPartnerLaunch": "Mentorix Partner Launch Campaign"
     },
@@ -3918,10 +3918,10 @@
     "copyLink": "Copy link",
     "copied": "Copied",
     "copyError": "Copy failed",
-    "terms": "{{discount}}% user discount (first {{discountMonths}} paid months on original package; lost on upgrade) · {{commission}}% commission (while customer pays) · {{trial}}-day trial",
-    "termsLimited": "{{discount}}% user discount (first {{discountMonths}} paid months) · {{commission}}% commission (first {{commissionMonths}} payments) · {{trial}}-day trial",
-    "termsHint": "Discount applies only to the first {{discountMonths}} paid months on the original package and is lost on upgrade. Commission continues while the customer pays. Trial is {{trial}} days.",
-    "termsTooltip": "Referred users get a discount for their first {{discountMonths}} paid months on the package they joined with; upgrading forfeits the discount. You earn commission on every approved payment while they keep paying.",
+    "terms": "Invited users get {{discount}}% off for the first {{discountMonths}} months. You earn {{commission}}% commission on every payment (Trial: {{trial}} days).",
+    "termsLimited": "Invited users get {{discount}}% off for the first {{discountMonths}} months. You earn {{commission}}% commission on the first {{commissionMonths}} payments (Trial: {{trial}} days).",
+    "termsHint": "Invited users get a discount for the first {{discountMonths}} months. You earn commission on every payment (Trial: {{trial}} days).",
+    "termsTooltip": "Discount applies to the first {{discountMonths}} paid months on the original package and is lost on upgrade. Commission continues while the customer pays.",
     "requestPayout": "Request payout",
     "payoutRequested": "Payout requested",
     "payoutError": "Payout request failed",
