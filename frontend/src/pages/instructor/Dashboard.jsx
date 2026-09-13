@@ -8,6 +8,7 @@ import Card from '../../components/common/Card'
 import Modal from '../../components/common/Modal'
 import Button from '../../components/common/Button'
 import KpiCard from '../../components/common/KpiCard'
+import { KpiAznAmount } from '../../components/common/KpiValue'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import { useToast } from '../../components/common/Toast'
@@ -248,8 +249,19 @@ export default function InstructorDashboard() {
     hrs < 12 ? t('dashboard.greetingMorning') : hrs < 18 ? t('dashboard.greetingAfternoon') : t('dashboard.greetingEvening')
   const moneyLocale = moneyLocaleTag(i18n.language)
   const moneyFmt = new Intl.NumberFormat(moneyLocale)
-  const incomeThisMonthAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_this_month || 0)))}`
-  const totalEarningsAz = `₼ ${moneyFmt.format(Math.round(Number(dash.total_earnings_all || 0)))}`
+  const incomeThisMonthAz = loading ? (
+    '—'
+  ) : (
+    <KpiAznAmount amount={dash.income_this_month} locale={moneyLocale} />
+  )
+  const totalEarningsAz = loading ? (
+    '—'
+  ) : (
+    <KpiAznAmount amount={dash.total_earnings_all} locale={moneyLocale} />
+  )
+  const lastMonthAzNode = (
+    <KpiAznAmount amount={dash.income_last_month} locale={moneyLocale} />
+  )
   const rosterWithExam = students.filter((s) => examById[String(s.id)]?.exam_avg_score != null)
   const avgScore = rosterWithExam.length
     ? Math.min(
@@ -308,8 +320,6 @@ export default function InstructorDashboard() {
     : incomeMomPct > 0
       ? t('dashboard.kpiIncomeVsLastMonthUp', { pct: Math.abs(Math.round(incomeMomPct)) })
       : t('dashboard.kpiIncomeVsLastMonthDown', { pct: Math.abs(Math.round(incomeMomPct)) })
-
-  const lastMonthAz = `₼ ${moneyFmt.format(Math.round(Number(dash.income_last_month || 0)))}`
 
   const chartRows = students.slice(0, 10).map((s) => {
     const first = s.full_name?.split(' ')?.[0] || '—'
@@ -380,11 +390,13 @@ export default function InstructorDashboard() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
               <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{t('dashboard.kpiMonthCash')}</div>
-              <div className="mt-1 text-lg font-bold text-white tabular-nums">{incomeThisMonthAz}</div>
+              <div className="mt-1 text-lg font-semibold text-white tabular-nums tracking-normal">
+                <KpiAznAmount amount={dash.income_this_month} locale={moneyLocale} />
+              </div>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
               <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{t('dashboard.kpiIncomeLastMonth')}</div>
-              <div className="mt-1 text-lg font-bold text-white tabular-nums">{lastMonthAz}</div>
+              <div className="mt-1 text-lg font-semibold text-white tabular-nums tracking-normal">{lastMonthAzNode}</div>
             </div>
           </div>
           <p className={`text-sm font-medium ${incomeMomPct < 0 ? 'text-red-300' : 'text-emerald-300'}`}>{incomeVsLastMonth}</p>
@@ -412,7 +424,9 @@ export default function InstructorDashboard() {
                       return (
                         <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-2 text-xs shadow-lg">
                           <div className="font-semibold text-token-textMain mb-1">{p.label}</div>
-                          <div className="text-primary tabular-nums">₼ {moneyFmt.format(p.amount)}</div>
+                          <div className="text-primary tabular-nums">
+                            <KpiAznAmount amount={p.amount} locale={moneyLocale} />
+                          </div>
                         </div>
                       )
                     }}
@@ -516,7 +530,7 @@ export default function InstructorDashboard() {
           title={t('dashboard.kpiTotalIncome')}
           onClick={() => setIncomeOpen(true)}
           ariaLabel={t('dashboard.kpiTotalIncomeAria')}
-          value={loading ? '—' : totalEarningsAz}
+          value={totalEarningsAz}
           icon="💰"
           secondary={
             <>
@@ -534,7 +548,7 @@ export default function InstructorDashboard() {
           title={t('dashboard.kpiMonthCash')}
           to="/instructor/payments"
           ariaLabel={t('dashboard.kpiMonthCashAria')}
-          value={loading ? '—' : incomeThisMonthAz}
+          value={incomeThisMonthAz}
           icon="📅"
           secondary={t('dashboard.kpiMonthCashSecondary')}
           deltaPct={dash.income_delta_pct ?? 0}
