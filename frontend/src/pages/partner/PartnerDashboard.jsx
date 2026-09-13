@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
-import { useAuth } from '../../hooks/useAuth'
+import useAuthStore from '../../hooks/useAuth'
 
 function centsToAzn(cents) {
   return (Math.round(Number(cents) || 0) / 100).toFixed(2)
@@ -20,7 +20,7 @@ function statusBadge(status) {
 export default function PartnerDashboard() {
   const { t } = useTranslation()
   const toast = useToast()
-  const { user } = useAuth()
+  const { user } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
   const [applying, setApplying] = useState(false)
