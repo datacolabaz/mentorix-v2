@@ -39,7 +39,10 @@ async function findStudentIdByGoogleSub(dbConn, googleSub) {
   if (!sub) return null;
   const { rows } = await dbConn.query(
     `SELECT id, role FROM users
-     WHERE COALESCE(is_active, TRUE) = TRUE AND google_sub = $1 LIMIT 1`,
+     WHERE google_sub = $1
+       AND TRIM(COALESCE(google_sub::text, '')) <> ''
+     ORDER BY CASE WHEN COALESCE(is_active, TRUE) = TRUE THEN 0 ELSE 1 END
+     LIMIT 1`,
     [sub],
   );
   return rows[0] || null;
@@ -50,7 +53,9 @@ async function findStudentIdByEmail(dbConn, emailRaw) {
   if (!email || !email.includes('@')) return null;
   const { rows } = await dbConn.query(
     `SELECT id, role FROM users
-     WHERE COALESCE(is_active, TRUE) = TRUE AND LOWER(TRIM(email)) = $1 LIMIT 1`,
+     WHERE email IS NOT NULL AND LOWER(TRIM(email)) = $1
+     ORDER BY CASE WHEN COALESCE(is_active, TRUE) = TRUE THEN 0 ELSE 1 END
+     LIMIT 1`,
     [email],
   );
   return rows[0] || null;
@@ -104,7 +109,10 @@ async function findOrCreateGuestStudent(profile, client = null) {
 
   if (existing?.id) {
     const id = await assertStudentRole(existing, 'Bu hesab tələbə deyil — müəllim panelinə daxil olun.');
-    await q(`UPDATE users SET full_name = $1 WHERE id = $2::uuid`, [fullName, id]);
+    await q(`UPDATE users SET full_name = $1, is_active = TRUE, account_status = 'active' WHERE id = $2::uuid`, [
+      fullName,
+      id,
+    ]);
     if (email) {
       await q(`UPDATE users SET email = COALESCE(NULLIF(TRIM(email), ''), $1) WHERE id = $2::uuid`, [email, id]);
     }
@@ -132,7 +140,32 @@ async function findOrCreateGuestStudent(profile, client = null) {
              'student', TRUE, 'active', TRUE)
      RETURNING id`,
     [fullName, phoneCanon, email || null, googleSub],
-  );
+  ).catch(async (err) => {
+    if (String(err?.code || '') !== '23505' && !/duplicate key/i.test(String(err?.message || ''))) {
+      throw err;
+    }
+    // Race / inactive identity with same google_sub or email — reuse existing student.
+    let again = googleSub ? await findStudentIdByGoogleSub(conn, googleSub) : null;
+    if (!again?.id && email) again = await findStudentIdByEmail(conn, email);
+    if (!again?.id && phoneCanon) again = await findStudentIdByContactPhone(conn, phoneCanon);
+    if (!again?.id) {
+      // Include inactive google_sub holders for recovery.
+      if (googleSub) {
+        const { rows } = await q(
+          `SELECT id, role FROM users WHERE google_sub = $1 ORDER BY COALESCE(is_active, TRUE) DESC LIMIT 1`,
+          [googleSub],
+        );
+        again = rows[0] || null;
+      }
+    }
+    if (!again?.id) {
+      const friendly = new Error('Bu Google hesabı ilə artıq qeydiyyat mövcuddur. Daxil olun.');
+      friendly.statusCode = 409;
+      friendly.code = 'ACCOUNT_ALREADY_EXISTS';
+      throw friendly;
+    }
+    return { rows: [{ id: again.id }] };
+  });
   const studentId = ins[0]?.id;
   if (!studentId) throw Object.assign(new Error('Tələbə profili yaradılmadı'), { statusCode: 500 });
   await grantUserRole(studentId, 'student', client);

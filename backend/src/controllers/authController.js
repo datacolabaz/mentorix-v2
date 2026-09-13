@@ -34,6 +34,7 @@ const {
   getActiveRoles,
   getLoginEligibleRoles,
   ensureLoginRoleGranted,
+  grantUserRole,
 } = require('../services/userRolesService');
 const { pickEmailLoginRole } = require('../lib/pickEmailLoginRole');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
@@ -51,6 +52,15 @@ const {
   rowNeedsOnboarding,
   isAdminRole,
 } = require('../services/personaOnboardingService');
+const {
+  findUserByGoogleSub,
+  findUserByEmail,
+  claimGoogleSubForUser,
+  publicGoogleAuthError,
+  isPgUniqueViolation,
+  isGoogleSubUniqueViolation,
+  isUsersEmailUniqueViolation,
+} = require('../lib/googleIdentity');
 
 function logAuthLogin(req, user, role) {
   if (!user?.id) return;
@@ -372,21 +382,7 @@ function canonicalStudentEmail(email) {
 }
 
 async function assertGoogleSubFreeForOtherUser(googleSub, keepUserId) {
-  const sub = String(googleSub || '').trim();
-  if (!sub) return;
-  const { rows } = await db.query(
-    `SELECT id FROM users
-     WHERE is_active = TRUE
-       AND google_sub = $1
-       AND id <> $2
-     LIMIT 1`,
-    [sub, keepUserId]
-  );
-  if (rows[0]?.id) {
-    const err = new Error('Bu Google hesabı artıq başqa istifadəçiyə bağlıdır');
-    err.statusCode = 409;
-    throw err;
-  }
+  await claimGoogleSubForUser(db, googleSub, keepUserId);
 }
 
 function hasStoredPin(pinHash) {
@@ -1851,21 +1847,74 @@ function googleClient() {
   return new OAuth2Client(cid);
 }
 
-function parseGoogleAuthIntent(body) {
-  const raw = String(body?.intent || body?.mode || 'signin').trim().toLowerCase();
-  return raw === 'signup' || raw === 'register';
+function sendGoogleAuthError(res, err) {
+  const { status, body } = publicGoogleAuthError(err);
+  return res.status(status).json(body);
 }
 
-function googleAccountExistsSignupResponse() {
-  return {
-    success: false,
-    message: 'Bu Google hesabı artıq qeydiyyatdadır. Zəhmət olmasa «Daxil ol» bölməsindən giriş edin.',
-    code: 'ACCOUNT_ALREADY_EXISTS',
-  };
+/**
+ * Create a Google user or recover when google_sub/email already exists
+ * (inactive row, race, or missed lookup). Always returns the existing identity.
+ */
+async function insertOrRecoverGoogleUser({ fullName, email, googleSub, passwordHash, locale }) {
+  try {
+    const { rows: created } = await db.query(
+      `INSERT INTO users (
+         full_name, email, role, auth_provider, google_sub, phone_verified, password_hash,
+         account_status, is_verified, locale, role_selected, onboarding_completed, persona, is_active
+       )
+       VALUES ($1, $2, 'student', 'google', $3, FALSE, $4, 'active', TRUE, $5, FALSE, FALSE, NULL, TRUE)
+       RETURNING id, full_name, email, role, phone, phone_verified, is_verified, is_active,
+                 auth_provider, google_sub, account_status, role_selected, persona, persona_profile, onboarding_completed`,
+      [fullName, email, googleSub, passwordHash, locale],
+    );
+    return created[0];
+  } catch (err) {
+    if (!isPgUniqueViolation(err)) throw err;
+    if (isGoogleSubUniqueViolation(err)) {
+      const existing = await findUserByGoogleSub(db, googleSub);
+      if (existing) return existing;
+    }
+    if (isUsersEmailUniqueViolation(err) && email) {
+      const existing = await findUserByEmail(db, email);
+      if (existing) return existing;
+    }
+    // Fallback: try both identity keys even if constraint name is obscure.
+    const bySub = await findUserByGoogleSub(db, googleSub);
+    if (bySub) return bySub;
+    if (email) {
+      const byEmail = await findUserByEmail(db, email);
+      if (byEmail) return byEmail;
+    }
+    const friendly = new Error(
+      'Bu Google hesabı ilə artıq qeydiyyat mövcuddur. Daxil olun.',
+    );
+    friendly.statusCode = 409;
+    friendly.code = 'ACCOUNT_ALREADY_EXISTS';
+    throw friendly;
+  }
 }
 
-function isActiveGoogleUser(user) {
-  return Boolean(user && user.is_active !== false);
+async function reactivateAndLinkGoogleUser(user, g) {
+  await claimGoogleSubForUser(db, g.sub, user.id);
+  const { rows: linked } = await db.query(
+    `UPDATE users
+     SET google_sub = COALESCE(NULLIF(TRIM(COALESCE(google_sub, '')), ''), $2),
+         auth_provider = COALESCE(NULLIF(TRIM(auth_provider), ''), 'google'),
+         is_active = TRUE,
+         account_status = 'active',
+         is_verified = TRUE,
+         full_name = CASE
+           WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($3, full_name)
+           ELSE full_name
+         END
+     WHERE id = $1
+     RETURNING id, full_name, email, role, phone, phone_verified, phone_verified_at,
+               auth_provider, google_sub, account_status, is_active, is_verified,
+               role_selected, persona, persona_profile, onboarding_completed`,
+    [user.id, g.sub, g.name || null],
+  );
+  return linked[0] || user;
 }
 
 async function verifyGoogleIdTokenOrThrow(credential) {
@@ -1909,44 +1958,16 @@ async function verifyGoogleIdTokenOrThrow(credential) {
 const googleLogin = async (req, res) => {
   try {
     const { credential, role: roleHint } = req.body;
-    const isSignupIntent = parseGoogleAuthIntent(req.body);
     const expectedRole = String(roleHint || '').trim().toLowerCase();
     const g = await verifyGoogleIdTokenOrThrow(credential);
 
-    const bySub = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified,
-              role_selected, persona, persona_profile, onboarding_completed
-       FROM users
-       WHERE is_active = TRUE
-         AND google_sub = $1
-       LIMIT 1`,
-      [g.sub]
-    );
-    let user = bySub.rows[0] || null;
+    let user = await findUserByGoogleSub(db, g.sub);
 
-    if (isSignupIntent && isActiveGoogleUser(user)) {
-      return res.status(409).json(googleAccountExistsSignupResponse());
-    }
+    // Prefer auto-login for existing Google identity (even if client sent signup intent).
 
     if (!user && g.email) {
-      const byEmail = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified, auth_provider, google_sub, account_status, is_active, is_verified,
-                role_selected, persona, persona_profile, onboarding_completed
-         FROM users
-         WHERE email IS NOT NULL
-           AND LOWER(TRIM(email)) = LOWER(TRIM($1))
-         ORDER BY
-           CASE WHEN is_active = TRUE THEN 0 ELSE 1 END,
-           CASE WHEN role = 'student' THEN 0 ELSE 1 END,
-           created_at DESC NULLS LAST
-         LIMIT 1`,
-        [g.email]
-      );
-      user = byEmail.rows[0] || null;
+      user = await findUserByEmail(db, g.email);
       if (user) {
-        if (isSignupIntent && isActiveGoogleUser(user)) {
-          return res.status(409).json(googleAccountExistsSignupResponse());
-        }
         if (!g.email_verified) {
           const err = new Error('Google email təsdiqlənməyib');
           err.statusCode = 409;
@@ -1957,28 +1978,10 @@ const googleLogin = async (req, res) => {
           err.statusCode = 409;
           throw err;
         }
-
-        await assertGoogleSubFreeForOtherUser(g.sub, user.id);
-
-        const { rows: linkedByEmail } = await db.query(
-          `UPDATE users
-           SET google_sub = $2,
-               auth_provider = COALESCE(NULLIF(TRIM(auth_provider), ''), 'google'),
-               is_active = TRUE,
-               account_status = 'active',
-               is_verified = TRUE,
-               full_name = CASE
-                 WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($3, full_name)
-                 ELSE full_name
-               END
-           WHERE id = $1
-           RETURNING id, full_name, email, role, phone, phone_verified, phone_verified_at,
-                     auth_provider, google_sub, account_status, is_active, is_verified,
-                     role_selected, persona, persona_profile, onboarding_completed`,
-          [user.id, g.sub, g.name || null],
-        );
-        if (linkedByEmail[0]) user = linkedByEmail[0];
+        user = await reactivateAndLinkGoogleUser(user, g);
       }
+    } else if (user) {
+      user = await reactivateAndLinkGoogleUser(user, g);
     }
 
     if (!user) {
@@ -2023,18 +2026,26 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    if (expectedRole && LOGIN_ROLES.has(expectedRole) && user.role !== expectedRole) {
-      return res.status(409).json(googleRoleMismatchResponse(user.role, expectedRole));
+    let sessionRole = user.role;
+    if (expectedRole && LOGIN_ROLES.has(expectedRole)) {
+      const eligible = await getLoginEligibleRoles(user.id);
+      if (eligible.includes(expectedRole)) {
+        sessionRole = expectedRole;
+        await ensureLoginRoleGranted(user.id, expectedRole);
+      } else if (user.role !== expectedRole) {
+        return res.status(409).json(googleRoleMismatchResponse(user.role, expectedRole));
+      }
     }
 
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
 
     await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
 
-    const token = signRoleSession({ id: user.id, role: user.role });
-    logAuthLogin(req, user, user.role);
+    const token = signRoleSession({ id: user.id, role: sessionRole });
+    logAuthLogin(req, user, sessionRole);
     const sessionUser = {
       ...user,
+      role: sessionRole,
       google_sub: user.google_sub || g.sub,
       auth_provider: user.auth_provider || 'google',
     };
@@ -2046,7 +2057,7 @@ const googleLogin = async (req, res) => {
           persona_profile: user.persona_profile,
           onboarding_completed: user.onboarding_completed,
         },
-        user.role,
+        sessionRole,
       ),
     );
     return res.json({
@@ -2057,8 +2068,7 @@ const googleLogin = async (req, res) => {
       needs_instructor_phone: Boolean(payload.needs_instructor_phone),
     });
   } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message });
+    return sendGoogleAuthError(res, err);
   }
 };
 
@@ -2120,8 +2130,7 @@ const googleLinkSendOtp = async (req, res) => {
     }
     res.json({ success: true, message: 'OTP göndərildi' });
   } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message });
+    return sendGoogleAuthError(res, err);
   }
 };
 
@@ -2246,52 +2255,22 @@ const googleLinkVerify = async (req, res) => {
       },
     });
   } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message });
+    return sendGoogleAuthError(res, err);
   }
 };
 
 const googleComplete = async (req, res) => {
   try {
     const { credential } = req.body;
-    const isSignupIntent = parseGoogleAuthIntent(req.body);
     const g = await verifyGoogleIdTokenOrThrow(credential);
     const requestedRole = String(req.body?.role || '').trim().toLowerCase();
     const typedPassword = normalizePasswordInput(req.body?.password);
 
-    const { rows: existingBySub } = await db.query(
-      `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified,
-              role_selected, persona, persona_profile, onboarding_completed
-       FROM users
-       WHERE is_active = TRUE
-         AND google_sub = $1
-       LIMIT 1`,
-      [g.sub]
-    );
-    let user = existingBySub[0] || null;
-
-    if (isSignupIntent && isActiveGoogleUser(user) && !rowNeedsOnboarding(user)) {
-      return res.status(409).json(googleAccountExistsSignupResponse());
-    }
+    let user = await findUserByGoogleSub(db, g.sub);
 
     if (!user && g.email) {
-      const { rows: byEmail } = await db.query(
-        `SELECT id, full_name, email, role, phone, phone_verified, google_sub, account_status, is_active, is_verified,
-                role_selected, persona, persona_profile, onboarding_completed
-         FROM users
-         WHERE email IS NOT NULL
-           AND LOWER(TRIM(email)) = LOWER(TRIM($1))
-         ORDER BY
-           CASE WHEN is_active = TRUE THEN 0 ELSE 1 END,
-           created_at DESC NULLS LAST
-         LIMIT 1`,
-        [g.email]
-      );
-      user = byEmail[0] || null;
+      user = await findUserByEmail(db, g.email);
       if (user) {
-        if (isSignupIntent && isActiveGoogleUser(user) && !rowNeedsOnboarding(user)) {
-          return res.status(409).json(googleAccountExistsSignupResponse());
-        }
         if (!g.email_verified) {
           return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
         }
@@ -2302,46 +2281,54 @@ const googleComplete = async (req, res) => {
           user.role !== requestedRole &&
           !rowNeedsOnboarding(user)
         ) {
-          return res.status(409).json(googleRoleMismatchResponse(user.role, requestedRole));
+          const eligible = await getLoginEligibleRoles(user.id);
+          if (!eligible.includes(requestedRole)) {
+            return res.status(409).json(googleRoleMismatchResponse(user.role, requestedRole));
+          }
         }
-        if (user.google_sub && String(user.google_sub) !== String(g.sub)) {
+        if (user.google_sub && String(user.google_sub).trim() !== '' && String(user.google_sub) !== String(g.sub)) {
           return res.status(409).json({ success: false, message: 'Bu email artıq başqa Google hesabına bağlıdır' });
         }
-        await assertGoogleSubFreeForOtherUser(g.sub, user.id);
       }
     }
 
-    if (!user) {
+    // Existing identity → always continue as login / link (never INSERT duplicate).
+    if (user) {
+      try {
+        user = await reactivateAndLinkGoogleUser(user, g);
+      } catch (linkErr) {
+        if (isPgUniqueViolation(linkErr)) {
+          const recovered = await findUserByGoogleSub(db, g.sub);
+          if (recovered) user = recovered;
+          else throw linkErr;
+        } else {
+          throw linkErr;
+        }
+      }
+    } else {
       const fullName = g.name || (g.email ? g.email.split('@')[0] : 'User');
       const passwordHash =
         typedPassword.length >= 8
           ? await bcrypt.hash(typedPassword, 12)
           : await bcrypt.hash(`google_oauth:${g.sub}:${Date.now()}:${Math.random()}`, 10);
-      const { rows: created } = await db.query(
-        `INSERT INTO users (
-           full_name, email, role, auth_provider, google_sub, phone_verified, password_hash,
-           account_status, is_verified, locale, role_selected, onboarding_completed, persona
-         )
-         VALUES ($1, $2, 'student', 'google', $3, FALSE, $4, 'active', TRUE, $5, FALSE, FALSE, NULL)
-         RETURNING id, full_name, email, role, phone, phone_verified, is_verified,
-                   role_selected, persona, persona_profile, onboarding_completed`,
-        [fullName, g.email, g.sub, passwordHash, localeFromReq(req)]
-      );
-      user = created[0];
-    } else {
-      const { rows: linked } = await db.query(
-        `UPDATE users
-         SET google_sub = COALESCE(google_sub, $2),
-             auth_provider = COALESCE(NULLIF(TRIM(auth_provider), ''), 'google'),
-             is_active = TRUE,
-             account_status = 'active',
-             is_verified = TRUE
-         WHERE id = $1
-         RETURNING id, full_name, email, role, phone, phone_verified, is_verified,
-                   role_selected, persona, persona_profile, onboarding_completed`,
-        [user.id, g.sub]
-      );
-      if (linked[0]) user = { ...user, ...linked[0] };
+      user = await insertOrRecoverGoogleUser({
+        fullName,
+        email: g.email,
+        googleSub: g.sub,
+        passwordHash,
+        locale: localeFromReq(req),
+      });
+      // If recovery returned an existing row, ensure google_sub is linked/reactivated.
+      if (user?.id) {
+        try {
+          user = await reactivateAndLinkGoogleUser(user, g);
+        } catch (linkErr) {
+          if (!isPgUniqueViolation(linkErr)) throw linkErr;
+          const recovered = await findUserByGoogleSub(db, g.sub);
+          if (recovered) user = recovered;
+        }
+        await grantUserRole(user.id, 'student').catch(() => {});
+      }
     }
 
     if (user?.id) await attachTypedPasswordToGoogleUser(user.id, typedPassword);
@@ -2356,7 +2343,14 @@ const googleComplete = async (req, res) => {
     await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
 
     const needsOnboarding = rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id));
-    const sessionRole = needsOnboarding ? null : user.role;
+    let sessionRole = needsOnboarding ? null : user.role;
+    if (!needsOnboarding && requestedRole && LOGIN_ROLES.has(requestedRole)) {
+      const eligible = await getLoginEligibleRoles(user.id);
+      if (eligible.includes(requestedRole)) {
+        sessionRole = requestedRole;
+        await ensureLoginRoleGranted(user.id, requestedRole);
+      }
+    }
     const token = signRoleSession({ id: user.id, role: sessionRole });
     if (!needsOnboarding) logAuthLogin(req, user, sessionRole);
     const fresh = await loadUserLiteById(user.id);
@@ -2373,8 +2367,7 @@ const googleComplete = async (req, res) => {
       needs_instructor_phone: false,
     });
   } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message });
+    return sendGoogleAuthError(res, err);
   }
 };
 

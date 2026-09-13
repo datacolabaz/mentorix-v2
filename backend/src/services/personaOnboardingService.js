@@ -12,6 +12,7 @@ const {
   PERSONAS,
 } = require('../config/personas');
 const { grantUserRole } = require('./userRolesService');
+const { rolesToGrantAfterPersonaChange } = require('../lib/multiRoleMembership');
 
 function badRequest(message, code = 'INVALID_PERSONA') {
   const err = new Error(message);
@@ -193,6 +194,8 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
       !alreadyInstructor &&
       !instRows[0];
 
+    const previousRole = String(me.role || '').trim().toLowerCase();
+
     await client.query(
       `UPDATE users
        SET persona = $2,
@@ -204,7 +207,14 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
       [userId, personaId, JSON.stringify(nextProfile), authRole],
     );
 
-    await grantUserRole(userId, authRole, client);
+    const membershipRoles = rolesToGrantAfterPersonaChange({
+      previousRole,
+      authRole,
+      personaId,
+    });
+    for (const role of membershipRoles) {
+      await grantUserRole(userId, role, client);
+    }
     if (personaId !== PERSONAS.PARTNER) {
       await provisionForAuthRole(client, {
         userId,
