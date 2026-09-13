@@ -6,6 +6,7 @@ const BASIC_TRIAL_LANDING_LINES = [
   'Bütün funksiyaları 21 gün tam sına',
   'Kredit kartı tələb olunmur',
   'İstənilən vaxt ləğv et',
+  'Limitsiz canlı dərslər · 5 iştirakçı',
 ]
 
 const FALLBACK_MARKETING_BY_SLUG = {

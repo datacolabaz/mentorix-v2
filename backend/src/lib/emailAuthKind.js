@@ -2,7 +2,7 @@ const EMAIL_NOT_VERIFIED_MESSAGE =
   'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzdakı təsdiq linkinə klik edin və ya təsdiq kodunu daxil edin.';
 
 const GOOGLE_LOGIN_REQUIRED_MESSAGE =
-  'Bu hesab Google ilə yaradılıb. «Google ilə davam et» düyməsini basın — email şifrəsi bu hesabda yoxdur.';
+  'Bu hesab Google ilə yaradılıb. «Google ilə davam et» düyməsini basın — email şifrəsi bu hesabda yoxdursa əvvəlcə Google ilə daxil olun, sonra «Şifrəmi unutmuşam» ilə şifrə təyin edin.';
 
 const WRONG_PASSWORD_MESSAGE = 'Email və ya şifrə yanlışdır';
 const WRONG_PASSWORD_RESET_HINT =

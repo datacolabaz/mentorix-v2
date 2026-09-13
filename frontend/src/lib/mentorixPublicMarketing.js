@@ -31,7 +31,14 @@ export const MENTORIX_PRICING_PLANS = [
     title: 'SADƏ',
     priceLabel: 'Pulsuz',
     highlight: false,
-    items: ['21 günlük sınaq', '5 tələbə', '5 SMS / ay', '2 imtahan / ay', '5 tapşırıq / ay'],
+    items: [
+      '21 günlük sınaq',
+      '5 tələbə',
+      '5 SMS / ay',
+      '2 imtahan / ay',
+      '5 tapşırıq / ay',
+      'Limitsiz canlı dərslər · 5 iştirakçı',
+    ],
     mapNote: null,
   },
   {

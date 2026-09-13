@@ -6,6 +6,7 @@ import { useToast } from '../common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import { googleAuthWithAutoRole } from '../../lib/googleAuth'
 import { postAuthNavigate } from '../../lib/postAuth'
+import { authLoggedInToastKey, authLoginErrorMessage } from '../../lib/authWelcomeToast'
 
 /** Landing / axtarış — mövcud Google hesabı ilə giriş. */
 export default function PublicGoogleSignIn({ className = '', label, context = 'signin' }) {
@@ -29,10 +30,10 @@ export default function PublicGoogleSignIn({ className = '', label, context = 's
         needs_instructor_phone: false,
       }
       setSession(r.token, u)
-      toast(u.role === 'student' ? t('auth.toasts.loggedInStudent') : t('auth.toasts.loggedIn'), 'success')
+      toast(t(authLoggedInToastKey(u)), 'success')
       postAuthNavigate(u, navigate)
     } catch (err) {
-      toast(err?.message || t('auth.toasts.googleFailed'), 'error')
+      toast(authLoginErrorMessage(err, t) || err?.message || t('auth.toasts.googleFailed'), 'error')
     } finally {
       setBusy(false)
     }

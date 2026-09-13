@@ -11,6 +11,7 @@ import { getAttributionPayload } from '../../lib/analytics'
 import { postAuthNavigate } from '../../lib/postAuth'
 import { googleAuthWithAutoRole, googleSignup } from '../../lib/googleAuth'
 import { loginWithEmailPassword } from '../../lib/emailLogin'
+import { authLoggedInToastKey, authLoginErrorMessage } from '../../lib/authWelcomeToast'
 import useUiStore from '../../hooks/useUi'
 
 function authInputClass(isDark) {
@@ -234,11 +235,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         needs_instructor_phone: false,
       }
       setSession(r.token, u)
-      if (u.role === 'student') {
-        toast(t('auth.toasts.loggedInStudent'), 'success')
-      } else {
-        toast(t('auth.toasts.loggedIn'), 'success')
-      }
+      toast(t(authLoggedInToastKey(u)), 'success')
       goAfterAuth(u)
     } catch (err) {
       if (tab === 'signup' && isAccountExistsError(err)) {
@@ -247,7 +244,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         setLoginRoleFallback(true)
         toast(t('auth.toasts.selectRoleRetry'), 'error')
       } else {
-        toast(err?.message || t('auth.toasts.googleFailed'), 'error')
+        toast(authLoginErrorMessage(err, t) || err?.message || t('auth.toasts.googleFailed'), 'error')
       }
     } finally {
       setLoading(false)
@@ -323,13 +320,16 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         loginRoleFallback ? loginRole : null,
       )
       setLoginRoleFallback(false)
+      if (data?.token && data?.user && !data?.needs_onboarding && !data?.needs_role) {
+        toast(t(authLoggedInToastKey(data.user)), 'success')
+      }
       finishEmailLogin(data)
     } catch (err) {
       if (!loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
         toast(t('auth.toasts.selectRoleRetry'), 'error')
       } else {
-        toast(err.message || t('auth.toasts.loginError'), 'error')
+        toast(authLoginErrorMessage(err, t), 'error')
       }
     } finally {
       setLoading(false)

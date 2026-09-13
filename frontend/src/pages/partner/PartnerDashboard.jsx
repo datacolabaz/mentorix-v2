@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import Brand from '../../components/common/Brand'
+import LocaleThemeBar from '../../components/LocaleThemeBar'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
@@ -72,6 +73,7 @@ function PartnerShell({ children }) {
           >
             {t('partner.secondaryPanel', { defaultValue: 'Digər panel' })}
           </Link>
+          <LocaleThemeBar tone={theme === 'dark' ? 'dark' : 'light'} />
           <button
             type="button"
             onClick={() => logout()}
