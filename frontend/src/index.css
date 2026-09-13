@@ -688,13 +688,11 @@ input.mx-auth-tel-input::placeholder {
   opacity: 1;
 }
 
-/* Google Sign-In — öz dizaynımız görünür; rəsmi düymə toxunuş üçün üstdə */
+/* Google Sign-In — opaque custom face on top (pointer-events:none); GIS underneath receives clicks */
 .mx-google-signin__decor {
   pointer-events: none;
 }
 .mx-google-signin__hit {
-  /* iOS Safari opacity:0 iframe toxunuşu qəbul etmir */
-  opacity: 0.01;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

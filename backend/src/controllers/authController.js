@@ -26,7 +26,6 @@ const {
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
 const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
 const {
-  canAdoptLoginPassword,
   hasUserChosenPassword,
   normalizePasswordInput,
   passwordLoginFailureBody,
@@ -1392,13 +1391,9 @@ const loginWithEmail = async (req, res) => {
     if (!user) {
       return res.status(401).json(passwordLoginFailureBody(null));
     }
-    let passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
-    if (!passOk && canAdoptLoginPassword(user, pass, passOk)) {
-      const hash = await bcrypt.hash(pass, 12);
-      await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hash, user.id]);
-      user.password_hash = hash;
-      passOk = true;
-    }
+    // Google-only accounts (placeholder / no chosen password) must use Google or
+    // «Forgot password» — never silently adopt a typed password on email login.
+    const passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
     if (!passOk) {
       return res.status(401).json(passwordLoginFailureBody(user));
     }

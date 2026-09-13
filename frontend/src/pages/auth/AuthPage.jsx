@@ -222,17 +222,18 @@ export default function AuthPage() {
               onTabChange={setAuthTab}
             />
           )}
+
+          {!isAdmin ? (
+            <p className={['mt-5 pt-4 border-t text-center text-sm', isDark ? 'border-white/10 text-gray-400' : 'border-slate-100 text-slate-500'].join(' ')}>
+              <Link
+                to="/partner"
+                className={isDark ? 'text-primary hover:underline' : 'text-emerald-700 hover:underline font-medium'}
+              >
+                {t('partner.public.nav', { defaultValue: 'Partner proqramı' })}
+              </Link>
+            </p>
+          ) : null}
         </div>
-        {!isAdmin ? (
-          <p className={['mt-4 text-center text-sm', isDark ? 'text-gray-400' : 'text-slate-500'].join(' ')}>
-            <Link
-              to="/partner"
-              className={isDark ? 'text-primary hover:underline' : 'text-emerald-700 hover:underline font-medium'}
-            >
-              {t('partner.public.nav', { defaultValue: 'Partner proqramı' })}
-            </Link>
-          </p>
-        ) : null}
       </div>
       </main>
     </div>

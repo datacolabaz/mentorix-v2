@@ -73,32 +73,74 @@ function AuthModeTabs({ tab, onTab, isDark }) {
   )
 }
 
-function LoginPasswordInput({ value, onChange, inputClass }) {
+function PasswordVisibilityToggle({ visible, onToggle, labelShow, labelHide }) {
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-gray-200"
+      aria-label={visible ? labelHide : labelShow}
+      onClick={onToggle}
+    >
+      {visible ? (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+          <path
+            d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10.5 10.5 0 0 1 12 5c5 0 9.3 3.1 11 7.5a11.7 11.7 0 0 1-4.2 5.1M6.1 6.1A11.7 11.7 0 0 0 1 12.5C2.7 16.9 7 20 12 20c1.4 0 2.7-.2 3.9-.7"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+          <path
+            d="M2 12.5C3.7 8.1 8 5 13 5s9.3 3.1 11 7.5C22.3 16.9 18 20 13 20S3.7 16.9 2 12.5Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <circle cx="13" cy="12.5" r="3" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+function LoginPasswordInput({ value, onChange, inputClass, showPassword, onToggleVisibility }) {
   const { t } = useTranslation()
   return (
-    <input
-      id="password"
-      name="password"
-      type="password"
-      placeholder={t('auth.passwordPlaceholder')}
-      autoComplete="current-password"
-      autoCapitalize="off"
-      autoCorrect="off"
-      spellCheck={false}
-      enterKeyHint="go"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`${inputClass} touch-manipulation`}
-      onFocus={(e) => {
-        window.setTimeout(() => {
-          try {
-            e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-          } catch {
-            /* ignore */
-          }
-        }, 400)
-      }}
-    />
+    <div className="relative">
+      <input
+        id="password"
+        name="password"
+        type={showPassword ? 'text' : 'password'}
+        placeholder={t('auth.passwordPlaceholder')}
+        autoComplete="current-password"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        enterKeyHint="go"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${inputClass} touch-manipulation pr-11`}
+        onFocus={(e) => {
+          window.setTimeout(() => {
+            try {
+              e.target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+            } catch {
+              /* ignore */
+            }
+          }, 400)
+        }}
+      />
+      <PasswordVisibilityToggle
+        visible={showPassword}
+        onToggle={onToggleVisibility}
+        labelShow={t('auth.showPassword')}
+        labelHide={t('auth.hidePassword')}
+      />
+    </div>
   )
 }
 
@@ -197,6 +239,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const [loginPassword, setLoginPassword] = useState('')
   const [loginRole, setLoginRole] = useState('instructor')
   const [loginRoleFallback, setLoginRoleFallback] = useState(false)
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showSignupPassword, setShowSignupPassword] = useState(false)
+  const [googleOnlyHint, setGoogleOnlyHint] = useState(false)
 
   const [signupFullName, setSignupFullName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
@@ -312,6 +357,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       return
     }
     setLoading(true)
+    setGoogleOnlyHint(false)
     try {
       const data = await loginWithEmailPassword(
         api.post.bind(api),
@@ -328,6 +374,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       if (!loginRoleFallback && err?.status === 403) {
         setLoginRoleFallback(true)
         toast(t('auth.toasts.selectRoleRetry'), 'error')
+      } else if (err?.code === 'GOOGLE_LOGIN_REQUIRED') {
+        setGoogleOnlyHint(true)
+        toast(authLoginErrorMessage(err, t), 'error')
       } else {
         toast(authLoginErrorMessage(err, t), 'error')
       }
@@ -474,7 +523,13 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               onChange={(e) => setLoginEmail(e.target.value)}
               required
             />
-            <LoginPasswordInput value={loginPassword} onChange={setLoginPassword} inputClass={inputClass} />
+            <LoginPasswordInput
+              value={loginPassword}
+              onChange={setLoginPassword}
+              inputClass={inputClass}
+              showPassword={showLoginPassword}
+              onToggleVisibility={() => setShowLoginPassword((v) => !v)}
+            />
             <Button type="submit" loading={loading} className="w-full justify-center">
               {t('auth.login')}
             </Button>
@@ -487,6 +542,26 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               {t('auth.forgotPassword')}
             </button>
           </form>
+
+          {googleOnlyHint ? (
+            <div
+              className={[
+                'rounded-xl border px-3 py-2.5 text-xs leading-relaxed space-y-2',
+                isDark ? 'border-amber-500/30 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-900',
+              ].join(' ')}
+              role="status"
+            >
+              <p>{t('auth.googleOnlyHint')}</p>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void handleForgotPassword()}
+                className="font-semibold text-primary hover:brightness-110 disabled:opacity-50"
+              >
+                {t('auth.setPasswordViaForgot')}
+              </button>
+            </div>
+          ) : null}
 
           {loginRoleFallback ? (
             <div className="space-y-1.5">
@@ -517,13 +592,6 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
             label={t('auth.googleLogin')}
             context="signin"
           />
-
-          <p className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-            {t('auth.noAccount')}{' '}
-            <button type="button" className="font-semibold text-primary hover:brightness-110" onClick={() => pickTab('signup')}>
-              {t('auth.signupLink')}
-            </button>
-          </p>
       </div>
       ) : (
       <div className="space-y-4">
@@ -572,21 +640,29 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
               onChange={(e) => setSignupEmail(e.target.value)}
               required
             />
-            <input
-              id="mx-signup-password"
-              name="new-password"
-              type="password"
-              className={inputClass}
-              placeholder={t('auth.passwordMin')}
-              autoComplete="new-password"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              value={signupPassword}
-              onChange={(e) => setSignupPassword(e.target.value)}
-              minLength={8}
-              required
-            />
+            <div className="relative">
+              <input
+                id="mx-signup-password"
+                name="new-password"
+                type={showSignupPassword ? 'text' : 'password'}
+                className={`${inputClass} pr-11`}
+                placeholder={t('auth.passwordMin')}
+                autoComplete="new-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                minLength={8}
+                required
+              />
+              <PasswordVisibilityToggle
+                visible={showSignupPassword}
+                onToggle={() => setShowSignupPassword((v) => !v)}
+                labelShow={t('auth.showPassword')}
+                labelHide={t('auth.hidePassword')}
+              />
+            </div>
             <Button type="submit" loading={loading} variant="secondary" className="w-full justify-center">
               {t('auth.signupSubmit')}
             </Button>
