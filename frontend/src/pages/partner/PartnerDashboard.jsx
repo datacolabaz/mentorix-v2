@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Button from '../../components/common/Button'
+import Brand from '../../components/common/Brand'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
+import { dashboardPathForUser } from '../../lib/postAuth'
 
 function centsToAzn(cents) {
   return (Math.round(Number(cents) || 0) / 100).toFixed(2)
@@ -15,6 +19,34 @@ function statusBadge(status) {
   if (s === 'pending') return 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
   if (s === 'rejected' || s === 'suspended' || s === 'void') return 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
   return 'bg-token-border/40 text-token-textMuted'
+}
+
+function PartnerShell({ children }) {
+  const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const { theme } = useUiStore()
+  const home = dashboardPathForUser(user) || '/'
+  return (
+    <div className={`theme-${theme} min-h-screen bg-token-surfaceMain text-token-textMain`}>
+      <header className="border-b border-[color:var(--border-subtle)] px-4 py-3 flex items-center justify-between gap-3">
+        <Link to="/" className="shrink-0">
+          <Brand size="nav" tone={theme === 'dark' ? 'dark' : 'light'} />
+        </Link>
+        <div className="flex items-center gap-3 text-sm">
+          <Link to="/partner" className="text-token-textMuted hover:text-token-textMain">
+            {t('partner.public.nav', { defaultValue: 'Partner proqramı' })}
+          </Link>
+          <Link
+            to={home}
+            className="rounded-lg bg-primary/15 border border-primary/30 px-3 py-1.5 font-semibold text-primary"
+          >
+            {t('partner.backToApp', { defaultValue: 'Panelə qayıt' })}
+          </Link>
+        </div>
+      </header>
+      {children}
+    </div>
+  )
 }
 
 export default function PartnerDashboard() {
@@ -107,42 +139,48 @@ export default function PartnerDashboard() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-10 text-token-textMuted">
-        {t('common.loading')}
-      </div>
+      <PartnerShell>
+        <div className="mx-auto max-w-4xl px-4 py-10 text-token-textMuted">{t('common.loading')}</div>
+      </PartnerShell>
     )
   }
 
   if (data?.disabled) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-10">
-        <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
-        <p className="mt-2 text-token-textMuted">{t('partner.disabled')}</p>
-      </div>
+      <PartnerShell>
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
+          <p className="mt-2 text-token-textMuted">{t('partner.disabled')}</p>
+        </div>
+      </PartnerShell>
     )
   }
 
   if (data?.needApply) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-10">
-        <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
-        <p className="mt-3 max-w-xl text-token-textMuted">{t('partner.applyDesc')}</p>
-        <Button className="mt-6" onClick={handleApply} disabled={applying}>
-          {applying ? t('common.loading') : t('partner.applyCta')}
-        </Button>
-      </div>
+      <PartnerShell>
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
+          <p className="mt-3 max-w-xl text-token-textMuted">{t('partner.applyDesc')}</p>
+          <Button className="mt-6" onClick={handleApply} disabled={applying}>
+            {applying ? t('common.loading') : t('partner.applyCta')}
+          </Button>
+        </div>
+      </PartnerShell>
     )
   }
 
   if (data?.pending) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-10">
-        <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
-        <p className="mt-3 text-token-textMuted">{t('partner.pendingReview')}</p>
-        <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-sm ${statusBadge(data.partner?.status)}`}>
-          {data.partner?.status}
-        </span>
-      </div>
+      <PartnerShell>
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <h1 className="font-display text-2xl font-bold text-token-textMain">{t('partner.title')}</h1>
+          <p className="mt-3 text-token-textMuted">{t('partner.pendingReview')}</p>
+          <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-sm ${statusBadge(data.partner?.status)}`}>
+            {data.partner?.status}
+          </span>
+        </div>
+      </PartnerShell>
     )
   }
 
@@ -150,6 +188,7 @@ export default function PartnerDashboard() {
   const partner = data?.partner || {}
 
   return (
+    <PartnerShell>
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
       <header>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-token-textMain">{t('partner.title')}</h1>
@@ -278,5 +317,6 @@ export default function PartnerDashboard() {
         </div>
       </section>
     </div>
+    </PartnerShell>
   )
 }

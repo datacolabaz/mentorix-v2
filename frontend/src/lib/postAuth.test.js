@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { isInviteResumePath, isSafeAppPath } from './inviteReturn.js'
+import { isInviteResumePath, isSafeAppPath, isAllowedReturnPathForUser } from './inviteReturn.js'
 import {
   pathForPendingStudentDeepLink,
   rememberPendingStudentDeepLink,
@@ -40,5 +40,14 @@ describe('pending deep link paths', () => {
     globalThis.localStorage = api
     rememberPendingStudentDeepLink({ kind: 'task', openId: 'sa-22', taskId: 'task-1' })
     assert.equal(pathForPendingStudentDeepLink(), '/student/assignments?open=sa-22')
+  })
+})
+
+describe('isAllowedReturnPathForUser', () => {
+  it('allows partner dashboard for any role; admin paths only for admin', () => {
+    assert.equal(isAllowedReturnPathForUser({ role: 'instructor' }, '/partner/dashboard'), true)
+    assert.equal(isAllowedReturnPathForUser({ role: 'course' }, '/admin/partners'), false)
+    assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/admin/partners'), true)
+    assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/admin/partners?tab=1'), true)
   })
 })

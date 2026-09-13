@@ -111,6 +111,11 @@ export default function PublicSeoFooter({ className = '' }) {
                 </li>
               ))}
               <li>
+                <Link to="/partner" className="text-slate-800 font-semibold hover:text-emerald-700 transition-colors">
+                  {t('publicFooter.partnerProgram', { defaultValue: 'Partner proqramı' })}
+                </Link>
+              </li>
+              <li>
                 <Link to="/login" className="text-slate-800 font-semibold hover:text-emerald-700 transition-colors">
                   {t('publicFooter.loginRegister')}
                 </Link>

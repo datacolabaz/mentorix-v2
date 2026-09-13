@@ -66,6 +66,7 @@
     }
   },
   "nav": {
+    "partnerCabinet": "Partner kabineti",
     "sections": {
       "management": "İDARƏETMƏ",
       "materials": "MATERİALLAR",
@@ -137,7 +138,7 @@
       "payments": "Ödənişlər",
       "inventory": "SMS & Ehtiyat",
       "billing": "Platform ödənişləri",
-      "partners": "Partnerlər",
+      "partners": "Partner proqramı",
       "notifications": "Bildirişlər",
       "marketingLogin": "Landing məzmunu",
       "instructorNav": "Müəllim menyusu",
@@ -936,6 +937,7 @@
       "features": "Xüsusiyyətlər",
       "forTeachers": "Müəllimlər üçün",
       "examsTests": "İmtahanlar / Testlər",
+      "partner": "Partner ol",
       "plans": "Qiymətlər",
       "login": "Daxil ol",
       "startFree": "Pulsuz başla",
@@ -1325,6 +1327,7 @@
     "moreSearch": "Daha çox axtarış səhifəsi",
     "universityPrograms": "Universitet proqramları",
     "loginRegister": "Giriş / qeydiyyat",
+    "partnerProgram": "Partner proqramı",
     "tagline": "Mentorix müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.",
     "copyright": "© 2026 Mentorix.io. Bütün hüquqlar qorunur.",
     "byDatacolab": "Datacolab tərəfindən",
@@ -1337,6 +1340,7 @@
       "muellimler-ucun": "Müəllimlər üçün",
       "telebeler-ucun": "Tələbələr üçün",
       "haqqimizda": "Haqqımızda",
+      "partner": "Partner proqramı",
       "elaqe": "Əlaqə"
     },
     "searchLinks": {
@@ -3837,6 +3841,7 @@
   },
   "partner": {
     "title": "Partner paneli",
+    "backToApp": "Panelə qayıt",
     "disabled": "Partner proqramı hazırda aktiv deyil.",
     "applyDesc": "Mentorix Partner proqramına qoşulun: referral link paylaşın, endirimli qeydiyyat və komissiya qazanın.",
     "applyCta": "Müraciət et",
@@ -3859,6 +3864,21 @@
     "noCommissions": "Hələ komissiya yoxdur",
     "noPayouts": "Hələ payout yoxdur",
     "loadError": "Panel yüklənmədi",
+    "public": {
+      "seoTitle": "Mentorix — Partner proqramı",
+      "seoDesc": "Mentorix Partner proqramı: referral link paylaşın, endirimli qeydiyyat və komissiya qazanın.",
+      "nav": "Partner proqramı",
+      "eyebrow": "Partner proqramı",
+      "title": "Mentorix ilə birlikdə böyüyün",
+      "lead": "Referral linkinizi paylaşın. Yeni müəllimlər endirimlə qoşulur; siz təsdiqlənmiş ödənişlərdən komissiya qazanırsınız. Bu, təşkilat (organization) kabineti deyil — ayrıca Partner paneli.",
+      "b1": "Şəxsi referral link və klik/attribution statistika",
+      "b2": "İstifadəçiyə endirim · sizə komissiya (kampaniya şərtlərinə görə)",
+      "b3": "Payout sorğusu Partner kabinetindən",
+      "openCabinet": "Partner kabineti",
+      "joinCta": "Partner ol — qeydiyyat",
+      "loginCta": "Giriş edib müraciət et",
+      "notOrg": "Təşkilat paketi və /org kabineti ayrıdır. Partner proqramı referral komissiyası üçündür."
+    },
     "stats": {
       "clicks": "Klik",
       "attributions": "Attribution",

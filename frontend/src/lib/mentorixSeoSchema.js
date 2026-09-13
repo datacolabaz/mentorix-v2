@@ -51,6 +51,11 @@ export const MENTORIX_SITE_NAV = [
     description: 'Mentorix təhsil ekosistemi haqqında',
   },
   {
+    name: 'Partner proqramı',
+    path: '/partner',
+    description: 'Referral partner proqramı — link paylaşımı və komissiya',
+  },
+  {
     name: 'Əlaqə',
     path: '/elaqe',
     description: 'Dəstək və əlaqə məlumatları',

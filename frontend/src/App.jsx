@@ -11,7 +11,9 @@ import PersonaOnboarding from './pages/auth/PersonaOnboarding'
 import GenericAppHome from './pages/app/Home'
 import {
   consumeReturnAfterLogin,
+  dashboardPathForUser,
   isInviteResumePath,
+  isSafeAppPath,
   peekReturnAfterLogin,
   rememberReturnAfterLogin,
   resolvePostAuthPath,
@@ -87,6 +89,7 @@ import AdminPartners from './pages/admin/AdminPartners'
 import AdminInventory from './pages/admin/AdminInventory'
 import ParentNotifications from './pages/parent/Notifications'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
+import PartnerProgramLanding from './pages/partner/PartnerProgramLanding'
 import PartnerReferralLanding from './pages/PartnerReferralLanding'
 
 import StudentDashboard from './pages/student/Dashboard'
@@ -148,8 +151,13 @@ const ProtectedRoute = ({ children, roles }) => {
   const location = useLocation()
   if (!user) {
     const path = `${location.pathname || ''}${location.search || ''}`
-    if (path && path !== '/login' && path !== '/register' && !isInviteResumePath(peekReturnAfterLogin())) {
+    const inviteStored = isInviteResumePath(peekReturnAfterLogin())
+    if (path && path !== '/login' && path !== '/register' && !inviteStored) {
       rememberReturnAfterLogin(path)
+    }
+    // ?next= — sessionStorage-dan əlavə olaraq return URL saxla (partner/admin kabinetləri)
+    if (!inviteStored && path && isSafeAppPath(String(path).split(/[?#]/)[0])) {
+      return <Navigate to={`/login?next=${encodeURIComponent(path)}`} replace />
     }
     return <Navigate to="/login" replace />
   }
@@ -158,7 +166,10 @@ const ProtectedRoute = ({ children, roles }) => {
     return <Navigate to={invite} replace />
   }
   if (userNeedsOnboarding(user)) return <Navigate to={ONBOARDING_PATH} replace />
-  if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />
+  // Yanlış rol → /login yox, öz paneli (əks halda təşkilat/instructor loop + qarışıqlıq)
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to={dashboardPathForUser(user)} replace />
+  }
   return children
 }
 
@@ -220,6 +231,7 @@ export default function App() {
       <Route path="/muellim-paneli" element={<Navigate to="/muellimler-ucun" replace />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
       <Route path="/r/:code" element={<PartnerReferralLanding />} />
+      <Route path="/partner" element={<PartnerProgramLanding />} />
       <Route
         path="/partner/dashboard"
         element={
@@ -228,7 +240,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/partner" element={<Navigate to="/partner/dashboard" replace />} />
+      <Route path="/partner/apply" element={<Navigate to="/partner/dashboard" replace />} />
       <Route
         path="/login"
         element={user ? <ResumeAfterAuth /> : <AuthPage />}
