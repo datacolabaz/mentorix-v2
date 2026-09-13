@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import GoogleSignInButton from './GoogleSignInButton'
 import AuthAccountExistsModal from './AuthAccountExistsModal'
@@ -170,6 +170,12 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const toast = useToast()
   const { signupWithEmail, verifyEmailCode, resendVerificationEmail, requestPasswordReset, setSession } = useAuthStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const nextParam = searchParams.get('next')
+  const goAfterAuth = (u) => {
+    if (onSuccess) onSuccess(u)
+    else postAuthNavigate(u, navigate, nextParam)
+  }
   const isDark = useUiStore((s) => s.theme) === 'dark'
   const inputClass = authInputClass(isDark)
 
@@ -233,8 +239,7 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
       } else {
         toast(t('auth.toasts.loggedIn'), 'success')
       }
-      if (onSuccess) onSuccess(u)
-      else postAuthNavigate(u, navigate)
+      goAfterAuth(u)
     } catch (err) {
       if (tab === 'signup' && isAccountExistsError(err)) {
         openAccountExistsModal(err?.message)
@@ -282,20 +287,17 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
   const finishEmailLogin = (data) => {
     if (String(data?.user?.role || '').toLowerCase() === 'admin' && data?.token) {
       setSession(data.token, data.user)
-      if (onSuccess) onSuccess(data.user)
-      else postAuthNavigate(data.user, navigate)
+      goAfterAuth(data.user)
       return
     }
     if ((data?.needs_onboarding || data?.needs_role) && data?.token && data?.user) {
       setSession(data.token, data.user)
-      if (onSuccess) onSuccess(data.user)
-      else postAuthNavigate(data.user, navigate)
+      goAfterAuth(data.user)
       return
     }
     if (!data?.token || !data?.user) throw new Error(data?.message || t('auth.errors.invalidServer'))
     setSession(data.token, data.user)
-    if (onSuccess) onSuccess(data.user)
-    else postAuthNavigate(data.user, navigate)
+    goAfterAuth(data.user)
   }
 
   const handleLogin = async (e) => {
@@ -343,19 +345,16 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         setSession(r.token, r.user)
       if (String(r.user?.role || '').toLowerCase() === 'admin') {
         toast(t('auth.toasts.loggedIn'), 'success')
-        if (onSuccess) onSuccess(r.user)
-        else postAuthNavigate(r.user, navigate)
+        goAfterAuth(r.user)
         return
       }
       if (r?.needs_onboarding || r?.needs_role) {
         toast(t('auth.toasts.emailVerifiedChooseUse'), 'success')
-        if (onSuccess) onSuccess(r.user)
-        else postAuthNavigate(r.user, navigate)
+        goAfterAuth(r.user)
         return
       }
         toast(t('auth.toasts.emailVerifiedLoggedIn'), 'success')
-        if (onSuccess) onSuccess(r.user)
-        else postAuthNavigate(r.user, navigate)
+        goAfterAuth(r.user)
         return
       }
       toast(t('auth.toasts.emailVerifiedCanLogin'), 'success')

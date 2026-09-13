@@ -7,6 +7,15 @@ export function isSafeAppPath(path) {
   return Boolean(ret.startsWith('/') && !ret.startsWith('//') && !BLOCKED_RETURN_PATHS.has(ret))
 }
 
+/** Admin-only return path-ləri non-admin üçün ev panelinə yönəlt. */
+export function isAllowedReturnPathForUser(user, path) {
+  const p = String(path || '').split(/[?#]/)[0]
+  if (!p.startsWith('/')) return false
+  if (p === '/login' || p === '/register') return false
+  if (p.startsWith('/admin')) return String(user?.role || '').toLowerCase() === 'admin'
+  return true
+}
+
 /** WhatsApp/QR dəvət: qeydiyyatdan sonra panelə yox, dəvət səhifəsinə qayıt. */
 export function isInviteResumePath(path) {
   return /^\/(join|exam|task|library)(\/|$)/.test(String(path || '').split(/[?#]/)[0])

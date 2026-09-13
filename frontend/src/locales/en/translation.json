@@ -66,6 +66,7 @@
     }
   },
   "nav": {
+    "partnerCabinet": "Partner cabinet",
     "sections": {
       "management": "MANAGEMENT",
       "materials": "MATERIALS",
@@ -142,7 +143,7 @@
       "instructorNav": "Teacher menu",
       "categories": "Search categories",
       "settings": "Settings",
-      "partners": "Partners"
+      "partners": "Partner program"
     },
     "org": {
       "orgBadge": "Organization",
@@ -936,6 +937,7 @@
       "features": "Features",
       "forTeachers": "For teachers",
       "examsTests": "Exams / Tests",
+      "partner": "Become a partner",
       "plans": "Pricing",
       "login": "Sign in",
       "startFree": "Start free",
@@ -1325,6 +1327,7 @@
     "moreSearch": "More search pages",
     "universityPrograms": "University programs",
     "loginRegister": "Sign in / sign up",
+    "partnerProgram": "Partner program",
     "tagline": "Mentorix brings teachers, students, and parents together on one platform so you can run teaching more smoothly and effectively.",
     "copyright": "© 2026 Mentorix.io. All rights reserved.",
     "byDatacolab": "By Datacolab",
@@ -1337,6 +1340,7 @@
       "muellimler-ucun": "For teachers",
       "telebeler-ucun": "For students",
       "haqqimizda": "About us",
+      "partner": "Partner program",
       "elaqe": "Contact"
     },
     "searchLinks": {
@@ -3837,6 +3841,7 @@
   },
   "partner": {
     "title": "Partner dashboard",
+    "backToApp": "Back to app",
     "disabled": "Partner program is currently disabled.",
     "applyDesc": "Join Mentorix Partner: share your referral link, offer discounts, earn commission.",
     "applyCta": "Apply",
@@ -3859,6 +3864,21 @@
     "noCommissions": "No commissions yet",
     "noPayouts": "No payouts yet",
     "loadError": "Failed to load dashboard",
+    "public": {
+      "seoTitle": "Mentorix — Partner program",
+      "seoDesc": "Mentorix Partner program: share a referral link, offer discounts, earn commission.",
+      "nav": "Partner program",
+      "eyebrow": "Partner program",
+      "title": "Grow with Mentorix",
+      "lead": "Share your referral link. New teachers join with a discount; you earn commission on approved payments. This is not the organization workspace — it is a separate Partner cabinet.",
+      "b1": "Personal referral link plus click/attribution stats",
+      "b2": "User discount · your commission (per campaign terms)",
+      "b3": "Request payouts from the Partner cabinet",
+      "openCabinet": "Partner cabinet",
+      "joinCta": "Become a partner — sign up",
+      "loginCta": "Sign in to apply",
+      "notOrg": "Organization plans and /org are separate. The Partner program is for referral commissions."
+    },
     "stats": {
       "clicks": "Clicks",
       "attributions": "Attributions",

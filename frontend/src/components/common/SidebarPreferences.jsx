@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import useUiStore from '../../hooks/useUi'
 import LocaleThemeBar from '../LocaleThemeBar'
 
@@ -13,6 +14,17 @@ export default function SidebarPreferences({ onLogout, className = '' }) {
         <div className="text-xs font-semibold text-token-textMuted mb-2 px-1">{t('layout.language')}</div>
         <LocaleThemeBar className="w-full justify-between" menuPlacement="top" />
       </div>
+      <Link
+        to="/partner/dashboard"
+        className={[
+          'mb-2 flex items-center gap-2 text-sm font-medium transition-colors w-full px-4 py-2.5 rounded-xl',
+          isDark
+            ? 'text-primary/90 hover:text-primary hover:bg-primary/10'
+            : 'text-emerald-800 hover:text-emerald-900 hover:bg-emerald-50',
+        ].join(' ')}
+      >
+        {t('nav.partnerCabinet', { defaultValue: 'Partner kabineti' })}
+      </Link>
       <button
         type="button"
         onClick={onLogout}

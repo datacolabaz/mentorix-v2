@@ -25,6 +25,7 @@ const CTA_BTN =
 const LINKS = [
   { to: '/muellimler-ucun', labelKey: 'landing.nav.forTeachers' },
   { to: '/imtahanlar', labelKey: 'landing.nav.examsTests' },
+  { to: '/partner', labelKey: 'landing.nav.partner' },
 ]
 
 function linkClass(pathname, to, isDark) {

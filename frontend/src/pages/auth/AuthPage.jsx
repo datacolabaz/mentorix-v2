@@ -18,6 +18,7 @@ export default function AuthPage() {
   const [searchParams] = useSearchParams()
   const isAdmin = searchParams.get('admin') === 'true'
   const tabParam = searchParams.get('tab')
+  const nextParam = searchParams.get('next')
   const initialTab = useMemo(
     () => (location.pathname === '/register' || tabParam === 'signup' ? 'signup' : 'login'),
     [location.pathname, tabParam],
@@ -33,11 +34,11 @@ export default function AuthPage() {
   }, [initialTab])
 
   useEffect(() => {
-    const next = String(searchParams.get('next') || '').trim()
+    const next = String(nextParam || '').trim()
     if (next.startsWith('/') && next !== '/login' && next !== '/register') {
       rememberReturnAfterLogin(next)
     }
-  }, [searchParams])
+  }, [nextParam])
 
   const [adminIdentifier, setAdminIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -52,7 +53,7 @@ export default function AuthPage() {
       roleOrUser && typeof roleOrUser === 'object'
         ? roleOrUser
         : useAuthStore.getState().user || { role: roleOrUser }
-    postAuthNavigate(u, navigate)
+    postAuthNavigate(u, navigate, nextParam)
   }
 
   const handleEmailLogin = async (e) => {
@@ -60,7 +61,7 @@ export default function AuthPage() {
     setLoading(true)
     try {
       const user = await login(adminIdentifier, password)
-      goDashboard(user.role)
+      goDashboard(user)
     } catch (err) {
       toast(err.message || t('auth.loginError'), 'error')
     } finally {
@@ -222,6 +223,16 @@ export default function AuthPage() {
             />
           )}
         </div>
+        {!isAdmin ? (
+          <p className={['mt-4 text-center text-sm', isDark ? 'text-gray-400' : 'text-slate-500'].join(' ')}>
+            <Link
+              to="/partner"
+              className={isDark ? 'text-primary hover:underline' : 'text-emerald-700 hover:underline font-medium'}
+            >
+              {t('partner.public.nav', { defaultValue: 'Partner proqramı' })}
+            </Link>
+          </p>
+        ) : null}
       </div>
       </main>
     </div>

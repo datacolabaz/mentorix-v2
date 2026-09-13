@@ -1,6 +1,7 @@
 import { DEFAULT_APP_PATH, ONBOARDING_PATH, isPersonaId, userNeedsOnboarding } from '../constants/personas'
 import {
   consumeReturnAfterLogin,
+  isAllowedReturnPathForUser,
   isInviteResumePath,
   peekReturnAfterLogin,
 } from './inviteReturn'
@@ -13,6 +14,8 @@ export {
   RETURN_AFTER_LOGIN_KEY,
   consumeReturnAfterLogin,
   isInviteResumePath,
+  isSafeAppPath,
+  isAllowedReturnPathForUser,
   peekReturnAfterLogin,
   rememberReturnAfterLogin,
 } from './inviteReturn'
@@ -48,7 +51,10 @@ export function resolvePostAuthPath(user, { nextQuery = '', stored = peekReturnA
   if (userNeedsOnboarding(user)) return ONBOARDING_PATH
   const pendingPath = pathForPendingStudentDeepLink(peekPendingStudentDeepLink())
   if (pendingPath) return pendingPath
-  if (ret && ret !== ONBOARDING_PATH) return ret
+  if (ret && ret !== ONBOARDING_PATH) {
+    if (!isAllowedReturnPathForUser(user, ret)) return dashboardPathForUser(user)
+    return ret
+  }
   return dashboardPathForUser(user)
 }
 
