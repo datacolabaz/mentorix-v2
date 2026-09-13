@@ -69,7 +69,39 @@ function normalizeRow(r) {
     slug,
     title: String(r.title || slug).trim() || slug.toUpperCase(),
     price_azn,
-    limits: { students, documents, storage_mb, storage_limit_bytes, sms_monthly, exams_monthly, homeworks_monthly, ram_limit_mb },
+    limits: {
+      students,
+      documents,
+      storage_mb,
+      storage_limit_bytes,
+      sms_monthly,
+      exams_monthly,
+      homeworks_monthly,
+      ram_limit_mb,
+      recording_hours_monthly:
+        r.recording_hours_monthly == null ? null : Number(r.recording_hours_monthly),
+      recording_storage_bytes:
+        r.recording_storage_bytes == null ? null : Number(r.recording_storage_bytes),
+      recording_retention_days:
+        r.recording_retention_days == null ? null : Number(r.recording_retention_days),
+      recording_max_duration_sec:
+        r.recording_max_duration_sec == null ? null : Number(r.recording_max_duration_sec),
+      recording_max_quality:
+        r.recording_max_quality == null || String(r.recording_max_quality).trim() === ''
+          ? null
+          : String(r.recording_max_quality).trim(),
+    },
+    recording_limits: {
+      hours_monthly: r.recording_hours_monthly == null ? 0 : Number(r.recording_hours_monthly) || 0,
+      storage_bytes: r.recording_storage_bytes == null ? 0 : Number(r.recording_storage_bytes) || 0,
+      retention_days: r.recording_retention_days == null ? 0 : Number(r.recording_retention_days) || 0,
+      max_duration_sec:
+        r.recording_max_duration_sec == null ? 0 : Number(r.recording_max_duration_sec) || 0,
+      max_quality:
+        r.recording_max_quality == null || String(r.recording_max_quality).trim() === ''
+          ? null
+          : String(r.recording_max_quality).trim(),
+    },
     highlight: Boolean(r.highlight),
     is_active: Boolean(r.is_active),
     features,
@@ -83,7 +115,7 @@ function normalizeRow(r) {
 
 async function loadPlansFromDb() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
      FROM subscription_plans
      WHERE is_active = TRUE
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
