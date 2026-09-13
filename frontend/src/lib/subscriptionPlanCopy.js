@@ -38,9 +38,6 @@ function documentLineFromLimits(lim, opts) {
 function cloudStorageLineFromPlan(p, lim, planId, opts) {
   const id = String(planId || '').toLowerCase()
   const normId = id === 'business' ? 'premium' : id
-  if (normId === 'premium') {
-    return pt(opts, 'limits.cloudStorageUnlimited', {}, 'Limitsiz Yaddaş')
-  }
   const rec = resolveRecordingFromPlan(p, lim, normId)
   const gb = Number(formatRecordingStorageGb(rec.storageBytes, opts))
   if (Number.isFinite(gb) && gb > 0) {
@@ -423,7 +420,7 @@ function planDescription(p, opts = {}) {
     return pt(opts, 'desc.growth', { title }, `${title} paket — böyüyən tədris biznesi və ətraflı hesabatlar.`)
   }
   if (id === 'premium') {
-    return pt(opts, 'desc.premium', { title }, `${title} paket — limitsiz tələbə/sənəd və prioritet dəstək.`)
+    return pt(opts, 'desc.premium', { title }, `${title} paket — limitsiz tələbə, 50 GB bulud yaddaşı və prioritet dəstək.`)
   }
   return null
 }

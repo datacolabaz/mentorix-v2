@@ -1243,7 +1243,7 @@
         "cta": "Planı seç",
         "bullets": [
           "Limitsiz tələbə",
-          "Limitsiz Yaddaş",
+          "50 GB Bulud Yaddaşı",
           "200 SMS / ay",
           "Limitsiz imtahan",
           "Limitsiz tapşırıq",
@@ -2915,7 +2915,7 @@
       "basic": "21 günlük pulsuz sınaq — platformanı risksiz sınayın.",
       "pro": "Kiçik və orta qruplar üçün ən populyar {{title}} paket.",
       "growth": "{{title}} paket — böyüyən tədris biznesi və ətraflı hesabatlar.",
-      "premium": "{{title}} paket — limitsiz tələbə/sənəd və prioritet dəstək."
+      "premium": "{{title}} paket — limitsiz tələbə, 50 GB bulud yaddaşı və prioritet dəstək."
     },
     "detail": {
       "basic": {
