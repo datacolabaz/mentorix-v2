@@ -140,4 +140,39 @@ router.get('/subscription-plans', async (_req, res) => {
   }
 });
 
+/** Partner referral click capture — public */
+router.get('/r/:code', async (req, res) => {
+  try {
+    const { recordClick, normalizeRefCode } = require('../services/partner/partnerAttributionService');
+    const { isPartnerProgramEnabled, PARTNER_DEFAULTS } = require('../config/partnerProgram');
+    if (!isPartnerProgramEnabled()) {
+      return res.status(404).json({ success: false, message: 'Not found' });
+    }
+    const code = normalizeRefCode(req.params.code);
+    const sessionKey =
+      req.query.session_key ||
+      req.headers['x-session-key'] ||
+      null;
+    const out = await recordClick({
+      codeRaw: code,
+      sessionKey,
+      ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      landingPath: req.query.redirect || '/signup',
+    });
+    if (!out) {
+      return res.status(404).json({ success: false, message: 'Referral kodu tapılmadı', code: 'REF_NOT_FOUND' });
+    }
+    res.json({
+      success: true,
+      code: out.code,
+      cookie_name: PARTNER_DEFAULTS.cookie_name,
+      attribution_window_days: out.attribution_window_days,
+      redirect: String(req.query.redirect || '/signup'),
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 module.exports = router;

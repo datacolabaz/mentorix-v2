@@ -218,6 +218,13 @@ async function provisionInstructorBasicTrial(client, userId, req) {
   if (!result.granted) {
     await logRisk(userId, req, { kind: 'basic_trial_ip_denied', reason: result.reason }, 35);
   }
+  let trialDays = BASIC_TRIAL_DAYS;
+  try {
+    const { resolveTrialDaysForUser } = require('../services/partner/partnerTrialService');
+    trialDays = await resolveTrialDaysForUser(userId);
+  } catch {
+    // keep BASIC_TRIAL_DAYS
+  }
   await client.query(
     `INSERT INTO subscriptions (user_id, plan, status, current_period_start, current_period_end, updated_at)
      VALUES ($1, 'basic', 'active', NOW(), NOW() + ($2 || ' days')::interval, NOW())
@@ -230,7 +237,7 @@ async function provisionInstructorBasicTrial(client, userId, req) {
          NOW() + ($2 || ' days')::interval
        ),
        updated_at = NOW()`,
-    [userId, String(BASIC_TRIAL_DAYS)]
+    [userId, String(trialDays)]
   );
   return result;
 }
@@ -1298,6 +1305,24 @@ const signup = async (req, res) => {
       );
       return rows[0];
     });
+
+    try {
+      const { attributeUserOnRegister } = require('../services/partner/partnerAttributionService');
+      const ref =
+        req.body?.ref ||
+        req.body?.partner_ref ||
+        req.body?.referral_code ||
+        req.query?.ref ||
+        null;
+      await attributeUserOnRegister({
+        userId: created.id,
+        refCode: ref,
+        sessionKey: req.body?.session_key || req.body?.partner_session_key || null,
+        source: ref ? 'register_body' : 'cookie',
+      });
+    } catch (e) {
+      console.error('[partner] attribution on signup', e.message);
+    }
 
     scheduleAccessEvent(req, {
       event_type: 'signup_complete',

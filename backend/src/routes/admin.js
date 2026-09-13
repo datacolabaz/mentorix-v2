@@ -36,6 +36,7 @@ const db = require('../utils/db');
 const { grantCourseRoleToUser } = require('../services/userRolesService');
 const { adminListPlans, adminUpsertPlan } = require('../services/subscriptionPlansService');
 const { fulfillBillingPayment, rejectBillingPayment } = require('../services/billingActivationService');
+const adminPartner = require('../controllers/adminPartnerController');
 const { adminGetBillingSettings, adminUpdateBillingSettings } = require('../services/billingSettingsService');
 const {
   getAdminBillingInventory,
@@ -266,5 +267,16 @@ router.get('/certified-exams/:id/preview', authenticate, authorize('admin'), get
 router.patch('/certified-exams/:id/verify', authenticate, authorize('admin'), approveCertifiedExam);
 router.patch('/certified-exams/:id/reject', authenticate, authorize('admin'), rejectCertifiedExam);
 router.post('/certified-exams/:id/review', authenticate, authorize('admin'), reviewCertifiedExam);
+
+// Partner / referral admin
+router.get('/partners', authenticate, authorize('admin'), adminPartner.listPartners);
+router.get('/partners/:id', authenticate, authorize('admin'), adminPartner.getPartner);
+router.post('/partners/:id/status', authenticate, authorize('admin'), adminPartner.setStatus);
+router.get('/partner-campaigns', authenticate, authorize('admin'), adminPartner.listCampaigns);
+router.put('/partner-campaigns', authenticate, authorize('admin'), adminPartner.upsertCampaign);
+router.get('/partner-commissions', authenticate, authorize('admin'), adminPartner.listCommissions);
+router.get('/partner-payouts', authenticate, authorize('admin'), adminPartner.listPayouts);
+router.post('/partner-payouts/:id/review', authenticate, authorize('admin'), adminPartner.reviewPayout);
+router.post('/partner-attributions/reassign', authenticate, authorize('admin'), adminPartner.reassignAttribution);
 
 module.exports = router;

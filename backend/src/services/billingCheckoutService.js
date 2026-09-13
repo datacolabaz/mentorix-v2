@@ -23,6 +23,8 @@ const {
 } = require('./billingSettingsService');
 const { normalizeBillingInterval } = require('./billingActivationService');
 const { logBillingEvent, assertDowngradeAllowed } = require('./billingEntitlements');
+const { getCheckoutDiscountForUser } = require('./partner/partnerCommissionService');
+const { applyDiscountCents } = require('./partner/partnerMath');
 
 function yearlyTotalFromMonthly(monthlyAzn, discountPct = 0.2) {
   const m = Number(monthlyAzn || 0) || 0;
@@ -102,18 +104,46 @@ async function createPlanCheckout({
     }
   }
 
-  const amountCents = Math.round(finalPriceAzn * 100);
+  let listAmountCents = Math.round(finalPriceAzn * 100);
+  let amountCents = listAmountCents;
+  let partnerDiscount = null;
+  try {
+    partnerDiscount = await getCheckoutDiscountForUser(db, userId);
+    if (partnerDiscount?.discount_pct > 0) {
+      const split = applyDiscountCents(listAmountCents, partnerDiscount.discount_pct);
+      amountCents = split.net_cents;
+      partnerDiscount = {
+        ...partnerDiscount,
+        list_amount_cents: split.gross_cents,
+        discount_cents: split.discount_cents,
+        net_amount_cents: split.net_cents,
+      };
+    } else {
+      partnerDiscount = null;
+    }
+  } catch {
+    partnerDiscount = null;
+  }
+
   const provider = paymentMethod === 'cash' ? 'manual' : 'payriff';
   const periodLabel = billingInterval === 'yearly' ? '12 ay' : '30 gün';
 
   const { rows: ins } = await db.query(
     `INSERT INTO billing_payments (
        user_id, provider, plan, amount_cents, currency, status,
-       billing_interval, payment_method, product_type
+       billing_interval, payment_method, product_type, partner_attribution_id
      )
-     VALUES ($1, $2, $3, $4, 'AZN', 'pending', $5, $6, 'plan')
+     VALUES ($1, $2, $3, $4, 'AZN', 'pending', $5, $6, 'plan', $7)
      RETURNING id`,
-    [userId, provider, plan, amountCents, billingInterval, paymentMethod]
+    [
+      userId,
+      provider,
+      plan,
+      amountCents,
+      billingInterval,
+      paymentMethod,
+      partnerDiscount?.attribution_id || null,
+    ]
   );
   const paymentId = ins[0]?.id;
 
@@ -147,6 +177,7 @@ async function createPlanCheckout({
       billing_interval: billingInterval,
       manual_transfer_account: manualAccount,
       description: `Mentorix — ${String(picked?.title || plan).trim()} (${periodLabel})`,
+      partner_discount: partnerDiscount,
     };
   }
 
@@ -163,7 +194,7 @@ async function createPlanCheckout({
   );
 
   const order = await createOrder({
-    amount: finalPriceAzn,
+    amount: amountCents / 100,
     currency: 'AZN',
     language: 'AZ',
     description: `Mentorix — ${String(picked?.title || plan).trim()} (${periodLabel})`,
@@ -201,6 +232,7 @@ async function createPlanCheckout({
     external_order_id: orderId,
     payment_url: paymentUrl,
     billing_interval: billingInterval,
+    partner_discount: partnerDiscount,
   };
 }
 

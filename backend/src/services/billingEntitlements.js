@@ -73,11 +73,19 @@ async function ensureSubscriptionRow(dbConn, userId) {
   );
   if (rows[0]) return rows[0];
 
+  let trialDays = BASIC_TRIAL_DAYS;
+  try {
+    const { resolveTrialDaysForUser } = require('./partner/partnerTrialService');
+    trialDays = await resolveTrialDaysForUser(userId);
+  } catch {
+    // keep BASIC_TRIAL_DAYS
+  }
+
   const { rows: ins } = await dbConn.query(
     `INSERT INTO subscriptions (user_id, plan, status, current_period_start, current_period_end, updated_at)
      VALUES ($1, 'basic', 'active', NOW(), NOW() + ($2 || ' days')::interval, NOW())
      RETURNING user_id, plan, status`,
-    [userId, String(BASIC_TRIAL_DAYS)]
+    [userId, String(trialDays)]
   );
   return ins[0] || { user_id: userId, plan: 'basic', status: 'active' };
 }
