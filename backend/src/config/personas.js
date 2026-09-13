@@ -9,6 +9,7 @@ const PERSONAS = Object.freeze({
   STUDENT: 'student',
   PARENT: 'parent',
   HR_COMPANY: 'hr_company',
+  PARTNER: 'partner',
   OTHER: 'other',
 });
 
@@ -18,15 +19,18 @@ const PERSONA_ORDER = Object.freeze([
   PERSONAS.STUDENT,
   PERSONAS.PARENT,
   PERSONAS.HR_COMPANY,
+  PERSONAS.PARTNER,
   PERSONAS.OTHER,
 ]);
 
+/** Partner has no dedicated auth role — referral cabinet is role-agnostic. */
 const PERSONA_TO_AUTH_ROLE = Object.freeze({
   [PERSONAS.TEACHER]: 'instructor',
   [PERSONAS.EDUCATION_CENTER]: 'course',
   [PERSONAS.STUDENT]: 'student',
   [PERSONAS.PARENT]: 'parent',
   [PERSONAS.HR_COMPANY]: 'instructor',
+  [PERSONAS.PARTNER]: null,
   [PERSONAS.OTHER]: 'instructor',
 });
 
@@ -131,6 +135,10 @@ function sanitizePersonaProfile(persona, raw) {
         company_size: pickEnum(src.company_size, COMPANY_SIZES),
         exam_purpose: pickEnum(src.exam_purpose, HR_EXAM_PURPOSES),
       });
+    case PERSONAS.PARTNER:
+      return compactObject({
+        note: cleanStr(src.note, 240),
+      });
     case PERSONAS.OTHER:
       return compactObject({
         purpose_text: cleanStr(src.purpose_text, 400),
@@ -153,6 +161,8 @@ function requiredProfileComplete(persona, profile) {
       return Boolean(p.child_count);
     case PERSONAS.HR_COMPANY:
       return Boolean(p.company_name && p.company_size && p.exam_purpose);
+    case PERSONAS.PARTNER:
+      return true;
     case PERSONAS.OTHER:
       return Boolean(p.purpose_text);
     default:

@@ -253,6 +253,7 @@
     "continue": "Davam et",
     "continueHintSkip": "Seçim məcburi deyil. Sonra Tənzimləmələrdən də seçə bilərsiniz.",
     "continueHintSelected": "Davam et — qısa məlumatları doldurmaq üçün.",
+    "continueHintPartner": "Davam et — Partner kabinetinə keçəcəksiniz.",
     "detailsHint": "Sizə uyğun paneli hazırlamaq üçün qısa məlumatları doldurun.",
     "unauthorizedTitle": "Daxil olun",
     "unauthorizedBody": "Davam etmək üçün əvvəlcə hesabınıza daxil olun.",
@@ -280,6 +281,10 @@
       "hr_company": {
         "title": "Şirkət / HR",
         "desc": "Namizədləri və əməkdaşları qiymətləndirin."
+      },
+      "partner": {
+        "title": "Partner",
+        "desc": "Referral link paylaşın və təsdiqlənmiş ödənişlərdən komissiya qazanın."
       },
       "other": {
         "title": "Digər",
@@ -405,6 +410,45 @@
       "exams": "İmtahanlar",
       "tests": "Testlər",
       "results": "Nəticələr"
+    },
+    "partner": {
+      "cabinet": "Partner kabineti",
+      "program": "Partner proqramı"
+    }
+  },
+  "adminPartners": {
+    "title": "Partner proqramı",
+    "subtitle": "Partner seçin, müraciətləri və payout-ları idarə edin",
+    "selectLabel": "Partner seçin",
+    "selectPlaceholder": "— Siyahıdan seçin —",
+    "clearSelection": "Seçimi sil",
+    "select": "Seç",
+    "detailTitle": "Seçilmiş partner",
+    "loading": "Yüklənir…",
+    "loadError": "Yüklənmədi",
+    "detailError": "Partner tapılmadı",
+    "error": "Xəta",
+    "status": "Status",
+    "empty": "Hələ partner yoxdur",
+    "filterAll": "Hamısı",
+    "refresh": "Yenilə",
+    "approve": "Təsdiq",
+    "reject": "Rədd",
+    "restore": "Bərpa",
+    "paid": "Ödənildi",
+    "pendingCommission": "Gözləyən",
+    "referralLinks": "Referral linklər",
+    "tabs": {
+      "partners": "Partnerlər",
+      "commissions": "Komissiyalar",
+      "payouts": "Payout",
+      "campaigns": "Kampaniyalar"
+    },
+    "col": {
+      "name": "Ad",
+      "status": "Status",
+      "commission": "Komissiya",
+      "actions": "Əməliyyat"
     }
   },
   "appHome": {

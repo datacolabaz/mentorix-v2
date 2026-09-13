@@ -22,8 +22,12 @@ export {
   DEFAULT_APP_PATH,
 }
 
-/** Public picker: teacher / trainer and participant. Other personas stay valid for existing accounts. */
-export const PRIMARY_PERSONA_ORDER = Object.freeze([PERSONAS.TEACHER, PERSONAS.STUDENT])
+/** Public picker: teacher / participant / partner. Other personas stay valid for existing accounts. */
+export const PRIMARY_PERSONA_ORDER = Object.freeze([
+  PERSONAS.TEACHER,
+  PERSONAS.STUDENT,
+  PERSONAS.PARTNER,
+])
 
 export function pickerPersonaIds(current) {
   const ids = [...PRIMARY_PERSONA_ORDER]
@@ -56,6 +60,11 @@ export const PERSONA_UI = Object.freeze({
     icon: 'briefcase',
     titleKey: 'onboarding.personas.hr_company.title',
     descKey: 'onboarding.personas.hr_company.desc',
+  },
+  [PERSONAS.PARTNER]: {
+    icon: 'briefcase',
+    titleKey: 'onboarding.personas.partner.title',
+    descKey: 'onboarding.personas.partner.desc',
   },
   [PERSONAS.OTHER]: {
     icon: 'dots',
@@ -96,6 +105,10 @@ export const PERSONA_HOME_LINKS = Object.freeze({
     { to: '/instructor/analytics', labelKey: 'personaHome.hr_company.evaluations', icon: 'attendance' },
     { to: '/instructor/analytics', labelKey: 'personaHome.hr_company.results', icon: 'progress' },
     { to: '/instructor/analytics', labelKey: 'personaHome.hr_company.reports', icon: 'analytics' },
+  ],
+  [PERSONAS.PARTNER]: [
+    { to: '/partner/dashboard', labelKey: 'personaHome.partner.cabinet', icon: 'briefcase' },
+    { to: '/partner', labelKey: 'personaHome.partner.program', icon: 'analytics' },
   ],
   [PERSONAS.OTHER]: [
     { to: '/instructor/exams', labelKey: 'personaHome.other.exams', icon: 'exams' },

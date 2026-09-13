@@ -73,6 +73,8 @@ function profileComplete(persona, p) {
       return Boolean(p.company_name && p.company_size && p.exam_purpose)
     case PERSONAS.OTHER:
       return Boolean(String(p.purpose_text || '').trim())
+    case PERSONAS.PARTNER:
+      return true
     default:
       return false
   }
@@ -358,6 +360,11 @@ export default function PersonaOnboarding() {
       return
     }
     if (picked) {
+      // Partner needs no profile form — go straight to referral cabinet.
+      if (picked === PERSONAS.PARTNER || profileComplete(picked, emptyProfile())) {
+        await finishSession({ persona: picked, profile: {} })
+        return
+      }
       setStep('details')
       return
     }
@@ -406,7 +413,7 @@ export default function PersonaOnboarding() {
                 ) : null}
               </div>
 
-              <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {pickerIds.map((id) => {
                   const meta = PERSONA_UI[id]
                   const selected = picked === id
@@ -467,7 +474,13 @@ export default function PersonaOnboarding() {
                 {t('onboarding.continue')}
               </Button>
               <p className="mt-3 text-center text-xs text-gray-500 leading-relaxed">
-                {picked ? t('onboarding.continueHintSelected') : t('onboarding.continueHintSkip')}
+                {picked === PERSONAS.PARTNER
+                  ? t('onboarding.continueHintPartner', {
+                      defaultValue: 'Davam et — Partner kabinetinə keçəcəksiniz.',
+                    })
+                  : picked
+                    ? t('onboarding.continueHintSelected')
+                    : t('onboarding.continueHintSkip')}
               </p>
             </>
           ) : (

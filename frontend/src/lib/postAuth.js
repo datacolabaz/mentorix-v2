@@ -1,4 +1,4 @@
-import { DEFAULT_APP_PATH, ONBOARDING_PATH, isPersonaId, userNeedsOnboarding } from '../constants/personas'
+import { DEFAULT_APP_PATH, ONBOARDING_PATH, PERSONAS, isPersonaId, userNeedsOnboarding } from '../constants/personas'
 import {
   consumeReturnAfterLogin,
   isAllowedReturnPathForUser,
@@ -36,6 +36,7 @@ export function dashboardPathForRole(role) {
 export function dashboardPathForUser(user) {
   if (!user) return '/login'
   if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
+  if (String(user.persona || '').trim() === PERSONAS.PARTNER) return '/partner/dashboard'
   if (isPersonaId(user.persona)) return dashboardPathForRole(user.role)
   if (user.onboarding_completed) return DEFAULT_APP_PATH
   return dashboardPathForRole(user.role)

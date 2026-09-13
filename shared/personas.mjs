@@ -6,6 +6,7 @@ export const PERSONAS = Object.freeze({
   STUDENT: 'student',
   PARENT: 'parent',
   HR_COMPANY: 'hr_company',
+  PARTNER: 'partner',
   OTHER: 'other',
 })
 
@@ -15,16 +16,19 @@ export const PERSONA_ORDER = Object.freeze([
   PERSONAS.STUDENT,
   PERSONAS.PARENT,
   PERSONAS.HR_COMPANY,
+  PERSONAS.PARTNER,
   PERSONAS.OTHER,
 ])
 
-/** Maps a use-case persona to the existing authorization role. */
+/** Maps a use-case persona to the existing authorization role.
+ * Partner is referral-only: no dedicated auth role (see applyPersonaSelection). */
 export const PERSONA_TO_AUTH_ROLE = Object.freeze({
   [PERSONAS.TEACHER]: 'instructor',
   [PERSONAS.EDUCATION_CENTER]: 'course',
   [PERSONAS.STUDENT]: 'student',
   [PERSONAS.PARENT]: 'parent',
   [PERSONAS.HR_COMPANY]: 'instructor',
+  [PERSONAS.PARTNER]: null,
   [PERSONAS.OTHER]: 'instructor',
 })
 
