@@ -62,7 +62,7 @@ export const MENTORIX_PRICING_PLANS = [
     title: 'PREMİUM',
     priceLabel: '19 AZN / ay',
     highlight: false,
-    items: ['Limitsiz tələbə', '200 SMS / ay', 'Limitsiz imtahan', 'Limitsiz tapşırıq'],
+    items: ['Limitsiz tələbə', '50 GB Bulud Yaddaşı', '200 SMS / ay', 'Limitsiz imtahan', 'Limitsiz tapşırıq'],
     mapNote: null,
   },
 ]

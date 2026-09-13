@@ -1243,7 +1243,7 @@
         "cta": "Choose plan",
         "bullets": [
           "Unlimited students",
-          "Unlimited storage",
+          "50 GB cloud storage",
           "200 SMS / mo.",
           "Unlimited exams",
           "Unlimited assignments",
@@ -2915,7 +2915,7 @@
       "basic": "21-day free trial — try the platform with no risk.",
       "pro": "The most popular {{title}} plan for small and mid-size groups.",
       "growth": "{{title}} plan — a growing teaching business and detailed reports.",
-      "premium": "{{title}} plan — unlimited students/documents and priority support."
+      "premium": "{{title}} plan — unlimited students, 50 GB cloud storage, and priority support."
     },
     "detail": {
       "basic": {
