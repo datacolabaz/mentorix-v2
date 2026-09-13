@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
+const { createPartnerCommissionIfEligible } = require('./partner/partnerCommissionService');
 
 function normalizeBillingInterval(raw) {
   const s = String(raw ?? '')
@@ -198,7 +199,18 @@ async function fulfillBillingPayment(paymentId, { reviewedBy = null } = {}) {
       ).catch(() => {});
     }
 
-    return { payment, activation, noop: false };
+    let partnerCommission = null;
+    if (String(payment.product_type || 'plan').toLowerCase() === 'plan') {
+      try {
+        partnerCommission = await createPartnerCommissionIfEligible(client, payment, { reviewedBy });
+      } catch (e) {
+        // Commission must not roll back paid activation; log via throw only if unique already handled
+        console.error('[partner] commission create failed', payment.id, e.message);
+        partnerCommission = { created: false, reason: 'error', message: e.message };
+      }
+    }
+
+    return { payment, activation, noop: false, partnerCommission };
   });
 }
 

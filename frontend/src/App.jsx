@@ -83,8 +83,11 @@ import CertifiedExamDetailPage from './pages/public/CertifiedExamDetailPage'
 import StudentCertificates from './pages/student/Certificates'
 import InstructorCertificates from './pages/instructor/Certificates'
 import AdminBilling from './pages/admin/AdminBilling'
+import AdminPartners from './pages/admin/AdminPartners'
 import AdminInventory from './pages/admin/AdminInventory'
 import ParentNotifications from './pages/parent/Notifications'
+import PartnerDashboard from './pages/partner/PartnerDashboard'
+import PartnerReferralLanding from './pages/PartnerReferralLanding'
 
 import StudentDashboard from './pages/student/Dashboard'
 import StudentExams from './pages/student/Exams'
@@ -216,6 +219,16 @@ export default function App() {
       <Route path="/pricing" element={<Navigate to="/qiymetler" replace />} />
       <Route path="/muellim-paneli" element={<Navigate to="/muellimler-ucun" replace />} />
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
+      <Route path="/r/:code" element={<PartnerReferralLanding />} />
+      <Route
+        path="/partner/dashboard"
+        element={
+          <ProtectedRoute>
+            <PartnerDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/partner" element={<Navigate to="/partner/dashboard" replace />} />
       <Route
         path="/login"
         element={user ? <ResumeAfterAuth /> : <AuthPage />}
@@ -224,6 +237,7 @@ export default function App() {
         path="/register"
         element={user ? <ResumeAfterAuth /> : <AuthPage />}
       />
+      <Route path="/signup" element={<Navigate to="/register" replace />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route
         path="/verify-phone"
@@ -305,6 +319,7 @@ export default function App() {
         <Route path="classes" element={<AdminClasses />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="billing" element={<AdminBilling />} />
+        <Route path="partners" element={<AdminPartners />} />
         <Route path="inventory" element={<AdminInventory />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />

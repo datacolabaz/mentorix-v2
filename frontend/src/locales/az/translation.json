@@ -137,6 +137,7 @@
       "payments": "Ödənişlər",
       "inventory": "SMS & Ehtiyat",
       "billing": "Platform ödənişləri",
+      "partners": "Partnerlər",
       "notifications": "Bildirişlər",
       "marketingLogin": "Landing məzmunu",
       "instructorNav": "Müəllim menyusu",
@@ -3832,6 +3833,44 @@
       "material": "Material",
       "file": "Fayl",
       "materialsEmpty": "Təşkilat kitabxanası boşdur."
+    }
+  },
+  "partner": {
+    "title": "Partner paneli",
+    "disabled": "Partner proqramı hazırda aktiv deyil.",
+    "applyDesc": "Mentorix Partner proqramına qoşulun: referral link paylaşın, endirimli qeydiyyat və komissiya qazanın.",
+    "applyCta": "Müraciət et",
+    "applyOk": "Müraciət göndərildi",
+    "applyError": "Müraciət alınmadı",
+    "pendingReview": "Müraciətiniz baxılır. Təsdiqdən sonra linkiniz aktiv olacaq.",
+    "defaultCampaign": "Mentorix Partner Launch",
+    "yourLink": "Referral linkiniz",
+    "linkHint": "Bu linki paylaşın. Qəbz və bank məlumatları burada göstərilmir.",
+    "copyLink": "Linki kopyala",
+    "copied": "Kopyalandı",
+    "copyError": "Kopyalama alınmadı",
+    "terms": "İstifadəçiyə {{discount}}% endirim · sizə {{commission}}% komissiya (ilk {{months}} ödəniş) · sınaq {{trial}} gün",
+    "requestPayout": "Ödəniş tələb et",
+    "payoutRequested": "Payout sorğusu yaradıldı",
+    "payoutError": "Payout sorğusu alınmadı",
+    "minPayout": "Minimum payout: {{amount}} AZN",
+    "commissions": "Komissiyalar",
+    "payouts": "Payout-lar",
+    "noCommissions": "Hələ komissiya yoxdur",
+    "noPayouts": "Hələ payout yoxdur",
+    "loadError": "Panel yüklənmədi",
+    "stats": {
+      "clicks": "Klik",
+      "attributions": "Attribution",
+      "approved": "Təsdiqli balans",
+      "paid": "Ödənilmiş"
+    },
+    "col": {
+      "plan": "Plan",
+      "period": "Period",
+      "amount": "Məbləğ",
+      "status": "Status",
+      "date": "Tarix"
     }
   }
 }

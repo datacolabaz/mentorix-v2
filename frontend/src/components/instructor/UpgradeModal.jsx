@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import api from '../../lib/api'
@@ -18,6 +18,7 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
   const [err, setErr] = useState(null)
   const [billingInterval, setBillingInterval] = useState('monthly')
   const [checkout, setCheckout] = useState(null)
+  const [partnerOffer, setPartnerOffer] = useState(null)
   const { theme } = useUiStore()
   const plansQ = useSubscriptionPlans()
   const billingConfigQ = useBillingConfig()
@@ -26,21 +27,44 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const curRank = planRank(currentPlan)
 
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    api
+      .get('/partner/offer')
+      .then((r) => {
+        if (!cancelled) setPartnerOffer(r?.offer || null)
+      })
+      .catch(() => {
+        if (!cancelled) setPartnerOffer(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
   function priceLines(p) {
     const pid = String(p?.id || '').toLowerCase()
     const monthly = Number(p?.price_azn)
     const isPaid = pid !== 'basic' && Number.isFinite(monthly) && monthly > 0
     if (!isPaid)
       return { line1: 'Pulsuz', line2: null, suffix: '', isPaid: false, amountLabel: '', periodLabel: '' }
+    const discountPct =
+      billingInterval === 'monthly' && partnerOffer?.discount_pct > 0 ? Number(partnerOffer.discount_pct) : 0
     if (billingInterval === 'monthly') {
+      const discounted =
+        discountPct > 0 ? Math.round(monthly * (100 - discountPct)) / 100 : monthly
       return {
-        line1: `${formatAzn(monthly)} AZN`,
+        line1: `${formatAzn(discounted)} AZN`,
         suffix: '/ay',
-        line2: 'İllik seçərək 20% qənaət üçün Tənzimləmələr səhifəsində illik seçin.',
+        line2:
+          discountPct > 0
+            ? `Partner endirimi −${discountPct}% (siyahi: ${formatAzn(monthly)} AZN)`
+            : 'İllik seçərək 20% qənaət üçün Tənzimləmələr səhifəsində illik seçin.',
         isPaid: true,
-        amountLabel: `${formatAzn(monthly)} AZN`,
+        amountLabel: `${formatAzn(discounted)} AZN`,
         periodLabel: '(aylıq)',
-        amountAzn: monthly,
+        amountAzn: discounted,
       }
     }
     const y = yearlyTotalAzn(monthly, YEARLY_DISCOUNT)
@@ -111,6 +135,12 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
           <p className="text-sm text-token-textMuted">
             Plan seçin və ödəniş üsulunu təyin edin. Kartla ödəniş dərhal aktivləşir; köçürmə admin təsdiqi ilə.
           </p>
+          {partnerOffer?.discount_pct > 0 ? (
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
+              Partner endirimi: ilk {partnerOffer.discount_duration_months || 3} ödənişli ay üçün −
+              {partnerOffer.discount_pct}% (aylıq paketlər).
+            </div>
+          ) : null}
           <PricingBillingIntervalToggle value={billingInterval} onChange={setBillingInterval} theme={theme} />
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             {plans.map((p) => {

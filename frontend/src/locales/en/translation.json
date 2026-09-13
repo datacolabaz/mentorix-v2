@@ -141,7 +141,8 @@
       "marketingLogin": "Landing content",
       "instructorNav": "Teacher menu",
       "categories": "Search categories",
-      "settings": "Settings"
+      "settings": "Settings",
+      "partners": "Partners"
     },
     "org": {
       "orgBadge": "Organization",
@@ -3832,6 +3833,44 @@
       "material": "Material",
       "file": "File",
       "materialsEmpty": "The organization library is empty."
+    }
+  },
+  "partner": {
+    "title": "Partner dashboard",
+    "disabled": "Partner program is currently disabled.",
+    "applyDesc": "Join Mentorix Partner: share your referral link, offer discounts, earn commission.",
+    "applyCta": "Apply",
+    "applyOk": "Application submitted",
+    "applyError": "Could not apply",
+    "pendingReview": "Your application is under review. Your link activates after approval.",
+    "defaultCampaign": "Mentorix Partner Launch",
+    "yourLink": "Your referral link",
+    "linkHint": "Share this link. Customer receipts and bank details are never shown here.",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "copyError": "Copy failed",
+    "terms": "{{discount}}% user discount · {{commission}}% commission (first {{months}} payments) · {{trial}}-day trial",
+    "requestPayout": "Request payout",
+    "payoutRequested": "Payout requested",
+    "payoutError": "Payout request failed",
+    "minPayout": "Minimum payout: {{amount}} AZN",
+    "commissions": "Commissions",
+    "payouts": "Payouts",
+    "noCommissions": "No commissions yet",
+    "noPayouts": "No payouts yet",
+    "loadError": "Failed to load dashboard",
+    "stats": {
+      "clicks": "Clicks",
+      "attributions": "Attributions",
+      "approved": "Approved balance",
+      "paid": "Paid out"
+    },
+    "col": {
+      "plan": "Plan",
+      "period": "Period",
+      "amount": "Amount",
+      "status": "Status",
+      "date": "Date"
     }
   }
 }

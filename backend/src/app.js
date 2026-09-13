@@ -88,6 +88,7 @@ app.use('/api/applications', require('./routes/applications'));
 app.use('/api/live', require('./routes/live'));
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/generation', require('./routes/generation'));
+app.use('/api/partner', require('./routes/partner'));
 app.use('/api/mentor', require('./routes/mentor'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

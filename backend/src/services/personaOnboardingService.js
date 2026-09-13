@@ -94,6 +94,13 @@ async function provisionForAuthRole(client, { userId, authRole, fullName, person
       const { grantBasicTrialForInstructor } = require('./basicTrialIpService');
       const { clientIp } = require('../utils/clientIp');
       const { BASIC_TRIAL_DAYS } = require('../config/billingTrial');
+      let trialDays = BASIC_TRIAL_DAYS;
+      try {
+        const { resolveTrialDaysForUser } = require('./partner/partnerTrialService');
+        trialDays = await resolveTrialDaysForUser(userId);
+      } catch {
+        // keep BASIC_TRIAL_DAYS
+      }
       await grantBasicTrialForInstructor(client, userId, clientIp(req));
       await client.query(
         `INSERT INTO subscriptions (user_id, plan, status, current_period_start, current_period_end, updated_at)
@@ -107,7 +114,7 @@ async function provisionForAuthRole(client, { userId, authRole, fullName, person
              NOW() + ($2 || ' days')::interval
            ),
            updated_at = NOW()`,
-        [userId, String(BASIC_TRIAL_DAYS)],
+        [userId, String(trialDays)],
       );
     }
     return;
