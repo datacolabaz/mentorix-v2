@@ -2,7 +2,7 @@ const EMAIL_NOT_VERIFIED_MESSAGE =
   'E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzdakı təsdiq linkinə klik edin və ya təsdiq kodunu daxil edin.';
 
 const GOOGLE_LOGIN_REQUIRED_MESSAGE =
-  'Bu hesab Google ilə yaradılıb. «Google ilə davam et» düyməsini basın — email şifrəsi bu hesabda yoxdursa əvvəlcə Google ilə daxil olun, sonra «Şifrəmi unutmuşam» ilə şifrə təyin edin.';
+  'Bu hesab Google ilə yaradılıb və email şifrəsi təyin olunmayıb. «Google ilə davam et» basın və ya «Şifrəmi unutmuşam» ilə şifrə təyin edin.';
 
 const WRONG_PASSWORD_MESSAGE = 'Email və ya şifrə yanlışdır';
 const WRONG_PASSWORD_RESET_HINT =
@@ -52,8 +52,9 @@ function normalizePasswordInput(password) {
 }
 
 /**
- * Google ilə yaranmış hesabda (placeholder hash) ilk email+şifrə girişi
- * həmin şifrəni saxlayır — müəllim də daxil olmaqla.
+ * Google ilə yaranmış hesabda (placeholder hash) email+şifrə girişi
+ * avtomatik şifrə saxlamır — yalnız Google və ya «Şifrəmi unutmuşam».
+ * Helper qalır test/diagnostic üçün; loginWithEmail istifadə etmir.
  */
 function canAdoptLoginPassword(user, password, passOk) {
   if (passOk || !user) return false;

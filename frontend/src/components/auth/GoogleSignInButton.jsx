@@ -56,6 +56,10 @@ function clickEmbeddedGoogleButton(hitEl) {
   }
 }
 
+/**
+ * Custom dark Google button. Official GIS control sits underneath an opaque decor
+ * (pointer-events: none) so English “Sign in with Google” never ghosts through.
+ */
 export default function GoogleSignInButton({
   onCredential,
   disabled,
@@ -178,6 +182,9 @@ export default function GoogleSignInButton({
       className={['mx-google-signin relative w-full min-h-[52px]', disabled ? 'opacity-50 pointer-events-none' : ''].join(
         ' ',
       )}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={label}
       onClick={handleProxyTap}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -186,22 +193,17 @@ export default function GoogleSignInButton({
         }
       }}
     >
+      {/* GIS hit target under the opaque custom face — clicks pass through decor */}
+      <div ref={hitRef} className="mx-google-signin__hit absolute inset-0 z-0 overflow-hidden rounded-xl" />
+
       <div
-        className="mx-google-signin__decor flex w-full min-h-[52px] items-center justify-center gap-3 rounded-xl border border-slate-200 bg-[#111827] px-4 py-3 transition-colors"
+        className="mx-google-signin__decor absolute inset-0 z-10 flex w-full min-h-[52px] items-center justify-center gap-3 rounded-xl border border-slate-200 bg-[#111827] px-4 py-3 transition-colors"
         aria-hidden
       >
         <GoogleGIcon />
         <span className="text-sm font-semibold text-white">{label}</span>
-        {!ready ? (
-          <span className="text-xs text-gray-500 animate-pulse">…</span>
-        ) : null}
+        {!ready ? <span className="text-xs text-gray-500 animate-pulse">…</span> : null}
       </div>
-
-      <div
-        ref={hitRef}
-        className="mx-google-signin__hit absolute inset-0 z-10 overflow-hidden rounded-xl"
-        aria-label={label}
-      />
     </div>
   )
 }

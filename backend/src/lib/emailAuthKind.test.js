@@ -29,22 +29,16 @@ describe('emailAuthKind', () => {
     assert.match(body.message, /Google/);
   });
 
-  it('lets a Google participant adopt the password they type on login', () => {
+  it('flags Google-only accounts so email login can refuse without silent adopt', () => {
     const student = { role: 'student', google_sub: 'abc', password_hash: GOOGLE_PLACEHOLDER };
+    assert.equal(hasUserChosenPassword(student), false);
+    assert.equal(passwordLoginFailureBody(student).code, 'GOOGLE_LOGIN_REQUIRED');
+    // Helper still describes “could adopt”, but loginWithEmail must not auto-set password.
     assert.equal(canAdoptLoginPassword(student, 'Parol1234', false), true);
     assert.equal(canAdoptLoginPassword(student, 'short', false), false);
-    assert.equal(canAdoptLoginPassword(student, 'Parol1234', true), false);
-    assert.equal(
-      canAdoptLoginPassword({ role: 'instructor', google_sub: 'abc', password_hash: GOOGLE_PLACEHOLDER }, 'Parol1234', false),
-      true,
-    );
     assert.equal(
       canAdoptLoginPassword({ role: 'student', password_hash: 'real' }, 'Parol1234', false),
       false,
-    );
-    assert.equal(
-      canAdoptLoginPassword({ role: 'student', password_hash: null }, 'Parol1234', false),
-      true,
     );
   });
 
@@ -54,15 +48,13 @@ describe('emailAuthKind', () => {
     assert.equal(hasUserChosenPassword({ password_hash: EMAIL_HASH }), true);
   });
 
-  it('lets a Google-only teacher adopt the password they type on email login', () => {
-    assert.equal(
-      canAdoptLoginPassword(
-        { role: 'instructor', google_sub: 'abc', password_hash: GOOGLE_PLACEHOLDER },
-        'Parol1234',
-        false,
-      ),
-      true,
-    );
+  it('hints password reset when a real password exists but does not match', () => {
+    const body = passwordLoginFailureBody({
+      google_sub: 'x',
+      password_hash: EMAIL_HASH,
+    });
+    assert.equal(body.code, 'INVALID_CREDENTIALS');
+    assert.match(body.message, /unut/i);
   });
 
   it('trims passwords so mobile autofill spaces do not fail login', () => {
