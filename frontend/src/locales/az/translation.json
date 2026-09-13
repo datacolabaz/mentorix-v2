@@ -226,6 +226,9 @@
     },
     "toasts": {
       "loggedInStudent": "Tələbə kimi daxil oldunuz",
+      "loggedInPartner": "Partner kimi daxil oldunuz",
+      "loggedInTeacher": "Müəllim kimi daxil oldunuz",
+      "loggedInParent": "Valideyn kimi daxil oldunuz",
       "loggedIn": "Daxil oldunuz",
       "selectRoleRetry": "Hesab növünü seçib yenidən cəhd edin",
       "googleFailed": "Google girişi uğursuz",
@@ -235,7 +238,7 @@
       "enterPassword": "Şifrə daxil edin",
       "verifyEmailFirst": "Əvvəlcə emaili təsdiqləyin (kod və ya link)",
       "signupReadyLogin": "Qeydiyyat uğurludur. İndi istifadə məqsədinizi seçin.",
-      "googleLoginRequired": "Bu hesab Google ilə yaradılıb. Email kodu lazım deyil — «Google ilə davam et» düyməsini basın.",
+      "googleLoginRequired": "Bu hesab Google ilə yaradılıb. «Google ilə davam et» basın — email şifrəsi yoxdursa əvvəlcə Google, sonra «Şifrəmi unutmuşam» ilə şifrə təyin edin.",
       "loginError": "Giriş xətası",
       "emailVerifiedChooseRole": "Email təsdiqləndi! İndi istifadə məqsədinizi seçin.",
       "emailVerifiedChooseUse": "Email təsdiqləndi! İndi Mentorix-dən necə istifadə edəcəyinizi seçin.",
@@ -1193,7 +1196,8 @@
         "trialLines": [
           "21 gün ərzində platformanı sınayın",
           "Kredit kartı tələb olunmur",
-          "İstənilən vaxt dayandıra bilərsiniz"
+          "İstənilən vaxt dayandıra bilərsiniz",
+          "Limitsiz canlı dərslər · 5 iştirakçı"
         ]
       },
       "pro": {
