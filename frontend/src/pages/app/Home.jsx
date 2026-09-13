@@ -15,7 +15,7 @@ export default function GenericAppHome() {
   }
   return (
     <div className="min-h-screen bg-[#07090c] text-white">
-      <header className="px-4 sm:px-6 py-4 border-b border-white/10">
+      <header className="sticky top-0 z-50 px-4 sm:px-6 py-4 border-b border-white/10 bg-[#07090c]/95 backdrop-blur-sm supports-[backdrop-filter]:bg-[#07090c]/90">
         <div className="mx-auto w-full max-w-3xl flex items-center justify-between gap-3">
           <Brand size="md" tone="dark" />
           <Link

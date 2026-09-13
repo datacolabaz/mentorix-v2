@@ -3909,7 +3909,7 @@
     "applyOk": "Müraciət göndərildi",
     "applyError": "Müraciət alınmadı",
     "pendingReview": "Müraciətiniz baxılır. Təsdiqdən sonra linkiniz aktiv olacaq.",
-    "defaultCampaign": "Mentorix Partner Launch",
+    "defaultCampaign": "Mentorix Partner Launch Kampaniyası",
     "campaigns": {
       "mentorixPartnerLaunch": "Mentorix Partner Launch Kampaniyası"
     },
@@ -3918,10 +3918,10 @@
     "copyLink": "Linki kopyala",
     "copied": "Kopyalandı",
     "copyError": "Kopyalama alınmadı",
-    "terms": "İstifadəçiyə {{discount}}% endirim (ilk {{discountMonths}} ödənişli ay, eyni paket; yüksəltmədə itirilir) · sizə {{commission}}% komissiya (müştəri ödədikcə) · sınaq {{trial}} gün",
-    "termsLimited": "İstifadəçiyə {{discount}}% endirim (ilk {{discountMonths}} ödənişli ay) · sizə {{commission}}% komissiya (ilk {{commissionMonths}} ödəniş) · sınaq {{trial}} gün",
-    "termsHint": "Endirim yalnız ilk {{discountMonths}} ödənişli aya və ilkin paketlərə aiddir; yüksəltmədə endirim itirilir. Komissiya müştəri ödəniş etdikcə davam edir. Sınaq {{trial}} gün.",
-    "termsTooltip": "Referral ilə qoşulan istifadəçi ilk {{discountMonths}} ödənişli ayda, qoşulduğu paketdə endirim alır; paket yüksəldəndə endirim dayanır. Siz isə onun hər təsdiqlənmiş ödənişindən komissiya qazanırsınız.",
+    "terms": "Dəvət etdiyiniz istifadəçiyə ilk {{discountMonths}} ay üçün {{discount}}% endirim tətbiq olunur. Siz hər ödənişdən {{commission}}% komissiya qazanırsınız (Sınaq müddəti: {{trial}} gün).",
+    "termsLimited": "Dəvət etdiyiniz istifadəçiyə ilk {{discountMonths}} ay üçün {{discount}}% endirim tətbiq olunur. Siz ilk {{commissionMonths}} ödənişdən {{commission}}% komissiya qazanırsınız (Sınaq müddəti: {{trial}} gün).",
+    "termsHint": "Dəvət etdiyiniz istifadəçiyə ilk {{discountMonths}} ay üçün endirim tətbiq olunur. Siz hər ödənişdən komissiya qazanırsınız (Sınaq müddəti: {{trial}} gün).",
+    "termsTooltip": "Endirim ilk {{discountMonths}} ödənişli aya və ilkin paketə aiddir; yüksəltmədə itirilir. Komissiya müştəri ödədikcə davam edir.",
     "requestPayout": "Ödəniş tələb et",
     "payoutRequested": "Payout sorğusu yaradıldı",
     "payoutError": "Payout sorğusu alınmadı",

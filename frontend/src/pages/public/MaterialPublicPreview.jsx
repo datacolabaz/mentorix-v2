@@ -44,7 +44,7 @@ export default function MaterialPublicPreview() {
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
-      <header className="border-b border-white/10 bg-[#0f0f0f]/95">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0f0f0f]/95 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Mentorix · Material</p>

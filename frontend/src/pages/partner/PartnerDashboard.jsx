@@ -35,7 +35,7 @@ function PartnerShell({ children }) {
     .slice(0, 2)
   return (
     <div className={`theme-${theme} min-h-screen bg-token-surfaceMain text-token-textMain`}>
-      <header className="border-b border-[color:var(--border-subtle)] px-4 py-3 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-50 border-b border-[color:var(--border-subtle)] bg-token-surfaceMain/95 backdrop-blur-sm supports-[backdrop-filter]:bg-token-surfaceMain/90 px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Link to="/partner/dashboard" className="shrink-0">
             <Brand size="nav" tone={theme === 'dark' ? 'dark' : 'light'} />
@@ -265,7 +265,10 @@ export default function PartnerDashboard() {
             {copied ? t('partner.copied') : t('partner.copyLink')}
           </Button>
         </div>
-        <p className="mt-3 text-xs text-token-textMuted">
+        <p
+          className="mt-3 text-sm leading-relaxed text-token-textMain/80"
+          title={t('partner.termsTooltip', { discountMonths })}
+        >
           {Number(commissionMonths) > 0
             ? t('partner.termsLimited', {
                 discount: partner.user_discount_pct ?? 10,
@@ -280,15 +283,6 @@ export default function PartnerDashboard() {
                 commission: partner.commission_pct ?? 20,
                 trial: partner.trial_days ?? 21,
               })}
-        </p>
-        <p
-          className="mt-1 text-[11px] leading-snug text-token-textMuted/90"
-          title={t('partner.termsTooltip', { discountMonths })}
-        >
-          {t('partner.termsHint', {
-            discountMonths,
-            trial: partner.trial_days ?? 21,
-          })}
         </p>
       </section>
 

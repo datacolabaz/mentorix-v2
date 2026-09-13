@@ -90,7 +90,7 @@ export default function CourseLayout() {
       <header
         className={[
           'lg:hidden fixed top-0 left-0 right-0 z-[1000] h-[72px] flex items-center justify-between gap-2 px-3 overflow-visible',
-          'bg-token-surfaceMain border-b border-[color:var(--border-subtle)] text-token-textMain',
+          'bg-token-surfaceMain/95 backdrop-blur-sm supports-[backdrop-filter]:bg-token-surfaceMain/90 border-b border-[color:var(--border-subtle)] text-token-textMain',
         ].join(' ')}
       >
         <button
