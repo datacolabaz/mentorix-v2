@@ -1,5 +1,10 @@
 const { isPartnerProgramEnabled, PARTNER_DEFAULTS } = require('../../config/partnerProgram');
-const { computeCommissionCents, isWithinDurationMonths } = require('./partnerMath');
+const { normalizePlanSlug } = require('../../config/plans');
+const {
+  computeCommissionCents,
+  isWithinDurationMonths,
+  resolveDurationMonths,
+} = require('./partnerMath');
 const { getActiveAttributionForUser, logPartnerAudit } = require('./partnerAttributionService');
 
 /**
@@ -21,6 +26,36 @@ async function countPaidPlanPayments(client, userId, currentPaymentId) {
   const idx = ids.indexOf(String(currentPaymentId));
   if (idx >= 0) return idx + 1;
   return ids.length + 1;
+}
+
+/** Chronological paid plan slugs for original-package / upgrade checks. */
+async function listPaidPlanSlugs(client, userId) {
+  const { rows } = await client.query(
+    `SELECT plan
+     FROM billing_payments
+     WHERE user_id = $1
+       AND status = 'paid'
+       AND COALESCE(product_type, 'plan') = 'plan'
+       AND plan IS NOT NULL
+     ORDER BY COALESCE(paid_at, created_at) ASC, created_at ASC`,
+    [userId]
+  );
+  return rows.map((r) => normalizePlanSlug(r.plan));
+}
+
+/**
+ * Discount only on the package the user originally joined with.
+ * Any later paid plan different from that original forfeits remaining discount
+ * (including the upgrade checkout itself).
+ */
+function discountForfeitedByPlanHistory(paidSlugs, checkoutPlan) {
+  if (!paidSlugs.length) return false; // first paid checkout becomes original package
+  const original = paidSlugs[0];
+  if (paidSlugs.some((p) => p !== original)) return true;
+  if (checkoutPlan != null && checkoutPlan !== '') {
+    return normalizePlanSlug(checkoutPlan) !== original;
+  }
+  return false;
 }
 
 /**
@@ -50,8 +85,10 @@ async function createPartnerCommissionIfEligible(client, payment, { reviewedBy =
   }
 
   const periodIndex = await countPaidPlanPayments(client, payment.user_id, payment.id);
-  const duration =
-    Number(attr.commission_duration_months) || PARTNER_DEFAULTS.commission_duration_months;
+  const duration = resolveDurationMonths(
+    attr.commission_duration_months,
+    PARTNER_DEFAULTS.commission_duration_months
+  );
   if (!isWithinDurationMonths(periodIndex, duration)) {
     return { created: false, reason: 'outside_commission_window', period_index: periodIndex };
   }
@@ -119,12 +156,22 @@ async function createPartnerCommissionIfEligible(client, payment, { reviewedBy =
 }
 
 /**
- * Checkout discount eligibility for attributed user within discount_duration_months.
+ * Checkout discount eligibility for attributed user within discount_duration_months
+ * on the original joined package only (upgrade forfeits).
+ *
+ * @param {object} client
+ * @param {string} userId
+ * @param {{ checkoutPlan?: string }} [opts]
  */
-async function getCheckoutDiscountForUser(client, userId) {
+async function getCheckoutDiscountForUser(client, userId, { checkoutPlan } = {}) {
   if (!isPartnerProgramEnabled() || !userId) return null;
   const attr = await getActiveAttributionForUser(userId, client);
   if (!attr) return null;
+
+  const paidSlugs = await listPaidPlanSlugs(client, userId);
+  if (discountForfeitedByPlanHistory(paidSlugs, checkoutPlan)) {
+    return null;
+  }
 
   const { rows } = await client.query(
     `SELECT COUNT(*)::int AS n
@@ -136,7 +183,10 @@ async function getCheckoutDiscountForUser(client, userId) {
   );
   const paidCount = Number(rows[0]?.n) || 0;
   const nextPeriod = paidCount + 1;
-  const duration = Number(attr.discount_duration_months) || PARTNER_DEFAULTS.discount_duration_months;
+  const duration = resolveDurationMonths(
+    attr.discount_duration_months,
+    PARTNER_DEFAULTS.discount_duration_months
+  );
   if (!isWithinDurationMonths(nextPeriod, duration)) return null;
 
   const pct = Number(attr.user_discount_pct) || PARTNER_DEFAULTS.user_discount_pct;
@@ -150,11 +200,14 @@ async function getCheckoutDiscountForUser(client, userId) {
     discount_pct: pct,
     period_index: nextPeriod,
     discount_duration_months: duration,
+    original_plan: paidSlugs[0] || (checkoutPlan ? normalizePlanSlug(checkoutPlan) : null),
   };
 }
 
 module.exports = {
   countPaidPlanPayments,
+  listPaidPlanSlugs,
+  discountForfeitedByPlanHistory,
   createPartnerCommissionIfEligible,
   getCheckoutDiscountForUser,
 };

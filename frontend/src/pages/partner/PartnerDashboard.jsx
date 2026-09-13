@@ -231,15 +231,25 @@ export default function PartnerDashboard() {
 
   const stats = data?.stats || {}
   const partner = data?.partner || {}
+  const discountMonths = partner.discount_duration_months ?? 3
+  const commissionMonths = partner.commission_duration_months
+  const campaignSlug = String(partner.campaign_slug || '').trim()
+  const campaignI18nKey =
+    campaignSlug === 'mentorix-partner-launch'
+      ? 'partner.campaigns.mentorixPartnerLaunch'
+      : null
+  const campaignTitle = campaignI18nKey
+    ? t(campaignI18nKey, {
+        defaultValue: partner.campaign_title || t('partner.defaultCampaign'),
+      })
+    : partner.campaign_title || t('partner.defaultCampaign')
 
   return (
     <PartnerShell>
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
       <header>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-token-textMain">{t('partner.title')}</h1>
-        <p className="mt-1 text-sm text-token-textMuted">
-          {partner.campaign_title || t('partner.defaultCampaign')}
-        </p>
+        <p className="mt-1 text-sm text-token-textMuted">{campaignTitle}</p>
       </header>
 
       <PersonaSettingsCard />
@@ -256,16 +266,27 @@ export default function PartnerDashboard() {
           </Button>
         </div>
         <p className="mt-3 text-xs text-token-textMuted">
-          {t('partner.terms', {
-            discount: partner.user_discount_pct ?? 10,
-            commission: partner.commission_pct ?? 20,
-            months: partner.commission_duration_months ?? 3,
-            trial: partner.trial_days ?? 21,
-          })}
+          {Number(commissionMonths) > 0
+            ? t('partner.termsLimited', {
+                discount: partner.user_discount_pct ?? 10,
+                discountMonths,
+                commission: partner.commission_pct ?? 20,
+                commissionMonths,
+                trial: partner.trial_days ?? 21,
+              })
+            : t('partner.terms', {
+                discount: partner.user_discount_pct ?? 10,
+                discountMonths,
+                commission: partner.commission_pct ?? 20,
+                trial: partner.trial_days ?? 21,
+              })}
         </p>
-        <p className="mt-1 text-[11px] leading-snug text-token-textMuted/90" title={t('partner.termsTooltip')}>
+        <p
+          className="mt-1 text-[11px] leading-snug text-token-textMuted/90"
+          title={t('partner.termsTooltip', { discountMonths })}
+        >
           {t('partner.termsHint', {
-            months: partner.commission_duration_months ?? 3,
+            discountMonths,
             trial: partner.trial_days ?? 21,
           })}
         </p>

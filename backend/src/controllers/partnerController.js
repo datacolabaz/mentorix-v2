@@ -62,6 +62,7 @@ async function me(req, res) {
         payout_iban: partner.payout_iban,
         payout_bank_name: partner.payout_bank_name,
         payout_account_holder: partner.payout_account_holder,
+        campaign_slug: partner.campaign_slug,
         campaign_title: partner.campaign_title,
         commission_pct: partner.commission_pct,
         commission_duration_months: partner.commission_duration_months,

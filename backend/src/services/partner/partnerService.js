@@ -193,7 +193,7 @@ async function listPartnersAdmin({ status, limit = 50, offset = 0 } = {}) {
 async function getPartnerDashboard(partnerId) {
   const { rows: partnerRows } = await db.query(
     `SELECT p.*, pr.display_name, pr.phone, pr.city,
-            c.title AS campaign_title, c.commission_pct, c.commission_duration_months,
+            c.slug AS campaign_slug, c.title AS campaign_title, c.commission_pct, c.commission_duration_months,
             c.user_discount_pct, c.discount_duration_months, c.attribution_window_days,
             c.minimum_payout_cents, c.trial_days
      FROM partners p
@@ -248,6 +248,7 @@ async function getPartnerDashboard(partnerId) {
       id: partner.id,
       status: partner.status,
       display_name: partner.display_name,
+      campaign_slug: partner.campaign_slug,
       campaign_title: partner.campaign_title,
       commission_pct: partner.commission_pct,
       commission_duration_months: partner.commission_duration_months,

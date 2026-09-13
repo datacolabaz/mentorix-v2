@@ -42,11 +42,26 @@ function splitPaymentCents(listCents, discountPct, commissionPct) {
   };
 }
 
-/** period_index is 1-based count of prior paid plan payments for this user + 1 */
+/**
+ * period_index is 1-based count of prior paid plan payments for this user + 1.
+ * durationMonths === 0 means unlimited (recurring). Null/NaN → not within window
+ * (callers should resolve campaign defaults before calling).
+ */
 function isWithinDurationMonths(periodIndex, durationMonths) {
   const idx = Math.max(1, Math.round(Number(periodIndex) || 1));
-  const months = Math.max(0, Math.round(Number(durationMonths) || 0));
-  return months > 0 && idx <= months;
+  if (durationMonths == null || durationMonths === '') return false;
+  const months = Math.round(Number(durationMonths));
+  if (!Number.isFinite(months) || months < 0) return false;
+  if (months === 0) return true; // unlimited
+  return idx <= months;
+}
+
+/** Resolve duration with nullish default (0 is valid = unlimited). */
+function resolveDurationMonths(raw, fallback) {
+  if (raw == null || raw === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return fallback;
+  return Math.round(n);
 }
 
 module.exports = {
@@ -55,4 +70,5 @@ module.exports = {
   computeCommissionCents,
   splitPaymentCents,
   isWithinDurationMonths,
+  resolveDurationMonths,
 };

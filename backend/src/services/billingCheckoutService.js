@@ -108,7 +108,8 @@ async function createPlanCheckout({
   let amountCents = listAmountCents;
   let partnerDiscount = null;
   try {
-    partnerDiscount = await getCheckoutDiscountForUser(db, userId);
+    // Partner discount only on original joined package; pass checkout plan so upgrades forfeit.
+    partnerDiscount = await getCheckoutDiscountForUser(db, userId, { checkoutPlan: plan });
     if (partnerDiscount?.discount_pct > 0) {
       const split = applyDiscountCents(listAmountCents, partnerDiscount.discount_pct);
       amountCents = split.net_cents;
