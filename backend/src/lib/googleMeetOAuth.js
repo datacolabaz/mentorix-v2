@@ -11,12 +11,67 @@
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 
+const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+
 const GOOGLE_MEET_SCOPES = [
   'openid',
   'email',
   'profile',
-  'https://www.googleapis.com/auth/calendar.events',
+  CALENDAR_EVENTS_SCOPE,
 ];
+
+/** @param {string|string[]|null|undefined} raw */
+function parseGrantedScopes(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s || '').trim()).filter(Boolean);
+  }
+  return String(raw || '')
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** @param {string|string[]|null|undefined} raw */
+function hasCalendarEventsScope(raw) {
+  const scopes = parseGrantedScopes(raw);
+  return scopes.some(
+    (s) =>
+      s === CALENDAR_EVENTS_SCOPE ||
+      s === 'https://www.googleapis.com/auth/calendar' ||
+      s.endsWith('/auth/calendar.events') ||
+      s.endsWith('/auth/calendar'),
+  );
+}
+
+/** Detect Google Calendar API insufficient-scope / permission errors. */
+function isInsufficientCalendarScopeError(status, data) {
+  if (status !== 401 && status !== 403) return false;
+  const reason = String(data?.error?.status || data?.error?.errors?.[0]?.reason || '').toUpperCase();
+  const msg = String(data?.error?.message || '').toLowerCase();
+  const details = Array.isArray(data?.error?.details) ? data.error.details : [];
+  const detailReason = details
+    .map((d) => String(d?.reason || '').toUpperCase())
+    .join(' ');
+  if (
+    reason.includes('PERMISSION_DENIED') ||
+    reason.includes('INSUFFICIENT') ||
+    detailReason.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') ||
+    detailReason.includes('INSUFFICIENT')
+  ) {
+    if (
+      msg.includes('scope') ||
+      msg.includes('permission') ||
+      msg.includes('insufficient') ||
+      detailReason.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT')
+    ) {
+      return true;
+    }
+  }
+  if (msg.includes('insufficient authentication scopes')) return true;
+  if (msg.includes('request had insufficient authentication scopes')) return true;
+  if (String(data?.error?.errors?.[0]?.reason || '') === 'insufficientPermissions') return true;
+  return false;
+}
 
 function googleClientId() {
   return String(process.env.GOOGLE_MEET_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '').trim();
@@ -114,7 +169,11 @@ function frontendConnectRedirect({ success, error, returnPath } = {}) {
 }
 
 module.exports = {
+  CALENDAR_EVENTS_SCOPE,
   GOOGLE_MEET_SCOPES,
+  parseGrantedScopes,
+  hasCalendarEventsScope,
+  isInsufficientCalendarScopeError,
   googleClientId,
   googleClientSecret,
   googleMeetRedirectUri,

@@ -8,6 +8,8 @@ const {
   fetchGoogleUserInfo,
   revokeGoogleToken,
   GOOGLE_MEET_SCOPES,
+  parseGrantedScopes,
+  hasCalendarEventsScope,
   assertGoogleMeetOAuthConfigured,
 } = require('../lib/googleMeetOAuth');
 
@@ -158,6 +160,20 @@ async function completeGoogleMeetOAuth({ code, state }) {
     throw err;
   }
 
+  const grantedScopes = parseGrantedScopes(tokens.scope);
+  // When Google returns an explicit scope list without Calendar, reject.
+  // Empty scope field is treated as unknown (legacy clients) — allow and store requested scopes.
+  if (grantedScopes.length > 0 && !hasCalendarEventsScope(grantedScopes)) {
+    await revokeGoogleToken(accessToken);
+    if (tokens.refresh_token) await revokeGoogleToken(tokens.refresh_token);
+    const err = new Error(
+      'Google Calendar icazəsi verilmədi. Razılıq ekranında təqvimi (calendar) işarələyin.',
+    );
+    err.status = 400;
+    err.code = 'GOOGLE_CALENDAR_SCOPE_MISSING';
+    throw err;
+  }
+
   const profile = await fetchGoogleUserInfo(accessToken);
   const accountEmail = profile?.email || null;
   const providerAccountId = profile?.id || accountEmail || null;
@@ -177,6 +193,8 @@ async function completeGoogleMeetOAuth({ code, state }) {
     err.code = 'GOOGLE_REFRESH_MISSING';
     throw err;
   }
+
+  const scopesToStore = grantedScopes.length ? grantedScopes : GOOGLE_MEET_SCOPES;
 
   const { rows } = await db.query(
     `INSERT INTO teacher_provider_connections (
@@ -202,7 +220,7 @@ async function completeGoogleMeetOAuth({ code, state }) {
       accessEnc,
       keepRefresh,
       expiry.toISOString(),
-      JSON.stringify(GOOGLE_MEET_SCOPES),
+      JSON.stringify(scopesToStore),
     ],
   );
 
