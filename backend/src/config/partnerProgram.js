@@ -18,7 +18,7 @@ const PARTNER_DEFAULTS = Object.freeze({
    */
   commission_duration_months: 0,
   attribution_window_days: 90,
-  minimum_payout_cents: 2000,
+  minimum_payout_cents: 500,
   cookie_name: 'mx_partner_ref',
   code_cookie_days: 90,
 });
