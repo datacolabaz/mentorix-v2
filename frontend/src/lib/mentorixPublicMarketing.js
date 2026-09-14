@@ -1,5 +1,4 @@
-/** İctimai SEO və landing səhifələri üçün rəsmi marketinq mətni */
-
+import { AI_PLAN_LIMITS } from '../constants/aiPlanLimits'
 import { defaultPlatformContact } from './platformContact'
 
 export const MENTORIX_SEO_TITLE = 'Mentorix — onlayn imtahan və qiymətləndirmə'
@@ -37,6 +36,8 @@ export const MENTORIX_PRICING_PLANS = [
       '5 SMS / ay',
       '2 imtahan / ay',
       '5 tapşırıq / ay',
+      `${AI_PLAN_LIMITS.basic.questions} AI sual`,
+      `${AI_PLAN_LIMITS.basic.gradings} AI Tapşırıq yoxlama`,
       'Limitsiz canlı dərslər · 5 iştirakçı',
     ],
     mapNote: null,
@@ -46,7 +47,14 @@ export const MENTORIX_PRICING_PLANS = [
     title: 'STANDART',
     priceLabel: '5 AZN / ay',
     highlight: false,
-    items: ['20 tələbə', '20 SMS / ay', '20 imtahan / ay', '40 tapşırıq / ay'],
+    items: [
+      '20 tələbə',
+      '20 SMS / ay',
+      '20 imtahan / ay',
+      '40 tapşırıq / ay',
+      `${AI_PLAN_LIMITS.pro.questions} AI sual / ay`,
+      `${AI_PLAN_LIMITS.pro.gradings} AI Tapşırıq yoxlama / ay`,
+    ],
     mapNote: null,
   },
   {
@@ -54,7 +62,14 @@ export const MENTORIX_PRICING_PLANS = [
     title: 'PROFESSİONAL',
     priceLabel: '10 AZN / ay',
     highlight: false,
-    items: ['50 tələbə', '50 SMS / ay', '50 imtahan / ay', '120 tapşırıq / ay'],
+    items: [
+      '50 tələbə',
+      '50 SMS / ay',
+      '50 imtahan / ay',
+      '120 tapşırıq / ay',
+      `${AI_PLAN_LIMITS.growth.questions} AI sual / ay`,
+      `${AI_PLAN_LIMITS.growth.gradings} AI Tapşırıq yoxlama / ay`,
+    ],
     mapNote: null,
   },
   {
@@ -62,7 +77,15 @@ export const MENTORIX_PRICING_PLANS = [
     title: 'PREMİUM',
     priceLabel: '19 AZN / ay',
     highlight: false,
-    items: ['Limitsiz tələbə', '50 GB Bulud Yaddaşı', '200 SMS / ay', 'Limitsiz imtahan', 'Limitsiz tapşırıq'],
+    items: [
+      'Limitsiz tələbə',
+      '50 GB Bulud Yaddaşı',
+      '200 SMS / ay',
+      'Limitsiz imtahan',
+      'Limitsiz tapşırıq',
+      `${AI_PLAN_LIMITS.premium.questions} AI sual / ay`,
+      `${AI_PLAN_LIMITS.premium.gradings} AI Tapşırıq yoxlama / ay`,
+    ],
     mapNote: null,
   },
 ]

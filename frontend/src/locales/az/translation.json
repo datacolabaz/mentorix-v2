@@ -591,7 +591,7 @@
       "storage": "Sənəd yaddaşı",
       "sms": "SMS",
       "aiQuestions": "AI suallar",
-      "aiGradings": "AI qiymətləndirmə",
+      "aiGradings": "AI Tapşırıq yoxlama",
       "usedOf": "{{used}} / {{limit}} istifadə olunur",
       "usedUnlimited": "{{used}} / ∞ istifadə olunur",
       "smsLeft": "{{used}} / {{limit}} qalıb",
@@ -1212,6 +1212,8 @@
           "21 gün ərzində platformanı sınayın",
           "Kredit kartı tələb olunmur",
           "İstənilən vaxt dayandıra bilərsiniz",
+          "20 AI sual",
+          "10 AI Tapşırıq yoxlama",
           "Limitsiz canlı dərslər · 5 iştirakçı"
         ]
       },
@@ -1225,6 +1227,8 @@
           "20 SMS / ay",
           "20 imtahan / ay",
           "40 tapşırıq / ay",
+          "100 AI sual / ay",
+          "30 AI Tapşırıq yoxlama / ay",
           "Ödəniş izləmə",
           "Valideyn bildirişləri",
           "Qrup və fərdi çat",
@@ -1241,6 +1245,8 @@
           "50 SMS / ay",
           "50 imtahan / ay",
           "120 tapşırıq / ay",
+          "300 AI sual / ay",
+          "100 AI Tapşırıq yoxlama / ay",
           "Ödəniş izləmə",
           "Valideyn bildirişləri",
           "Ətraflı hesabatlar",
@@ -1258,6 +1264,8 @@
           "200 SMS / ay",
           "Limitsiz imtahan",
           "Limitsiz tapşırıq",
+          "800 AI sual / ay",
+          "300 AI Tapşırıq yoxlama / ay",
           "Ödəniş izləmə",
           "Valideyn bildirişləri",
           "Ətraflı hesabatlar",
@@ -1299,8 +1307,11 @@
         "sms": "SMS / ay",
         "liveLessons": "Canlı dərslər",
         "live": "Canlı dərs iştirakçısı",
-        "recording": "Dərs yazısı"
-      }
+        "recording": "Dərs yazısı",
+        "aiQuestions": "AI sual",
+        "aiGradings": "AI Tapşırıq yoxlama"
+      },
+      "perMonth": "{{count}} / ay"
     },
     "demo": {
       "title": "Nümunə — müəllim paneli",
@@ -2914,10 +2925,10 @@
       "homeworksUnlimitedMonthly": "Limitsiz tapşırıq / ay",
       "homeworksTrial": "{{count}} tapşırıq",
       "homeworksMonthly": "{{count}} tapşırıq / ay",
-      "aiQuestionsTrial": "{{count}} AI sual (sınaq)",
+      "aiQuestionsTrial": "{{count}} AI sual",
       "aiQuestionsMonthly": "{{count}} AI sual / ay",
-      "aiGradingsTrial": "{{count}} AI qiymətləndirmə (sınaq)",
-      "aiGradingsMonthly": "{{count}} AI qiymətləndirmə / ay",
+      "aiGradingsTrial": "{{count}} AI Tapşırıq yoxlama",
+      "aiGradingsMonthly": "{{count}} AI Tapşırıq yoxlama / ay",
       "liveUnlimited": "Limitsiz canlı dərslər · Limitsiz iştirakçı",
       "liveLessonsUnlimited": "Limitsiz canlı dərslər",
       "liveParticipantsUnlimited": "Limitsiz iştirakçı",

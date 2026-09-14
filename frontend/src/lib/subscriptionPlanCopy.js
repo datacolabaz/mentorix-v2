@@ -1,7 +1,12 @@
 /** Paket kartlarında limit sətirləri (API: items və ya limits). */
 
+import { resolveAiPlanLimits } from '../constants/aiPlanLimits'
 import { planTitleOrSlug } from './subscriptionPlanGuards'
 import { normalizePlanId } from './subscriptionPlanMarketing'
+
+/** Matches AI quota lines so static/API feature lists do not duplicate them. */
+export const AI_LIMIT_LINE_RE =
+  /\b(AI\s*sual|AI\s*question|ИИ-вопрос|AI\s*Tapşırıq|AI\s*qiymət|AI\s*grading|AI\s*assignment\s*review|ИИ-оцен|ИИ-проверк)/i
 
 function pickT(opts) {
   return typeof opts?.t === 'function' ? opts.t : null
@@ -281,43 +286,48 @@ function monthlyContentLimitLines(lim, planId = '', opts = {}) {
     )
   }
 
-  const aiQ = lim.ai_questions_monthly
-  if (aiQ != null && Number.isFinite(Number(aiQ))) {
-    lines.push(
-      isTrial
-        ? pt(
-            opts,
-            'limits.aiQuestionsTrial',
-            { count: fmtNum(aiQ, opts) },
-            `${fmtNum(aiQ, opts)} AI sual (sınaq)`,
-          )
-        : pt(
-            opts,
-            'limits.aiQuestionsMonthly',
-            { count: fmtNum(aiQ, opts) },
-            `${fmtNum(aiQ, opts)} AI sual / ay`,
-          ),
-    )
-  }
-  const aiG = lim.ai_gradings_monthly
-  if (aiG != null && Number.isFinite(Number(aiG))) {
-    lines.push(
-      isTrial
-        ? pt(
-            opts,
-            'limits.aiGradingsTrial',
-            { count: fmtNum(aiG, opts) },
-            `${fmtNum(aiG, opts)} AI qiymətləndirmə (sınaq)`,
-          )
-        : pt(
-            opts,
-            'limits.aiGradingsMonthly',
-            { count: fmtNum(aiG, opts) },
-            `${fmtNum(aiG, opts)} AI qiymətləndirmə / ay`,
-          ),
-    )
-  }
+  lines.push(...planAiLimitLines({ limits: lim, id: planId, slug: planId }, opts))
   return lines
+}
+
+/** AI question + assignment-review lines for any package card (always resolved via shared quotas). */
+export function planAiLimitLines(p, opts = {}) {
+  const { questions, gradings, isTrial } = resolveAiPlanLimits(p)
+  const q = fmtNum(questions, opts)
+  const g = fmtNum(gradings, opts)
+  return [
+    isTrial
+      ? pt(opts, 'limits.aiQuestionsTrial', { count: q }, `${q} AI sual`)
+      : pt(opts, 'limits.aiQuestionsMonthly', { count: q }, `${q} AI sual / ay`),
+    isTrial
+      ? pt(opts, 'limits.aiGradingsTrial', { count: g }, `${g} AI Tapşırıq yoxlama`)
+      : pt(opts, 'limits.aiGradingsMonthly', { count: g }, `${g} AI Tapşırıq yoxlama / ay`),
+  ]
+}
+
+/** Insert AI quota lines into a static bullet list without duplicates. */
+export function ensureAiLimitLinesInBullets(bullets, p, opts = {}) {
+  const list = Array.isArray(bullets) ? bullets.map((x) => String(x || '').trim()).filter(Boolean) : []
+  const ai = planAiLimitLines(p, opts)
+  const withoutAi = list.filter((line) => !AI_LIMIT_LINE_RE.test(line))
+  const hwIdx = withoutAi.findIndex((line) =>
+    /\b(tapşırıq|assignment|задани|imtahan|exam|экзамен)\b/i.test(line),
+  )
+  // Prefer after the last homework/exam-ish content line.
+  let insertAt = -1
+  for (let i = 0; i < withoutAi.length; i += 1) {
+    if (/\b(tapşırıq|assignment|задани|imtahan|exam|экзамен)\b/i.test(withoutAi[i])) insertAt = i
+  }
+  if (insertAt < 0 && hwIdx >= 0) insertAt = hwIdx
+  if (insertAt >= 0) {
+    return [...withoutAi.slice(0, insertAt + 1), ...ai, ...withoutAi.slice(insertAt + 1)]
+  }
+  // Trial marketing lines: append AI near the end (before live if present).
+  const liveIdx = withoutAi.findIndex((line) => /\b(canlı|live|живы)\b/i.test(line))
+  if (liveIdx >= 0) {
+    return [...withoutAi.slice(0, liveIdx), ...ai, ...withoutAi.slice(liveIdx)]
+  }
+  return [...withoutAi, ...ai]
 }
 
 /** Landing qiymət kartları üçün limit sətirləri (istifadəçi spec). */
@@ -360,7 +370,10 @@ export function planLimitFeatureLines(p, opts = {}) {
   if (items.length) {
     const LIVE_OR_RECORD_RE = /\b(canlı|live|запись|record|yazı|iştirakçı|участник)\b/i
     const base = items.filter(
-      (line) => !CONTENT_LIMIT_RE.test(String(line)) && !LIVE_OR_RECORD_RE.test(String(line)),
+      (line) =>
+        !CONTENT_LIMIT_RE.test(String(line)) &&
+        !LIVE_OR_RECORD_RE.test(String(line)) &&
+        !AI_LIMIT_LINE_RE.test(String(line)),
     )
     return [...base, ...contentLimits, ...liveRecLines]
   }

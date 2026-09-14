@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
+import { resolveAiPlanLimits } from '../../constants/aiPlanLimits'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
 import { useLandingPlanDisplay } from '../../lib/landingCopy'
 import PricingFeatureListItem from '../landing/PricingFeatureListItem'
@@ -66,6 +67,11 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
     { key: 'documents', label: t('landing.pricingPage.rows.documents') },
     { key: 'exams', label: t('landing.pricingPage.rows.exams') },
     { key: 'assignments', label: t('landing.pricingPage.rows.assignments') },
+    { key: 'aiQuestions', label: t('landing.pricingPage.rows.aiQuestions', { defaultValue: 'AI sual' }) },
+    {
+      key: 'aiGradings',
+      label: t('landing.pricingPage.rows.aiGradings', { defaultValue: 'AI Tapşırıq yoxlama' }),
+    },
     { key: 'sms', label: t('landing.pricingPage.rows.sms') },
     { key: 'liveLessons', label: t('landing.pricingPage.rows.liveLessons', { defaultValue: 'Canlı dərslər' }) },
     { key: 'live', label: t('landing.pricingPage.rows.live') },
@@ -84,6 +90,12 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
     if (key === 'documents') return limitLabel(lim.documents, unlimited)
     if (key === 'exams') return limitLabel(lim.exams_monthly, unlimited)
     if (key === 'assignments') return limitLabel(lim.homeworks_monthly, unlimited)
+    if (key === 'aiQuestions' || key === 'aiGradings') {
+      const ai = resolveAiPlanLimits(plan)
+      const n = key === 'aiQuestions' ? ai.questions : ai.gradings
+      if (ai.isTrial) return String(n)
+      return t('landing.pricingPage.perMonth', { count: n, defaultValue: `${n} / ay` })
+    }
     if (key === 'sms') return limitLabel(lim.sms_monthly, unlimited)
     if (key === 'liveLessons') return unlimited
     if (key === 'live') return limitLabel(liveLimit(plan), unlimited)

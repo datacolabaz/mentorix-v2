@@ -1,22 +1,44 @@
 /** Landing və paket kartları üçün marketinq mətnləri (admin paneldən idarə olunur). */
 
+import { AI_PLAN_LIMITS } from '../constants/aiPlanLimits'
 import { planPricingLimitLines } from './subscriptionPlanCopy'
 
 const BASIC_TRIAL_LANDING_LINES = [
   'Bütün funksiyaları 21 gün tam sına',
   'Kredit kartı tələb olunmur',
   'İstənilən vaxt ləğv et',
+  `${AI_PLAN_LIMITS.basic.questions} AI sual`,
+  `${AI_PLAN_LIMITS.basic.gradings} AI Tapşırıq yoxlama`,
   'Limitsiz canlı dərslər · 5 iştirakçı',
 ]
 
 const FALLBACK_MARKETING_BY_SLUG = {
-  basic: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Limitsiz canlı dərslər', 'Mentorix Live (5 iştirakçı)'],
-  pro: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Limitsiz canlı dərslər', 'Mentorix Live (20 iştirakçı)', 'Yazı: 5 saat/ay'],
+  basic: [
+    'Ödəniş izləmə',
+    'Valideyn bildirişləri',
+    'Xəritədə görünmə',
+    `${AI_PLAN_LIMITS.basic.questions} AI sual`,
+    `${AI_PLAN_LIMITS.basic.gradings} AI Tapşırıq yoxlama`,
+    'Limitsiz canlı dərslər',
+    'Mentorix Live (5 iştirakçı)',
+  ],
+  pro: [
+    'Ödəniş izləmə',
+    'Valideyn bildirişləri',
+    'Xəritədə görünmə',
+    `${AI_PLAN_LIMITS.pro.questions} AI sual / ay`,
+    `${AI_PLAN_LIMITS.pro.gradings} AI Tapşırıq yoxlama / ay`,
+    'Limitsiz canlı dərslər',
+    'Mentorix Live (20 iştirakçı)',
+    'Yazı: 5 saat/ay',
+  ],
   growth: [
     'Ödəniş izləmə',
     'Valideyn bildirişləri',
     'Xəritədə görünmə',
     'Ətraflı hesabatlar',
+    `${AI_PLAN_LIMITS.growth.questions} AI sual / ay`,
+    `${AI_PLAN_LIMITS.growth.gradings} AI Tapşırıq yoxlama / ay`,
     'Limitsiz canlı dərslər',
     'Mentorix Live (50 iştirakçı)',
     'Yazı: 20 saat/ay',
@@ -27,6 +49,8 @@ const FALLBACK_MARKETING_BY_SLUG = {
     'Xəritədə görünmə',
     'Ətraflı hesabatlar',
     'Prioritet texniki dəstək',
+    `${AI_PLAN_LIMITS.premium.questions} AI sual / ay`,
+    `${AI_PLAN_LIMITS.premium.gradings} AI Tapşırıq yoxlama / ay`,
     'Limitsiz canlı dərslər',
     'Mentorix Live (limitsiz)',
     'Yazı: 50 saat/ay',
@@ -94,7 +118,13 @@ export function landingPlanFeatureLines(p) {
   if (normalizePlanId(p) === 'basic') {
     return BASIC_TRIAL_LANDING_LINES
   }
-  return [...planPricingLimitLines(p), ...planMarketingFeatures(p)]
+  // Marketing bullets from admin may omit AI; always keep quota lines from plan limits.
+  const limits = planPricingLimitLines(p)
+  const marketing = planMarketingFeatures(p).filter(
+    (line) => !/\b(AI\s*sual|AI\s*Tapşırıq|AI\s*question|AI\s*grading|ИИ-)/i.test(String(line)),
+  )
+  // Prefer limit-derived AI lines (already inside planPricingLimitLines).
+  return [...limits, ...marketing]
 }
 
 export function landingPlanPriceLabel(p) {

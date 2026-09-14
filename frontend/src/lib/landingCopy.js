@@ -5,6 +5,7 @@ import {
   landingPlanPriceLabel,
   normalizePlanId,
 } from './subscriptionPlanMarketing'
+import { ensureAiLimitLinesInBullets } from './subscriptionPlanCopy'
 
 function arrayFromT(t, key) {
   const v = t(key, { returnObjects: true })
@@ -114,7 +115,9 @@ export function useLandingPlanDisplay(p, t, i18n) {
     const id = normalizePlanId(p)
     const prefix = `landing.plans.${id}`
     const trialLines = id === 'basic' ? arrayFromT(t, `${prefix}.trialLines`) : []
-    const bullets = trialLines.length ? trialLines : arrayFromT(t, `${prefix}.bullets`)
+    const staticBullets = trialLines.length ? trialLines : arrayFromT(t, `${prefix}.bullets`)
+    const baseBullets = staticBullets.length ? staticBullets : landingPlanFeatureLines(p)
+    const bullets = ensureAiLimitLinesInBullets(baseBullets, p, { t, lang: i18n.language })
     const v = Number(p?.price_azn)
     const priceLabel =
       !Number.isFinite(v) || v <= 0
@@ -128,7 +131,7 @@ export function useLandingPlanDisplay(p, t, i18n) {
         popularLabel: null,
         cta: t(`${prefix}.cta`),
       },
-      bullets: bullets.length ? bullets : landingPlanFeatureLines(p),
+      bullets,
       priceLabel: priceLabel || landingPlanPriceLabel(p),
     }
   }, [p, t, i18n.language])
