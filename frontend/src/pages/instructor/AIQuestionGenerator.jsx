@@ -20,6 +20,8 @@ import {
 } from '../../lib/generationApi'
 import { normalizeGenerationLanguage } from '../../lib/generationLanguage'
 import { copyStudentTaskLink } from '../../lib/taskShare'
+import { useBillingStatus, BILLING_STATUS_QUERY_KEY } from '../../hooks/useBillingStatus'
+import { useQueryClient } from '@tanstack/react-query'
 
 /** Reduce a question object to the persisted shape the PATCH endpoint accepts. */
 function toPersisted(q) {
@@ -43,6 +45,27 @@ export default function AIQuestionGenerator() {
   const navigate = useNavigate()
   const toast = useToast()
   const { t, i18n } = useTranslation()
+  const queryClient = useQueryClient()
+  const billingQ = useBillingStatus()
+  const billing = billingQ.data || null
+
+  const aiUsed = Math.max(0, Number(billing?.usage?.ai_questions_used) || 0)
+  const aiLimit = billing?.limits?.ai_questions_monthly
+  const aiRemaining =
+    billing?.remaining?.ai_questions != null
+      ? Number(billing.remaining.ai_questions)
+      : aiLimit == null
+        ? null
+        : Math.max(0, Number(aiLimit) - aiUsed)
+  const aiBlocked =
+    aiLimit != null && Number.isFinite(Number(aiLimit)) && Number(aiRemaining) <= 0
+  const aiNear =
+    !aiBlocked &&
+    aiLimit != null &&
+    Number.isFinite(Number(aiLimit)) &&
+    Number(aiLimit) > 0 &&
+    Number(aiRemaining) / Number(aiLimit) <= 0.2
+  const isTrialPlan = String(billing?.plan || '').toLowerCase() === 'basic'
 
   const [phase, setPhase] = useState(PHASES.FORM)
   const [draftId, setDraftId] = useState(null)
@@ -140,12 +163,16 @@ export default function AIQuestionGenerator() {
         setQuestions(list)
         setPreviewMode('teacher')
         setPhase(PHASES.PREVIEW)
+        queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       } catch (err) {
         toast(generationErrorMessage(err, t('generation.errors.generateFailed')), 'error')
         setPhase(PHASES.FORM)
+        if (err?.error?.code === 'AI_LIMIT_EXCEEDED' || err?.code === 'AI_LIMIT_EXCEEDED') {
+          queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
+        }
       }
     },
-    [toast, t, i18n.language],
+    [toast, t, i18n.language, queryClient],
   )
 
   const handleSaveQuestion = useCallback(
@@ -308,9 +335,70 @@ export default function AIQuestionGenerator() {
         ) : null}
       </div>
 
+      {aiLimit != null ? (
+        <div
+          className={[
+            'rounded-xl border px-4 py-3 max-w-2xl text-sm',
+            aiBlocked
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+              : aiNear
+                ? 'border-amber-400/30 bg-amber-400/5 text-amber-100/90'
+                : 'border-[color:var(--border-subtle)] bg-token-surfaceCard/40 text-token-textMain',
+          ].join(' ')}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold tabular-nums">
+              {t('billing.usage.aiQuestions')}: {aiUsed}/{Math.max(0, Number(aiLimit) || 0)}
+            </p>
+            {aiBlocked || aiNear ? (
+              <Button
+                type="button"
+                size="sm"
+                variant={aiBlocked ? 'primary' : 'secondary'}
+                onClick={() => navigate('/instructor/settings', { state: { scrollTo: 'billing-plans' } })}
+              >
+                {t('billing.usage.upgradeCta')}
+              </Button>
+            ) : null}
+          </div>
+          {aiBlocked ? (
+            <p className="mt-1 text-xs opacity-90">
+              {isTrialPlan ? t('billing.usage.aiBlockedTrial') : t('billing.usage.aiBlocked')}
+            </p>
+          ) : aiNear ? (
+            <p className="mt-1 text-xs opacity-90">{t('billing.usage.aiNearLimit')}</p>
+          ) : null}
+          <div className="mt-2 h-1.5 rounded-full bg-black/20 overflow-hidden">
+            <div
+              className={[
+                'h-full rounded-full transition-all',
+                aiBlocked ? 'bg-amber-400' : aiNear ? 'bg-amber-300' : 'bg-primary',
+              ].join(' ')}
+              style={{
+                width: `${Math.min(100, Math.round((aiUsed / Math.max(1, Number(aiLimit))) * 100))}%`,
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {phase === PHASES.FORM ? (
         <Card className="p-5 sm:p-6 max-w-2xl">
-          <ContentGeneratorForm onSubmit={handleGenerate} />
+          {aiBlocked ? (
+            <div className="space-y-3">
+              <p className="text-sm text-token-textMuted">
+                {isTrialPlan ? t('billing.usage.aiBlockedTrial') : t('billing.usage.aiBlocked')}
+              </p>
+              <Button
+                type="button"
+                onClick={() => navigate('/instructor/settings', { state: { scrollTo: 'billing-plans' } })}
+              >
+                {t('billing.usage.upgradeCta')}
+              </Button>
+            </div>
+          ) : (
+            <ContentGeneratorForm onSubmit={handleGenerate} />
+          )}
         </Card>
       ) : null}
 

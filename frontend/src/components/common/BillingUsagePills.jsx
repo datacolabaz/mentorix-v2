@@ -41,6 +41,27 @@ function fmtSmsRemainingLine(billing, t) {
   return t('billing.usage.smsLeft', { used: remaining, limit: cap })
 }
 
+function fmtAiLine(billing, kind, t) {
+  const usedKey = kind === 'questions' ? 'ai_questions_used' : 'ai_gradings_used'
+  const limKey = kind === 'questions' ? 'ai_questions_monthly' : 'ai_gradings_monthly'
+  const used = Math.max(0, Number(billing?.usage?.[usedKey]) || 0)
+  const lim = billing?.limits?.[limKey]
+  if (lim == null || lim === '') return t('billing.usage.usedUnlimited', { used })
+  return t('billing.usage.usedOf', { used, limit: Math.max(0, Number(lim) || 0) })
+}
+
+function aiWarn(billing, kind) {
+  const usedKey = kind === 'questions' ? 'ai_questions_used' : 'ai_gradings_used'
+  const limKey = kind === 'questions' ? 'ai_questions_monthly' : 'ai_gradings_monthly'
+  const remKey = kind === 'questions' ? 'ai_questions' : 'ai_gradings'
+  const lim = billing?.limits?.[limKey]
+  if (lim == null || !Number.isFinite(Number(lim)) || Number(lim) <= 0) return false
+  const rem = billing?.remaining?.[remKey]
+  if (rem != null) return Number(rem) / Number(lim) <= 0.2
+  const used = Math.max(0, Number(billing?.usage?.[usedKey]) || 0)
+  return used / Number(lim) >= 0.8
+}
+
 function compactSummary(billing) {
   const students = Math.max(0, Number(billing?.usage?.students) || 0)
   const storage = fmtStorageMbPair(billing).split(' / ')[0]
@@ -49,7 +70,11 @@ function compactSummary(billing) {
   const effective = sms.effective
   const smsLeft =
     effective == null || effective === '' ? used : Math.max(0, Math.round(effective - used))
-  return `👥 ${students} · 💾 ${storage} · 📱 ${smsLeft}`
+  const aiQ = Math.max(0, Number(billing?.usage?.ai_questions_used) || 0)
+  const aiQLim = billing?.limits?.ai_questions_monthly
+  const aiPart =
+    aiQLim == null || aiQLim === '' ? `AI ${aiQ}` : `AI ${aiQ}/${Math.max(0, Number(aiQLim) || 0)}`
+  return `👥 ${students} · 💾 ${storage} · 📱 ${smsLeft} · ${aiPart}`
 }
 
 function UsageRow({ icon, label, value, warn }) {
@@ -115,6 +140,8 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
     Number(billing.usage?.students) >= Number(billing.limits.students)
   const storageWarn = storage.limit != null && storage.pct >= 90
   const smsWarn = sms.overEffective
+  const aiQWarn = aiWarn(billing, 'questions')
+  const aiGWarn = aiWarn(billing, 'gradings')
 
   const planSlug = String(billing?.plan || '').toLowerCase()
   const planName = t(`billing.planName.${planSlug}`, {
@@ -165,6 +192,18 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
           <UsageRow icon="👥" label={t('billing.usage.students')} value={fmtStudentsLine(billing, t)} warn={studentsWarn} />
           <UsageRow icon="💾" label={t('billing.usage.storage')} value={fmtStorageMbPair(billing)} warn={storageWarn} />
           <UsageRow icon="📱" label={t('billing.usage.sms')} value={fmtSmsRemainingLine(billing, t)} warn={smsWarn} />
+          <UsageRow
+            icon="✨"
+            label={t('billing.usage.aiQuestions')}
+            value={fmtAiLine(billing, 'questions', t)}
+            warn={aiQWarn}
+          />
+          <UsageRow
+            icon="📝"
+            label={t('billing.usage.aiGradings')}
+            value={fmtAiLine(billing, 'gradings', t)}
+            warn={aiGWarn}
+          />
         </div>
       ) : (
         <p className="px-3 pb-2.5 text-[10px] text-token-textMuted leading-snug truncate">

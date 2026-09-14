@@ -535,8 +535,9 @@ const submitMyAssignment = async (req, res) => {
 
 const requestAiReviewSuggestion = async (req, res) => {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('[ai-suggest] OPENAI_API_KEY is not configured');
+    const { hasAnthropicKey } = require('../config/aiModels');
+    if (!hasAnthropicKey() && !process.env.OPENAI_API_KEY) {
+      console.error('[ai-suggest] Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is configured');
       const { localeFromReq } = require('../lib/userLocale');
       const { pickMessage } = require('../lib/sanitizeAiProviderError');
       return res.status(503).json({
@@ -573,12 +574,37 @@ const requestAiReviewSuggestion = async (req, res) => {
     ]);
 
     const { runAssignmentAiReview } = require('../services/assignmentAiReviewService');
+    const { withAiCredit, AI_OPS } = require('../services/aiCreditService');
     const { localeFromReq } = require('../lib/userLocale');
     const { toTeacherAiError } = require('../lib/sanitizeAiProviderError');
     let ai;
     try {
-      ai = await runAssignmentAiReview(rows[0]);
+      ai = await withAiCredit({
+        userId: instructorId,
+        operation: AI_OPS.ASSIGNMENT_GRADING,
+        amount: 1,
+        locale: localeFromReq(req),
+        run: () => runAssignmentAiReview(rows[0]),
+      });
     } catch (err) {
+      if (err?.code === 'AI_LIMIT_EXCEEDED') {
+        const failed = {
+          status: 'error',
+          error: err.message,
+          error_code: 'AI_LIMIT_EXCEEDED',
+          completed_at: new Date().toISOString(),
+        };
+        await db.query(`UPDATE student_assignments SET ai_metadata = $1::jsonb WHERE id = $2`, [
+          JSON.stringify(failed),
+          id,
+        ]);
+        return res.status(429).json({
+          success: false,
+          message: failed.error,
+          code: failed.error_code,
+          ai: failed,
+        });
+      }
       const locale = localeFromReq(req);
       const safe = toTeacherAiError(err, locale);
       console.error('[ai-suggest] assignment review failed', {

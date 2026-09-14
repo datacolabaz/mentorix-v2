@@ -590,10 +590,16 @@
       "students": "Ученики",
       "storage": "Хранилище документов",
       "sms": "SMS",
+      "aiQuestions": "ИИ-вопросы",
+      "aiGradings": "ИИ-оценка",
       "usedOf": "{{used}} / {{limit}} используется",
       "usedUnlimited": "{{used}} / ∞ используется",
       "smsLeft": "{{used}} / {{limit}} осталось",
-      "smsUnlimited": "{{used}} / ∞ осталось"
+      "smsUnlimited": "{{used}} / ∞ осталось",
+      "aiNearLimit": "Вы приближаетесь к лимиту ИИ",
+      "aiBlocked": "Ваш месячный лимит ИИ исчерпан.",
+      "aiBlockedTrial": "Лимит ИИ пробного периода исчерпан.",
+      "upgradeCta": "Смотреть пакеты"
     }
   },
   "live": {
@@ -2908,6 +2914,10 @@
       "homeworksUnlimitedMonthly": "Безлимит заданий / мес.",
       "homeworksTrial": "{{count}} заданий",
       "homeworksMonthly": "{{count}} заданий / мес.",
+      "aiQuestionsTrial": "{{count}} ИИ-вопросов (пробный)",
+      "aiQuestionsMonthly": "{{count}} ИИ-вопросов / мес.",
+      "aiGradingsTrial": "{{count}} ИИ-оценок (пробный)",
+      "aiGradingsMonthly": "{{count}} ИИ-оценок / мес.",
       "liveUnlimited": "Безлимитные живые уроки · Безлимит участников",
       "liveLessonsUnlimited": "Безлимитные живые уроки",
       "liveParticipantsUnlimited": "Безлимит участников",

@@ -280,6 +280,43 @@ function monthlyContentLimitLines(lim, planId = '', opts = {}) {
       ),
     )
   }
+
+  const aiQ = lim.ai_questions_monthly
+  if (aiQ != null && Number.isFinite(Number(aiQ))) {
+    lines.push(
+      isTrial
+        ? pt(
+            opts,
+            'limits.aiQuestionsTrial',
+            { count: fmtNum(aiQ, opts) },
+            `${fmtNum(aiQ, opts)} AI sual (sınaq)`,
+          )
+        : pt(
+            opts,
+            'limits.aiQuestionsMonthly',
+            { count: fmtNum(aiQ, opts) },
+            `${fmtNum(aiQ, opts)} AI sual / ay`,
+          ),
+    )
+  }
+  const aiG = lim.ai_gradings_monthly
+  if (aiG != null && Number.isFinite(Number(aiG))) {
+    lines.push(
+      isTrial
+        ? pt(
+            opts,
+            'limits.aiGradingsTrial',
+            { count: fmtNum(aiG, opts) },
+            `${fmtNum(aiG, opts)} AI qiymətləndirmə (sınaq)`,
+          )
+        : pt(
+            opts,
+            'limits.aiGradingsMonthly',
+            { count: fmtNum(aiG, opts) },
+            `${fmtNum(aiG, opts)} AI qiymətləndirmə / ay`,
+          ),
+    )
+  }
   return lines
 }
 

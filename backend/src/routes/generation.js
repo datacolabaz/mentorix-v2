@@ -2,6 +2,10 @@ const express = require('express');
 const { authenticate, authorize } = require('../middleware/auth');
 const { generationRateLimit } = require('../middleware/generationRateLimit');
 const {
+  attachEntitlements,
+  enforceActiveSubscription,
+} = require('../middleware/entitlements');
+const {
   postGenerateQuestions,
   postRegenerateQuestionItem,
   patchDraftContent,
@@ -14,6 +18,8 @@ const router = express.Router();
 
 router.use(authenticate);
 router.use(authorize('instructor'));
+router.use(attachEntitlements);
+router.use(enforceActiveSubscription);
 router.use(generationRateLimit);
 
 router.post('/questions', postGenerateQuestions);

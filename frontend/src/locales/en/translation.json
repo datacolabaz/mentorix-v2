@@ -590,10 +590,16 @@
       "students": "Students",
       "storage": "Document storage",
       "sms": "SMS",
+      "aiQuestions": "AI questions",
+      "aiGradings": "AI grading",
       "usedOf": "{{used}} / {{limit}} used",
       "usedUnlimited": "{{used}} / ∞ used",
       "smsLeft": "{{used}} / {{limit}} remaining",
-      "smsUnlimited": "{{used}} / ∞ remaining"
+      "smsUnlimited": "{{used}} / ∞ remaining",
+      "aiNearLimit": "You are nearing your AI limit",
+      "aiBlocked": "Your monthly AI limit has been reached.",
+      "aiBlockedTrial": "Your trial AI limit has been reached.",
+      "upgradeCta": "View plans"
     }
   },
   "live": {
@@ -2908,6 +2914,10 @@
       "homeworksUnlimitedMonthly": "Unlimited assignments / month",
       "homeworksTrial": "{{count}} assignments",
       "homeworksMonthly": "{{count}} assignments / month",
+      "aiQuestionsTrial": "{{count}} AI questions (trial)",
+      "aiQuestionsMonthly": "{{count}} AI questions / month",
+      "aiGradingsTrial": "{{count}} AI grading (trial)",
+      "aiGradingsMonthly": "{{count}} AI grading / month",
       "liveUnlimited": "Unlimited live lessons · Unlimited participants",
       "liveLessonsUnlimited": "Unlimited live lessons",
       "liveParticipantsUnlimited": "Unlimited participants",

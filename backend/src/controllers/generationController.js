@@ -22,6 +22,8 @@ const {
 const { AIGenerationError } = require('../providers/errors');
 const { defaultClaudeProvider } = require('../providers/aiProviderService');
 const { resolveCorrelationId } = require('../middleware/generationRateLimit');
+const { withAiCredit, AI_OPS } = require('../services/aiCreditService');
+const { localeFromReq } = require('../lib/userLocale');
 
 /**
  * @param {unknown} body
@@ -81,6 +83,17 @@ function mapDraftSummary(draft) {
 }
 
 function mapGenerationError(err, res, correlationId) {
+  if (/** @type {{ code?: string }} */ (err).code === 'AI_LIMIT_EXCEEDED') {
+    return res.status(429).json({
+      success: false,
+      error: {
+        code: 'AI_LIMIT_EXCEEDED',
+        message: err.message,
+        correlationId,
+      },
+    });
+  }
+
   if (/** @type {{ code?: string }} */ (err).code === 'VALIDATION_ERROR') {
     return res.status(400).json({
       success: false,
@@ -193,7 +206,22 @@ async function postGenerateQuestions(req, res) {
   }
 
   try {
-    const draft = await generateQuestions(req.user.id, input);
+    const amount = Math.max(1, Math.floor(Number(input.questionCount) || 1));
+    const draft = await withAiCredit({
+      userId: req.user.id,
+      operation: AI_OPS.QUESTION_GENERATION,
+      amount,
+      locale: localeFromReq(req),
+      run: async () => {
+        const row = await generateQuestions(req.user.id, input);
+        return {
+          ...row,
+          model: defaultClaudeProvider.lastCallMeta?.model,
+          tokenUsage: defaultClaudeProvider.lastCallMeta?.tokenUsage,
+          requestId: input.requestId,
+        };
+      },
+    });
 
     return res.status(201).json({
       success: true,
@@ -225,12 +253,25 @@ async function postRegenerateQuestionItem(req, res) {
   }
 
   try {
-    const question = await regenerateQuestionItem(
-      req.user.id,
-      req.params.draftId,
-      body.questionId,
-      body.instructions,
-    );
+    const question = await withAiCredit({
+      userId: req.user.id,
+      operation: AI_OPS.QUESTION_GENERATION,
+      amount: 1,
+      locale: localeFromReq(req),
+      run: async () => {
+        const q = await regenerateQuestionItem(
+          req.user.id,
+          req.params.draftId,
+          body.questionId,
+          body.instructions,
+        );
+        return {
+          ...q,
+          model: defaultClaudeProvider.lastCallMeta?.model,
+          tokenUsage: defaultClaudeProvider.lastCallMeta?.tokenUsage,
+        };
+      },
+    });
 
     return res.status(200).json({
       success: true,

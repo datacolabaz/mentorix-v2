@@ -55,6 +55,14 @@ function normalizeRow(r) {
   const documents = r.document_limit == null ? null : Number(r.document_limit);
   const ram_limit_mb = r.ram_limit_mb == null ? null : Number(r.ram_limit_mb);
   const fallback = PLANS[slug] || PLANS.basic;
+  const ai_questions_monthly =
+    r.ai_question_limit == null
+      ? fallback.ai_questions_monthly ?? null
+      : Number(r.ai_question_limit);
+  const ai_gradings_monthly =
+    r.ai_grading_limit == null
+      ? fallback.ai_gradings_monthly ?? null
+      : Number(r.ai_grading_limit);
   const live_participants =
     fallback.live_participants === undefined ? null : fallback.live_participants;
   const features = Array.isArray(r.features) ? r.features : r.features ? r.features : null;
@@ -103,6 +111,14 @@ function normalizeRow(r) {
         r.recording_max_quality == null || String(r.recording_max_quality).trim() === ''
           ? fallback.recording_max_quality ?? null
           : String(r.recording_max_quality).trim(),
+      ai_questions_monthly:
+        ai_questions_monthly == null || !Number.isFinite(ai_questions_monthly)
+          ? fallback.ai_questions_monthly ?? null
+          : ai_questions_monthly,
+      ai_gradings_monthly:
+        ai_gradings_monthly == null || !Number.isFinite(ai_gradings_monthly)
+          ? fallback.ai_gradings_monthly ?? null
+          : ai_gradings_monthly,
     },
     recording_limits: {
       hours_monthly:
@@ -139,7 +155,7 @@ function normalizeRow(r) {
 
 async function loadPlansFromDb() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, ai_question_limit, ai_grading_limit, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
      FROM subscription_plans
      WHERE is_active = TRUE
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
@@ -213,6 +229,8 @@ function buildPlanFeaturesFromLimits({
   recording_retention_days,
   recording_max_duration_sec,
   recording_max_quality,
+  ai_question_limit,
+  ai_grading_limit,
 }) {
   const lines = [];
   const planSlug = normalizePlanSlug(slug);
@@ -242,6 +260,29 @@ function buildPlanFeaturesFromLimits({
 
   if (homework_limit == null) lines.push('Limitsiz tapşırıq / ay');
   else lines.push(`${Math.max(0, Math.round(Number(homework_limit)))} tapşırıq / ay`);
+
+  const aiQ =
+    ai_question_limit != null && Number.isFinite(Number(ai_question_limit))
+      ? Number(ai_question_limit)
+      : fallback.ai_questions_monthly;
+  const aiG =
+    ai_grading_limit != null && Number.isFinite(Number(ai_grading_limit))
+      ? Number(ai_grading_limit)
+      : fallback.ai_gradings_monthly;
+  if (aiQ != null && Number.isFinite(aiQ)) {
+    lines.push(
+      planSlug === 'basic'
+        ? `${Math.max(0, Math.round(aiQ))} AI sual (sınaq)`
+        : `${Math.max(0, Math.round(aiQ))} AI sual / ay`,
+    );
+  }
+  if (aiG != null && Number.isFinite(aiG)) {
+    lines.push(
+      planSlug === 'basic'
+        ? `${Math.max(0, Math.round(aiG))} AI qiymətləndirmə (sınaq)`
+        : `${Math.max(0, Math.round(aiG))} AI qiymətləndirmə / ay`,
+    );
+  }
 
   lines.push('Limitsiz canlı dərslər');
   lines.push(`İştirakçı: ${liveParticipantLimitLabel(planSlug)}`);
@@ -329,7 +370,7 @@ function resolveLimitsFromAdminPayload(payload) {
 
 async function adminListPlans() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, ai_question_limit, ai_grading_limit, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
      FROM subscription_plans
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
   );
@@ -357,6 +398,8 @@ async function adminListPlans() {
       r.recording_max_quality == null || String(r.recording_max_quality).trim() === ''
         ? null
         : String(r.recording_max_quality).trim(),
+    ai_question_limit: r.ai_question_limit == null ? null : Number(r.ai_question_limit),
+    ai_grading_limit: r.ai_grading_limit == null ? null : Number(r.ai_grading_limit),
     features: r.features ?? null,
     marketing_features: parseMarketingFeatures(r.marketing_features),
     plan_subtitle: r.plan_subtitle == null ? null : String(r.plan_subtitle),
@@ -586,6 +629,48 @@ async function adminUpsertPlan(payload) {
       is_active,
     ]
   );
+
+  // AI limits: optional payload keys; preserve existing when omitted.
+  if (
+    Object.prototype.hasOwnProperty.call(payload || {}, 'ai_question_limit') ||
+    Object.prototype.hasOwnProperty.call(payload || {}, 'ai_grading_limit')
+  ) {
+    let aiQ = null;
+    let aiG = null;
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'ai_question_limit')) {
+      aiQ =
+        payload.ai_question_limit === '' || payload.ai_question_limit == null
+          ? null
+          : Math.max(0, Math.round(Number(payload.ai_question_limit)));
+      if (!Number.isFinite(aiQ)) aiQ = null;
+    } else {
+      const { rows: cur } = await db.query(
+        `SELECT ai_question_limit FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+        [slug],
+      );
+      aiQ = cur[0]?.ai_question_limit == null ? null : Number(cur[0].ai_question_limit);
+    }
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'ai_grading_limit')) {
+      aiG =
+        payload.ai_grading_limit === '' || payload.ai_grading_limit == null
+          ? null
+          : Math.max(0, Math.round(Number(payload.ai_grading_limit)));
+      if (!Number.isFinite(aiG)) aiG = null;
+    } else {
+      const { rows: cur } = await db.query(
+        `SELECT ai_grading_limit FROM subscription_plans WHERE slug = $1 LIMIT 1`,
+        [slug],
+      );
+      aiG = cur[0]?.ai_grading_limit == null ? null : Number(cur[0].ai_grading_limit);
+    }
+    await db.query(
+      `UPDATE subscription_plans
+       SET ai_question_limit = $2, ai_grading_limit = $3, updated_at = NOW()
+       WHERE slug = $1`,
+      [slug, aiQ, aiG],
+    );
+  }
+
   cache = { at: 0, plans: null };
 }
 

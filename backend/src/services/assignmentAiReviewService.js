@@ -1,7 +1,15 @@
 const path = require('path');
 const { readAssignmentFileBuffer } = require('./assignmentFileStorage');
+const {
+  hasAnthropicKey,
+  resolveAnthropicApiKey,
+  resolveGradingModel,
+  gradingTimeoutMs,
+} = require('../config/aiModels');
+
 const MAX_EXTRACT_CHARS = 14000;
 const OPENAI_MODEL = process.env.OPENAI_ASSIGNMENT_MODEL || 'gpt-4o-mini';
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 function stripHtml(html) {
   return String(html || '')
@@ -115,7 +123,7 @@ function parseAiJson(content) {
   };
 }
 
-async function callOpenAiReview({ assignment, submissionText }) {
+function buildReviewPrompts(assignment, submissionText) {
   const maxScore = assignment.max_score != null ? Number(assignment.max_score) : 100;
   const system = `Siz Azərbaycan dilində işləyən təhsil köməkçisisiniz. Müəllim üçün ev tapşırığını qiymətləndirmə təklifi hazırlayırsınız. Cavabı YALNIZ JSON obyekti kimi verin (markdown yox).`;
   const user = `Tapşırıq başlığı: ${assignment.title}
@@ -134,6 +142,71 @@ JSON formatı:
   "weaknesses": ["..."],
   "recommendations": "müəllim/tələbə üçün konkret tövsiyə mətni"
 }`;
+  return { system, user, maxScore };
+}
+
+async function callAnthropicReview({ assignment, submissionText }) {
+  const apiKey = resolveAnthropicApiKey();
+  if (!apiKey) {
+    const err = new Error('ANTHROPIC_API_KEY təyin edilməyib');
+    err.name = 'OpenAiReviewError';
+    err.status = 503;
+    throw err;
+  }
+
+  const model = resolveGradingModel();
+  const { system, user } = buildReviewPrompts(assignment, submissionText);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), gradingTimeoutMs());
+
+  try {
+    const res = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+      signal: controller.signal,
+    });
+
+    const errBody = !res.ok ? await res.text().catch(() => '') : '';
+    if (!res.ok) {
+      const err = new Error(`Anthropic API ${res.status}: ${errBody.slice(0, 300)}`);
+      err.name = 'OpenAiReviewError';
+      err.status = res.status;
+      err.rawProvider = { status: res.status, message: err.message };
+      throw err;
+    }
+
+    const data = await res.json();
+    const textBlock = (data.content || []).find((b) => b.type === 'text');
+    if (!textBlock?.text) throw new Error('AI cavabı boşdur');
+    const parsed = parseAiJson(textBlock.text);
+    const promptTokens = Number(data?.usage?.input_tokens) || 0;
+    const completionTokens = Number(data?.usage?.output_tokens) || 0;
+    return {
+      parsed,
+      model: String(data?.model || model),
+      tokenUsage: {
+        prompt: promptTokens,
+        completion: completionTokens,
+        total: promptTokens + completionTokens,
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callOpenAiReview({ assignment, submissionText }) {
+  const { system, user } = buildReviewPrompts(assignment, submissionText);
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -171,7 +244,15 @@ JSON formatı:
   }
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error('AI cavabı boşdur');
-  return parseAiJson(content);
+  return {
+    parsed: parseAiJson(content),
+    model: OPENAI_MODEL,
+    tokenUsage: {
+      prompt: Number(data?.usage?.prompt_tokens) || 0,
+      completion: Number(data?.usage?.completion_tokens) || 0,
+      total: Number(data?.usage?.total_tokens) || 0,
+    },
+  };
 }
 
 async function runAssignmentAiReview(row) {
@@ -185,7 +266,12 @@ async function runAssignmentAiReview(row) {
     throw new Error('Təhlil üçün mətn və ya PDF/DOCX faylı tapılmadı');
   }
 
-  const parsed = await callOpenAiReview({ assignment: row, submissionText });
+  // Prefer Anthropic when configured so instructors do not hit OpenAI for the same flow.
+  const result = hasAnthropicKey()
+    ? await callAnthropicReview({ assignment: row, submissionText })
+    : await callOpenAiReview({ assignment: row, submissionText });
+
+  const parsed = result.parsed;
   const maxScore = row.max_score != null ? Number(row.max_score) : 100;
   let suggested = parsed.suggested_score;
   if (suggested != null) {
@@ -197,7 +283,8 @@ async function runAssignmentAiReview(row) {
 
   return {
     status: 'ready',
-    model: OPENAI_MODEL,
+    model: result.model,
+    tokenUsage: result.tokenUsage,
     requested_at: startedAt,
     completed_at: new Date().toISOString(),
     max_score: maxScore,
@@ -215,4 +302,5 @@ module.exports = {
   runAssignmentAiReview,
   collectSubmissionText,
   buildDraftFeedback,
+  hasAnthropicKey,
 };
