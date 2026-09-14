@@ -3,16 +3,21 @@ const { sendEmail } = require('./emailService');
 
 function frontendBaseUrl() {
   const base = String(
-    process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.az',
+    process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.io',
   )
     .trim()
     .replace(/\/+$/, '');
-  return base || 'https://mentorix.az';
+  return base || 'https://mentorix.io';
 }
 
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || '').trim();
+// Prefer dedicated override, then shared Resend sender (same as verify/password emails).
+// Default matches product brand; Resend still requires the domain to be verified in dashboard.
 const EMAIL_FROM = String(
-  process.env.INSTRUCTOR_COMPLETE_PROFILE_FROM || 'Mentorix <info@mentorix.az>',
+  process.env.INSTRUCTOR_COMPLETE_PROFILE_FROM ||
+    process.env.VERIFY_EMAIL_FROM ||
+    process.env.EMAIL_FROM ||
+    'Mentorix <notifications@mentorix.io>',
 ).trim();
 
 function escapeHtml(s) {

@@ -37,7 +37,10 @@ npm run dev
 
 ### Backend
 - `DATABASE_URL` — PostgreSQL connection string
-- `JWT_SECRET` — JWT secret key
+- `JWT_SECRET` — JWT secret (ən azı 32 simvol; Railway Variables)
+- `RESEND_API_KEY` — Resend API key
+- `VERIFY_EMAIL_FROM` — verified Resend FROM (məs. `Mentorix <notifications@mentorix.io>`). Domain must be verified in [Resend Domains](https://resend.com/domains) — code cannot verify it.
+- `INSTRUCTOR_COMPLETE_PROFILE_FROM` — optional override for incomplete-instructor reminders (falls back to `VERIFY_EMAIL_FROM` / `EMAIL_FROM`)
 - `SMS_LOGIN` — sendsms.az login
 - `SMS_PASSWORD` — sendsms.az password
 

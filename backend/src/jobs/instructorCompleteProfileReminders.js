@@ -50,6 +50,7 @@ async function runInstructorCompleteProfileReminders() {
   let sent = 0;
   let skippedComplete = 0;
   let failed = 0;
+  let domainBlockedLogged = false;
 
   for (const row of rows) {
     if (isSearchable(row)) {
@@ -68,7 +69,19 @@ async function runInstructorCompleteProfileReminders() {
       if (!r?.ok) {
         failed += 1;
         if (!r?.skipped) {
-          console.error('instructor complete-profile email failed', to, r?.error || r?.reason);
+          const errMsg = String(r?.error || r?.reason || '');
+          // Best-effort cron: domain misconfig fails every recipient the same way — log once.
+          if (/domain is not verified/i.test(errMsg)) {
+            if (!domainBlockedLogged) {
+              domainBlockedLogged = true;
+              console.warn(
+                'instructor complete-profile email: Resend domain not verified — skipping remaining sends this run. Verify domain in Resend dashboard and set VERIFY_EMAIL_FROM / INSTRUCTOR_COMPLETE_PROFILE_FROM to a verified address.',
+                errMsg,
+              );
+            }
+            break;
+          }
+          console.warn('instructor complete-profile email failed', to, errMsg || 'unknown');
         }
         continue;
       }
@@ -97,7 +110,7 @@ async function runInstructorCompleteProfileReminders() {
       sent += 1;
     } catch (e) {
       failed += 1;
-      console.error('instructor complete-profile reminder', row.id, e.message);
+      console.warn('instructor complete-profile reminder', row.id, e.message);
     }
   }
 
