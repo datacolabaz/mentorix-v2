@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -337,6 +337,8 @@ export default function PartnerDashboard() {
   const [payoutBusy, setPayoutBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const [period, setPeriod] = useState('30d')
+  const [payoutSuccessBanner, setPayoutSuccessBanner] = useState(null)
+  const payoutToastShownRef = useRef(null)
 
   const load = useCallback(async (periodOverride) => {
     const p = periodOverride || period
@@ -368,6 +370,48 @@ export default function PartnerDashboard() {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    const unread = data?.unread_payout_notifications
+    if (!Array.isArray(unread) || unread.length === 0) {
+      setPayoutSuccessBanner(null)
+      return
+    }
+    const latest = unread[0]
+    const amount =
+      latest?.meta?.amount ||
+      (latest?.meta?.amount_cents != null
+        ? centsToAzn(latest.meta.amount_cents)
+        : null)
+    if (!amount) return
+    const message = t('partner.payoutPaidSuccess', { amount })
+    setPayoutSuccessBanner({ id: latest.id, message })
+    if (payoutToastShownRef.current !== latest.id) {
+      payoutToastShownRef.current = latest.id
+      toast.success(message)
+    }
+  }, [data?.unread_payout_notifications, t, toast])
+
+  async function dismissPayoutSuccess() {
+    const id = payoutSuccessBanner?.id
+    setPayoutSuccessBanner(null)
+    if (!id) return
+    try {
+      await api.post(`/partner/notifications/${id}/read`)
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              unread_payout_notifications: (prev.unread_payout_notifications || []).filter(
+                (n) => n.id !== id
+              ),
+            }
+          : prev
+      )
+    } catch {
+      /* banner already closed */
+    }
+  }
 
   const primaryLink = useMemo(() => data?.links?.[0] || null, [data])
   const shareUrl = useMemo(() => {
@@ -496,6 +540,29 @@ export default function PartnerDashboard() {
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-token-textMain">{t('partner.title')}</h1>
         <p className="mt-1 text-sm text-token-textMuted">{campaignTitle}</p>
       </header>
+
+      {payoutSuccessBanner ? (
+        <div
+          role="status"
+          className="flex flex-col gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+              {t('partner.payoutPaidTitle')}
+            </div>
+            <p className="mt-0.5 text-sm text-emerald-900/90 dark:text-emerald-100/90">
+              {payoutSuccessBanner.message}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={dismissPayoutSuccess}
+            className="shrink-0 rounded-lg border border-emerald-500/35 px-3 py-1.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-500/15 dark:text-emerald-100"
+          >
+            {t('partner.payoutPaidDismiss')}
+          </button>
+        </div>
+      ) : null}
 
       <PersonaSettingsCard />
 
