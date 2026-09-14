@@ -154,8 +154,20 @@ JSON formatı:
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = data?.error?.message || `OpenAI xətası (${res.status})`;
-    throw new Error(msg);
+    const provider = data?.error || {};
+    const msg = provider.message || `OpenAI xətası (${res.status})`;
+    const err = new Error(msg);
+    err.name = 'OpenAiReviewError';
+    err.status = res.status;
+    err.code = provider.code;
+    err.type = provider.type;
+    err.rawProvider = {
+      status: res.status,
+      code: provider.code || null,
+      type: provider.type || null,
+      message: provider.message || msg,
+    };
+    throw err;
   }
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error('AI cavabı boşdur');

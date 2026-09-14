@@ -22,6 +22,18 @@ import { intlLocale } from '../../lib/uiLocale'
 
 const BAKU_TZ = 'Asia/Baku'
 
+const PROVIDER_LEAK_RE =
+  /credits remaining|insufficient_quota|platform\.openai\.com|openai\.com\/settings|rate limit exceeded|incorrect api key|exceeded your current quota/i
+
+function teacherAiErrorMessage(t, { code, message } = {}) {
+  if (code === 'AI_SERVICE_UNAVAILABLE') return t('tasks.toasts.aiUnavailable')
+  if (code === 'AI_RATE_LIMIT') return t('tasks.toasts.aiRateLimit')
+  const raw = String(message || '').trim()
+  if (raw && !PROVIDER_LEAK_RE.test(raw)) return raw
+  if (code === 'AI_SUGGEST_FAILED') return t('tasks.toasts.aiSuggestFailed')
+  return t('tasks.toasts.aiUnavailable')
+}
+
 function fmtLocaleField(row, key, locale) {
   const iso = row?.[key]
   if (!iso) return ''
@@ -466,7 +478,10 @@ export default function InstructorTasks() {
       toast(t('tasks.toasts.aiReady'), 'success')
     } catch (e) {
       if (e?.ai) setAiMeta(e.ai)
-      toast(e?.message || t('tasks.toasts.aiError'), 'error')
+      toast(
+        teacherAiErrorMessage(t, { code: e?.code || e?.ai?.error_code, message: e?.message }),
+        'error',
+      )
     } finally {
       setAiLoading(false)
     }
@@ -1046,7 +1061,12 @@ export default function InstructorTasks() {
                   <p className="text-sm text-violet-200/90">{t('tasks.review.aiAnalyzing')}</p>
                 ) : null}
                 {aiMeta?.status === 'error' ? (
-                  <p className="text-sm text-amber-200/90">{aiMeta.error || t('tasks.review.aiError')}</p>
+                  <p className="text-sm text-amber-200/90">
+                    {teacherAiErrorMessage(t, {
+                      code: aiMeta.error_code,
+                      message: aiMeta.error,
+                    }) || t('tasks.review.aiError')}
+                  </p>
                 ) : null}
                 {aiMeta?.status === 'ready' ? (
                   <div className="space-y-2 text-sm text-gray-200">
