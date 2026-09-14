@@ -620,6 +620,8 @@
     "meetNeedsConnect": "Connect your Google account for Meet",
     "meetConnectSuccess": "Google Meet connected",
     "meetConnectFailed": "Could not connect Google Meet",
+    "meetCalendarScopeRequired": "Calendar permission was not granted. Disconnect, reconnect, and tick “View and edit events on all your calendars”.",
+    "meetNeedsReauth": "Google Meet needs reconnecting — disconnect and reconnect with calendar permission.",
     "meetDisconnected": "Google Meet disconnected",
     "meetDisconnectFailed": "Could not disconnect",
     "meetLessonCreated": "Google Meet lesson created",
@@ -629,7 +631,7 @@
       "mentorix_live": "Mentorix Live",
       "mentorix_liveHint": "Built-in video room (LiveKit)",
       "google_meet": "Google Meet",
-      "google_meetHint": "Creates Meet on your Google account",
+      "google_meetHint": "Creates Meet on your Google account — grant Calendar permission",
       "zoom": "Zoom",
       "teams": "Microsoft Teams"
     },

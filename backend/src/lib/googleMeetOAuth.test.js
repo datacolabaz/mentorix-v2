@@ -4,6 +4,10 @@ const {
   createPkcePair,
   frontendConnectRedirect,
   GOOGLE_MEET_SCOPES,
+  parseGrantedScopes,
+  hasCalendarEventsScope,
+  isInsufficientCalendarScopeError,
+  CALENDAR_EVENTS_SCOPE,
 } = require('./googleMeetOAuth');
 
 describe('googleMeetOAuth helpers', () => {
@@ -18,6 +22,39 @@ describe('googleMeetOAuth helpers', () => {
 
   it('includes calendar.events scope', () => {
     assert.ok(GOOGLE_MEET_SCOPES.some((s) => s.includes('calendar.events')));
+  });
+
+  it('parses space-delimited granted scopes', () => {
+    assert.deepEqual(parseGrantedScopes('openid email profile'), [
+      'openid',
+      'email',
+      'profile',
+    ]);
+    assert.equal(hasCalendarEventsScope('openid email profile'), false);
+    assert.equal(
+      hasCalendarEventsScope(`openid email ${CALENDAR_EVENTS_SCOPE}`),
+      true,
+    );
+  });
+
+  it('detects insufficient calendar scope API errors', () => {
+    assert.equal(
+      isInsufficientCalendarScopeError(403, {
+        error: {
+          message: 'Request had insufficient authentication scopes.',
+          status: 'PERMISSION_DENIED',
+          details: [{ reason: 'ACCESS_TOKEN_SCOPE_INSUFFICIENT' }],
+        },
+      }),
+      true,
+    );
+    assert.equal(
+      isInsufficientCalendarScopeError(403, {
+        error: { message: 'Forbidden', status: 'PERMISSION_DENIED' },
+      }),
+      false,
+    );
+    assert.equal(isInsufficientCalendarScopeError(500, {}), false);
   });
 
   it('builds frontend redirect with success flag', () => {

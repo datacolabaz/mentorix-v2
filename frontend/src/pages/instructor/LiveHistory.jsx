@@ -96,7 +96,12 @@ export default function InstructorLiveHistory() {
       window.history.replaceState({}, '', next)
       void load()
     } else if (params.get('meet_error')) {
-      toast(t('live.meetConnectFailed'), 'error')
+      const errCode = params.get('meet_error')
+      if (errCode === 'GOOGLE_CALENDAR_SCOPE_MISSING') {
+        toast(t('live.meetCalendarScopeRequired'), 'error')
+      } else {
+        toast(t('live.meetConnectFailed'), 'error')
+      }
       params.delete('meet_error')
       const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
       window.history.replaceState({}, '', next)
@@ -257,8 +262,15 @@ export default function InstructorLiveHistory() {
       toast(t('live.guestLinkCreated'), 'success')
       void load()
     } catch (e) {
-      if (e?.code === 'NEEDS_CONNECTION' || e?.response?.data?.code === 'NEEDS_CONNECTION') {
+      const code = e?.code || e?.response?.data?.code
+      if (code === 'NEEDS_CONNECTION') {
         toast(t('live.meetNeedsConnect'), 'info')
+      } else if (code === 'GOOGLE_CALENDAR_SCOPE_MISSING') {
+        toast(t('live.meetCalendarScopeRequired'), 'error')
+        void load()
+      } else if (code === 'NEEDS_REAUTH') {
+        toast(t('live.meetNeedsReauth'), 'error')
+        void load()
       } else {
         toast(e?.message || t('live.startFailed'), 'error')
       }

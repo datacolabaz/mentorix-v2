@@ -620,6 +620,8 @@
     "meetNeedsConnect": "Google Meet üçün hesabınızı bağlayın",
     "meetConnectSuccess": "Google Meet bağlandı",
     "meetConnectFailed": "Google Meet bağlana bilmədi",
+    "meetCalendarScopeRequired": "Təqvim (Calendar) icazəsi seçilməyib. Bağlantını kəsin, yenidən bağlayın və «View and edit events on all your calendars» işarəsini mütləq seçin.",
+    "meetNeedsReauth": "Google Meet yenidən bağlanmalıdır — hesabı kəsib təqvim icazəsi ilə yenidən bağlayın.",
     "meetDisconnected": "Google Meet bağlantısı kəsildi",
     "meetDisconnectFailed": "Bağlantı kəsilmədi",
     "meetLessonCreated": "Google Meet dərsi yaradıldı",
@@ -629,7 +631,7 @@
       "mentorix_live": "Mentorix Live",
       "mentorix_liveHint": "Platformanın öz video otağı (LiveKit)",
       "google_meet": "Google Meet",
-      "google_meetHint": "Sizin Google hesabınızda Meet yaradılır",
+      "google_meetHint": "Sizin Google hesabınızda Meet yaradılır — təqvim (Calendar) icazəsini seçin",
       "zoom": "Zoom",
       "teams": "Microsoft Teams"
     },

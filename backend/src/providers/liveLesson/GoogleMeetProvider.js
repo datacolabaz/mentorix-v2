@@ -6,7 +6,7 @@ const {
   persistRefreshedTokens,
   markNeedsReauth,
 } = require('../../services/teacherProviderConnectionService');
-const { getGoogleOAuthClient } = require('../../lib/googleMeetOAuth');
+const { getGoogleOAuthClient, hasCalendarEventsScope, isInsufficientCalendarScopeError } = require('../../lib/googleMeetOAuth');
 
 const DEFAULT_DURATION_MIN = 60;
 const BAKU_TZ = 'Asia/Baku';
@@ -87,6 +87,19 @@ class GoogleMeetProvider extends LiveLessonProvider {
 
   async createMeeting(instructorId, input = {}) {
     const { accessToken, connection } = await this.#accessToken(instructorId);
+
+    // Prefer early reject when stored scopes are known incomplete (post-fix connections).
+    if (connection.scopes != null && !hasCalendarEventsScope(connection.scopes)) {
+      await markNeedsReauth(connection.id);
+      const err = new Error(
+        'Google Calendar icazəsi yoxdur. Hesabı kəsib yenidən bağlayın və təqvim işarəsini seçin.',
+      );
+      err.status = 409;
+      err.code = 'GOOGLE_CALENDAR_SCOPE_MISSING';
+      err.provider = this.id;
+      throw err;
+    }
+
     const title = String(input.title || '').trim() || 'Mentorix canlı dərs';
     const { start, end } = resolveWindow(input.scheduledAt, input.durationMinutes);
     const attendees = Array.isArray(input.attendeeEmails)
@@ -124,18 +137,35 @@ class GoogleMeetProvider extends LiveLessonProvider {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const msg = data?.error?.message || 'Google Meet yaradıla bilmədi';
+      const googleMsg = data?.error?.message || null;
+      if (isInsufficientCalendarScopeError(res.status, data)) {
+        await markNeedsReauth(connection.id);
+        const err = new Error(
+          'Google Calendar icazəsi yoxdur. Hesabı kəsib yenidən bağlayın və təqvim işarəsini seçin.',
+        );
+        err.status = 409;
+        err.code = 'GOOGLE_CALENDAR_SCOPE_MISSING';
+        err.provider = this.id;
+        err.googleMessage = googleMsg;
+        throw err;
+      }
       if (res.status === 401 || res.status === 403) {
         await markNeedsReauth(connection.id);
-        const err = new Error('Google Meet yenidən bağlanmalıdır');
+        const err = new Error(
+          googleMsg
+            ? `Google Meet yenidən bağlanmalıdır (${googleMsg})`
+            : 'Google Meet yenidən bağlanmalıdır',
+        );
         err.status = 409;
         err.code = 'NEEDS_REAUTH';
         err.provider = this.id;
+        err.googleMessage = googleMsg;
         throw err;
       }
-      const err = new Error(msg);
+      const err = new Error(googleMsg || 'Google Meet yaradıla bilmədi');
       err.status = res.status >= 400 && res.status < 500 ? 400 : 502;
       err.code = 'GOOGLE_MEET_CREATE_FAILED';
+      err.googleMessage = googleMsg;
       throw err;
     }
 
