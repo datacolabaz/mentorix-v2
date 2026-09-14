@@ -12,5 +12,6 @@ router.get('/dashboard', authenticate, partnerController.dashboard);
 router.patch('/profile', authenticate, partnerController.updateProfile);
 router.post('/links', authenticate, partnerController.createLink);
 router.post('/payouts/request', authenticate, partnerController.payoutRequest);
+router.post('/notifications/:id/read', authenticate, partnerController.markNotificationRead);
 
 module.exports = router;

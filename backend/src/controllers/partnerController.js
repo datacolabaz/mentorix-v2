@@ -4,6 +4,7 @@ const {
   getPartnerDashboard,
   updatePartnerPayoutProfile,
   createExtraLink,
+  markPartnerNotificationRead,
 } = require('../services/partner/partnerService');
 const { requestPayout } = require('../services/partner/partnerPayoutService');
 const { getCheckoutDiscountForUser } = require('../services/partner/partnerCommissionService');
@@ -137,6 +138,18 @@ async function payoutRequest(req, res) {
   }
 }
 
+async function markNotificationRead(req, res) {
+  try {
+    const partner = await requirePartner(req, res);
+    if (!partner) return;
+    const ok = await markPartnerNotificationRead(req.user.id, req.params.id);
+    if (!ok) return res.status(404).json({ success: false, message: 'Bildiriş tapılmadı' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ success: false, message: err.message });
+  }
+}
+
 /** For upgrade UI — current user referral offer (no receipts/bank). */
 async function myOffer(req, res) {
   try {
@@ -155,5 +168,6 @@ module.exports = {
   updateProfile,
   createLink,
   payoutRequest,
+  markNotificationRead,
   myOffer,
 };

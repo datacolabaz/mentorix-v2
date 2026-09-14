@@ -417,6 +417,17 @@ async function getPartnerDashboard(partnerId, { period } = {}) {
     [partnerId]
   );
 
+  const { rows: unreadPayoutNotifications } = await db.query(
+    `SELECT id, title, body, type, is_read, created_at, COALESCE(meta, '{}'::jsonb) AS meta
+     FROM notifications
+     WHERE user_id = $1
+       AND is_read = FALSE
+       AND type = 'partner_payout_paid'
+     ORDER BY created_at DESC
+     LIMIT 10`,
+    [partner.user_id]
+  );
+
   const analytics = await getPartnerAnalytics(partnerId, period);
 
   // Never expose bank/receipt details of customers
@@ -447,7 +458,20 @@ async function getPartnerDashboard(partnerId, { period } = {}) {
     analytics,
     commissions,
     payouts,
+    unread_payout_notifications: unreadPayoutNotifications,
   };
+}
+
+async function markPartnerNotificationRead(partnerUserId, notificationId) {
+  const { rowCount } = await db.query(
+    `UPDATE notifications
+     SET is_read = TRUE
+     WHERE id = $1
+       AND user_id = $2
+       AND type = 'partner_payout_paid'`,
+    [notificationId, partnerUserId]
+  );
+  return rowCount > 0;
 }
 
 async function updatePartnerPayoutProfile(partnerId, userId, body) {
@@ -524,4 +548,5 @@ module.exports = {
   updatePartnerPayoutProfile,
   createExtraLink,
   normalizeAnalyticsPeriod,
+  markPartnerNotificationRead,
 };

@@ -73,6 +73,38 @@ async function requestPayout(partnerId, userId) {
   });
 }
 
+function formatAznAmount(cents) {
+  return (Math.round(Number(cents) || 0) / 100).toFixed(2);
+}
+
+async function notifyPartnerPayoutPaid(payout) {
+  if (!payout?.partner_id) return;
+  const { rows } = await db.query(`SELECT user_id FROM partners WHERE id = $1 LIMIT 1`, [payout.partner_id]);
+  const userId = rows[0]?.user_id;
+  if (!userId) return;
+
+  const amount = formatAznAmount(payout.amount_cents);
+  const title = 'Ödəniş uğurlu';
+  const body = `${amount} ₼ uğurla hesabınıza ödənildi`;
+  await db
+    .query(
+      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
+       VALUES ($1, $2, $3, 'partner_payout_paid', FALSE, $4::jsonb)`,
+      [
+        userId,
+        title,
+        body,
+        JSON.stringify({
+          kind: 'partner_payout_paid',
+          payout_id: payout.id,
+          amount_cents: Number(payout.amount_cents) || 0,
+          amount,
+        }),
+      ]
+    )
+    .catch((e) => console.error('notifyPartnerPayoutPaid', e.message));
+}
+
 async function adminReviewPayout({ payoutId, status, adminUserId, adminNote }) {
   if (!['approved', 'paid', 'rejected'].includes(status)) {
     const err = new Error('Yanlış payout status');
@@ -80,7 +112,7 @@ async function adminReviewPayout({ payoutId, status, adminUserId, adminNote }) {
     throw err;
   }
 
-  return db.transaction(async (client) => {
+  const updated = await db.transaction(async (client) => {
     const { rows } = await client.query(`SELECT * FROM partner_payouts WHERE id = $1 FOR UPDATE`, [payoutId]);
     const payout = rows[0];
     if (!payout) {
@@ -134,6 +166,12 @@ async function adminReviewPayout({ payoutId, status, adminUserId, adminNote }) {
     const { rows: out } = await client.query(`SELECT * FROM partner_payouts WHERE id = $1`, [payoutId]);
     return out[0];
   });
+
+  if (status === 'paid' && updated) {
+    await notifyPartnerPayoutPaid(updated);
+  }
+
+  return updated;
 }
 
 async function listPayoutsAdmin({ status, limit = 50 } = {}) {
