@@ -590,10 +590,16 @@
       "students": "Tələbələr",
       "storage": "Sənəd yaddaşı",
       "sms": "SMS",
+      "aiQuestions": "AI suallar",
+      "aiGradings": "AI qiymətləndirmə",
       "usedOf": "{{used}} / {{limit}} istifadə olunur",
       "usedUnlimited": "{{used}} / ∞ istifadə olunur",
       "smsLeft": "{{used}} / {{limit}} qalıb",
-      "smsUnlimited": "{{used}} / ∞ qalıb"
+      "smsUnlimited": "{{used}} / ∞ qalıb",
+      "aiNearLimit": "AI limitinizə yaxınlaşırsınız",
+      "aiBlocked": "Aylıq AI limitiniz bitdi.",
+      "aiBlockedTrial": "Sınaq AI limitiniz bitdi.",
+      "upgradeCta": "Paketlərə bax"
     }
   },
   "live": {
@@ -2908,6 +2914,10 @@
       "homeworksUnlimitedMonthly": "Limitsiz tapşırıq / ay",
       "homeworksTrial": "{{count}} tapşırıq",
       "homeworksMonthly": "{{count}} tapşırıq / ay",
+      "aiQuestionsTrial": "{{count}} AI sual (sınaq)",
+      "aiQuestionsMonthly": "{{count}} AI sual / ay",
+      "aiGradingsTrial": "{{count}} AI qiymətləndirmə (sınaq)",
+      "aiGradingsMonthly": "{{count}} AI qiymətləndirmə / ay",
       "liveUnlimited": "Limitsiz canlı dərslər · Limitsiz iştirakçı",
       "liveLessonsUnlimited": "Limitsiz canlı dərslər",
       "liveParticipantsUnlimited": "Limitsiz iştirakçı",

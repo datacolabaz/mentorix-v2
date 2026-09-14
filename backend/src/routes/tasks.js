@@ -5,7 +5,7 @@ const multer = require('multer');
 const { verify } = require('../utils/jwt');
 const { authenticate, authorize } = require('../middleware/auth');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
-const { enforceActiveSubscription, enforceHomeworksLimit } = require('../middleware/entitlements');
+const { enforceActiveSubscription, enforceHomeworksLimit, attachEntitlements } = require('../middleware/entitlements');
 const {
   listInstructorTasks,
   createInstructorTask,
@@ -80,7 +80,14 @@ router.patch('/assignments/:id/submit', authenticate, authorize('student'), subm
 
 // Instructor review of a specific student assignment row
 router.get('/instructor/review/:id', authenticate, authorize('instructor'), getInstructorStudentAssignment);
-router.post('/instructor/review/:id/ai-suggest', authenticate, authorize('instructor'), requestAiReviewSuggestion);
+router.post(
+  '/instructor/review/:id/ai-suggest',
+  authenticate,
+  authorize('instructor'),
+  attachEntitlements,
+  enforceActiveSubscription,
+  requestAiReviewSuggestion,
+);
 router.patch('/instructor/review/:id', authenticate, authorize('instructor'), reviewInstructorAssignment);
 
 // Upload attachments for assignments (local storage, unguessable filenames)

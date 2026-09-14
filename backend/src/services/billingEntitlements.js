@@ -321,6 +321,22 @@ function buildMessages(status, ctx) {
     ) {
       parts.push(`Aylıq tapşırıq limitinə yaxınlaşırsınız (${used.homeworks_monthly}/${limits.homeworks_monthly})`);
     }
+    if (
+      limits.ai_questions_monthly != null &&
+      isWarnPercent(remainingObj.ai_questions, limits.ai_questions_monthly, 0.2)
+    ) {
+      parts.push(
+        `AI sual limitinə yaxınlaşırsınız (${used.ai_questions_used}/${limits.ai_questions_monthly})`,
+      );
+    }
+    if (
+      limits.ai_gradings_monthly != null &&
+      isWarnPercent(remainingObj.ai_gradings, limits.ai_gradings_monthly, 0.2)
+    ) {
+      parts.push(
+        `AI qiymətləndirmə limitinə yaxınlaşırsınız (${used.ai_gradings_used}/${limits.ai_gradings_monthly})`,
+      );
+    }
     const stLine = storageUsageLine(used, limits);
     if (stLine) {
       const cap = limits.storage_limit_bytes;
@@ -472,6 +488,14 @@ async function resolveEntitlements(userId, opts = {}) {
   const examsUsed = await countInstructorExamsThisMonth(db, userId);
   const homeworksUsed = await countInstructorHomeworksThisMonth(db, userId);
 
+  let aiSnap = null;
+  try {
+    const { getAiUsageSnapshot } = require('./aiCreditService');
+    aiSnap = await getAiUsageSnapshot(userId);
+  } catch {
+    aiSnap = null;
+  }
+
   const extraSmsBalance = Number(usage?.extra_sms_balance || 0) || 0;
   const baseSmsLimit = planLimits.sms_monthly;
   const effectiveSmsLimit =
@@ -495,6 +519,10 @@ async function resolveEntitlements(userId, opts = {}) {
     ram_limit_mb: planLimits.ram_limit_mb ?? null,
     exams_monthly: planLimits.exams_monthly ?? null,
     homeworks_monthly: planLimits.homeworks_monthly ?? null,
+    ai_questions_monthly:
+      planLimits.ai_questions_monthly ?? aiSnap?.limits?.ai_questions_monthly ?? null,
+    ai_gradings_monthly:
+      planLimits.ai_gradings_monthly ?? aiSnap?.limits?.ai_gradings_monthly ?? null,
   };
 
   const used = {
@@ -504,6 +532,8 @@ async function resolveEntitlements(userId, opts = {}) {
     sms_monthly: Number(usage?.sms_used_monthly || 0) || 0,
     exams_monthly: examsUsed,
     homeworks_monthly: homeworksUsed,
+    ai_questions_used: Number(aiSnap?.usage?.ai_questions_used || 0) || 0,
+    ai_gradings_used: Number(aiSnap?.usage?.ai_gradings_used || 0) || 0,
     extra_sms_balance: extraSmsBalance,
     extra_storage_bytes: extraStorageBytes,
   };
@@ -514,6 +544,8 @@ async function resolveEntitlements(userId, opts = {}) {
     sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
     exams_monthly: remaining(limits.exams_monthly, used.exams_monthly),
     homeworks_monthly: remaining(limits.homeworks_monthly, used.homeworks_monthly),
+    ai_questions: remaining(limits.ai_questions_monthly, used.ai_questions_used),
+    ai_gradings: remaining(limits.ai_gradings_monthly, used.ai_gradings_used),
     storage_bytes:
       limits.storage_limit_bytes == null
         ? null

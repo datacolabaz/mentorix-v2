@@ -153,8 +153,9 @@ async function recalculateExamResultScore(examResultId, client = db) {
 
 async function processOpenGradingForResult(examResultId) {
   const { rows: resultRows } = await db.query(
-    `SELECT er.id, er.exam_id, er.answers, er.grading
+    `SELECT er.id, er.exam_id, er.answers, er.grading, e.instructor_id
      FROM exam_results er
+     JOIN exams e ON e.id = er.exam_id
      WHERE er.id = $1 AND er.submitted_at IS NOT NULL`,
     [examResultId],
   );
@@ -180,6 +181,9 @@ async function processOpenGradingForResult(examResultId) {
   let processed = 0;
   let errors = 0;
 
+  const { withAiCredit, AI_OPS } = require('./aiCreditService');
+  const instructorId = result.instructor_id;
+
   for (const q of questions) {
     if (!q?.id || inferQuestionType(q) !== 'open') continue;
     const modelAnswer = String(q.model_answer ?? '').trim();
@@ -195,11 +199,17 @@ async function processOpenGradingForResult(examResultId) {
     }
 
     try {
-      const ai = await gradeOpenAnswerWithAi({
-        questionText: q.question_text,
-        modelAnswer,
-        studentAnswer: given,
-        maxPoints: q.points,
+      const ai = await withAiCredit({
+        userId: instructorId,
+        operation: AI_OPS.ASSIGNMENT_GRADING,
+        amount: 1,
+        run: async () =>
+          gradeOpenAnswerWithAi({
+            questionText: q.question_text,
+            modelAnswer,
+            studentAnswer: given,
+            maxPoints: q.points,
+          }),
       });
       grading[q.id] = {
         type: 'open',
@@ -212,6 +222,7 @@ async function processOpenGradingForResult(examResultId) {
       };
       processed += 1;
     } catch (e) {
+      const limitHit = e?.code === 'AI_LIMIT_EXCEEDED';
       console.error('openExamGrading AI failed', examResultId, q.id, e.message);
       grading[q.id] = {
         type: 'open',
@@ -222,8 +233,10 @@ async function processOpenGradingForResult(examResultId) {
         final_score: null,
         earned_points: 0,
         ai_error: String(e.message || 'AI xətası').slice(0, 500),
+        ...(limitHit ? { ai_limit_exceeded: true } : {}),
       };
       errors += 1;
+      if (limitHit) break;
     }
   }
 

@@ -15,6 +15,9 @@ const PLANS = {
     recording_retention_days: 0,
     recording_max_duration_sec: 0,
     recording_max_quality: null,
+    /** Trial totals (whole 21d window), not monthly */
+    ai_questions_monthly: 20,
+    ai_gradings_monthly: 10,
   },
   pro: {
     price_azn: 5,
@@ -31,6 +34,8 @@ const PLANS = {
     recording_retention_days: 30,
     recording_max_duration_sec: 7200,
     recording_max_quality: '720p',
+    ai_questions_monthly: 100,
+    ai_gradings_monthly: 30,
   },
   growth: {
     price_azn: 10,
@@ -47,6 +52,8 @@ const PLANS = {
     recording_retention_days: 90,
     recording_max_duration_sec: 7200,
     recording_max_quality: '720p',
+    ai_questions_monthly: 300,
+    ai_gradings_monthly: 100,
   },
   premium: {
     price_azn: 19,
@@ -63,6 +70,8 @@ const PLANS = {
     recording_retention_days: 180,
     recording_max_duration_sec: 10800,
     recording_max_quality: '1080p',
+    ai_questions_monthly: 800,
+    ai_gradings_monthly: 300,
   },
 };
 

@@ -7,9 +7,15 @@ const { parseGeneratedQuestionSet, normalizeGenerationLanguage } = require('../m
 const { AIGenerationError, isRetriableOutputError } = require('./errors');
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const DEFAULT_MODEL = process.env.ANTHROPIC_GENERATION_MODEL || 'claude-sonnet-5';
-const REQUEST_TIMEOUT_MS = Number(process.env.ANTHROPIC_GENERATION_TIMEOUT_MS || 60000);
-const DEFAULT_MAX_TOKENS = Number(process.env.ANTHROPIC_GENERATION_MAX_TOKENS || 4096);
+const {
+  resolveQuestionModel,
+  generationTimeoutMs,
+  generationMaxTokens,
+} = require('../config/aiModels');
+
+const DEFAULT_MODEL = resolveQuestionModel();
+const REQUEST_TIMEOUT_MS = generationTimeoutMs();
+const DEFAULT_MAX_TOKENS = generationMaxTokens();
 
 const RETRY_CORRECTION_SUFFIX = [
   'CORRECTION REQUIRED: Your previous response was invalid or did not match the required JSON schema.',

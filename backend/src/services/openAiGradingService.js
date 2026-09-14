@@ -1,6 +1,12 @@
+const {
+  resolveGradingModel,
+  gradingTimeoutMs,
+  resolveAnthropicApiKey,
+} = require('../config/aiModels');
+
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const DEFAULT_MODEL = process.env.ANTHROPIC_OPEN_GRADING_MODEL || 'claude-sonnet-5';
-const REQUEST_TIMEOUT_MS = Number(process.env.ANTHROPIC_OPEN_GRADING_TIMEOUT_MS || 45000);
+const DEFAULT_MODEL = resolveGradingModel();
+const REQUEST_TIMEOUT_MS = gradingTimeoutMs();
 
 function buildGradingPrompt({ questionText, modelAnswer, studentAnswer }) {
   return `Sən imtahan qiymətləndirən köməkçisən. Aşağıda sual, müəllimin yazdığı model cavab, və tələbənin yazdığı cavab var.
@@ -42,11 +48,12 @@ function percentToPoints(scorePercent, maxPoints) {
 }
 
 async function gradeOpenAnswerWithAi({ questionText, modelAnswer, studentAnswer, maxPoints }) {
-  const apiKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
+  const apiKey = resolveAnthropicApiKey();
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY təyin edilməyib');
   }
 
+  const model = resolveGradingModel();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -59,7 +66,7 @@ async function gradeOpenAnswerWithAi({ questionText, modelAnswer, studentAnswer,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model,
         max_tokens: 512,
         messages: [
           {
@@ -80,11 +87,19 @@ async function gradeOpenAnswerWithAi({ questionText, modelAnswer, studentAnswer,
     const textBlock = (data.content || []).find((b) => b.type === 'text');
     const parsed = parseAiGradingJson(textBlock?.text || '');
     const suggestedScore = percentToPoints(parsed.scorePercent, maxPoints);
+    const promptTokens = Number(data?.usage?.input_tokens) || 0;
+    const completionTokens = Number(data?.usage?.output_tokens) || 0;
 
     return {
       scorePercent: parsed.scorePercent,
       reasoning: parsed.reasoning,
       suggestedScore,
+      model: String(data?.model || model),
+      tokenUsage: {
+        prompt: promptTokens,
+        completion: completionTokens,
+        total: promptTokens + completionTokens,
+      },
     };
   } finally {
     clearTimeout(timer);
@@ -95,4 +110,5 @@ module.exports = {
   gradeOpenAnswerWithAi,
   percentToPoints,
   buildGradingPrompt,
+  DEFAULT_MODEL,
 };
