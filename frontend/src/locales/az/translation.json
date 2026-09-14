@@ -261,11 +261,15 @@
     "forAccount": "{{email}} hesabı üçün",
     "continue": "Davam et",
     "continueHintSkip": "Seçim məcburi deyil. Sonra Tənzimləmələrdən də seçə bilərsiniz.",
+    "continueHintRequired": "Davam etmək üçün istifadə məqsədini seçməlisiniz.",
     "continueHintSelected": "Davam et — qısa məlumatları doldurmaq üçün.",
     "continueHintPartner": "Davam et — Partner kabinetinə keçəcəksiniz.",
     "detailsHint": "Sizə uyğun paneli hazırlamaq üçün qısa məlumatları doldurun.",
     "unauthorizedTitle": "Daxil olun",
     "unauthorizedBody": "Davam etmək üçün əvvəlcə hesabınıza daxil olun.",
+    "errors": {
+      "selectRequired": "Davam etmək üçün istifadə məqsədini seçin."
+    },
     "toasts": {
       "ready": "Hazırdır. Paneliniz açılır.",
       "failed": "Onboarding tamamlanmadı"

@@ -14,6 +14,7 @@ const {
   toggleStudent,
   deleteStudent,
   getClasses,
+  searchUsers,
 } = require('../controllers/adminController');
 const {
   getAdminLoginMarketing,
@@ -61,6 +62,7 @@ router.get('/stats', authenticate, authorize('admin'), getDashboardStats);
 router.get('/analytics/traffic', authenticate, authorize('admin'), getAdminTraffic);
 router.get('/analytics/dashboard', authenticate, authorize('admin'), getAdminAnalytics);
 router.get('/students', authenticate, authorize('admin'), getStudents);
+router.get('/users/search', authenticate, authorize('admin'), searchUsers);
 router.get('/students/:id', authenticate, authorize('admin'), getStudentById);
 router.patch('/students/:id/toggle', authenticate, authorize('admin'), toggleStudent);
 router.delete('/students/:id', authenticate, authorize('admin'), deleteStudent);

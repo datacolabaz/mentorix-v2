@@ -19,6 +19,7 @@ const { SMS_LOGS_MONTHLY_COUNT_SUBQUERY } = require('../sql/adminSmsUsage');
 const { decorateAdminClassRow } = require('../lib/participantGroupLabels');
 
 const { mapRowsWithPresence } = require('../services/userPresenceService');
+const { isRegistrationIncomplete } = require('../lib/adminRegistrationStatus');
 
 // Butun muellimler
 const getInstructors = async (req, res) => {
@@ -65,8 +66,9 @@ const getInstructors = async (req, res) => {
        LEFT JOIN subscriptions s ON s.user_id = u.id
        LEFT JOIN usage_counters uc ON uc.user_id = u.id
        LEFT JOIN subscription_plans sp ON sp.slug = COALESCE(s.plan, 'basic') AND sp.is_active = TRUE
-       WHERE u.role = 'instructor' AND u.is_active = TRUE AND u.deleted_at IS NULL
+       WHERE u.role = 'instructor' AND u.deleted_at IS NULL
        ORDER BY
+         CASE WHEN u.is_active = TRUE THEN 0 ELSE 1 END,
          CASE
            WHEN COALESCE(ip.discover_verified, FALSE) = FALSE
             AND (
@@ -521,6 +523,11 @@ const buildStudentListQuery = (filters) => {
       u.is_verified,
       u.created_at,
       u.last_activity_at,
+      u.role,
+      u.persona,
+      u.role_selected,
+      u.onboarding_completed,
+      u.auth_provider,
       e.id AS enrollment_id,
       e.status AS enrollment_status,
       e.instructor_id,
@@ -548,6 +555,72 @@ const buildStudentListQuery = (filters) => {
   return { sql, params };
 };
 
+/**
+ * Cross-role admin lookup — Students/Instructors tabs are role-split, so emails
+ * for teachers/org/parent/incomplete accounts were easy to miss.
+ */
+const searchUsers = async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Axtarış üçün ən azı 2 simvol daxil edin',
+        code: 'QUERY_TOO_SHORT',
+      });
+    }
+    const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100);
+    const params = [`%${q}%`, limit];
+    const { rows } = await db.query(
+      `SELECT
+         u.id,
+         u.full_name,
+         u.email,
+         u.phone,
+         u.role,
+         u.persona,
+         u.role_selected,
+         u.onboarding_completed,
+         u.is_active,
+         u.is_verified,
+         u.auth_provider,
+         u.created_at,
+         u.deleted_at,
+         (u.deleted_at IS NOT NULL) AS is_deleted,
+         (
+           u.onboarding_completed IS NOT TRUE
+           OR u.role_selected IS NOT TRUE
+           OR u.persona IS NULL
+         ) AS registration_incomplete
+       FROM users u
+       WHERE (
+         u.full_name ILIKE $1
+         OR COALESCE(u.email, '') ILIKE $1
+         OR COALESCE(u.phone, '') ILIKE $1
+       )
+       ORDER BY
+         CASE WHEN u.deleted_at IS NULL THEN 0 ELSE 1 END,
+         u.created_at DESC NULLS LAST,
+         u.full_name ASC
+       LIMIT $2`,
+      params,
+    );
+    res.json({
+      success: true,
+      users: (rows || []).map((r) => ({
+        ...r,
+        role_selected: r.role_selected !== false,
+        onboarding_completed: r.onboarding_completed === true,
+        registration_incomplete: Boolean(r.registration_incomplete),
+        is_deleted: Boolean(r.is_deleted),
+        is_active: r.is_active !== false,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getStudents = async (req, res) => {
   try {
     const filters = {
@@ -559,7 +632,13 @@ const getStudents = async (req, res) => {
     };
     const { sql, params } = buildStudentListQuery(filters);
     const { rows } = await db.query(sql, params);
-    res.json({ success: true, students: mapRowsWithPresence(rows) });
+    const students = mapRowsWithPresence(
+      (rows || []).map((r) => ({
+        ...r,
+        registration_incomplete: isRegistrationIncomplete(r),
+      })),
+    );
+    res.json({ success: true, students });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -808,4 +887,5 @@ module.exports = {
   toggleStudent,
   deleteStudent,
   getClasses,
+  searchUsers,
 };

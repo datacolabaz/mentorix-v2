@@ -231,7 +231,12 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
   return { persona: personaId, authRole };
 }
 
-/** Complete onboarding without a use-case. Does not assign a persona or wipe history. */
+/**
+ * Legacy helper: mark onboarding done without a persona.
+ * Public signup must NOT call this — skipping left role='student' and made
+ * accounts look like students without an explicit purpose choice.
+ * Kept for tests / one-off admin scripts only.
+ */
 async function skipOnboarding(userId) {
   await db.query(
     `UPDATE users

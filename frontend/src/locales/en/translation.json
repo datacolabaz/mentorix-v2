@@ -261,11 +261,15 @@
     "forAccount": "For {{email}}",
     "continue": "Continue",
     "continueHintSkip": "A choice is optional. You can also pick this later in Settings.",
+    "continueHintRequired": "Select how you’ll use Mentorix to continue.",
     "continueHintSelected": "Continue to add a few details.",
     "continueHintPartner": "Continue — you’ll open the Partner cabinet.",
     "detailsHint": "A few details help us set up the right workspace.",
     "unauthorizedTitle": "Sign in",
     "unauthorizedBody": "Please sign in first to continue.",
+    "errors": {
+      "selectRequired": "Select a use case to continue."
+    },
     "toasts": {
       "ready": "You’re set. Opening your workspace.",
       "failed": "Could not finish onboarding"
