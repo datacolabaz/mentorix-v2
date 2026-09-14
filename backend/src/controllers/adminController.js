@@ -482,15 +482,22 @@ const getDashboardStats = async (req, res) => {
 
 const buildStudentListQuery = (filters) => {
   const params = [];
-  const where = [`u.role = 'student'`, `u.deleted_at IS NULL`];
+  const where = [`u.role = 'student'`];
+  // Exact email search must surface soft-deleted / merged rows; browse list stays live-only.
+  if (!filters.q) {
+    where.push(`u.deleted_at IS NULL`);
+  }
 
   if (filters.q) {
     params.push(`%${filters.q}%`);
     const i = params.length;
+    params.push(String(filters.q).trim().toLowerCase());
+    const exact = params.length;
     where.push(`(
       u.full_name ILIKE $${i}
       OR COALESCE(u.email, '') ILIKE $${i}
       OR COALESCE(u.phone, '') ILIKE $${i}
+      OR lower(trim(COALESCE(u.email, ''))) = $${exact}
     )`);
   }
 
@@ -528,6 +535,8 @@ const buildStudentListQuery = (filters) => {
       u.role_selected,
       u.onboarding_completed,
       u.auth_provider,
+      u.deleted_at,
+      (u.deleted_at IS NOT NULL) AS is_deleted,
       e.id AS enrollment_id,
       e.status AS enrollment_status,
       e.instructor_id,
@@ -561,6 +570,7 @@ const buildStudentListQuery = (filters) => {
  */
 const searchUsers = async (req, res) => {
   try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100);
     const q = String(req.query.q || '').trim();
     if (q.length < 2) {
       return res.status(400).json({
@@ -569,8 +579,7 @@ const searchUsers = async (req, res) => {
         code: 'QUERY_TOO_SHORT',
       });
     }
-    const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100);
-    const params = [`%${q}%`, limit];
+    const params = [`%${q}%`, q.toLowerCase(), limit];
     const { rows } = await db.query(
       `SELECT
          u.id,
@@ -584,6 +593,7 @@ const searchUsers = async (req, res) => {
          u.is_active,
          u.is_verified,
          u.auth_provider,
+         u.google_sub,
          u.created_at,
          u.deleted_at,
          (u.deleted_at IS NOT NULL) AS is_deleted,
@@ -597,12 +607,15 @@ const searchUsers = async (req, res) => {
          u.full_name ILIKE $1
          OR COALESCE(u.email, '') ILIKE $1
          OR COALESCE(u.phone, '') ILIKE $1
+         OR lower(trim(COALESCE(u.email, ''))) = $2
+         OR lower(trim(COALESCE(u.google_sub, ''))) = $2
        )
        ORDER BY
          CASE WHEN u.deleted_at IS NULL THEN 0 ELSE 1 END,
+         CASE WHEN lower(trim(COALESCE(u.email, ''))) = $2 THEN 0 ELSE 1 END,
          u.created_at DESC NULLS LAST,
          u.full_name ASC
-       LIMIT $2`,
+       LIMIT $3`,
       params,
     );
     res.json({
@@ -636,6 +649,7 @@ const getStudents = async (req, res) => {
       (rows || []).map((r) => ({
         ...r,
         registration_incomplete: isRegistrationIncomplete(r),
+        is_deleted: Boolean(r.is_deleted || r.deleted_at),
       })),
     );
     res.json({ success: true, students });

@@ -12,7 +12,7 @@ const inputClass =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/60'
 
 const ROLE_LABEL = {
-  student: 'Tələbə',
+  student: 'İştirakçı',
   instructor: 'Müəllim',
   course: 'Təşkilat',
   parent: 'Valideyn',
@@ -212,7 +212,8 @@ export default function AdminStudents() {
             Digər rollarda / statuslarda tapıldı ({otherRoleMatches.length})
           </h2>
           <p className="text-xs text-token-textMuted mb-3">
-            Bu siyahı yalnız «tələbə» rolunu göstərir. Email başqa rolda və ya silinmiş hesabda ola bilər.
+            Əsas cədvəl yalnız «student» auth rolunu göstərir. Email müəllim, partner, natamam
+            qeydiyyat və ya silinmiş hesabda ola bilər — aşağıdakı nəticələrə baxın.
           </p>
           <div className="space-y-2">
             {otherRoleMatches.map((u) => (
@@ -301,6 +302,11 @@ export default function AdminStudents() {
                   {s.registration_incomplete && (
                     <span className="inline-block mt-1 mr-1 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 font-semibold">
                       Qeydiyyat natamam — məqsəd seçilməyib
+                    </span>
+                  )}
+                  {s.is_deleted && (
+                    <span className="inline-block mt-1 mr-1 text-[10px] uppercase tracking-wide text-red-400 font-semibold">
+                      Silinib / birləşdirilib
                     </span>
                   )}
                   {s.is_unassigned && (

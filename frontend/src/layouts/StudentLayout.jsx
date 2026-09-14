@@ -85,7 +85,7 @@ function StudentLayoutInner() {
   const partnerPurpose = isPartnerPersona(user)
   const roleBadge = partnerPurpose
     ? t('layout.partnerRole', { defaultValue: 'Partner' })
-    : t('layout.studentRole', { defaultValue: 'Tələbə' })
+    : t('layout.studentRole', { defaultValue: 'İştirakçı' })
 
   const navGroups = useMemo(
     () =>

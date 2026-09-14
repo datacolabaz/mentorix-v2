@@ -30,7 +30,10 @@ export default function PublicGoogleSignIn({ className = '', label, context = 's
         needs_instructor_phone: false,
       }
       setSession(r.token, u)
-      toast(t(authLoggedInToastKey(u)), 'success')
+      // Do not claim "logged in as student" before purpose is chosen.
+      if (!(r?.needs_onboarding || r?.needs_role)) {
+        toast(t(authLoggedInToastKey(u)), 'success')
+      }
       postAuthNavigate(u, navigate)
     } catch (err) {
       toast(authLoginErrorMessage(err, t) || err?.message || t('auth.toasts.googleFailed'), 'error')

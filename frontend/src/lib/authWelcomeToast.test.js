@@ -10,9 +10,14 @@ describe('authLoggedInToastKey', () => {
     )
   })
 
-  it('uses student toast for student persona/role', () => {
+  it('uses student toast only for explicit student persona', () => {
     assert.equal(authLoggedInToastKey({ role: 'student', persona: 'student' }), 'auth.toasts.loggedInStudent')
-    assert.equal(authLoggedInToastKey({ role: 'student' }), 'auth.toasts.loggedInStudent')
+  })
+
+  it('does not treat placeholder role=student as logged-in student', () => {
+    assert.equal(authLoggedInToastKey({ role: 'student' }), 'auth.toasts.loggedIn')
+    assert.equal(authLoggedInToastKey({ role: 'student', persona: null }), 'auth.toasts.loggedIn')
+    assert.equal(authLoggedInToastKey({ role: null, onboarding_completed: false }), 'auth.toasts.loggedIn')
   })
 
   it('uses teacher toast for instructor', () => {

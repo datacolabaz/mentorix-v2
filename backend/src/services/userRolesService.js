@@ -97,11 +97,21 @@ async function getLoginEligibleRoles(userId) {
   const eligible = new Set(await getActiveRoles(userId));
 
   const { rows: userRows } = await db.query(
-    `SELECT role FROM users WHERE id = $1 AND COALESCE(is_active, TRUE) = TRUE LIMIT 1`,
+    `SELECT role, persona, onboarding_completed, role_selected
+     FROM users
+     WHERE id = $1 AND COALESCE(is_active, TRUE) = TRUE
+     LIMIT 1`,
     [userId],
   );
   const legacyRole = userRows[0]?.role;
-  if (legacyRole && LOGIN_ROLES.includes(legacyRole)) eligible.add(legacyRole);
+  const persona = String(userRows[0]?.persona || '').trim();
+  // Placeholder users.role='student' before purpose choice must not unlock student login.
+  // Partner purpose may keep placeholder auth role for session JWT (cabinet + secondary panel).
+  if (legacyRole && LOGIN_ROLES.includes(legacyRole)) {
+    if (legacyRole !== 'student' || persona === 'student' || persona === 'partner') {
+      eligible.add(legacyRole);
+    }
+  }
 
   if (await isInstructorAccount(userId)) eligible.add('instructor');
 

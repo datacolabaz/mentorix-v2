@@ -195,6 +195,7 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
       !instRows[0];
 
     const previousRole = String(me.role || '').trim().toLowerCase();
+    const previousPersona = String(me.persona || '').trim() || null;
 
     await client.query(
       `UPDATE users
@@ -211,6 +212,7 @@ async function applyPersonaSelection({ userId, persona, profile, req, requireCom
       previousRole,
       authRole,
       personaId,
+      previousPersona,
     });
     for (const role of membershipRoles) {
       await grantUserRole(userId, role, client);

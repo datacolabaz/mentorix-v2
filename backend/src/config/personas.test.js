@@ -81,15 +81,30 @@ describe('personas config', () => {
     assert.equal(rowNeedsOnboarding({ role: 'student', onboarding_completed: false }), true);
     assert.equal(rowNeedsOnboarding({ role: 'instructor', role_selected: false }), true);
     assert.equal(
-      rowNeedsOnboarding({ role: 'instructor', role_selected: true, onboarding_completed: true }),
+      rowNeedsOnboarding({
+        role: 'instructor',
+        role_selected: true,
+        onboarding_completed: true,
+        persona: 'teacher',
+      }),
       false,
     );
+    // Legacy skip / placeholder role must still force purpose picker.
     assert.equal(
       rowNeedsOnboarding({
         role: 'student',
         role_selected: true,
         onboarding_completed: true,
         persona: null,
+      }),
+      true,
+    );
+    assert.equal(
+      rowNeedsOnboarding({
+        role: 'student',
+        role_selected: true,
+        onboarding_completed: true,
+        persona: 'student',
       }),
       false,
     );

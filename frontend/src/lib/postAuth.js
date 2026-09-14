@@ -92,9 +92,9 @@ export function dashboardPathForUser(user) {
   if (!user) return '/login'
   if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
   if (isPartnerPersona(user)) return '/partner/dashboard'
+  // Placeholder role=student must not open /student until persona is chosen.
   if (isPersonaId(user.persona)) return dashboardPathForRole(user.role)
-  if (user.onboarding_completed) return DEFAULT_APP_PATH
-  return dashboardPathForRole(user.role)
+  return DEFAULT_APP_PATH
 }
 
 export { userNeedsOnboarding, ONBOARDING_PATH, DEFAULT_APP_PATH }
