@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Area,
@@ -54,6 +54,7 @@ function PartnerChartTooltip({ active, payload, label }) {
 
 function PartnerShell({ children }) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const { theme } = useUiStore()
   const secondaryHome = secondaryPanelPathForUser(user) || '/'
@@ -110,7 +111,11 @@ function PartnerShell({ children }) {
           <LocaleThemeBar tone={theme === 'dark' ? 'dark' : 'light'} />
           <button
             type="button"
-            onClick={() => logout()}
+            onClick={() => {
+              logout()
+              // /partner/dashboard üzərində qalma → ProtectedRoute ?next= yapışdırır; təmiz /login.
+              navigate('/login', { replace: true })
+            }}
             className="rounded-lg border border-token-border px-3 py-1.5 text-token-textMuted hover:text-token-textMain hover:bg-token-bg whitespace-nowrap"
           >
             {t('layout.logout')}

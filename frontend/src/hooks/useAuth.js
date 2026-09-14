@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../lib/api'
 import { trackLogout } from '../lib/analytics'
+import { consumeReturnAfterLogin } from '../lib/inviteReturn'
 
 function clearDiscoverReminderOnAuth(user) {
   const id = user?.id
@@ -115,6 +116,13 @@ const useAuthStore = create((set) => ({
       } catch {
         /* ignore */
       }
+    }
+    // Sticky ?next= / return URL (məs. /partner/dashboard) növbəti girişdə digər persona-ya yapışmasın.
+    consumeReturnAfterLogin()
+    try {
+      sessionStorage.removeItem('mx_role_panel_override')
+    } catch {
+      /* ignore */
     }
     localStorage.removeItem('mx_token')
     localStorage.removeItem('mx_user')

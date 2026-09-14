@@ -142,7 +142,7 @@ function ResumeAfterAuth() {
   const [searchParams] = useSearchParams()
   const stored = peekReturnAfterLogin()
   const dest = resolvePostAuthPath(user, { nextQuery: searchParams.get('next'), stored })
-  if (dest && dest === stored) consumeReturnAfterLogin()
+  if (dest && dest !== ONBOARDING_PATH) consumeReturnAfterLogin()
   return <Navigate to={dest} replace />
 }
 
