@@ -75,8 +75,7 @@ function dashboardPathForUser(user) {
   if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
   if (isPartnerPersona(user)) return '/partner/dashboard'
   if (isPersonaId(user.persona)) return dashboardPathForRole(user.role)
-  if (user.onboarding_completed) return DEFAULT_APP_PATH
-  return dashboardPathForRole(user.role)
+  return DEFAULT_APP_PATH
 }
 
 function secondaryPanelPathForUser(user) {
@@ -134,6 +133,14 @@ describe('partner persona primary home', () => {
   it('keeps teacher/student persona on role homes', () => {
     assert.equal(dashboardPathForUser({ role: 'instructor', persona: 'teacher' }), '/instructor')
     assert.equal(dashboardPathForUser({ role: 'student', persona: 'student' }), '/student')
+  })
+
+  it('never opens student shell from placeholder role without persona', () => {
+    assert.equal(dashboardPathForUser({ role: 'student', persona: null }), DEFAULT_APP_PATH)
+    assert.equal(
+      dashboardPathForUser({ role: 'student', onboarding_completed: true, persona: null }),
+      DEFAULT_APP_PATH,
+    )
   })
 
   it('flags role-home paths for partner redirect', () => {

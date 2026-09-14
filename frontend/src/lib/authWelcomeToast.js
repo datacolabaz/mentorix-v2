@@ -5,19 +5,27 @@ function isPartnerPersona(user) {
   return String(user?.persona || '').trim() === PERSONAS.PARTNER
 }
 
-/** Post-login confirm modal copy — respect active persona, not only auth role. */
+/**
+ * Post-login confirm modal copy — respect active persona, not placeholder auth role.
+ * Signup/Google create store role='student' before purpose is chosen; that must not
+ * show "Tələbə kimi daxil oldunuz".
+ */
 export function authLoggedInToastKey(user) {
   if (isPartnerPersona(user)) return 'auth.toasts.loggedInPartner'
   const persona = String(user?.persona || '').trim()
-  if (persona === PERSONAS.STUDENT || String(user?.role || '').toLowerCase() === 'student') {
-    return 'auth.toasts.loggedInStudent'
-  }
-  if (persona === PERSONAS.TEACHER || String(user?.role || '').toLowerCase() === 'instructor') {
+  if (persona === PERSONAS.STUDENT) return 'auth.toasts.loggedInStudent'
+  if (persona === PERSONAS.TEACHER || persona === PERSONAS.HR_COMPANY || persona === PERSONAS.OTHER) {
     return 'auth.toasts.loggedInTeacher'
   }
-  if (persona === PERSONAS.PARENT || String(user?.role || '').toLowerCase() === 'parent') {
-    return 'auth.toasts.loggedInParent'
-  }
+  if (persona === PERSONAS.PARENT) return 'auth.toasts.loggedInParent'
+  if (persona === PERSONAS.EDUCATION_CENTER) return 'auth.toasts.loggedIn'
+
+  // No persona yet (or unknown): never infer from placeholder role.
+  if (!persona) return 'auth.toasts.loggedIn'
+
+  const role = String(user?.role || '').toLowerCase()
+  if (role === 'instructor') return 'auth.toasts.loggedInTeacher'
+  if (role === 'parent') return 'auth.toasts.loggedInParent'
   return 'auth.toasts.loggedIn'
 }
 

@@ -287,7 +287,9 @@ async function enrichUserForClient(userLite, sessionRole = null) {
       : userLite.role && LOGIN_ROLES.has(userLite.role)
         ? [userLite.role]
         : [];
-  const role = sessionRole || userLite.role;
+  // Explicit null sessionRole (pre-persona onboarding) must NOT fall back to the
+  // DB placeholder users.role='student' — that leaked student shell + toast.
+  const role = sessionRole !== undefined ? sessionRole : userLite.role;
   let out = { ...userLite, role, roles: legacyRoles };
   if (role === 'instructor') {
     out = await attachInstructorPublicLabel(out);

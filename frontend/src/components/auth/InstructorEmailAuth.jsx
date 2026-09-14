@@ -280,7 +280,9 @@ export default function InstructorEmailAuth({ onSuccess, onTabChange, initialTab
         needs_instructor_phone: false,
       }
       setSession(r.token, u)
-      toast(t(authLoggedInToastKey(u)), 'success')
+      if (!(r?.needs_onboarding || r?.needs_role)) {
+        toast(t(authLoggedInToastKey(u)), 'success')
+      }
       goAfterAuth(u)
     } catch (err) {
       if (tab === 'signup' && isAccountExistsError(err)) {

@@ -207,6 +207,9 @@ function rowNeedsOnboarding(row) {
   if (isAdminRole(row)) return false;
   if (row.onboarding_completed === false) return true;
   if (row.role_selected === false) return true;
+  // Placeholder users.role='student' is NOT a purpose choice. Legacy skip left
+  // onboarding_completed=true with persona null and still entered the student shell.
+  if (!String(row.persona || '').trim()) return true;
   return false;
 }
 

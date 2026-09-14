@@ -58,7 +58,7 @@
     "teacher": "Müəllim",
     "trainer": "Təlimçi",
     "parentRole": "Valideyn",
-    "studentRole": "Tələbə",
+    "studentRole": "İştirakçı",
     "partnerRole": "Partner",
     "adminRole": "Admin",
     "footer": {
@@ -230,7 +230,7 @@
       "invalidServer": "Server cavabı etibarsızdır"
     },
     "toasts": {
-      "loggedInStudent": "Tələbə kimi daxil oldunuz",
+      "loggedInStudent": "İştirakçı kimi daxil oldunuz",
       "loggedInPartner": "Partner kimi daxil oldunuz",
       "loggedInTeacher": "Müəllim kimi daxil oldunuz",
       "loggedInParent": "Valideyn kimi daxil oldunuz",

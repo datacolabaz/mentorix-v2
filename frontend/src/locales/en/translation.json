@@ -58,7 +58,7 @@
     "teacher": "Teacher",
     "trainer": "Trainer",
     "parentRole": "Parent",
-    "studentRole": "Student",
+    "studentRole": "Participant",
     "partnerRole": "Partner",
     "adminRole": "Admin",
     "footer": {
@@ -230,7 +230,7 @@
       "invalidServer": "Invalid server response"
     },
     "toasts": {
-      "loggedInStudent": "Signed in as a student",
+      "loggedInStudent": "Signed in as a participant",
       "loggedInPartner": "Signed in as a partner",
       "loggedInTeacher": "Signed in as a teacher",
       "loggedInParent": "Signed in as a parent",
