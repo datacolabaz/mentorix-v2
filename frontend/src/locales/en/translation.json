@@ -1232,7 +1232,7 @@
           "Payment tracking",
           "Parent notifications",
           "Group and private chat",
-          "Live class — 20 participants"
+          "Unlimited live lessons · 20 participants"
         ]
       },
       "growth": {
@@ -1251,7 +1251,7 @@
           "Parent notifications",
           "Detailed reports",
           "Group and private chat",
-          "Live class — 50 participants"
+          "Unlimited live lessons · 50 participants"
         ]
       },
       "premium": {
@@ -1270,7 +1270,7 @@
           "Parent notifications",
           "Detailed reports",
           "Priority support",
-          "Live class — unlimited participants"
+          "Unlimited live lessons · Unlimited participants"
         ]
       }
     },
@@ -1302,6 +1302,7 @@
         "price": "Price",
         "students": "Student limit",
         "documents": "Document limit",
+        "cloudStorage": "Cloud storage",
         "exams": "Exams / month",
         "assignments": "Assignments / month",
         "sms": "SMS / month",
@@ -1311,6 +1312,9 @@
         "aiQuestions": "AI questions",
         "aiGradings": "AI assignment reviews"
       },
+      "dash": "—",
+      "recordingNone": "—",
+      "recordingHours": "{{hours}} h/mo",
       "perMonth": "{{count}} / month"
     },
     "demo": {
@@ -2902,6 +2906,7 @@
       "documentsUnlimited": "Unlimited documents",
       "documents": "{{count}} documents",
       "cloudStorageGb": "{{size}} GB cloud storage",
+      "cloudStorageGbShort": "{{size}} GB",
       "cloudStorageUnlimited": "Unlimited storage",
       "storage5mb": "5 MB document storage",
       "storage256mb": "256 MB document storage",

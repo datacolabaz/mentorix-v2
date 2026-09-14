@@ -19,8 +19,7 @@ const FALLBACK_MARKETING_BY_SLUG = {
     'Xəritədə görünmə',
     `${AI_PLAN_LIMITS.basic.questions} AI sual`,
     `${AI_PLAN_LIMITS.basic.gradings} AI Tapşırıq yoxlama`,
-    'Limitsiz canlı dərslər',
-    'Mentorix Live (5 iştirakçı)',
+    'Limitsiz canlı dərslər · 5 iştirakçı',
   ],
   pro: [
     'Ödəniş izləmə',
@@ -28,8 +27,7 @@ const FALLBACK_MARKETING_BY_SLUG = {
     'Xəritədə görünmə',
     `${AI_PLAN_LIMITS.pro.questions} AI sual / ay`,
     `${AI_PLAN_LIMITS.pro.gradings} AI Tapşırıq yoxlama / ay`,
-    'Limitsiz canlı dərslər',
-    'Mentorix Live (20 iştirakçı)',
+    'Limitsiz canlı dərslər · 20 iştirakçı',
     'Yazı: 5 saat/ay',
   ],
   growth: [
@@ -39,8 +37,7 @@ const FALLBACK_MARKETING_BY_SLUG = {
     'Ətraflı hesabatlar',
     `${AI_PLAN_LIMITS.growth.questions} AI sual / ay`,
     `${AI_PLAN_LIMITS.growth.gradings} AI Tapşırıq yoxlama / ay`,
-    'Limitsiz canlı dərslər',
-    'Mentorix Live (50 iştirakçı)',
+    'Limitsiz canlı dərslər · 50 iştirakçı',
     'Yazı: 20 saat/ay',
   ],
   premium: [
@@ -51,8 +48,7 @@ const FALLBACK_MARKETING_BY_SLUG = {
     'Prioritet texniki dəstək',
     `${AI_PLAN_LIMITS.premium.questions} AI sual / ay`,
     `${AI_PLAN_LIMITS.premium.gradings} AI Tapşırıq yoxlama / ay`,
-    'Limitsiz canlı dərslər',
-    'Mentorix Live (limitsiz)',
+    'Limitsiz canlı dərslər · Limitsiz iştirakçı',
     'Yazı: 50 saat/ay',
   ],
 }

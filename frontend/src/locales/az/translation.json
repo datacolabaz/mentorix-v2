@@ -1232,7 +1232,7 @@
           "Ödəniş izləmə",
           "Valideyn bildirişləri",
           "Qrup və fərdi çat",
-          "Canlı dərs — 20 iştirakçı"
+          "Limitsiz canlı dərslər · 20 iştirakçı"
         ]
       },
       "growth": {
@@ -1251,7 +1251,7 @@
           "Valideyn bildirişləri",
           "Ətraflı hesabatlar",
           "Qrup və fərdi çat",
-          "Canlı dərs — 50 iştirakçı"
+          "Limitsiz canlı dərslər · 50 iştirakçı"
         ]
       },
       "premium": {
@@ -1270,7 +1270,7 @@
           "Valideyn bildirişləri",
           "Ətraflı hesabatlar",
           "Prioritet dəstək",
-          "Canlı dərs — limitsiz iştirakçı"
+          "Limitsiz canlı dərslər · Limitsiz iştirakçı"
         ]
       }
     },
@@ -1302,6 +1302,7 @@
         "price": "Qiymət",
         "students": "Tələbə limiti",
         "documents": "Sənəd limiti",
+        "cloudStorage": "Bulud Yaddaşı",
         "exams": "İmtahan / ay",
         "assignments": "Tapşırıq / ay",
         "sms": "SMS / ay",
@@ -1311,6 +1312,9 @@
         "aiQuestions": "AI sual",
         "aiGradings": "AI Tapşırıq yoxlama"
       },
+      "dash": "—",
+      "recordingNone": "—",
+      "recordingHours": "{{hours}} saat/ay",
       "perMonth": "{{count}} / ay"
     },
     "demo": {
@@ -2902,6 +2906,7 @@
       "documentsUnlimited": "Limitsiz sənəd",
       "documents": "{{count}} sənəd",
       "cloudStorageGb": "{{size}} GB Bulud Yaddaşı",
+      "cloudStorageGbShort": "{{size}} GB",
       "cloudStorageUnlimited": "Limitsiz Yaddaş",
       "storage5mb": "5 MB Sənəd Yaddaşı",
       "storage256mb": "256 MB Sənəd Yaddaşı",

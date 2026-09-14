@@ -51,6 +51,19 @@ function cloudStorageLineFromPlan(p, lim, planId, opts) {
   return documentLineFromLimits(lim, opts)
 }
 
+/**
+ * Compare-table cell for cloud storage (same source as package cards: recording_storage_bytes).
+ * Returns null when the plan has no cloud quota (e.g. SADƏ) — caller shows "—".
+ */
+export function cloudStorageCompareValue(p, opts = {}) {
+  const id = normalizePlanId(p)
+  const lim = p?.limits
+  const rec = resolveRecordingFromPlan(p, lim, id)
+  const gb = Number(formatRecordingStorageGb(rec.storageBytes, opts))
+  if (!Number.isFinite(gb) || gb <= 0) return null
+  return pt(opts, 'limits.cloudStorageGbShort', { size: gb }, `${gb} GB`)
+}
+
 function storageLabelFromBytes(bytes, opts) {
   const b = Number(bytes)
   if (!Number.isFinite(b) || b <= 0) return null
