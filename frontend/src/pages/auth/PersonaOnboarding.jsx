@@ -359,16 +359,20 @@ export default function PersonaOnboarding() {
       })
       return
     }
-    if (picked) {
-      // Partner needs no profile form — go straight to referral cabinet.
-      if (picked === PERSONAS.PARTNER || profileComplete(picked, emptyProfile())) {
-        await finishSession({ persona: picked, profile: {} })
-        return
-      }
-      setStep('details')
+    if (!picked) {
+      const msg = t('onboarding.errors.selectRequired', {
+        defaultValue: 'Davam etmək üçün istifadə məqsədini seçin.',
+      })
+      setError(msg)
+      toast(msg, 'error')
       return
     }
-    await finishSession({ persona: null, profile: {} })
+    // Partner needs no profile form — go straight to referral cabinet.
+    if (picked === PERSONAS.PARTNER || profileComplete(picked, emptyProfile())) {
+      await finishSession({ persona: picked, profile: {} })
+      return
+    }
+    setStep('details')
   }
 
   const togglePersona = (id) => {
@@ -469,6 +473,7 @@ export default function PersonaOnboarding() {
               <Button
                 className="w-full justify-center mt-6"
                 loading={busy}
+                disabled={!fromJoinInvite && !picked}
                 onClick={() => void continueFromPick()}
               >
                 {t('onboarding.continue')}
@@ -480,7 +485,7 @@ export default function PersonaOnboarding() {
                     })
                   : picked
                     ? t('onboarding.continueHintSelected')
-                    : t('onboarding.continueHintSkip')}
+                    : t('onboarding.continueHintRequired')}
               </p>
             </>
           ) : (

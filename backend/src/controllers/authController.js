@@ -34,7 +34,6 @@ const {
   getActiveRoles,
   getLoginEligibleRoles,
   ensureLoginRoleGranted,
-  grantUserRole,
 } = require('../services/userRolesService');
 const { pickEmailLoginRole } = require('../lib/pickEmailLoginRole');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
@@ -46,7 +45,6 @@ const {
   userNeedsOnboarding,
   attachPersonaFields,
   applyPersonaSelection,
-  skipOnboarding,
   resolvePersonaInput,
   fetchPersonaState,
   rowNeedsOnboarding,
@@ -1205,9 +1203,13 @@ const selectOnboardingPersona = async (req, res) => {
 
     const persona = resolvePersonaInput(req.body);
     if (!persona) {
-      await skipOnboarding(me.id);
-      const session = await finishPersonaSession(req, me.id);
-      return res.json({ success: true, skipped: true, ...session });
+      // Do not skip into placeholder role=student — that made new accounts look
+      // like students without an explicit purpose choice.
+      return res.status(400).json({
+        success: false,
+        message: 'İstifadə məqsədini seçin',
+        code: 'PERSONA_REQUIRED',
+      });
     }
 
     await applyPersonaSelection({
@@ -2327,7 +2329,7 @@ const googleComplete = async (req, res) => {
           const recovered = await findUserByGoogleSub(db, g.sub);
           if (recovered) user = recovered;
         }
-        await grantUserRole(user.id, 'student').catch(() => {});
+        // Do not grant student membership until persona onboarding confirms it.
       }
     }
 

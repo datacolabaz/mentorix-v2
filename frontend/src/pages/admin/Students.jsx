@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -11,9 +11,23 @@ import PresenceDot from '../../components/common/PresenceDot'
 const inputClass =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/60'
 
+const ROLE_LABEL = {
+  student: 'Tələbə',
+  instructor: 'Müəllim',
+  course: 'Təşkilat',
+  parent: 'Valideyn',
+  admin: 'Admin',
+}
+
+function roleLabel(role) {
+  const key = String(role || '').toLowerCase()
+  return ROLE_LABEL[key] || key || '—'
+}
+
 export default function AdminStudents() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [students, setStudents] = useState([])
+  const [crossRoleUsers, setCrossRoleUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [detail, setDetail] = useState(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -49,6 +63,17 @@ export default function AdminStudents() {
       const qs = params.toString()
       const d = await api.get(`/admin/students${qs ? `?${qs}` : ''}`)
       setStudents(d.students || [])
+
+      if (filters.q.trim().length >= 2) {
+        try {
+          const found = await api.get(`/admin/users/search?q=${encodeURIComponent(filters.q.trim())}`)
+          setCrossRoleUsers(found.users || [])
+        } catch {
+          setCrossRoleUsers([])
+        }
+      } else {
+        setCrossRoleUsers([])
+      }
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
     } finally {
@@ -59,6 +84,15 @@ export default function AdminStudents() {
   useEffect(() => {
     load()
   }, [load])
+
+  const otherRoleMatches = useMemo(() => {
+    const studentIds = new Set(students.map((s) => String(s.id)))
+    return (crossRoleUsers || []).filter((u) => {
+      if (studentIds.has(String(u.id))) return false
+      // Keep students that are soft-deleted / missing from the main list visible here.
+      return true
+    })
+  }, [crossRoleUsers, students])
 
   const openDetail = async (id) => {
     setDetailOpen(true)
@@ -116,7 +150,7 @@ export default function AdminStudents() {
         <div>
           <h1 className="font-display font-bold text-2xl text-token-textMain">Tələbələr</h1>
           <p className="text-token-textMuted text-sm mt-1">
-            Qeydiyyatdan keçən bütün tələbələr • müəllim və qrup bağlantısı
+            Qeydiyyatdan keçən bütün tələbələr • email axtarışı digər rolları da göstərir
           </p>
         </div>
         <Button
@@ -172,6 +206,68 @@ export default function AdminStudents() {
         </div>
       </Card>
 
+      {filters.q.trim().length >= 2 && otherRoleMatches.length > 0 && (
+        <Card className="p-4 mb-4 border border-amber-500/30 bg-amber-500/5">
+          <h2 className="font-semibold text-sm text-token-textMain mb-1">
+            Digər rollarda / statuslarda tapıldı ({otherRoleMatches.length})
+          </h2>
+          <p className="text-xs text-token-textMuted mb-3">
+            Bu siyahı yalnız «tələbə» rolunu göstərir. Email başqa rolda və ya silinmiş hesabda ola bilər.
+          </p>
+          <div className="space-y-2">
+            {otherRoleMatches.map((u) => (
+              <div
+                key={u.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/50 px-3 py-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <div className="font-semibold text-token-textMain truncate">{u.full_name || '—'}</div>
+                  <div className="text-xs text-token-textMuted truncate">{u.email || u.phone || '—'}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-primary/15 text-primary">
+                      {roleLabel(u.role)}
+                    </span>
+                    {u.persona ? (
+                      <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-token-surfaceMain text-token-textMuted">
+                        persona: {u.persona}
+                      </span>
+                    ) : null}
+                    {u.registration_incomplete ? (
+                      <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        Qeydiyyat natamam
+                      </span>
+                    ) : null}
+                    {u.is_deleted ? (
+                      <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-red-500/20 text-red-400">
+                        Silinib / birləşdirilib
+                      </span>
+                    ) : null}
+                    {!u.is_active && !u.is_deleted ? (
+                      <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-red-500/20 text-red-400">
+                        Deaktiv
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                {String(u.role).toLowerCase() === 'instructor' && !u.is_deleted ? (
+                  <Link
+                    to="/admin/instructors"
+                    className="text-xs font-semibold text-primary hover:underline shrink-0"
+                  >
+                    Müəllimlər siyahısı →
+                  </Link>
+                ) : null}
+                {String(u.role).toLowerCase() === 'student' && !u.is_deleted ? (
+                  <Button size="sm" variant="secondary" onClick={() => openDetail(u.id)}>
+                    Profil
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card className="overflow-hidden">
         <table className="w-full text-sm text-token-textMain">
           <thead>
@@ -188,7 +284,7 @@ export default function AdminStudents() {
               <tr
                 key={s.id}
                 className={`border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] ${
-                  s.is_unassigned ? 'border-l-[3px] border-l-amber-500/70' : ''
+                  s.is_unassigned || s.registration_incomplete ? 'border-l-[3px] border-l-amber-500/70' : ''
                 }`}
               >
                 <td className="py-3 px-4">
@@ -200,6 +296,11 @@ export default function AdminStudents() {
                   {s.is_verified === false && (
                     <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 font-semibold">
                       Email təsdiqlənməyib
+                    </span>
+                  )}
+                  {s.registration_incomplete && (
+                    <span className="inline-block mt-1 mr-1 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400 font-semibold">
+                      Qeydiyyat natamam — məqsəd seçilməyib
                     </span>
                   )}
                   {s.is_unassigned && (
@@ -250,7 +351,11 @@ export default function AdminStudents() {
         </table>
         {loading && <div className="text-center py-8 text-token-textMuted">Yüklənir...</div>}
         {!loading && !students.length && (
-          <div className="text-center py-12 text-token-textMuted">Tələbə tapılmadı</div>
+          <div className="text-center py-12 text-token-textMuted">
+            {filters.q.trim().length >= 2 && otherRoleMatches.length > 0
+              ? 'Bu axtarışla tələbə tapılmadı — yuxarıda digər rollar göstərilir.'
+              : 'Tələbə tapılmadı'}
+          </div>
         )}
       </Card>
 
