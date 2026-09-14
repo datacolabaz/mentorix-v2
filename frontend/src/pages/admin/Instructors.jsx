@@ -186,127 +186,129 @@ export default function AdminInstructors() {
       </div>
 
       <Card className="overflow-hidden">
-        <table className="w-full text-sm text-token-textMain">
-          <thead>
-            <tr className="border-b border-[color:var(--border-subtle)] text-token-textMuted text-xs uppercase">
-              {["Ad", "Email", "Qeydiyyat", "Fenn", "Telefon", "Plan", "Telebe", "SMS", "Status", "Emeliyyat"].map(h => (
-                <th key={h} className="py-3 px-4 text-left font-semibold tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(i => (
-              <tr
-                key={i.id}
-                className={`border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] ${
-                  i.discover_pending ? "bg-amber-500/[0.04]" : ""
-                }`}
-              >
-                <td className="py-3 px-4">
-                  <div className="font-semibold text-token-textMain flex items-center gap-2">
-                    <PresenceDot user={i} />
-                    {i.full_name}
-                  </div>
-                  {i.discover_bio ? (
-                    <p className="text-[10px] text-token-textMuted mt-1 line-clamp-2 max-w-[14rem]">{i.discover_bio}</p>
-                  ) : null}
-                </td>
-                <td className="py-3 px-4 text-token-textMuted text-xs">{i.email || "-"}</td>
-                <td className="py-3 px-4 text-token-textMuted text-xs whitespace-nowrap">
-                  {i.created_at
-                    ? new Date(i.created_at).toLocaleString('az-AZ', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : '—'}
-                </td>
-                <td className="py-3 px-4 text-token-textMuted">{i.subject || "-"}</td>
-                <td className="py-3 px-4 text-token-textMuted text-xs">{i.phone || "-"}</td>
-                <td className="py-3 px-4">
-                  <select
-                    className={selectClass}
-                    value={(i.plan || "basic").toLowerCase()}
-                    disabled={!!planBusy[i.id]}
-                    onChange={(e) => void setPlan(i.id, e.target.value)}
-                  >
-                    <option value="basic">SADƏ</option>
-                    <option value="pro">PRO</option>
-                    <option value="growth">GROWTH</option>
-                    <option value="premium">PREMIUM</option>
-                  </select>
-                </td>
-                <td className="py-3 px-4 text-token-textMain tabular-nums">{i.student_count || 0}</td>
-                <td className="py-3 px-4 text-xs">
-                  <span className="text-primary font-semibold">{i.sms_used_monthly || 0}</span>
-                  <span className="text-token-textMuted">/{i.sms_limit_monthly ?? "∞"}</span>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex flex-col gap-1 items-start">
-                    <span className={"px-2 py-1 rounded-lg text-xs font-semibold " + (i.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400")}>
-                      {i.is_active ? "Aktiv" : "Deaktiv"}
-                    </span>
-                    {i.discover_verified ? (
-                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-sky-500/15 text-sky-300">
-                        Marketplace təsdiqli
-                      </span>
-                    ) : i.discover_pending ? (
-                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-amber-500/20 text-amber-300">
-                        Təsdiq gözləyir
-                      </span>
-                    ) : null}
-                    {i.search_listed ? (
-                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/15 text-emerald-300">
-                        Axtarışda{i.region ? ` · ${i.region}` : ""}
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-rose-500/15 text-rose-300">
-                        Axtarışda yoxdur
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex flex-wrap gap-2">
-                    {!i.search_listed ? (
-                      <Button
-                        size="sm"
-                        loading={!!searchBusy[i.id]}
-                        onClick={() => void publishToSearch(i, BAKU)}
-                      >
-                        Axtarışda göstər
-                      </Button>
-                    ) : null}
-                    {i.discover_pending ? (
-                      <Button
-                        size="sm"
-                        loading={!!verifyBusy[i.id]}
-                        onClick={() => void setDiscoverVerified(i, true)}
-                      >
-                        Təsdiqlə
-                      </Button>
-                    ) : i.discover_verified ? (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        loading={!!verifyBusy[i.id]}
-                        onClick={() => void setDiscoverVerified(i, false)}
-                      >
-                        Təsdiqi geri al
-                      </Button>
-                    ) : null}
-                    <Button size="sm" variant="secondary" onClick={() => openEdit(i)}>Redakte</Button>
-                    <Button size="sm" variant={i.is_active ? "danger" : "ghost"} onClick={() => toggle(i)}>
-                      {i.is_active ? "Deaktiv" : "Aktiv"}
-                    </Button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1100px] text-sm text-token-textMain">
+            <thead>
+              <tr className="border-b border-[color:var(--border-subtle)] text-token-textMuted text-xs uppercase">
+                {["Ad", "Email", "Qeydiyyat", "Fenn", "Telefon", "Plan", "Telebe", "SMS", "Status", "Emeliyyat"].map(h => (
+                  <th key={h} className="py-3 px-4 text-left font-semibold tracking-wider whitespace-nowrap">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visible.map(i => (
+                <tr
+                  key={i.id}
+                  className={`border-b border-[color:var(--border-subtle)] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] ${
+                    i.discover_pending ? "bg-amber-500/[0.04]" : ""
+                  }`}
+                >
+                  <td className="py-3 px-4">
+                    <div className="font-semibold text-token-textMain flex items-center gap-2">
+                      <PresenceDot user={i} />
+                      {i.full_name}
+                    </div>
+                    {i.discover_bio ? (
+                      <p className="text-[10px] text-token-textMuted mt-1 line-clamp-2 max-w-[14rem]">{i.discover_bio}</p>
+                    ) : null}
+                  </td>
+                  <td className="py-3 px-4 text-token-textMuted text-xs">{i.email || "-"}</td>
+                  <td className="py-3 px-4 text-token-textMuted text-xs whitespace-nowrap">
+                    {i.created_at
+                      ? new Date(i.created_at).toLocaleString('az-AZ', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '—'}
+                  </td>
+                  <td className="py-3 px-4 text-token-textMuted">{i.subject || "-"}</td>
+                  <td className="py-3 px-4 text-token-textMuted text-xs">{i.phone || "-"}</td>
+                  <td className="py-3 px-4">
+                    <select
+                      className={selectClass}
+                      value={(i.plan || "basic").toLowerCase()}
+                      disabled={!!planBusy[i.id]}
+                      onChange={(e) => void setPlan(i.id, e.target.value)}
+                    >
+                      <option value="basic">SADƏ</option>
+                      <option value="pro">PRO</option>
+                      <option value="growth">GROWTH</option>
+                      <option value="premium">PREMIUM</option>
+                    </select>
+                  </td>
+                  <td className="py-3 px-4 text-token-textMain tabular-nums">{i.student_count || 0}</td>
+                  <td className="py-3 px-4 text-xs">
+                    <span className="text-primary font-semibold">{i.sms_used_monthly || 0}</span>
+                    <span className="text-token-textMuted">/{i.sms_limit_monthly ?? "∞"}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className={"px-2 py-1 rounded-lg text-xs font-semibold " + (i.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400")}>
+                        {i.is_active ? "Aktiv" : "Deaktiv"}
+                      </span>
+                      {i.discover_verified ? (
+                        <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-sky-500/15 text-sky-300">
+                          Marketplace təsdiqli
+                        </span>
+                      ) : i.discover_pending ? (
+                        <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-amber-500/20 text-amber-300">
+                          Təsdiq gözləyir
+                        </span>
+                      ) : null}
+                      {i.search_listed ? (
+                        <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/15 text-emerald-300">
+                          Axtarışda{i.region ? ` · ${i.region}` : ""}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-rose-500/15 text-rose-300">
+                          Axtarışda yoxdur
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <div className="flex flex-nowrap gap-2">
+                      {!i.search_listed ? (
+                        <Button
+                          size="sm"
+                          loading={!!searchBusy[i.id]}
+                          onClick={() => void publishToSearch(i, BAKU)}
+                        >
+                          Axtarışda göstər
+                        </Button>
+                      ) : null}
+                      {i.discover_pending ? (
+                        <Button
+                          size="sm"
+                          loading={!!verifyBusy[i.id]}
+                          onClick={() => void setDiscoverVerified(i, true)}
+                        >
+                          Təsdiqlə
+                        </Button>
+                      ) : i.discover_verified ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={!!verifyBusy[i.id]}
+                          onClick={() => void setDiscoverVerified(i, false)}
+                        >
+                          Təsdiqi geri al
+                        </Button>
+                      ) : null}
+                      <Button size="sm" variant="secondary" onClick={() => openEdit(i)}>Redakte</Button>
+                      <Button size="sm" variant={i.is_active ? "danger" : "ghost"} onClick={() => toggle(i)}>
+                        {i.is_active ? "Deaktiv" : "Aktiv"}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {!visible.length && (
           <div className="text-center py-12 text-token-textMuted">
             {discoverFilter === "pending" ? "Təsdiq gözləyən müəllim yoxdur" : "Muellim tapilmadi"}
