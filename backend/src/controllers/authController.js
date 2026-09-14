@@ -54,6 +54,7 @@ const {
   findUserByGoogleSub,
   findUserByEmail,
   claimGoogleSubForUser,
+  detachGoogleSubFromSoftDeleted,
   publicGoogleAuthError,
   isPgUniqueViolation,
   isGoogleSubUniqueViolation,
@@ -1900,23 +1901,40 @@ async function insertOrRecoverGoogleUser({ fullName, email, googleSub, passwordH
 }
 
 async function reactivateAndLinkGoogleUser(user, g) {
+  // Soft-deleted / merged rows must not be revived: they often have email=NULL and an
+  // old persona=student, which made Google login land as iştirakçı while admin search
+  // by Gmail found nothing. Detach the sub so signup/login can create a live row.
+  if (user?.deleted_at) {
+    await detachGoogleSubFromSoftDeleted(db, g.sub || user.google_sub);
+    return null;
+  }
+
   await claimGoogleSubForUser(db, g.sub, user.id);
+  const emailCanon = g.email ? String(g.email).trim().toLowerCase() : null;
   const { rows: linked } = await db.query(
     `UPDATE users
      SET google_sub = COALESCE(NULLIF(TRIM(COALESCE(google_sub, '')), ''), $2),
          auth_provider = COALESCE(NULLIF(TRIM(auth_provider), ''), 'google'),
          is_active = TRUE,
+         deleted_at = NULL,
          account_status = 'active',
          is_verified = TRUE,
+         email = CASE
+           WHEN $4::text IS NOT NULL AND (
+             email IS NULL OR TRIM(COALESCE(email, '')) = ''
+           ) THEN $4::text
+           ELSE email
+         END,
          full_name = CASE
            WHEN TRIM(COALESCE(full_name, '')) = '' THEN COALESCE($3, full_name)
            ELSE full_name
          END
      WHERE id = $1
+       AND deleted_at IS NULL
      RETURNING id, full_name, email, role, phone, phone_verified, phone_verified_at,
                auth_provider, google_sub, account_status, is_active, is_verified,
-               role_selected, persona, persona_profile, onboarding_completed`,
-    [user.id, g.sub, g.name || null],
+               role_selected, persona, persona_profile, onboarding_completed, deleted_at`,
+    [user.id, g.sub, g.name || null, emailCanon],
   );
   return linked[0] || user;
 }
@@ -2296,20 +2314,26 @@ const googleComplete = async (req, res) => {
       }
     }
 
-    // Existing identity → always continue as login / link (never INSERT duplicate).
+    // Existing identity → continue as login / link (never INSERT duplicate),
+    // unless soft-deleted — reactivate returns null and we create a live row.
     if (user) {
       try {
         user = await reactivateAndLinkGoogleUser(user, g);
       } catch (linkErr) {
         if (isPgUniqueViolation(linkErr)) {
           const recovered = await findUserByGoogleSub(db, g.sub);
-          if (recovered) user = recovered;
-          else throw linkErr;
+          if (recovered && !recovered.deleted_at) user = recovered;
+          else if (recovered?.deleted_at) {
+            await detachGoogleSubFromSoftDeleted(db, g.sub);
+            user = null;
+          } else throw linkErr;
         } else {
           throw linkErr;
         }
       }
-    } else {
+    }
+
+    if (!user) {
       const fullName = g.name || (g.email ? g.email.split('@')[0] : 'User');
       const passwordHash =
         typedPassword.length >= 8
@@ -2329,10 +2353,24 @@ const googleComplete = async (req, res) => {
         } catch (linkErr) {
           if (!isPgUniqueViolation(linkErr)) throw linkErr;
           const recovered = await findUserByGoogleSub(db, g.sub);
-          if (recovered) user = recovered;
+          if (recovered && !recovered.deleted_at) user = recovered;
+          else if (recovered?.deleted_at) {
+            await detachGoogleSubFromSoftDeleted(db, g.sub);
+            user = await insertOrRecoverGoogleUser({
+              fullName,
+              email: g.email,
+              googleSub: g.sub,
+              passwordHash,
+              locale: localeFromReq(req),
+            });
+          }
         }
         // Do not grant student membership until persona onboarding confirms it.
       }
+    }
+
+    if (!user?.id) {
+      return res.status(500).json({ success: false, message: 'Google hesabı yaradıla bilmədi' });
     }
 
     if (user?.id) await attachTypedPasswordToGoogleUser(user.id, typedPassword);

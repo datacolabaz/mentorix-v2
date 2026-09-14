@@ -377,6 +377,7 @@ const deleteStudent = async (req, res) => {
          SET is_active = FALSE,
              phone = NULL,
              email = NULL,
+             google_sub = NULL,
              phone_verified = FALSE,
              deleted_at = NOW()
          WHERE id = $1`,

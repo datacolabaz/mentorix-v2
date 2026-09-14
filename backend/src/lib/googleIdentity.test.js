@@ -59,4 +59,9 @@ describe('googleIdentity', () => {
     assert.equal(body.code, 'ACCOUNT_ALREADY_EXISTS');
     assert.match(body.message, /Google hesabı/);
   });
+
+  it('exports detachGoogleSubFromSoftDeleted helper', () => {
+    const { detachGoogleSubFromSoftDeleted } = require('./googleIdentity');
+    assert.equal(typeof detachGoogleSubFromSoftDeleted, 'function');
+  });
 });
