@@ -45,11 +45,13 @@ describe('pending deep link paths', () => {
 })
 
 describe('isAllowedReturnPathForUser', () => {
-  it('allows partner dashboard for any role; admin paths only for admin', () => {
+  it('allows partner dashboard for non-admins; admin paths only for admin', () => {
     assert.equal(isAllowedReturnPathForUser({ role: 'instructor' }, '/partner/dashboard'), true)
     assert.equal(isAllowedReturnPathForUser({ role: 'course' }, '/admin/partners'), false)
     assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/admin/partners'), true)
     assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/admin/partners?tab=1'), true)
+    assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/partner/dashboard'), false)
+    assert.equal(isAllowedReturnPathForUser({ role: 'admin' }, '/partner/dashboard?x=1'), false)
   })
 })
 
@@ -89,8 +91,10 @@ function isRoleHomePath(pathname) {
   return p === '/student' || p === '/instructor' || p === '/parent' || p === '/org' || p === '/app'
 }
 
-function resolvePostAuthPath(user, { stored = '' } = {}) {
-  const ret = stored
+function resolvePostAuthPath(user, { nextQuery = '', stored = '' } = {}) {
+  const q = String(nextQuery || '').trim()
+  const fromQuery = q.startsWith('/') && !q.startsWith('//') ? q : ''
+  const ret = fromQuery && fromQuery !== '/login' && fromQuery !== '/register' ? fromQuery : stored
   if (isInviteResumePath(ret)) return ret
   if (isPartnerPersona(user)) {
     const retPath = String(ret || '').split(/[?#]/)[0]
@@ -127,6 +131,20 @@ describe('partner persona primary home', () => {
     assert.equal(
       resolvePostAuthPath({ role: 'student', persona: 'partner', onboarding_completed: true }, { stored: '/join/ABC' }),
       '/join/ABC',
+    )
+  })
+
+  it('does not force admin into partner next after logout sticky redirect', () => {
+    assert.equal(
+      resolvePostAuthPath(
+        { role: 'admin', onboarding_completed: true },
+        { nextQuery: '/partner/dashboard', stored: '/partner/dashboard' },
+      ),
+      '/admin',
+    )
+    assert.equal(
+      resolvePostAuthPath({ role: 'admin', onboarding_completed: true }, { stored: '/partner/dashboard' }),
+      '/admin',
     )
   })
 

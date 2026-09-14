@@ -128,6 +128,7 @@ export function userNeedsPhoneVerificationPage(_user) {
 export function postAuthNavigate(user, navigate, nextQuery) {
   const stored = peekReturnAfterLogin()
   const path = resolvePostAuthPath(user, { nextQuery, stored })
-  if (path !== ONBOARDING_PATH && path === stored) consumeReturnAfterLogin()
+  // Onboarding saxlanılan invite return-u saxlamaq üçündür; digər hallarda sticky next təmizlənsin.
+  if (path !== ONBOARDING_PATH) consumeReturnAfterLogin()
   navigate(path, { replace: true })
 }
