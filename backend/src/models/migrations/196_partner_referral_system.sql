@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS partner_campaigns (
   commission_pct INT NOT NULL DEFAULT 20 CHECK (commission_pct >= 0 AND commission_pct <= 100),
   commission_duration_months INT NOT NULL DEFAULT 0 CHECK (commission_duration_months >= 0 AND commission_duration_months <= 36),
   attribution_window_days INT NOT NULL DEFAULT 90 CHECK (attribution_window_days > 0 AND attribution_window_days <= 730),
-  minimum_payout_cents INT NOT NULL DEFAULT 2000 CHECK (minimum_payout_cents >= 0),
+  minimum_payout_cents INT NOT NULL DEFAULT 500 CHECK (minimum_payout_cents >= 0),
   starts_at TIMESTAMPTZ,
   ends_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -256,12 +256,12 @@ INSERT INTO partner_campaigns (
 VALUES (
   'mentorix-partner-launch',
   'Mentorix Partner Launch Campaign',
-  'V2: 21-day trial, 10% user discount for first 3 paid months on original package (lost on upgrade), 20% partner commission on every approved payment while customer pays, 90-day attribution, 20 AZN min payout.',
+  'V2: 21-day trial, 10% user discount for first 3 paid months on original package (lost on upgrade), 20% partner commission on every approved payment while customer pays, 90-day attribution, 5 AZN min payout.',
   TRUE,
   TRUE,
   21, 10, 3,
   20, 0,
-  90, 2000
+  90, 500
 )
 ON CONFLICT (slug) DO NOTHING;
 

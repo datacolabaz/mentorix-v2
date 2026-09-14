@@ -17,7 +17,7 @@ ALTER TABLE partner_campaigns
 UPDATE partner_campaigns
 SET
   commission_duration_months = 0,
-  description = 'V2: 21-day trial, 10% user discount for first 3 paid months on original package (lost on upgrade), 20% partner commission on every approved payment while customer pays, 90-day attribution, 20 AZN min payout.',
+  description = 'V2: 21-day trial, 10% user discount for first 3 paid months on original package (lost on upgrade), 20% partner commission on every approved payment while customer pays, 90-day attribution, 5 AZN min payout.',
   updated_at = NOW()
 WHERE slug = 'mentorix-partner-launch';
 

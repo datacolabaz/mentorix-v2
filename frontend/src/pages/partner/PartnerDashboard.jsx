@@ -557,7 +557,7 @@ export default function PartnerDashboard() {
           {payoutBusy ? t('common.loading') : t('partner.requestPayout')}
         </Button>
         <span className="text-xs text-token-textMuted">
-          {t('partner.minPayout', { amount: centsToAzn(partner.minimum_payout_cents ?? 2000) })}
+          {t('partner.minPayout', { amount: centsToAzn(partner.minimum_payout_cents ?? 500) })}
         </span>
       </section>
 
