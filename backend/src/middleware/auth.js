@@ -14,7 +14,7 @@ const authenticate = async (req, res, next) => {
   try {
     const payload = verify(token);
     const row = await fetchUserAuthState(payload.id);
-    if (!row || row.is_active === false) {
+    if (!row || row.is_active === false || row.deleted_at) {
       return res.status(401).json({ success: false, message: 'Token etibarsızdır' });
     }
     if (!isUserEmailVerified(row)) {
@@ -59,7 +59,7 @@ const optionalAuthenticate = async (req, res, next) => {
   try {
     const payload = verify(token);
     const row = await fetchUserAuthState(payload.id);
-    if (row && row.is_active !== false && isUserEmailVerified(row)) {
+    if (row && row.is_active !== false && !row.deleted_at && isUserEmailVerified(row)) {
       const effectiveRole =
         row?.role_selected === false || row?.onboarding_completed === false ? null : row.role;
       req.user = { ...payload, id: row.id, role: effectiveRole };

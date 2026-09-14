@@ -6,7 +6,7 @@
 const GOOGLE_USER_COLUMNS = `
   id, full_name, email, role, phone, phone_verified, phone_verified_at,
   auth_provider, google_sub, account_status, is_active, is_verified,
-  role_selected, persona, persona_profile, onboarding_completed
+  role_selected, persona, persona_profile, onboarding_completed, deleted_at
 `;
 
 const ACCOUNT_EXISTS_AZ =
@@ -86,6 +86,7 @@ async function findUserByGoogleSub(db, googleSub) {
      WHERE google_sub = $1
        AND TRIM(COALESCE(google_sub::text, '')) <> ''
      ORDER BY
+       CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END,
        CASE WHEN COALESCE(is_active, TRUE) = TRUE THEN 0 ELSE 1 END,
        created_at DESC NULLS LAST
      LIMIT 1`,
@@ -103,6 +104,7 @@ async function findUserByEmail(db, email) {
      WHERE email IS NOT NULL
        AND LOWER(TRIM(email)) = $1
      ORDER BY
+       CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END,
        CASE WHEN COALESCE(is_active, TRUE) = TRUE THEN 0 ELSE 1 END,
        CASE WHEN role = 'student' THEN 0 ELSE 1 END,
        created_at DESC NULLS LAST
@@ -113,12 +115,43 @@ async function findUserByEmail(db, email) {
 }
 
 /**
+ * Soft-deleted / merged Google rows must not keep google_sub — otherwise login
+ * reactivates a zombie with null email (admin cannot find the account by Gmail).
+ */
+async function detachGoogleSubFromSoftDeleted(db, googleSub, keepUserId = null) {
+  const sub = String(googleSub || '').trim();
+  if (!sub) return;
+  if (keepUserId) {
+    await db.query(
+      `UPDATE users
+       SET google_sub = NULL,
+           is_active = FALSE
+       WHERE google_sub = $1
+         AND id <> $2
+         AND (deleted_at IS NOT NULL OR COALESCE(is_active, TRUE) = FALSE)`,
+      [sub, keepUserId],
+    );
+    return;
+  }
+  await db.query(
+    `UPDATE users
+     SET google_sub = NULL,
+         is_active = FALSE
+     WHERE google_sub = $1
+       AND deleted_at IS NOT NULL`,
+    [sub],
+  );
+}
+
+/**
  * Detach google_sub from inactive duplicates so the keep user can claim it.
  * Active conflicts still throw a friendly 409.
  */
 async function claimGoogleSubForUser(db, googleSub, keepUserId) {
   const sub = String(googleSub || '').trim();
   if (!sub || !keepUserId) return;
+
+  await detachGoogleSubFromSoftDeleted(db, sub, keepUserId);
 
   await db.query(
     `UPDATE users
@@ -134,6 +167,7 @@ async function claimGoogleSubForUser(db, googleSub, keepUserId) {
      WHERE google_sub = $1
        AND TRIM(COALESCE(google_sub::text, '')) <> ''
        AND id <> $2
+       AND deleted_at IS NULL
      LIMIT 1`,
     [sub, keepUserId],
   );
@@ -158,4 +192,5 @@ module.exports = {
   findUserByGoogleSub,
   findUserByEmail,
   claimGoogleSubForUser,
+  detachGoogleSubFromSoftDeleted,
 };

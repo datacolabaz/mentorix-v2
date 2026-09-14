@@ -189,7 +189,7 @@ export default function AdminInstructors() {
         <table className="w-full text-sm text-token-textMain">
           <thead>
             <tr className="border-b border-[color:var(--border-subtle)] text-token-textMuted text-xs uppercase">
-              {["Ad", "Email", "Fenn", "Telefon", "Plan", "Telebe", "SMS", "Status", "Emeliyyat"].map(h => (
+              {["Ad", "Email", "Qeydiyyat", "Fenn", "Telefon", "Plan", "Telebe", "SMS", "Status", "Emeliyyat"].map(h => (
                 <th key={h} className="py-3 px-4 text-left font-semibold tracking-wider">{h}</th>
               ))}
             </tr>
@@ -212,6 +212,17 @@ export default function AdminInstructors() {
                   ) : null}
                 </td>
                 <td className="py-3 px-4 text-token-textMuted text-xs">{i.email || "-"}</td>
+                <td className="py-3 px-4 text-token-textMuted text-xs whitespace-nowrap">
+                  {i.created_at
+                    ? new Date(i.created_at).toLocaleString('az-AZ', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '—'}
+                </td>
                 <td className="py-3 px-4 text-token-textMuted">{i.subject || "-"}</td>
                 <td className="py-3 px-4 text-token-textMuted text-xs">{i.phone || "-"}</td>
                 <td className="py-3 px-4">

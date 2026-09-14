@@ -16,7 +16,8 @@ function respondEmailNotVerified(res) {
 async function fetchUserAuthState(userId) {
   try {
     const { rows } = await db.query(
-      `SELECT id, role, is_active, is_verified, role_selected, onboarding_completed, google_sub, auth_provider
+      `SELECT id, role, is_active, is_verified, role_selected, onboarding_completed,
+              google_sub, auth_provider, deleted_at
        FROM users
        WHERE id = $1
        LIMIT 1`,
@@ -42,7 +43,7 @@ async function fetchUserAuthState(userId) {
  */
 async function ensureUserCanUseSession(userId, res) {
   const u = await fetchUserAuthState(userId);
-  if (!u || u.is_active === false) {
+  if (!u || u.is_active === false || u.deleted_at) {
     res.status(401).json({ success: false, message: 'Hesab tapılmadı və ya deaktivdir' });
     return null;
   }
