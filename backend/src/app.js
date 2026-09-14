@@ -86,6 +86,8 @@ app.use('/api/presentations', require('./routes/presentations'));
 app.use('/api/programs', require('./routes/programs'));
 app.use('/api/applications', require('./routes/applications'));
 app.use('/api/live', require('./routes/live'));
+app.use('/api/live-lessons', require('./routes/liveLessons'));
+app.use('/api/teacher-connections', require('./routes/teacherConnections'));
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/generation', require('./routes/generation'));
 app.use('/api/partner', require('./routes/partner'));
