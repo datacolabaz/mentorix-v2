@@ -591,7 +591,7 @@
       "storage": "Document storage",
       "sms": "SMS",
       "aiQuestions": "AI questions",
-      "aiGradings": "AI grading",
+      "aiGradings": "AI assignment reviews",
       "usedOf": "{{used}} / {{limit}} used",
       "usedUnlimited": "{{used}} / ∞ used",
       "smsLeft": "{{used}} / {{limit}} remaining",
@@ -1212,6 +1212,8 @@
           "Try the platform for 21 days",
           "No credit card required",
           "Stop whenever you want",
+          "20 AI questions",
+          "10 AI assignment reviews",
           "Unlimited live lessons · 5 participants"
         ]
       },
@@ -1225,6 +1227,8 @@
           "20 SMS / mo.",
           "20 exams / mo.",
           "40 assignments / mo.",
+          "100 AI questions / month",
+          "30 AI assignment reviews / month",
           "Payment tracking",
           "Parent notifications",
           "Group and private chat",
@@ -1241,6 +1245,8 @@
           "50 SMS / mo.",
           "50 exams / mo.",
           "120 assignments / mo.",
+          "300 AI questions / month",
+          "100 AI assignment reviews / month",
           "Payment tracking",
           "Parent notifications",
           "Detailed reports",
@@ -1258,6 +1264,8 @@
           "200 SMS / mo.",
           "Unlimited exams",
           "Unlimited assignments",
+          "800 AI questions / month",
+          "300 AI assignment reviews / month",
           "Payment tracking",
           "Parent notifications",
           "Detailed reports",
@@ -1299,8 +1307,11 @@
         "sms": "SMS / month",
         "liveLessons": "Live lessons",
         "live": "Live class participants",
-        "recording": "Lesson recording"
-      }
+        "recording": "Lesson recording",
+        "aiQuestions": "AI questions",
+        "aiGradings": "AI assignment reviews"
+      },
+      "perMonth": "{{count}} / month"
     },
     "demo": {
       "title": "Sample — teacher dashboard",
@@ -2914,10 +2925,10 @@
       "homeworksUnlimitedMonthly": "Unlimited assignments / month",
       "homeworksTrial": "{{count}} assignments",
       "homeworksMonthly": "{{count}} assignments / month",
-      "aiQuestionsTrial": "{{count}} AI questions (trial)",
+      "aiQuestionsTrial": "{{count}} AI questions",
       "aiQuestionsMonthly": "{{count}} AI questions / month",
-      "aiGradingsTrial": "{{count}} AI grading (trial)",
-      "aiGradingsMonthly": "{{count}} AI grading / month",
+      "aiGradingsTrial": "{{count}} AI assignment reviews",
+      "aiGradingsMonthly": "{{count}} AI assignment reviews / month",
       "liveUnlimited": "Unlimited live lessons · Unlimited participants",
       "liveLessonsUnlimited": "Unlimited live lessons",
       "liveParticipantsUnlimited": "Unlimited participants",

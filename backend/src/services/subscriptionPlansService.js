@@ -272,15 +272,15 @@ function buildPlanFeaturesFromLimits({
   if (aiQ != null && Number.isFinite(aiQ)) {
     lines.push(
       planSlug === 'basic'
-        ? `${Math.max(0, Math.round(aiQ))} AI sual (sınaq)`
+        ? `${Math.max(0, Math.round(aiQ))} AI sual`
         : `${Math.max(0, Math.round(aiQ))} AI sual / ay`,
     );
   }
   if (aiG != null && Number.isFinite(aiG)) {
     lines.push(
       planSlug === 'basic'
-        ? `${Math.max(0, Math.round(aiG))} AI qiymətləndirmə (sınaq)`
-        : `${Math.max(0, Math.round(aiG))} AI qiymətləndirmə / ay`,
+        ? `${Math.max(0, Math.round(aiG))} AI Tapşırıq yoxlama`
+        : `${Math.max(0, Math.round(aiG))} AI Tapşırıq yoxlama / ay`,
     );
   }
 

@@ -1,3 +1,5 @@
+import { AI_PLAN_LIMITS } from './aiPlanLimits'
+
 export const DEFAULT_SUBSCRIPTION_PLANS = [
   {
     id: 'basic',
@@ -18,8 +20,8 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       recording_retention_days: 0,
       recording_max_duration_sec: 0,
       recording_max_quality: null,
-      ai_questions_monthly: 20,
-      ai_gradings_monthly: 10,
+      ai_questions_monthly: AI_PLAN_LIMITS.basic.questions,
+      ai_gradings_monthly: AI_PLAN_LIMITS.basic.gradings,
     },
     marketing_features: [
       'Ödəniş izləmə',
@@ -51,8 +53,8 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       recording_retention_days: 30,
       recording_max_duration_sec: 7200,
       recording_max_quality: '720p',
-      ai_questions_monthly: 100,
-      ai_gradings_monthly: 30,
+      ai_questions_monthly: AI_PLAN_LIMITS.pro.questions,
+      ai_gradings_monthly: AI_PLAN_LIMITS.pro.gradings,
     },
     marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
     plan_subtitle: null,
@@ -78,8 +80,8 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       recording_retention_days: 90,
       recording_max_duration_sec: 7200,
       recording_max_quality: '720p',
-      ai_questions_monthly: 300,
-      ai_gradings_monthly: 100,
+      ai_questions_monthly: AI_PLAN_LIMITS.growth.questions,
+      ai_gradings_monthly: AI_PLAN_LIMITS.growth.gradings,
     },
     marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar'],
     plan_subtitle: null,
@@ -105,8 +107,8 @@ export const DEFAULT_SUBSCRIPTION_PLANS = [
       recording_retention_days: 180,
       recording_max_duration_sec: 10800,
       recording_max_quality: '1080p',
-      ai_questions_monthly: 800,
-      ai_gradings_monthly: 300,
+      ai_questions_monthly: AI_PLAN_LIMITS.premium.questions,
+      ai_gradings_monthly: AI_PLAN_LIMITS.premium.gradings,
     },
     marketing_features: [
       'Ödəniş izləmə',

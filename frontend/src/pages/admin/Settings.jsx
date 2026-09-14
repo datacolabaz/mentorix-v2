@@ -46,6 +46,11 @@ function previewFeatures(p) {
   else lines.push(`${Math.max(0, Math.round(Number(p.exam_count) || 0))} imtahan / ay`)
   if (p.unlimited_homeworks) lines.push('Limitsiz tapşırıq / ay')
   else lines.push(`${Math.max(0, Math.round(Number(p.homework_count) || 0))} tapşırıq / ay`)
+  const aiQ = Math.max(0, Math.round(Number(p.ai_question_limit) || 0))
+  const aiG = Math.max(0, Math.round(Number(p.ai_grading_limit) || 0))
+  const isTrial = String(p.slug || '').toLowerCase() === 'basic'
+  if (aiQ > 0) lines.push(isTrial ? `${aiQ} AI sual` : `${aiQ} AI sual / ay`)
+  if (aiG > 0) lines.push(isTrial ? `${aiG} AI Tapşırıq yoxlama` : `${aiG} AI Tapşırıq yoxlama / ay`)
   lines.push('Limitsiz canlı dərslər')
   const recHours = Number(p.recording_hours_monthly)
   const recStorage = Number(p.recording_storage_bytes)
@@ -147,6 +152,14 @@ function dbRowToEditor(p) {
       p.recording_max_duration_sec ?? preset.recording_max_duration_sec ?? 0,
     recording_max_quality:
       p.recording_max_quality ?? preset.recording_max_quality ?? null,
+    ai_question_limit:
+      p.ai_question_limit != null
+        ? String(p.ai_question_limit)
+        : String(preset.ai_question_limit ?? ''),
+    ai_grading_limit:
+      p.ai_grading_limit != null
+        ? String(p.ai_grading_limit)
+        : String(preset.ai_grading_limit ?? ''),
   }
 }
 
@@ -175,6 +188,14 @@ function editorToPayload(p) {
     plan_subtitle: String(p.plan_subtitle || '').trim(),
     plan_cta: String(p.plan_cta || '').trim(),
     popular_label: String(p.popular_label || '').trim(),
+    ai_question_limit:
+      p.ai_question_limit === '' || p.ai_question_limit == null
+        ? null
+        : Math.max(0, Math.round(Number(p.ai_question_limit))),
+    ai_grading_limit:
+      p.ai_grading_limit === '' || p.ai_grading_limit == null
+        ? null
+        : Math.max(0, Math.round(Number(p.ai_grading_limit))),
   }
 }
 
@@ -206,6 +227,8 @@ const PRESETS = {
     recording_retention_days: 0,
     recording_max_duration_sec: 0,
     recording_max_quality: null,
+    ai_question_limit: '20',
+    ai_grading_limit: '10',
   },
   pro: {
     title: 'STANDART',
@@ -234,6 +257,8 @@ const PRESETS = {
     recording_retention_days: 30,
     recording_max_duration_sec: 7200,
     recording_max_quality: '720p',
+    ai_question_limit: '100',
+    ai_grading_limit: '30',
   },
   growth: {
     title: 'PROFESSİONAL',
@@ -262,6 +287,8 @@ const PRESETS = {
     recording_retention_days: 90,
     recording_max_duration_sec: 7200,
     recording_max_quality: '720p',
+    ai_question_limit: '300',
+    ai_grading_limit: '100',
   },
   premium: {
     title: 'PREMİUM',
@@ -296,6 +323,8 @@ const PRESETS = {
     recording_retention_days: 180,
     recording_max_duration_sec: 10800,
     recording_max_quality: '1080p',
+    ai_question_limit: '800',
+    ai_grading_limit: '300',
   },
 }
 
@@ -355,6 +384,14 @@ export default function AdminSettings() {
     if (!p.unlimited_homeworks) {
       const n = Number(p.homework_count)
       if (!Number.isFinite(n) || n < 0) return 'Tapşırıq sayı düzgün deyil'
+    }
+    {
+      const n = Number(p.ai_question_limit)
+      if (!Number.isFinite(n) || n < 0) return 'AI sual limiti düzgün deyil'
+    }
+    {
+      const n = Number(p.ai_grading_limit)
+      if (!Number.isFinite(n) || n < 0) return 'AI Tapşırıq yoxlama limiti düzgün deyil'
     }
     if (!p.unlimited_documents) {
       const n = Number(p.document_count)
@@ -597,6 +634,32 @@ export default function AdminSettings() {
                               onChange={(e) => patch(idx, { homework_count: e.target.value })}
                             />
                           </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-gray-300">
+                            AI sual {String(p.slug).toLowerCase() === 'basic' ? '(sınaq)' : '/ ay'}
+                          </div>
+                          <input
+                            type="number"
+                            min={0}
+                            className={inp}
+                            value={p.ai_question_limit ?? ''}
+                            onChange={(e) => patch(idx, { ai_question_limit: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-gray-300">
+                            AI Tapşırıq yoxlama {String(p.slug).toLowerCase() === 'basic' ? '(sınaq)' : '/ ay'}
+                          </div>
+                          <input
+                            type="number"
+                            min={0}
+                            className={inp}
+                            value={p.ai_grading_limit ?? ''}
+                            onChange={(e) => patch(idx, { ai_grading_limit: e.target.value })}
+                          />
                         </div>
                       </div>
                     </div>
