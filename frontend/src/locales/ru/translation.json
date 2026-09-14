@@ -615,6 +615,8 @@
     "selectedProvider": "Платформа: {{name}}",
     "connectGoogleMeet": "Подключить Google",
     "disconnectAccount": "Отключить",
+    "meetDisconnectConfirmTitle": "Отключить Google Meet?",
+    "meetDisconnectConfirmMessage": "Аккаунт Google будет отключён. Чтобы снова создать урок Meet, нужно будет подключить его заново.",
     "createMeetLesson": "Создать урок Meet",
     "meetConnectedAs": "Подключено: {{email}}",
     "meetNeedsConnect": "Подключите Google для Meet",

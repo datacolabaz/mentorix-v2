@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
+import ConfirmDialog from '../common/ConfirmDialog'
 import { useToast } from '../common/Toast'
 import api from '../../lib/api'
 
@@ -30,12 +31,15 @@ export default function CreateLiveLessonModal({
   const [connections, setConnections] = useState(null)
   const [loadingConn, setLoadingConn] = useState(false)
   const [connecting, setConnecting] = useState(false)
+  const [disconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
 
   const reset = useCallback(() => {
     setStep('pick')
     setProvider(null)
     setTitle('')
     setWhen('')
+    setDisconnectConfirmOpen(false)
   }, [])
 
   useEffect(() => {
@@ -88,6 +92,24 @@ export default function CreateLiveLessonModal({
     }
   }
 
+  const disconnectGoogleMeet = async () => {
+    if (disconnecting) return
+    setDisconnecting(true)
+    try {
+      await api.delete('/teacher-connections/google_meet')
+      setConnections((prev) => ({
+        ...(prev || {}),
+        google_meet: { provider: 'google_meet', connected: false },
+      }))
+      setDisconnectConfirmOpen(false)
+      toast(t('live.meetDisconnected'))
+    } catch (e) {
+      toast(e?.message || t('live.meetDisconnectFailed'), 'error')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
   const handleCreate = () => {
     if (!provider) return
     onCreated?.({
@@ -110,7 +132,7 @@ export default function CreateLiveLessonModal({
           type="button"
           variant="secondary"
           onClick={() => setStep('pick')}
-          disabled={starting || connecting}
+          disabled={starting || connecting || disconnecting}
         >
           {t('live.providerBack')}
         </Button>
@@ -132,90 +154,114 @@ export default function CreateLiveLessonModal({
     )
 
   return (
-    <Modal
-      open={open}
-      onClose={() => !starting && onClose?.()}
-      title={step === 'pick' ? t('live.createLessonTitle') : t('live.startOpenTitle')}
-      size="sm"
-      footer={footer}
-    >
-      {step === 'pick' ? (
-        <div className="space-y-3">
-          <p className="text-sm text-token-textMuted">{t('live.pickPlatform')}</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {PROVIDERS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                disabled={!p.available}
-                onClick={() => pickProvider(p.id, p.available)}
-                className={`rounded-xl border px-3 py-3 text-left transition ${
-                  p.available
-                    ? 'border-[color:var(--border-subtle)] bg-token-surfaceMain hover:border-primary/40 text-token-textMain'
-                    : 'border-[color:var(--border-subtle)] opacity-50 cursor-not-allowed text-token-textMuted'
-                }`}
-              >
-                <span className="block text-sm font-semibold">
-                  {t(`live.providers.${p.id}`)}
-                </span>
-                {!p.available ? (
-                  <span className="mt-0.5 block text-[11px] text-token-textMuted">
-                    {t('live.comingSoon')}
+    <>
+      <Modal
+        open={open}
+        onClose={() => !starting && onClose?.()}
+        title={step === 'pick' ? t('live.createLessonTitle') : t('live.startOpenTitle')}
+        size="sm"
+        footer={footer}
+      >
+        {step === 'pick' ? (
+          <div className="space-y-3">
+            <p className="text-sm text-token-textMuted">{t('live.pickPlatform')}</p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {PROVIDERS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={!p.available}
+                  onClick={() => pickProvider(p.id, p.available)}
+                  className={`rounded-xl border px-3 py-3 text-left transition ${
+                    p.available
+                      ? 'border-[color:var(--border-subtle)] bg-token-surfaceMain hover:border-primary/40 text-token-textMain'
+                      : 'border-[color:var(--border-subtle)] opacity-50 cursor-not-allowed text-token-textMuted'
+                  }`}
+                >
+                  <span className="block text-sm font-semibold">
+                    {t(`live.providers.${p.id}`)}
                   </span>
-                ) : p.id === 'google_meet' ? (
-                  <span className="mt-0.5 block text-[11px] text-token-textMuted">
-                    {t('live.providers.google_meetHint')}
-                  </span>
-                ) : p.id === 'mentorix_live' ? (
-                  <span className="mt-0.5 block text-[11px] text-token-textMuted">
-                    {t('live.providers.mentorix_liveHint')}
-                  </span>
-                ) : null}
-              </button>
-            ))}
-          </div>
-          <p className="text-[11px] text-token-textMuted">{t('live.byoHint')}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-token-textMuted">
-            {t('live.selectedProvider', { name: t(`live.providers.${provider}`) })}
-          </p>
-          {provider === 'google_meet' && (
-            <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
-              {loadingConn ? (
-                <span className="text-token-textMuted">{t('live.loading')}</span>
-              ) : meetConnected ? (
-                <span className="text-token-textMain">
-                  {t('live.meetConnectedAs', { email: meetConn.account_email || 'Google' })}
-                </span>
-              ) : (
-                <span className="text-token-textMuted">{t('live.meetNeedsConnect')}</span>
-              )}
+                  {!p.available ? (
+                    <span className="mt-0.5 block text-[11px] text-token-textMuted">
+                      {t('live.comingSoon')}
+                    </span>
+                  ) : p.id === 'google_meet' ? (
+                    <span className="mt-0.5 block text-[11px] text-token-textMuted">
+                      {t('live.providers.google_meetHint')}
+                    </span>
+                  ) : p.id === 'mentorix_live' ? (
+                    <span className="mt-0.5 block text-[11px] text-token-textMuted">
+                      {t('live.providers.mentorix_liveHint')}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
             </div>
-          )}
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-token-textMuted">{t('live.lessonTitle')}</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('live.lessonTitlePlaceholder')}
-              maxLength={120}
-              className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-token-textMuted">{t('live.scheduleWhen')}</span>
-            <input
-              type="datetime-local"
-              value={when}
-              onChange={(e) => setWhen(e.target.value)}
-              className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
-            />
-            <span className="text-[11px] text-token-textMuted">{t('live.scheduleWhenHint')}</span>
-          </label>
-        </div>
-      )}
-    </Modal>
+            <p className="text-[11px] text-token-textMuted">{t('live.byoHint')}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-token-textMuted">
+              {t('live.selectedProvider', { name: t(`live.providers.${provider}`) })}
+            </p>
+            {provider === 'google_meet' && (
+              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
+                {loadingConn ? (
+                  <span className="text-token-textMuted">{t('live.loading')}</span>
+                ) : meetConnected ? (
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <span className="text-token-textMain">
+                      {t('live.meetConnectedAs', { email: meetConn.account_email || 'Google' })}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={disconnecting || starting}
+                      onClick={() => setDisconnectConfirmOpen(true)}
+                      className="text-[11px] text-token-textMuted hover:text-token-textMain hover:underline disabled:opacity-50"
+                    >
+                      {t('live.disconnectAccount')}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-token-textMuted">{t('live.meetNeedsConnect')}</span>
+                )}
+              </div>
+            )}
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-token-textMuted">{t('live.lessonTitle')}</span>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t('live.lessonTitlePlaceholder')}
+                maxLength={120}
+                className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-token-textMuted">{t('live.scheduleWhen')}</span>
+              <input
+                type="datetime-local"
+                value={when}
+                onChange={(e) => setWhen(e.target.value)}
+                className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
+              />
+              <span className="text-[11px] text-token-textMuted">{t('live.scheduleWhenHint')}</span>
+            </label>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={disconnectConfirmOpen}
+        onClose={() => !disconnecting && setDisconnectConfirmOpen(false)}
+        onConfirm={() => void disconnectGoogleMeet()}
+        title={t('live.meetDisconnectConfirmTitle')}
+        message={t('live.meetDisconnectConfirmMessage')}
+        confirmLabel={t('live.disconnectAccount')}
+        cancelLabel={t('common.cancel')}
+        loading={disconnecting}
+        danger
+      />
+    </>
   )
 }

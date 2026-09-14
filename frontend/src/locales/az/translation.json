@@ -615,6 +615,8 @@
     "selectedProvider": "Platforma: {{name}}",
     "connectGoogleMeet": "Google hesabını bağla",
     "disconnectAccount": "Bağlantını kəs",
+    "meetDisconnectConfirmTitle": "Google Meet bağlantısını kəsin?",
+    "meetDisconnectConfirmMessage": "Hesab kəsiləcək. Yenidən Meet dərsi yaratmaq üçün Google-u birləşdirməli olacaqsınız.",
     "createMeetLesson": "Meet dərsi yarat",
     "meetConnectedAs": "Bağlı: {{email}}",
     "meetNeedsConnect": "Google Meet üçün hesabınızı bağlayın",

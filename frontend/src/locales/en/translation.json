@@ -615,6 +615,8 @@
     "selectedProvider": "Platform: {{name}}",
     "connectGoogleMeet": "Connect Google account",
     "disconnectAccount": "Disconnect",
+    "meetDisconnectConfirmTitle": "Disconnect Google Meet?",
+    "meetDisconnectConfirmMessage": "Your Google account will be disconnected. You’ll need to reconnect before creating another Meet lesson.",
     "createMeetLesson": "Create Meet lesson",
     "meetConnectedAs": "Connected: {{email}}",
     "meetNeedsConnect": "Connect your Google account for Meet",

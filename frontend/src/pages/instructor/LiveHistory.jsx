@@ -48,8 +48,6 @@ export default function InstructorLiveHistory() {
   const [loading, setLoading] = useState(true)
   const [startOpen, setStartOpen] = useState(false)
   const [starting, setStarting] = useState(false)
-  const [disconnectingMeet, setDisconnectingMeet] = useState(false)
-  const [meetConnection, setMeetConnection] = useState(null)
   const [shareSession, setShareSession] = useState(null)
   const [sessions, setSessions] = useState([])
   const [downloadingId, setDownloadingId] = useState(null)
@@ -68,14 +66,12 @@ export default function InstructorLiveHistory() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [res, usageRes, connRes] = await Promise.all([
+      const [res, usageRes] = await Promise.all([
         api.get('/live/history'),
         api.get('/live/recording-usage').catch(() => null),
-        api.get('/teacher-connections').catch(() => null),
       ])
       setSessions(Array.isArray(res.sessions) ? res.sessions : [])
       setRecordingUsage(usageRes?.usage || null)
-      setMeetConnection(connRes?.connections?.google_meet || null)
     } catch {
       setSessions([])
     } finally {
@@ -279,31 +275,6 @@ export default function InstructorLiveHistory() {
     }
   }
 
-  const disconnectGoogleMeet = async () => {
-    if (disconnectingMeet) return
-    setDisconnectingMeet(true)
-    try {
-      await api.delete('/teacher-connections/google_meet')
-      setMeetConnection({ provider: 'google_meet', connected: false })
-      toast(t('live.meetDisconnected'))
-    } catch (e) {
-      toast(e?.message || t('live.meetDisconnectFailed'), 'error')
-    } finally {
-      setDisconnectingMeet(false)
-    }
-  }
-
-  const connectGoogleMeet = async () => {
-    try {
-      const res = await api.post('/teacher-connections/google_meet/start', {
-        returnPath: '/instructor/live/history',
-      })
-      if (res.redirectUrl) window.location.href = res.redirectUrl
-    } catch (e) {
-      toast(e?.message || t('live.meetConnectFailed'), 'error')
-    }
-  }
-
   const canEnterLive = (s) => String(s?.status || '') !== 'ended' && !s?.ended_at
 
   const enterLive = (session) => {
@@ -392,28 +363,6 @@ export default function InstructorLiveHistory() {
           </Link>
         </div>
       </div>
-
-      <Card className="p-3 border border-[color:var(--border-subtle)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <p className="text-xs font-semibold text-token-textMain">{t('live.providers.google_meet')}</p>
-            <p className="text-[11px] text-token-textMuted mt-0.5">
-              {meetConnection?.connected
-                ? t('live.meetConnectedAs', { email: meetConnection.account_email || 'Google' })
-                : t('live.meetNeedsConnect')}
-            </p>
-          </div>
-          {meetConnection?.connected ? (
-            <Button size="sm" variant="secondary" loading={disconnectingMeet} onClick={() => void disconnectGoogleMeet()}>
-              {t('live.disconnectAccount')}
-            </Button>
-          ) : (
-            <Button size="sm" onClick={() => void connectGoogleMeet()}>
-              {t('live.connectGoogleMeet')}
-            </Button>
-          )}
-        </div>
-      </Card>
 
       {recordingUsage ? (
         <Card className="p-3 border border-[color:var(--border-subtle)]">
