@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import api, { AUTH_REQUEST_TIMEOUT_MS } from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
-import Modal from '../../components/common/Modal'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import LiveGuestShareModal from '../../components/live/LiveGuestShareModal'
+import CreateLiveLessonModal from '../../components/live/CreateLiveLessonModal'
 import { useToast } from '../../components/common/Toast'
 import { bakuDateTimeLocalToIso, fmtAzBakuField } from '../../lib/azDatetime'
 import { liveGuestJoinUrl } from '../../lib/absolutePublicUrl'
@@ -47,9 +47,9 @@ export default function InstructorLiveHistory() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [startOpen, setStartOpen] = useState(false)
-  const [startTitle, setStartTitle] = useState('')
-  const [startWhen, setStartWhen] = useState('')
   const [starting, setStarting] = useState(false)
+  const [disconnectingMeet, setDisconnectingMeet] = useState(false)
+  const [meetConnection, setMeetConnection] = useState(null)
   const [shareSession, setShareSession] = useState(null)
   const [sessions, setSessions] = useState([])
   const [downloadingId, setDownloadingId] = useState(null)
@@ -68,12 +68,14 @@ export default function InstructorLiveHistory() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [res, usageRes] = await Promise.all([
+      const [res, usageRes, connRes] = await Promise.all([
         api.get('/live/history'),
         api.get('/live/recording-usage').catch(() => null),
+        api.get('/teacher-connections').catch(() => null),
       ])
       setSessions(Array.isArray(res.sessions) ? res.sessions : [])
       setRecordingUsage(usageRes?.usage || null)
+      setMeetConnection(connRes?.connections?.google_meet || null)
     } catch {
       setSessions([])
     } finally {
@@ -84,6 +86,22 @@ export default function InstructorLiveHistory() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('meet_connected') === '1') {
+      toast(t('live.meetConnectSuccess'))
+      params.delete('meet_connected')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
+      window.history.replaceState({}, '', next)
+      void load()
+    } else if (params.get('meet_error')) {
+      toast(t('live.meetConnectFailed'), 'error')
+      params.delete('meet_error')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
+      window.history.replaceState({}, '', next)
+    }
+  }, [load, t, toast])
 
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected
@@ -188,20 +206,35 @@ export default function InstructorLiveHistory() {
     }
   }
 
-  const startOpenLesson = async () => {
+  const startOpenLesson = async ({ provider, title, scheduledAtLocal } = {}) => {
     if (starting) return
     setStarting(true)
     try {
-      const title = String(startTitle || '').trim()
-      const scheduledAt = bakuDateTimeLocalToIso(startWhen)
+      const scheduledAt = bakuDateTimeLocalToIso(scheduledAtLocal)
       const res = await api.post('/live/create', {
+        provider: provider || 'mentorix_live',
         title: title || undefined,
         notifySms: false,
         notifyEmail: false,
         scheduledAt: scheduledAt || undefined,
       })
-      const code = res?.room?.room_code
+      const room = res?.room
+      const code = room?.room_code
       if (!code) throw new Error(t('live.roomCreateFailed'))
+
+      if ((room?.provider || provider) === 'google_meet' && room?.join_url) {
+        setStartOpen(false)
+        toast(t('live.meetLessonCreated'), 'success')
+        try {
+          await navigator.clipboard.writeText(room.join_url)
+          toast(t('live.meetLinkCopied'))
+        } catch {
+          window.prompt(t('live.copySharePrompt'), room.join_url)
+        }
+        void load()
+        return
+      }
+
       const hoursUntil = scheduledAt
         ? Math.min(336, Math.max(24, Math.ceil((new Date(scheduledAt).getTime() - Date.now()) / 3600000) + 24))
         : 24
@@ -215,27 +248,59 @@ export default function InstructorLiveHistory() {
       const session = {
         roomCode: code,
         joinUrl,
-        title: title || res?.room?.title || t('live.historyTitle'),
+        title: title || room?.title || t('live.historyTitle'),
         expiresAt: inviteRes?.invite?.expires_at,
-        scheduledAt: scheduledAt || res?.room?.scheduled_at,
+        scheduledAt: scheduledAt || room?.scheduled_at,
       }
       setStartOpen(false)
-      setStartTitle('')
-      setStartWhen('')
       setShareSession(session)
       toast(t('live.guestLinkCreated'), 'success')
       void load()
     } catch (e) {
-      toast(e?.message || t('live.startFailed'), 'error')
+      if (e?.code === 'NEEDS_CONNECTION' || e?.response?.data?.code === 'NEEDS_CONNECTION') {
+        toast(t('live.meetNeedsConnect'), 'info')
+      } else {
+        toast(e?.message || t('live.startFailed'), 'error')
+      }
     } finally {
       setStarting(false)
+    }
+  }
+
+  const disconnectGoogleMeet = async () => {
+    if (disconnectingMeet) return
+    setDisconnectingMeet(true)
+    try {
+      await api.delete('/teacher-connections/google_meet')
+      setMeetConnection({ provider: 'google_meet', connected: false })
+      toast(t('live.meetDisconnected'))
+    } catch (e) {
+      toast(e?.message || t('live.meetDisconnectFailed'), 'error')
+    } finally {
+      setDisconnectingMeet(false)
+    }
+  }
+
+  const connectGoogleMeet = async () => {
+    try {
+      const res = await api.post('/teacher-connections/google_meet/start', {
+        returnPath: '/instructor/live/history',
+      })
+      if (res.redirectUrl) window.location.href = res.redirectUrl
+    } catch (e) {
+      toast(e?.message || t('live.meetConnectFailed'), 'error')
     }
   }
 
   const canEnterLive = (s) => String(s?.status || '') !== 'ended' && !s?.ended_at
 
   const enterLive = (session) => {
-    if (!session?.room_code) return
+    if (!session) return
+    if (session.provider && session.provider !== 'mentorix_live' && session.join_url) {
+      window.open(session.join_url, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (!session.room_code) return
     navigate(`/live/${encodeURIComponent(session.room_code)}`)
   }
 
@@ -309,12 +374,34 @@ export default function InstructorLiveHistory() {
           <p className="text-xs text-token-textMuted mt-1">{t('live.historySubtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => setStartOpen(true)}>{t('live.startOpen')}</Button>
+          <Button onClick={() => setStartOpen(true)}>{t('live.createLessonCta')}</Button>
           <Link to="/instructor/teaching-groups">
             <Button variant="secondary">{t('live.startFromGroup')}</Button>
           </Link>
         </div>
       </div>
+
+      <Card className="p-3 border border-[color:var(--border-subtle)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold text-token-textMain">{t('live.providers.google_meet')}</p>
+            <p className="text-[11px] text-token-textMuted mt-0.5">
+              {meetConnection?.connected
+                ? t('live.meetConnectedAs', { email: meetConnection.account_email || 'Google' })
+                : t('live.meetNeedsConnect')}
+            </p>
+          </div>
+          {meetConnection?.connected ? (
+            <Button size="sm" variant="secondary" loading={disconnectingMeet} onClick={() => void disconnectGoogleMeet()}>
+              {t('live.disconnectAccount')}
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => void connectGoogleMeet()}>
+              {t('live.connectGoogleMeet')}
+            </Button>
+          )}
+        </div>
+      </Card>
 
       {recordingUsage ? (
         <Card className="p-3 border border-[color:var(--border-subtle)]">
@@ -341,7 +428,7 @@ export default function InstructorLiveHistory() {
           <div className="text-4xl mb-3">🔴</div>
           <p className="text-sm text-token-textMuted">{t('live.noSessions')}</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            <Button onClick={() => setStartOpen(true)}>{t('live.startOpen')}</Button>
+            <Button onClick={() => setStartOpen(true)}>{t('live.createLessonCta')}</Button>
             <Link to="/instructor/teaching-groups">
               <Button variant="secondary">{t('live.startFromGroup')}</Button>
             </Link>
@@ -396,6 +483,9 @@ export default function InstructorLiveHistory() {
                 <div className="min-w-0 flex-1">
                 <h2 className="font-semibold text-sm text-token-textMain truncate">{s.title}</h2>
                 <p className="text-[11px] text-token-textMuted mt-1">
+                  {s.provider && s.provider !== 'mentorix_live'
+                    ? `${t(`live.providers.${s.provider}`)} · `
+                    : ''}
                   {s.group_name || t('live.general')}
                   {s.scheduled_at
                     ? ` · ${t('live.scheduledAt')} ${fmtAzBakuField(s, 'scheduled_at')}`
@@ -435,7 +525,9 @@ export default function InstructorLiveHistory() {
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   {canEnterLive(s) ? (
                     <Button size="sm" onClick={() => enterLive(s)}>
-                      {t('live.openLive')}
+                      {s.provider && s.provider !== 'mentorix_live'
+                        ? t('live.openExternal')
+                        : t('live.openLive')}
                     </Button>
                   ) : null}
                   {s.has_recording ? (
@@ -451,7 +543,7 @@ export default function InstructorLiveHistory() {
                   ) : !canEnterLive(s) ? (
                     <span className="text-[10px] text-token-textMuted/80 px-1">{t('live.noRecording')}</span>
                   ) : null}
-                  {canEnterLive(s) ? (
+                  {canEnterLive(s) && (!s.provider || s.provider === 'mentorix_live') ? (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -459,6 +551,21 @@ export default function InstructorLiveHistory() {
                       onClick={() => void openGuestShare(s)}
                     >
                       🔗 {t('live.shareGuest')}
+                    </Button>
+                  ) : canEnterLive(s) && s.join_url ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(s.join_url)
+                          toast(t('live.meetLinkCopied'))
+                        } catch {
+                          window.prompt(t('live.copySharePrompt'), s.join_url)
+                        }
+                      }}
+                    >
+                      🔗 {t('live.copyLink')}
                     </Button>
                   ) : (
                     <Button
@@ -486,46 +593,12 @@ export default function InstructorLiveHistory() {
         </div>
       )}
 
-      <Modal
+      <CreateLiveLessonModal
         open={startOpen}
         onClose={() => !starting && setStartOpen(false)}
-        title={t('live.startOpenTitle')}
-        size="sm"
-        footer={
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setStartOpen(false)} disabled={starting}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="button" loading={starting} onClick={() => void startOpenLesson()}>
-              {t('live.createAndShare')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-token-textMuted">{t('live.startOpenHint')}</p>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-token-textMuted">{t('live.lessonTitle')}</span>
-            <input
-              value={startTitle}
-              onChange={(e) => setStartTitle(e.target.value)}
-              placeholder={t('live.lessonTitlePlaceholder')}
-              maxLength={120}
-              className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-token-textMuted">{t('live.scheduleWhen')}</span>
-            <input
-              type="datetime-local"
-              value={startWhen}
-              onChange={(e) => setStartWhen(e.target.value)}
-              className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50"
-            />
-            <span className="text-[11px] text-token-textMuted">{t('live.scheduleWhenHint')}</span>
-          </label>
-        </div>
-      </Modal>
+        starting={starting}
+        onCreated={(payload) => void startOpenLesson(payload)}
+      />
 
       <LiveGuestShareModal
         open={Boolean(shareSession)}

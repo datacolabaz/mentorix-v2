@@ -109,7 +109,20 @@ function parseScheduledAt(raw) {
 
 async function createLiveRoom(
   instructorId,
-  { groupId, title, notifySms = false, notifyEmail = false, scheduledAt = null } = {},
+  {
+    groupId,
+    title,
+    notifySms = false,
+    notifyEmail = false,
+    scheduledAt = null,
+    provider = 'mentorix_live',
+    providerMeetingId = null,
+    joinUrl = null,
+    startUrl = null,
+    passcode = null,
+    providerPayload = {},
+    connectionId = null,
+  } = {},
 ) {
   const group = groupId ? await assertGroupOwnedByInstructor(instructorId, groupId) : null;
   if (groupId && !group) {
@@ -118,22 +131,58 @@ async function createLiveRoom(
     throw err;
   }
 
+  const providerId = String(provider || 'mentorix_live').trim() || 'mentorix_live';
   const roomCode = await uniqueRoomCode();
-  const roomTitle = String(title || '').trim() || (group ? `${group.name} — canlı dərs` : 'Mentorix Live');
+  const defaultTitle =
+    providerId === 'google_meet'
+      ? 'Google Meet dərs'
+      : providerId === 'mentorix_live'
+        ? 'Mentorix Live'
+        : 'Canlı dərs';
+  const roomTitle = String(title || '').trim() || (group ? `${group.name} — canlı dərs` : defaultTitle);
   const scheduled = parseScheduledAt(scheduledAt);
   const isFuture = scheduled && scheduled.getTime() > Date.now() + 60 * 1000;
 
   const { rows } = await db.query(
     isFuture
-      ? `INSERT INTO live_rooms (room_code, instructor_id, group_id, title, status, started_at, scheduled_at)
-         VALUES ($1, $2, $3, $4, 'waiting', NULL, $5)
+      ? `INSERT INTO live_rooms (
+           room_code, instructor_id, group_id, title, status, started_at, scheduled_at,
+           provider, provider_meeting_id, join_url, start_url, passcode, provider_payload, connection_id
+         ) VALUES ($1, $2, $3, $4, 'waiting', NULL, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::uuid)
          RETURNING *`
-      : `INSERT INTO live_rooms (room_code, instructor_id, group_id, title, status, started_at, scheduled_at)
-         VALUES ($1, $2, $3, $4, 'live', NOW(), NULL)
+      : `INSERT INTO live_rooms (
+           room_code, instructor_id, group_id, title, status, started_at, scheduled_at,
+           provider, provider_meeting_id, join_url, start_url, passcode, provider_payload, connection_id
+         ) VALUES ($1, $2, $3, $4, 'live', NOW(), NULL, $5, $6, $7, $8, $9, $10::jsonb, $11::uuid)
          RETURNING *`,
     isFuture
-      ? [roomCode, instructorId, groupId || null, roomTitle.slice(0, 255), scheduled.toISOString()]
-      : [roomCode, instructorId, groupId || null, roomTitle.slice(0, 255)],
+      ? [
+          roomCode,
+          instructorId,
+          groupId || null,
+          roomTitle.slice(0, 255),
+          scheduled.toISOString(),
+          providerId,
+          providerMeetingId,
+          joinUrl,
+          startUrl,
+          passcode,
+          JSON.stringify(providerPayload || {}),
+          connectionId,
+        ]
+      : [
+          roomCode,
+          instructorId,
+          groupId || null,
+          roomTitle.slice(0, 255),
+          providerId,
+          providerMeetingId,
+          joinUrl,
+          startUrl,
+          passcode,
+          JSON.stringify(providerPayload || {}),
+          connectionId,
+        ],
   );
   const room = rows[0];
 
@@ -154,7 +203,8 @@ async function notifyGroupForLiveClass(instructorId, room, { notifySms = false, 
   );
   const instructorName = instructorRows[0]?.full_name || 'Müəllim';
   const appBase = String(process.env.APP_URL || process.env.FRONTEND_URL || frontendBaseUrl()).replace(/\/$/, '');
-  const link = `${appBase}/live/${room.room_code}`;
+  const externalJoin = room.join_url && String(room.join_url).trim();
+  const link = externalJoin || `${appBase}/live/${room.room_code}`;
   const message = `${instructorName} müəllim canlı dərsi başlatdı!\nQoşulmaq üçün: ${link}`;
   const roomTitle = String(room.title || 'Canlı dərs').trim();
 
@@ -356,6 +406,7 @@ async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
   const cap = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const { rows } = await db.query(
     `SELECT lr.id, lr.room_code, lr.title, lr.status, lr.started_at, lr.ended_at, lr.scheduled_at, lr.participant_count, lr.created_at,
+            lr.provider, lr.join_url, lr.provider_meeting_id,
             ig.name AS group_name,
             lrec.filename AS recording_filename,
             lrec.duration_sec AS recording_duration_sec,

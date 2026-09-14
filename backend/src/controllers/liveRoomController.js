@@ -4,7 +4,6 @@ const crypto = require('crypto');
 const multer = require('multer');
 const db = require('../utils/db');
 const {
-  createLiveRoom,
   getLiveRoomForUser,
   getLiveRoomForRecordingUpload,
   joinLiveSession,
@@ -15,6 +14,7 @@ const {
   jitsiRoomName,
   getInstructorLiveParticipantLimit,
 } = require('../services/liveRoomService');
+const { createLiveLesson } = require('../services/liveLessonOrchestrationService');
 const {
   ensureLiveRecordingsUploadDir,
   upsertLiveRecording,
@@ -44,7 +44,9 @@ const uploadLiveRecording = multer({
 async function mapRoom(row, user) {
   if (!row) return null;
   const isInstructor = user?.role === 'instructor' && String(row.instructor_id) === String(user.id);
-  const maxParticipants = row.instructor_id
+  const provider = row.provider || 'mentorix_live';
+  const isMentorixLive = provider === 'mentorix_live';
+  const maxParticipants = isMentorixLive && row.instructor_id
     ? await getInstructorLiveParticipantLimit(row.instructor_id)
     : null;
   return {
@@ -57,12 +59,22 @@ async function mapRoom(row, user) {
     instructor_name: row.instructor_name || null,
     participant_count: row.participant_count,
     max_participants: maxParticipants,
-    live_recording_local: true,
+    live_recording_local: isMentorixLive,
     started_at: row.started_at,
     scheduled_at: row.scheduled_at || null,
     ended_at: row.ended_at,
-    jitsi_room: jitsiRoomName(row.room_code),
+    jitsi_room: isMentorixLive ? jitsiRoomName(row.room_code) : null,
     is_instructor: isInstructor,
+    provider,
+    join_url: row.join_url || null,
+    provider_meeting_id: row.provider_meeting_id || null,
+    // start_url / passcode are host-sensitive for some providers — never expose to students
+    ...(isInstructor
+      ? {
+          start_url: row.start_url || row.join_url || null,
+          passcode: row.passcode || null,
+        }
+      : {}),
   };
 }
 
@@ -78,21 +90,29 @@ const postCreateRoom = async (req, res) => {
       }
     }
 
-    const { room, notifications } = await createLiveRoom(req.user.id, {
+    const { room, notifications, provider } = await createLiveLesson(req.user.id, {
+      provider: req.body?.provider || 'mentorix_live',
       groupId: req.body?.group_id || req.body?.groupId || null,
       title: req.body?.title || null,
       notifySms,
       notifyEmail,
       scheduledAt: req.body?.scheduled_at || req.body?.scheduledAt || null,
+      durationMinutes: req.body?.duration_minutes || req.body?.durationMinutes || 60,
     });
     const full = await getLiveRoomForUser(room.room_code, req.user).catch(() => room);
     res.status(201).json({
       success: true,
+      provider,
       room: await mapRoom(full, req.user),
       notifications: notifications || { sms: 0, email: 0 },
     });
   } catch (e) {
-    res.status(e.status || 500).json({ success: false, message: e.message || 'Xəta' });
+    res.status(e.status || 500).json({
+      success: false,
+      message: e.message || 'Xəta',
+      code: e.code || undefined,
+      provider: e.provider || undefined,
+    });
   }
 };
 
@@ -165,6 +185,17 @@ const postEnd = async (req, res) => {
 
 const getToken = async (req, res) => {
   try {
+    const room = await getLiveRoomForUser(req.params.roomCode, req.user);
+    if ((room.provider || 'mentorix_live') !== 'mentorix_live') {
+      return res.status(400).json({
+        success: false,
+        message: 'Bu dərs xarici platformadadır — Meet/Zoom linkindən qoşulun',
+        code: 'EXTERNAL_PROVIDER',
+        provider: room.provider,
+        join_url: room.join_url || null,
+      });
+    }
+
     const apiKey = String(process.env.LIVEKIT_API_KEY || '').trim();
     const apiSecret = String(process.env.LIVEKIT_API_SECRET || '').trim();
     const wsUrl = String(
@@ -184,8 +215,6 @@ const getToken = async (req, res) => {
           'LiveKit konfiqurasiya olunmayıb. Backend service-də LIVEKIT_API_KEY, LIVEKIT_API_SECRET və LIVEKIT_WS_URL (wss://...) əlavə edin.',
       });
     }
-
-    const room = await getLiveRoomForUser(req.params.roomCode, req.user);
     const isInstructor =
       req.user.role === 'instructor' && String(room.instructor_id) === String(req.user.id);
     await assertUserMayEnter(room, req.user);
@@ -229,6 +258,8 @@ const getHistory = async (req, res) => {
           title: r.title,
           group_name: r.group_name,
           status: r.status,
+          provider: r.provider || 'mentorix_live',
+          join_url: r.join_url || null,
           started_at: r.started_at,
           scheduled_at: r.scheduled_at || null,
           ended_at: r.ended_at,
