@@ -536,9 +536,13 @@ const submitMyAssignment = async (req, res) => {
 const requestAiReviewSuggestion = async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
+      console.error('[ai-suggest] OPENAI_API_KEY is not configured');
+      const { localeFromReq } = require('../lib/userLocale');
+      const { pickMessage } = require('../lib/sanitizeAiProviderError');
       return res.status(503).json({
         success: false,
-        message: 'AI xidməti aktiv deyil. OPENAI_API_KEY təyin edin.',
+        code: 'AI_SERVICE_UNAVAILABLE',
+        message: pickMessage('unavailable', localeFromReq(req)),
       });
     }
 
@@ -569,20 +573,41 @@ const requestAiReviewSuggestion = async (req, res) => {
     ]);
 
     const { runAssignmentAiReview } = require('../services/assignmentAiReviewService');
+    const { localeFromReq } = require('../lib/userLocale');
+    const { toTeacherAiError } = require('../lib/sanitizeAiProviderError');
     let ai;
     try {
       ai = await runAssignmentAiReview(rows[0]);
     } catch (err) {
+      const locale = localeFromReq(req);
+      const safe = toTeacherAiError(err, locale);
+      console.error('[ai-suggest] assignment review failed', {
+        student_assignment_id: id,
+        instructor_id: instructorId,
+        error_code: safe.code,
+        error_kind: safe.kind,
+        provider_status: err?.status || err?.rawProvider?.status || null,
+        provider_code: err?.code || err?.rawProvider?.code || null,
+        provider_type: err?.type || err?.rawProvider?.type || null,
+        provider_message: err?.message || null,
+        stack: err?.stack || null,
+      });
       const failed = {
         status: 'error',
-        error: err.message || 'AI xətası',
+        error: safe.message,
+        error_code: safe.code,
         completed_at: new Date().toISOString(),
       };
       await db.query(`UPDATE student_assignments SET ai_metadata = $1::jsonb WHERE id = $2`, [
         JSON.stringify(failed),
         id,
       ]);
-      return res.status(422).json({ success: false, message: failed.error, ai: failed });
+      return res.status(422).json({
+        success: false,
+        message: failed.error,
+        code: failed.error_code,
+        ai: failed,
+      });
     }
 
     await db.query(`UPDATE student_assignments SET ai_metadata = $1::jsonb WHERE id = $2`, [
