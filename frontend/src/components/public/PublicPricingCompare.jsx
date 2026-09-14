@@ -3,21 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { DEFAULT_SUBSCRIPTION_PLANS } from '../../constants/subscriptionPlans'
 import { resolveAiPlanLimits } from '../../constants/aiPlanLimits'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
+import { cloudStorageCompareValue } from '../../lib/subscriptionPlanCopy'
+import { liveParticipantLimitForPlan } from '../../lib/livePlanLimits'
 import { useLandingPlanDisplay } from '../../lib/landingCopy'
 import PricingFeatureListItem from '../landing/PricingFeatureListItem'
-
-const LIVE_FALLBACK = { basic: 5, pro: 20, growth: 50, premium: null }
 
 function limitLabel(value, unlimitedLabel) {
   if (value == null || value === '') return unlimitedLabel
   return String(value)
-}
-
-function liveLimit(plan) {
-  const fromPlan = plan?.limits?.live_participants
-  if (fromPlan !== undefined) return fromPlan
-  const id = normalizePlanId(plan)
-  return Object.prototype.hasOwnProperty.call(LIVE_FALLBACK, id) ? LIVE_FALLBACK[id] : null
 }
 
 export function PricingPlanCard({ plan, onCta }) {
@@ -52,19 +45,25 @@ export function PricingPlanCard({ plan, onCta }) {
 function recordingHoursLabel(plan, t) {
   const hours = plan?.limits?.recording_hours_monthly
   const n = hours == null ? null : Number(hours)
-  if (n == null || !Number.isFinite(n) || n <= 0) return t('landing.pricingPage.recordingNone', { defaultValue: '—' })
+  if (n == null || !Number.isFinite(n) || n <= 0) {
+    return t('landing.pricingPage.recordingNone', { defaultValue: '—' })
+  }
   return t('landing.pricingPage.recordingHours', { hours: n, defaultValue: `${n} saat/ay` })
 }
 
 export default function PublicPricingCompare({ plans, onCta, hideIntro = false, tableOnly = false }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const list = Array.isArray(plans) && plans.length ? plans : DEFAULT_SUBSCRIPTION_PLANS
   const unlimited = t('landing.plans.unlimited')
+  const dash = t('landing.pricingPage.dash', { defaultValue: '—' })
 
   const rows = [
     { key: 'price', label: t('landing.pricingPage.rows.price') },
     { key: 'students', label: t('landing.pricingPage.rows.students') },
-    { key: 'documents', label: t('landing.pricingPage.rows.documents') },
+    {
+      key: 'cloudStorage',
+      label: t('landing.pricingPage.rows.cloudStorage', { defaultValue: 'Bulud Yaddaşı' }),
+    },
     { key: 'exams', label: t('landing.pricingPage.rows.exams') },
     { key: 'assignments', label: t('landing.pricingPage.rows.assignments') },
     { key: 'aiQuestions', label: t('landing.pricingPage.rows.aiQuestions', { defaultValue: 'AI sual' }) },
@@ -87,7 +86,11 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
       return t('landing.plans.pricePerMonth', { price: v })
     }
     if (key === 'students') return limitLabel(lim.students, unlimited)
-    if (key === 'documents') return limitLabel(lim.documents, unlimited)
+    if (key === 'cloudStorage') {
+      return (
+        cloudStorageCompareValue(plan, { t, lang: i18n.language }) || dash
+      )
+    }
     if (key === 'exams') return limitLabel(lim.exams_monthly, unlimited)
     if (key === 'assignments') return limitLabel(lim.homeworks_monthly, unlimited)
     if (key === 'aiQuestions' || key === 'aiGradings') {
@@ -97,8 +100,9 @@ export default function PublicPricingCompare({ plans, onCta, hideIntro = false, 
       return t('landing.pricingPage.perMonth', { count: n, defaultValue: `${n} / ay` })
     }
     if (key === 'sms') return limitLabel(lim.sms_monthly, unlimited)
+    // Lesson count is unlimited on every package (package cards + livePlanLimits).
     if (key === 'liveLessons') return unlimited
-    if (key === 'live') return limitLabel(liveLimit(plan), unlimited)
+    if (key === 'live') return limitLabel(liveParticipantLimitForPlan(plan), unlimited)
     if (key === 'recording') return recordingHoursLabel(plan, t)
     return id
   }
