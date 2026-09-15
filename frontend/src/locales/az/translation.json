@@ -630,6 +630,11 @@
     "meetLessonCreated": "Google Meet dərsi yaradıldı",
     "meetLinkCopied": "Meet linki kopyalandı",
     "openExternal": "Meet-ə keç",
+    "meetAccountWarningTitle": "Google Meet hesabı diqqəti",
+    "meetAccountWarningText": "Bu dərs {{ownerEmail}} hesabı ilə yaradılıb. Google Meet açılanda həmin hesab ilə daxil olmağınız tövsiyyə olunur.",
+    "meetAccountWarningHint": "Əgər fərqli Google hesabı ilə daxil olunursunuzsa, meeting owner statusunuz ola bilməz.",
+    "meetAccountWarningProceed": "Yenə də davam et",
+    "meetAccountWarningDontShow": "Bu mesajı bir daha göstərmə",
     "providers": {
       "mentorix_live": "Mentorix Live",
       "mentorix_liveHint": "Platformanın öz video otağı (LiveKit)",

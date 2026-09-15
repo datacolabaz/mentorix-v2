@@ -109,7 +109,7 @@ Instructor creates Mentorix Live room
 | App type | Google Cloud OAuth client (Web) + consent screen |
 | Tokens | Authorization code + refresh; store encrypted server-side; refresh offline |
 | Rate limits | Standard Google Workspace quotas; one event per lesson is fine |
-| Verification | `calendar.events` is sensitive → plan OAuth verification before broad production |
+| Verification | `calendar.events` is sensitive → plan OAuth verification before broad production. Google requires app verification for sensitive scopes including calendar access. Start verification process early as it can take several weeks. Use test users during development phase. |
 | Separability | **Do not** reuse Google **login** ID token flow for Calendar scopes — separate “Connect Google for Meet” with incremental authorization |
 
 ### 3.3 Zoom

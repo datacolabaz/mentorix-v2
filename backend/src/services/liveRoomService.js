@@ -412,12 +412,14 @@ async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
             lrec.duration_sec AS recording_duration_sec,
             lrec.share_token AS recording_share_token,
             uploader.full_name AS recorded_by_name,
+            tpc.account_email AS connection_account_email,
             (SELECT COUNT(DISTINCT ls.user_id)::int FROM live_sessions ls WHERE ls.room_id = lr.id) AS total_participants,
             (SELECT COALESCE(SUM(ls.duration_minutes), 0)::int FROM live_sessions ls WHERE ls.room_id = lr.id AND ls.duration_minutes IS NOT NULL) AS total_minutes
      FROM live_rooms lr
      LEFT JOIN instructor_groups ig ON ig.id = lr.group_id
      LEFT JOIN live_recordings lrec ON lrec.room_id = lr.id AND lrec.deleted_at IS NULL AND (lrec.expires_at IS NULL OR lrec.expires_at > NOW())
      LEFT JOIN users uploader ON uploader.id = lrec.uploaded_by_user_id
+     LEFT JOIN teacher_provider_connections tpc ON tpc.id = lr.connection_id AND tpc.provider = lr.provider
      WHERE lr.instructor_id = $1
      ORDER BY COALESCE(lr.scheduled_at, lr.started_at, lr.created_at) DESC
      LIMIT $2`,

@@ -265,6 +265,7 @@ const getHistory = async (req, res) => {
           ended_at: r.ended_at,
           participant_count: r.total_participants || r.participant_count || 0,
           guest_count: guests.length,
+          connection_account_email: r.connection_account_email || null,
           guests: guests.map((g) => ({
             id: g.id,
             full_name: g.full_name,

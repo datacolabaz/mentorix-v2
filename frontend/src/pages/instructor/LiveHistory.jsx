@@ -7,6 +7,7 @@ import Button from '../../components/common/Button'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import LiveGuestShareModal from '../../components/live/LiveGuestShareModal'
 import CreateLiveLessonModal from '../../components/live/CreateLiveLessonModal'
+import GoogleMeetAccountWarning from '../../components/live/GoogleMeetAccountWarning'
 import { useToast } from '../../components/common/Toast'
 import { bakuDateTimeLocalToIso, fmtAzBakuField } from '../../lib/azDatetime'
 import { liveGuestJoinUrl } from '../../lib/absolutePublicUrl'
@@ -48,6 +49,9 @@ export default function InstructorLiveHistory() {
   const [loading, setLoading] = useState(true)
   const [startOpen, setStartOpen] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [meetWarningOpen, setMeetWarningOpen] = useState(false)
+  const [pendingMeetUrl, setPendingMeetUrl] = useState(null)
+  const [meetOwnerEmail, setMeetOwnerEmail] = useState(null)
   const [shareSession, setShareSession] = useState(null)
   const [sessions, setSessions] = useState([])
   const [downloadingId, setDownloadingId] = useState(null)
@@ -280,6 +284,17 @@ export default function InstructorLiveHistory() {
   const enterLive = (session) => {
     if (!session) return
     if (session.provider && session.provider !== 'mentorix_live' && session.join_url) {
+      // Google Meet account warning check
+      const warningDismissed = localStorage.getItem('meet_account_warning_dismissed') === 'true'
+      const ownerEmail = session.connection_account_email || session.owner_email || null
+
+      if (!warningDismissed && ownerEmail && session.provider === 'google_meet') {
+        setMeetOwnerEmail(ownerEmail)
+        setPendingMeetUrl(session.join_url)
+        setMeetWarningOpen(true)
+        return
+      }
+
       window.open(session.join_url, '_blank', 'noopener,noreferrer')
       return
     }
@@ -570,6 +585,24 @@ export default function InstructorLiveHistory() {
           navigate(`/live/${encodeURIComponent(shareSession.roomCode)}`)
         }}
         onRevoke={revokeShareLink}
+      />
+
+      <GoogleMeetAccountWarning
+        open={meetWarningOpen}
+        onClose={() => {
+          setMeetWarningOpen(false)
+          setPendingMeetUrl(null)
+          setMeetOwnerEmail(null)
+        }}
+        onProceed={() => {
+          if (pendingMeetUrl) {
+            window.open(pendingMeetUrl, '_blank', 'noopener,noreferrer')
+          }
+          setMeetWarningOpen(false)
+          setPendingMeetUrl(null)
+          setMeetOwnerEmail(null)
+        }}
+        ownerEmail={meetOwnerEmail}
       />
     </div>
   )
