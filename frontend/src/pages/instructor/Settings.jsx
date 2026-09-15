@@ -192,6 +192,11 @@ export default function InstructorSettings() {
   const [profBio, setProfBio] = useState('')
   const [savingProfessional, setSavingProfessional] = useState(false)
   const [billingInterval, setBillingInterval] = useState('monthly')
+  const [meetConnections, setMeetConnections] = useState(null)
+  const [loadingMeetConnections, setLoadingMeetConnections] = useState(false)
+  const [connectingMeet, setConnectingMeet] = useState(false)
+  const [disconnectingMeet, setDisconnectingMeet] = useState(false)
+  const [meetDisconnectConfirm, setMeetDisconnectConfirm] = useState(false)
 
   useEffect(() => {
     setAccountName(user?.full_name || '')
@@ -300,6 +305,80 @@ export default function InstructorSettings() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const loadMeetConnections = useCallback(async () => {
+    setLoadingMeetConnections(true)
+    try {
+      const res = await api.get('/teacher-connections')
+      setMeetConnections(res.connections || null)
+    } catch {
+      setMeetConnections(null)
+    } finally {
+      setLoadingMeetConnections(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadMeetConnections()
+  }, [loadMeetConnections])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('meet_connected') === '1') {
+      toast(t('live.meetConnectSuccess'))
+      params.delete('meet_connected')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
+      window.history.replaceState({}, '', next)
+      void loadMeetConnections()
+    } else if (params.get('meet_error')) {
+      const errCode = params.get('meet_error')
+      if (errCode === 'GOOGLE_CALENDAR_SCOPE_MISSING') {
+        toast(t('live.meetCalendarScopeRequired'), 'error')
+      } else {
+        toast(t('live.meetConnectFailed'), 'error')
+      }
+      params.delete('meet_error')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
+      window.history.replaceState({}, '', next)
+    }
+  }, [loadMeetConnections, t, toast])
+
+  const connectGoogleMeet = async () => {
+    if (connectingMeet) return
+    setConnectingMeet(true)
+    try {
+      const res = await api.post('/teacher-connections/google_meet/start', {
+        returnPath: '/instructor/settings',
+      })
+      if (res.redirectUrl) {
+        window.location.href = res.redirectUrl
+        return
+      }
+      toast(t('live.meetConnectFailed'), 'error')
+    } catch (e) {
+      toast(e?.message || t('live.meetConnectFailed'), 'error')
+    } finally {
+      setConnectingMeet(false)
+    }
+  }
+
+  const disconnectGoogleMeet = async () => {
+    if (disconnectingMeet) return
+    setDisconnectingMeet(true)
+    try {
+      await api.delete('/teacher-connections/google_meet')
+      setMeetConnections((prev) => ({
+        ...(prev || {}),
+        google_meet: { provider: 'google_meet', connected: false },
+      }))
+      setMeetDisconnectConfirm(false)
+      toast(t('live.meetDisconnected'))
+    } catch (e) {
+      toast(e?.message || t('live.meetDisconnectFailed'), 'error')
+    } finally {
+      setDisconnectingMeet(false)
+    }
+  }
 
   useEffect(() => {
     if (location.state?.openStorageAddon) {
@@ -640,8 +719,14 @@ export default function InstructorSettings() {
         </p>
         <nav className="mt-4 flex flex-wrap gap-2" aria-label={t('settings.jumpNavAria')}>
           <a
-            href="#discover-profile"
+            href="#google-meet-settings"
             className="text-xs font-semibold rounded-lg border border-primary/40 bg-primary/10 text-primary px-3 py-1.5 hover:bg-primary/15"
+          >
+            Google Meet
+          </a>
+          <a
+            href="#discover-profile"
+            className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
           >
             {t('settings.jumpDiscover')}
           </a>
@@ -661,6 +746,43 @@ export default function InstructorSettings() {
       </div>
 
       <PersonaSettingsCard />
+
+      <Card id="google-meet-settings" className={settingsCardCls}>
+        <h2 className={cardTitleCls}>Google Meet</h2>
+        <p className={cardTextCls}>
+          Canlı dərslər üçün Google Meet hesabınızı bağlayın
+        </p>
+        <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
+          {loadingMeetConnections ? (
+            <span className="text-token-textMuted">Yüklənir...</span>
+          ) : meetConnections?.google_meet?.connected ? (
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="text-token-textMain">
+                Qoşuldu: {meetConnections.google_meet.account_email || 'Google'}
+              </span>
+              <button
+                type="button"
+                disabled={disconnectingMeet}
+                onClick={() => setMeetDisconnectConfirm(true)}
+                className="text-[11px] text-token-textMuted hover:text-token-textMain hover:underline disabled:opacity-50"
+              >
+                Qoşulmanı kəs
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-token-textMuted">Google Meet hesabı bağlı deyil</span>
+              <Button
+                size="sm"
+                loading={connectingMeet}
+                onClick={() => void connectGoogleMeet()}
+              >
+                Google Meet Qoş
+              </Button>
+            </div>
+          )}
+        </div>
+      </Card>
 
       <InstructorDiscoverSettings mapVisible={mapVisible} theme={theme} inp={inp} />
 
@@ -1490,6 +1612,18 @@ export default function InstructorSettings() {
         }
         confirmLabel={t('common.confirm')}
         cancelLabel={t('common.cancel')}
+      />
+
+      <ConfirmDialog
+        open={Boolean(meetDisconnectConfirm)}
+        onClose={() => !disconnectingMeet && setMeetDisconnectConfirm(false)}
+        onConfirm={() => void disconnectGoogleMeet()}
+        title={t('live.meetDisconnectConfirmTitle')}
+        message={t('live.meetDisconnectConfirmMessage')}
+        confirmLabel={t('live.disconnectAccount')}
+        cancelLabel={t('common.cancel')}
+        loading={disconnectingMeet}
+        danger
       />
 
     </div>
