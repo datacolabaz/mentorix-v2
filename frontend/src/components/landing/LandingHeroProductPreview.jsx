@@ -66,6 +66,7 @@ export default function LandingHeroProductPreview({ onOpenDemo }) {
   const { t, i18n } = useTranslation()
   const [openSections, setOpenSections] = useState(DEFAULT_OPEN)
   const [activeKey, setActiveKey] = useState('dashboard')
+  const [tilt, setTilt] = useState({ x: 1, y: -4 })
 
   const sections = useMemo(() => buildPreviewNavSections(t), [t, i18n.language])
 
@@ -96,13 +97,31 @@ export default function LandingHeroProductPreview({ onOpenDemo }) {
     t('personaHome.teacher.results'),
   ]
 
+  const handlePreviewPointerMove = (event) => {
+    if (event.pointerType === 'touch') return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = (event.clientX - rect.left) / rect.width
+    const y = (event.clientY - rect.top) / rect.height
+    setTilt({
+      x: Number((-(y - 0.5) * 6).toFixed(2)),
+      y: Number(((x - 0.5) * 8).toFixed(2)),
+    })
+  }
+
+  const resetPreviewTilt = () => setTilt({ x: 1, y: -4 })
+
   return (
     <div
       id="mx-hero-preview"
-      className="relative w-full min-w-0 h-full"
+      className="mx-hero-preview-float relative w-full min-w-0 h-full"
       aria-label={t('landing.preview.ariaLabel')}
+      onPointerMove={handlePreviewPointerMove}
+      onPointerLeave={resetPreviewTilt}
     >
-      <div className="h-full max-h-[36rem] sm:max-h-[38rem] rounded-2xl border border-slate-200/80 bg-[#f4f7fa] text-slate-900 shadow-[0_24px_50px_-28px_rgba(255,255,255,0.35)] overflow-hidden flex flex-col">
+      <div
+        className="mx-hero-preview-tilt h-full max-h-[36rem] sm:max-h-[38rem] rounded-2xl border border-slate-200/80 bg-[#f4f7fa] text-slate-900 shadow-[0_30px_60px_-28px_rgba(15,23,42,0.45)] overflow-hidden flex flex-col"
+        style={{ '--mx-preview-rotate-x': `${tilt.x}deg`, '--mx-preview-rotate-y': `${tilt.y}deg` }}
+      >
         <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-slate-200/80 bg-white shrink-0">
           <span className="flex gap-1 shrink-0" aria-hidden>
             <span className="h-2 w-2 rounded-full bg-slate-300" />
