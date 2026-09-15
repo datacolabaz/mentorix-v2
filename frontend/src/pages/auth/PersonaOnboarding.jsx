@@ -333,10 +333,14 @@ export default function PersonaOnboarding() {
       toast(t('onboarding.toasts.ready'), 'success')
       postAuthNavigate(r.user, navigate)
     } catch (e) {
-      const msg = e?.message || e?.response?.data?.message || t('onboarding.toasts.failed')
+      const code = e?.code || e?.response?.data?.code
+      const st = e?.status ?? e?.response?.status
+      const msg =
+        code === 'ONBOARDING_SAVE_FAILED' || Number(st) >= 500
+          ? t('onboarding.errors.saveFailed', { defaultValue: t('onboarding.toasts.failed') })
+          : e?.message || e?.response?.data?.message || t('onboarding.toasts.failed')
       setError(msg)
       toast(msg, 'error')
-      const st = e?.status ?? e?.response?.status
       if (st === 401 || st === 403) {
         logout()
         navigate('/login', { replace: true })

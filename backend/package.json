@@ -17,7 +17,7 @@
     "build:america-data": "node scripts/buildAmericaCanadaData.js",
     "start": "node scripts/migrate.js && node src/app.js",
     "dev": "nodemon src/app.js",
-    "test": "node --test src/config/personas.test.js src/middleware/generationRateLimit.test.js src/providers/aiProviderService.test.js src/lib/aiCreditMath.test.js src/services/aiCreditService.test.js src/services/partner/*.test.js src/lib/googleIdentity.test.js src/lib/multiRoleMembership.test.js src/lib/emailAuthKind.test.js src/lib/tokenCrypto.test.js src/lib/googleMeetOAuth.test.js src/providers/liveLesson/*.test.js src/services/teacherProviderConnectionService.test.js"
+    "test": "node --test src/config/personas.test.js src/middleware/generationRateLimit.test.js src/providers/aiProviderService.test.js src/lib/aiCreditMath.test.js src/lib/clientSafeError.test.js src/services/aiCreditService.test.js src/services/partner/*.test.js src/lib/googleIdentity.test.js src/lib/multiRoleMembership.test.js src/lib/emailAuthKind.test.js src/lib/tokenCrypto.test.js src/lib/googleMeetOAuth.test.js src/providers/liveLesson/*.test.js src/services/teacherProviderConnectionService.test.js"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

@@ -268,7 +268,8 @@
     "unauthorizedTitle": "Daxil olun",
     "unauthorizedBody": "Davam etmək üçün əvvəlcə hesabınıza daxil olun.",
     "errors": {
-      "selectRequired": "Davam etmək üçün istifadə məqsədini seçin."
+      "selectRequired": "Davam etmək üçün istifadə məqsədini seçin.",
+      "saveFailed": "Profili yadda saxlamaq alınmadı. Zəhmət olmasa bir az sonra yenidən cəhd edin."
     },
     "toasts": {
       "ready": "Hazırdır. Paneliniz açılır.",
