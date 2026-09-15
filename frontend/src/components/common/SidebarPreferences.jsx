@@ -18,7 +18,7 @@ export default function SidebarPreferences({ onLogout, className = '' }) {
         <Link
           to="/partner/dashboard"
           className={[
-            'flex min-w-0 items-center text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg',
+            'flex min-w-0 items-center text-sm font-semibold leading-5 transition-colors px-2 py-2 rounded-lg',
             isDark
               ? 'text-primary/90 hover:text-primary hover:bg-primary/10'
               : 'text-emerald-800 hover:text-emerald-900 hover:bg-emerald-50',
@@ -30,7 +30,7 @@ export default function SidebarPreferences({ onLogout, className = '' }) {
           type="button"
           onClick={onLogout}
           className={[
-            'shrink-0 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg',
+            'shrink-0 text-sm font-semibold leading-5 transition-colors px-2 py-2 rounded-lg',
             isDark
               ? 'text-red-300 hover:text-red-200 hover:bg-red-500/10'
               : 'text-red-600 hover:text-red-700 hover:bg-red-50',
