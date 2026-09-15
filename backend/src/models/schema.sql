@@ -50,6 +50,9 @@ CREATE TABLE instructor_profiles (
   nearest_metro VARCHAR(80)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_instructor_profiles_user_id
+  ON instructor_profiles (user_id);
+
 CREATE TABLE student_profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,

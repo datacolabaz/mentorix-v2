@@ -268,7 +268,8 @@
     "unauthorizedTitle": "Sign in",
     "unauthorizedBody": "Please sign in first to continue.",
     "errors": {
-      "selectRequired": "Select a use case to continue."
+      "selectRequired": "Select a use case to continue.",
+      "saveFailed": "Could not save your profile. Please try again in a moment."
     },
     "toasts": {
       "ready": "You’re set. Opening your workspace.",

@@ -50,6 +50,7 @@ const {
   rowNeedsOnboarding,
   isAdminRole,
 } = require('../services/personaOnboardingService');
+const { toOnboardingClientError } = require('../lib/clientSafeError');
 const {
   findUserByGoogleSub,
   findUserByEmail,
@@ -1192,8 +1193,9 @@ const selectOnboardingRole = async (req, res) => {
     const session = await finishPersonaSession(req, me.id);
     return res.json({ success: true, ...session });
   } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message, code: err.code });
+    console.error('selectOnboardingRole', err);
+    const safe = toOnboardingClientError(err);
+    res.status(safe.status).json({ success: false, message: safe.message, code: safe.code });
   }
 };
 
@@ -1227,8 +1229,9 @@ const selectOnboardingPersona = async (req, res) => {
     const session = await finishPersonaSession(req, me.id);
     return res.json({ success: true, ...session });
   } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message, code: err.code });
+    console.error('selectOnboardingPersona', err);
+    const safe = toOnboardingClientError(err);
+    res.status(safe.status).json({ success: false, message: safe.message, code: safe.code });
   }
 };
 
@@ -1259,8 +1262,9 @@ const updatePersona = async (req, res) => {
     const session = await finishPersonaSession(req, me.id);
     return res.json({ success: true, ...session });
   } catch (err) {
-    const st = err.statusCode || 500;
-    res.status(st).json({ success: false, message: err.message, code: err.code });
+    console.error('updatePersona', err);
+    const safe = toOnboardingClientError(err);
+    res.status(safe.status).json({ success: false, message: safe.message, code: safe.code });
   }
 };
 
