@@ -74,23 +74,51 @@ function compactSummary(billing) {
   const aiQLim = billing?.limits?.ai_questions_monthly
   const aiPart =
     aiQLim == null || aiQLim === '' ? `AI ${aiQ}` : `AI ${aiQ}/${Math.max(0, Number(aiQLim) || 0)}`
-  return `👥 ${students} · 💾 ${storage} · 📱 ${smsLeft} · ${aiPart}`
+  return `${students} · ${storage} · ${smsLeft} SMS · ${aiPart}`
 }
 
-function UsageRow({ icon, label, value, warn }) {
+function PlanIcon({ kind }) {
+  const paths = {
+    package: <path d="M3.5 7.25 12 3l8.5 4.25v9.5L12 21l-8.5-4.25v-9.5Zm8.5 4.25v9.1m0-9.1 8.5-4.25M12 11.5 3.5 7.25" />,
+    users: <><path d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /><path d="M2.75 19c.35-3.25 2.3-5 5.75-5s5.4 1.75 5.75 5M16 6.25a2.5 2.5 0 0 1 0 4.75M18 14c1.8.7 2.9 2.3 3.15 5" /></>,
+    storage: <><rect x="4" y="3.5" width="16" height="17" rx="2" /><path d="M7.5 7.5h9M7.5 12h9M7.5 16.5h5" /></>,
+    sms: <><rect x="7" y="2.75" width="10" height="18.5" rx="2" /><path d="M10 5.75h4M10.25 17.5h3.5" /></>,
+    ai: <><path d="M12 2.75 13.5 8.5 19.25 10 13.5 11.5 12 17.25l-1.5-5.75L4.75 10l5.75-1.5L12 2.75Z" /><path d="m18 15 .7 2.3L21 18l-2.3.7L18 21l-.7-2.3L15 18l2.3-.7L18 15Z" /></>,
+    grading: <><path d="M6 3.5h9l3 3v14H6v-17Z" /><path d="M15 3.5v3h3M9 11h6M9 15h4" /><path d="m8.5 7.5 1 1 2-2" /></>,
+  }
   return (
-    <div className="min-w-0">
-      <p className="text-[11px] font-semibold text-token-textMuted leading-snug">
-        {icon} {label}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[kind] || paths.package}
+    </svg>
+  )
+}
+
+function UsageRow({ kind, label, value, warn }) {
+  const tone = warn
+    ? 'bg-amber-50 text-amber-700 border-amber-200'
+    : kind === 'ai'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      : kind === 'sms'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : 'bg-slate-50 text-slate-600 border-slate-200'
+  return (
+    <div className="flex min-w-0 items-start gap-2.5">
+      <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${tone}`}>
+        <PlanIcon kind={kind} />
+      </span>
+      <div className="min-w-0">
+      <p className="text-xs font-semibold text-token-textMuted leading-snug">
+        {label}
       </p>
       <p
         className={[
-          'text-sm font-semibold tabular-nums mt-0.5 leading-snug',
-          warn ? 'text-amber-200' : 'text-token-textMain',
+          'text-base font-bold tabular-nums mt-0.5 leading-snug tracking-tight',
+          warn ? 'text-amber-700 dark:text-amber-200' : 'text-token-textMain',
         ].join(' ')}
       >
         {value}
       </p>
+      </div>
     </div>
   )
 }
@@ -153,30 +181,36 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
 
   const header = (
     <>
-      <span className="text-sm font-bold text-token-textMain leading-snug truncate">📦 {planChip}</span>
+      <span className="flex min-w-0 items-center gap-2 text-[15px] font-bold tracking-tight text-token-textMain leading-snug truncate">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700">
+          <PlanIcon kind="package" />
+        </span>
+        <span className="truncate">{planChip}</span>
+      </span>
       {collapsible ? (
-        <span
-          aria-hidden
+        <svg
+          viewBox="0 0 20 20"
+          aria-hidden="true"
           className={[
-            'shrink-0 text-token-textMuted text-xs transition-transform duration-200',
+            'h-4 w-4 shrink-0 text-token-textMuted transition-transform duration-200',
             expanded ? 'rotate-180' : 'rotate-0',
           ].join(' ')}
         >
-          ▾
-        </span>
+          <path d="m5 7.5 5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       ) : null}
     </>
   )
 
   return (
-    <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/40 overflow-hidden">
+    <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard/55 overflow-hidden shadow-sm shadow-slate-950/[0.02]">
       {collapsible ? (
         <button
           type="button"
           onClick={toggle}
           aria-expanded={expanded}
           aria-controls={panelId}
-          className="w-full flex items-center justify-between gap-2 p-3 text-left hover:bg-white/[0.03] transition-colors"
+          className="w-full flex items-center justify-between gap-2 p-3 text-left transition-colors hover:bg-slate-500/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 focus-visible:ring-inset"
         >
           {header}
         </button>
@@ -185,28 +219,28 @@ export default function BillingUsagePills({ billing, planTitle = '', collapsible
       )}
 
       {!collapsible || expanded ? (
-        <div id={panelId} className={collapsible ? 'px-3 pb-3 pt-0 space-y-2.5 border-t border-white/5' : 'p-3 pt-0 space-y-2.5'}>
+        <div id={panelId} className={collapsible ? 'px-3 pb-3 pt-2.5 space-y-3 border-t border-[color:var(--border-subtle)]' : 'p-3 pt-2.5 space-y-3'}>
           {trialLine ? (
             <p className="text-[11px] font-medium text-amber-600 dark:text-amber-200/90 leading-snug">{trialLine}</p>
           ) : null}
-          <UsageRow icon="👥" label={t('billing.usage.students')} value={fmtStudentsLine(billing, t)} warn={studentsWarn} />
-          <UsageRow icon="💾" label={t('billing.usage.storage')} value={fmtStorageMbPair(billing)} warn={storageWarn} />
-          <UsageRow icon="📱" label={t('billing.usage.sms')} value={fmtSmsRemainingLine(billing, t)} warn={smsWarn} />
+          <UsageRow kind="users" label={t('billing.usage.students')} value={fmtStudentsLine(billing, t)} warn={studentsWarn} />
+          <UsageRow kind="storage" label={t('billing.usage.storage')} value={fmtStorageMbPair(billing)} warn={storageWarn} />
+          <UsageRow kind="sms" label={t('billing.usage.sms')} value={fmtSmsRemainingLine(billing, t)} warn={smsWarn} />
           <UsageRow
-            icon="✨"
+            kind="ai"
             label={t('billing.usage.aiQuestions')}
             value={fmtAiLine(billing, 'questions', t)}
             warn={aiQWarn}
           />
           <UsageRow
-            icon="📝"
+            kind="grading"
             label={t('billing.usage.aiGradings')}
             value={fmtAiLine(billing, 'gradings', t)}
             warn={aiGWarn}
           />
         </div>
       ) : (
-        <p className="px-3 pb-2.5 text-[10px] text-token-textMuted leading-snug truncate">
+        <p className="px-3 pb-2.5 text-[11px] font-medium text-token-textMuted leading-snug truncate">
           {trialLine ? `${trialLine} · ${summary}` : summary}
         </p>
       )}
