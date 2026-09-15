@@ -11,6 +11,7 @@ export default function Modal({
   size = 'md',
   zIndex = 10000,
   scrollBody = false,
+  compact = false,
 }) {
   const theme = useUiStore((s) => s.theme)
   const isDark = theme === 'dark'
@@ -48,7 +49,8 @@ export default function Modal({
       >
         <div
           className={[
-            'flex shrink-0 items-center justify-between p-6 border-b',
+            'flex shrink-0 items-center justify-between border-b',
+            compact ? 'px-5 py-4' : 'p-6',
             isDark ? 'border-white/10' : 'border-slate-200',
           ].join(' ')}
         >
@@ -70,8 +72,8 @@ export default function Modal({
         <div
           className={[
             scrollBody
-              ? 'flex-1 min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none] p-6'
-              : 'p-6',
+              ? `flex-1 min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none] ${compact ? 'p-5' : 'p-6'}`
+              : compact ? 'p-5' : 'p-6',
             isDark ? 'text-zinc-200' : 'text-slate-800',
           ].join(' ')}
         >
@@ -80,7 +82,8 @@ export default function Modal({
         {footer ? (
           <div
             className={[
-              'shrink-0 border-t px-6 py-4',
+              'shrink-0 border-t',
+              compact ? 'px-5 py-3' : 'px-6 py-4',
               isDark ? 'border-white/10 text-zinc-200 bg-surface-2' : 'border-slate-200 text-slate-800 bg-white',
             ].join(' ')}
           >
