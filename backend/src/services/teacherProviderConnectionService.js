@@ -30,6 +30,22 @@ function publicConnection(row) {
   };
 }
 
+/**
+ * A refresh token must never be carried from one Google account to another.
+ * Google can omit a refresh token on a repeat consent flow, so only retain an
+ * existing one when the identity returned by the new OAuth exchange matches.
+ */
+function sameGoogleAccount(existing, { providerAccountId, accountEmail }) {
+  if (!existing) return false;
+  const oldId = String(existing.provider_account_id || '').trim();
+  const newId = String(providerAccountId || '').trim();
+  if (oldId && newId) return oldId === newId;
+
+  const oldEmail = String(existing.account_email || '').trim().toLowerCase();
+  const newEmail = String(accountEmail || '').trim().toLowerCase();
+  return Boolean(oldEmail && newEmail && oldEmail === newEmail);
+}
+
 async function listConnections(instructorId) {
   const { rows } = await db.query(
     `SELECT provider, status, account_email, provider_account_id, token_expires_at, updated_at
@@ -184,11 +200,20 @@ async function completeGoogleMeetOAuth({ code, state }) {
   const accessEnc = encrypt(accessToken);
   const refreshEnc = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
 
-  // If Google did not return a new refresh token, keep the previous one.
+  // If Google did not return a new refresh token, keep the previous one only
+  // when this is still the same Google account. Keeping it after an account
+  // switch would later create Meets on the old account once the access token
+  // expired.
   const existing = await getConnectionRow(pending.instructor_id, 'google_meet');
-  const keepRefresh = refreshEnc || existing?.refresh_token_enc || null;
+  const keepRefresh =
+    refreshEnc ||
+    (sameGoogleAccount(existing, { providerAccountId, accountEmail })
+      ? existing?.refresh_token_enc
+      : null);
   if (!keepRefresh) {
-    const err = new Error('Google refresh token alınmadı — yenidən razılıq verin');
+    const err = new Error(
+      'Seçilən Google hesabı üçün refresh token alınmadı — Google hesab seçimini təsdiqləyib yenidən qoşulun',
+    );
     err.status = 502;
     err.code = 'GOOGLE_REFRESH_MISSING';
     throw err;
@@ -271,5 +296,6 @@ module.exports = {
   completeGoogleMeetOAuth,
   disconnectProvider,
   publicConnection,
+  sameGoogleAccount,
   ALLOWED_PROVIDERS,
 };

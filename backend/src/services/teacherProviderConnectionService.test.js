@@ -1,6 +1,10 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { ALLOWED_PROVIDERS, publicConnection } = require('../services/teacherProviderConnectionService');
+const {
+  ALLOWED_PROVIDERS,
+  publicConnection,
+  sameGoogleAccount,
+} = require('../services/teacherProviderConnectionService');
 
 describe('teacherProviderConnectionService contracts', () => {
   it('only allows google_meet / zoom / teams connection providers', () => {
@@ -27,5 +31,26 @@ describe('teacherProviderConnectionService contracts', () => {
     assert.equal('refresh_token_enc' in pub, false);
     assert.equal('access_token' in pub, false);
     assert.equal('refresh_token' in pub, false);
+  });
+
+  it('only reuses a refresh token for the same Google identity', () => {
+    const existing = {
+      provider_account_id: 'google-sub-1',
+      account_email: 'teacher@example.com',
+    };
+    assert.equal(
+      sameGoogleAccount(existing, {
+        providerAccountId: 'google-sub-1',
+        accountEmail: 'other@example.com',
+      }),
+      true,
+    );
+    assert.equal(
+      sameGoogleAccount(existing, {
+        providerAccountId: 'google-sub-2',
+        accountEmail: 'teacher@example.com',
+      }),
+      false,
+    );
   });
 });

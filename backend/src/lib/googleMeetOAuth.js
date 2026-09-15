@@ -115,7 +115,10 @@ function buildAuthorizeUrl({ state, codeChallenge }) {
   const client = getGoogleOAuthClient();
   return client.generateAuthUrl({
     access_type: 'offline',
-    prompt: 'consent',
+    // Teachers commonly have several Google accounts open in the same browser.
+    // Always show Google's account picker so a Meet connection is not silently
+    // renewed against whichever account happens to be active in Chrome.
+    prompt: 'select_account consent',
     scope: GOOGLE_MEET_SCOPES,
     state,
     include_granted_scopes: true,
