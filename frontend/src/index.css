@@ -85,6 +85,14 @@
   }
 }
 
+@media (max-width: 1023px) {
+  /* Keep the preview flat on touch-sized screens: motion is decorative and
+     the extra perspective costs precious horizontal space on mobile. */
+  .mx-hero-preview-tilt {
+    transform: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mx-hero-preview-float {
     animation: none;
