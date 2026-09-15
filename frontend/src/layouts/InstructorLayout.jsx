@@ -526,7 +526,7 @@ export default function InstructorLayout() {
           </div>
         </nav>
 
-        <div className="p-4 border-t border-[color:var(--border-subtle)]">
+        <div className="px-4 py-3 border-t border-[color:var(--border-subtle)]">
           <SidebarPreferences
             onLogout={() => {
               setFocusMode(false)
