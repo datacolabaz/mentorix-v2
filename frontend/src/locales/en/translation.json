@@ -1441,6 +1441,8 @@
     "universityPrograms": "University programs",
     "loginRegister": "Sign in / sign up",
     "partnerProgram": "Partner program",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
     "tagline": "Mentorix brings teachers, students, and parents together on one platform so you can run teaching more smoothly and effectively.",
     "copyright": "© 2026 Mentorix.io. All rights reserved.",
     "byDatacolab": "By Datacolab",
@@ -1461,6 +1463,149 @@
       "universitet-axtarisi": "University program",
       "riyaziyyat-repetitoru": "Math tutor",
       "ingilis-dili-repetitoru": "English tutor"
+    }
+  },
+  "legal": {
+    "eyebrow": "Legal",
+    "backHome": "Home",
+    "contactHeading": "Contact",
+    "contactBody": "Questions about privacy or these terms:",
+    "companyLine": "Mentorix is operated by DataColab (datacolab.az). Website: mentorix.io.",
+    "seeAlso": "See also:",
+    "privacyLink": "Privacy Policy",
+    "termsLink": "Terms of Service",
+    "privacy": {
+      "seoTitle": "Privacy Policy — Mentorix",
+      "seoDesc": "How Mentorix collects and uses personal data, including Google Calendar and Google Meet OAuth for live lessons.",
+      "title": "Privacy Policy",
+      "updated": "Last updated: 15 September 2026",
+      "sections": [
+        {
+          "heading": "Who we are",
+          "paragraphs": [
+            "Mentorix (mentorix.io) is an education platform for teachers, students, and parents. It is operated by DataColab. This policy explains what we collect, why we collect it, and how we handle Google account connections used for Mentorix Meet / Google Meet lessons."
+          ]
+        },
+        {
+          "heading": "Information we collect",
+          "paragraphs": [
+            "Depending on how you use Mentorix, we may collect:"
+          ],
+          "bullets": [
+            "Account details: name, email, phone, role (teacher, student, parent), and profile information you provide.",
+            "Teaching and learning data: groups, schedules, exams, assignments, payments metadata, and messages needed to run the service.",
+            "Technical data: IP address, device/browser info, cookies or similar technologies for login, security, and analytics.",
+            "Payment-related information required to process subscriptions or lesson packages (handled via our payment providers)."
+          ]
+        },
+        {
+          "heading": "Google Calendar and Google Meet (OAuth)",
+          "paragraphs": [
+            "Teachers who want to create Google Meet links from Mentorix can connect their own Google account. Mentorix requests limited OAuth access (typically OpenID profile/email identity and Google Calendar events scope) so we can create calendar events with Google Meet conference links on the teacher’s Google account.",
+            "We do not use this connection to sell advertising, scrape your full mailbox, or access unrelated Google services beyond what is needed to create and manage Meet-backed lessons that you start from Mentorix.",
+            "OAuth access and refresh tokens are stored encrypted on our servers and are used only to provide the live-lesson integration. Teachers can disconnect Google at any time from Mentorix settings; after disconnect we stop using those tokens and delete the stored connection credentials."
+          ]
+        },
+        {
+          "heading": "How we use information",
+          "paragraphs": [
+            "We use personal data to provide and improve Mentorix: authentication, scheduling, live lessons, exams, messaging, billing, support, security, and product analytics. We do not sell personal data."
+          ]
+        },
+        {
+          "heading": "Sharing",
+          "paragraphs": [
+            "We share data only when needed to operate the service: with infrastructure and payment providers under contract, when required by law, or when you ask us to (for example inviting a student to a lesson). Google receives the OAuth consent and API calls needed to create Meet links on the teacher’s account; video sessions themselves run on Google Meet under Google’s terms."
+          ]
+        },
+        {
+          "heading": "Retention and security",
+          "paragraphs": [
+            "We keep data as long as your account is active and as needed for legal, billing, and security purposes. We apply reasonable technical and organizational measures, including encryption of provider OAuth tokens at rest."
+          ]
+        },
+        {
+          "heading": "Your choices",
+          "paragraphs": [
+            "You may update profile information in the app, disconnect Google Meet, or request account deletion / data access by contacting us at the emails below. Some records may be retained where required by law or legitimate business needs (for example completed payments)."
+          ]
+        },
+        {
+          "heading": "Children",
+          "paragraphs": [
+            "Mentorix may be used by schools and families. Parents or guardians should supervise accounts for minors where applicable. Contact us if you believe we have collected a child’s data inappropriately."
+          ]
+        },
+        {
+          "heading": "Changes",
+          "paragraphs": [
+            "We may update this policy. The “Last updated” date above will change when we do. Continued use of Mentorix after an update means you accept the revised policy."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "seoTitle": "Terms of Service — Mentorix",
+      "seoDesc": "Terms for using Mentorix, subscriptions, and live video on the teacher’s Google Meet, Zoom, or Teams account.",
+      "title": "Terms of Service",
+      "updated": "Last updated: 15 September 2026",
+      "sections": [
+        {
+          "heading": "Agreement",
+          "paragraphs": [
+            "By creating an account or using mentorix.io, you agree to these Terms of Service and our Privacy Policy. If you use Mentorix on behalf of a school or organization, you confirm you have authority to accept these terms for that organization."
+          ]
+        },
+        {
+          "heading": "The service",
+          "paragraphs": [
+            "Mentorix provides tools for teaching management: groups, scheduling, exams, assignments, messaging, payments tracking, and live-lesson orchestration. Features available to you depend on your role and subscription plan."
+          ]
+        },
+        {
+          "heading": "Accounts and acceptable use",
+          "paragraphs": [
+            "You are responsible for your account credentials and for activity under your account. You agree not to misuse the platform, including by attempting unauthorized access, disrupting the service, uploading unlawful or harmful content, harassing others, or using Mentorix to violate applicable law or third-party rights."
+          ]
+        },
+        {
+          "heading": "Subscriptions and payments",
+          "paragraphs": [
+            "Paid plans, SMS credits, and other billable features are described on the pricing pages and in the product. Fees are charged according to the plan you select and the payment method you authorize. Lesson packages between teachers and students are agreements between those parties; Mentorix provides tooling and payment flows where enabled, but teaching quality and delivery remain the teacher’s responsibility unless we expressly state otherwise."
+          ]
+        },
+        {
+          "heading": "Live video (Google Meet, Zoom, Microsoft Teams)",
+          "paragraphs": [
+            "Mentorix can help teachers create and manage live lessons, including generating meeting links on a teacher’s connected Google, Zoom, or Microsoft account.",
+            "Important: video conferencing runs on the teacher’s own provider account. Mentorix does not sell or include Zoom Pro, Google Workspace, or Microsoft 365 licenses. Free-tier limits (for example Zoom Basic meeting length) are set by those providers, not by Mentorix. “Unlimited live lessons” in Mentorix packaging refers to managing lessons in Mentorix, not to unlimited third-party video capacity purchased by Mentorix on your behalf."
+          ]
+        },
+        {
+          "heading": "Google Meet / Calendar connection",
+          "paragraphs": [
+            "If you connect Google Calendar / Meet, you authorize Mentorix to create and manage calendar events with Meet links for lessons you start in the product. You can disconnect at any time. You must comply with Google’s terms for your Google account."
+          ]
+        },
+        {
+          "heading": "Availability and changes",
+          "paragraphs": [
+            "We aim for reliable service but do not guarantee uninterrupted availability. We may modify features, plans, or these terms with notice where reasonable. Continued use after changes constitutes acceptance."
+          ]
+        },
+        {
+          "heading": "Limitation of liability",
+          "paragraphs": [
+            "To the fullest extent permitted by law, Mentorix and DataColab are not liable for indirect, incidental, or consequential damages, or for losses arising from third-party services (including Google, Zoom, Microsoft, and payment processors) or from content and teaching provided by users."
+          ]
+        },
+        {
+          "heading": "Governing contact",
+          "paragraphs": [
+            "For questions about these terms, contact us using the emails below. These terms are intended for users of Mentorix worldwide, with primary operations related to Azerbaijan / DataColab."
+          ]
+        }
+      ]
     }
   },
   "teachingGroups": {

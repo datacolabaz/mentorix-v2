@@ -23,6 +23,7 @@ import {
 import InstructorMapSearch from './pages/public/InstructorMapSearch'
 import UniversityProgramSearch from './pages/public/UniversityProgramSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
+import LegalDocumentPage from './pages/public/LegalDocumentPage'
 import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
 import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
 import LibraryInvite from './pages/public/LibraryInvite'
@@ -232,6 +233,8 @@ export default function App() {
       <Route path="/teachers/:id" element={<PublicInstructorProfile />} />
       <Route path="/r/:code" element={<PartnerReferralLanding />} />
       <Route path="/partner" element={<PartnerProgramLanding />} />
+      <Route path="/privacy" element={<LegalDocumentPage doc="privacy" />} />
+      <Route path="/terms" element={<LegalDocumentPage doc="terms" />} />
       <Route
         path="/partner/dashboard"
         element={
