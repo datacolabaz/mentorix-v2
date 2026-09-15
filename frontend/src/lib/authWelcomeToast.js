@@ -31,6 +31,12 @@ export function authLoggedInToastKey(user) {
 
 export function authLoginErrorMessage(err, t) {
   const code = String(err?.code || '').trim()
+  if (code === 'INVALID_CREDENTIALS') {
+    return t('auth.toasts.invalidCredentials')
+  }
+  if (code === 'EMAIL_NOT_VERIFIED') {
+    return t('auth.toasts.verifyEmailFirst')
+  }
   if (code === 'GOOGLE_LOGIN_REQUIRED') {
     return t('auth.toasts.googleLoginRequired')
   }

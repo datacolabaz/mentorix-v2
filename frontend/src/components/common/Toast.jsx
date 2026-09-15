@@ -1,18 +1,17 @@
 import { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from './Modal'
 import Button from './Button'
 import useUiStore from '../../hooks/useUi'
 
 const ToastContext = createContext(null)
 
-const DIALOG_TITLES = {
-  success: 'Təsdiq',
-  info: 'Məlumat',
-  error: 'Xəta',
-}
-
-function DialogTitle({ type }) {
-  const label = DIALOG_TITLES[type] || 'Məlumat'
+function DialogTitle({ type, t }) {
+  const label = type === 'success'
+    ? t('common.success')
+    : type === 'error'
+      ? t('common.error')
+      : t('common.info')
   const iconClass = type === 'error'
     ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300'
     : type === 'success'
@@ -38,6 +37,7 @@ function messageClass(type, isDark) {
 
 export function ToastProvider({ children }) {
   const [dialog, setDialog] = useState(null)
+  const { t } = useTranslation()
   const theme = useUiStore((s) => s.theme)
   const isDark = theme === 'dark'
 
@@ -74,10 +74,11 @@ export function ToastProvider({ children }) {
       <Modal
         open={Boolean(dialog)}
         onClose={closeDialog}
-        title={<DialogTitle type={dialog?.type} />}
+        title={<DialogTitle type={dialog?.type} t={t} />}
         size="sm"
         zIndex={10150}
         compact
+        closeLabel={t('common.close')}
         footer={
           <div className="flex justify-center">
             <Button
@@ -86,7 +87,7 @@ export function ToastProvider({ children }) {
               className="min-w-[108px] justify-center"
               onClick={closeDialog}
             >
-              Bağla
+              {t('common.close')}
             </Button>
           </div>
         }

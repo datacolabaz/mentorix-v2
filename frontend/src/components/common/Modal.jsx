@@ -12,6 +12,7 @@ export default function Modal({
   zIndex = 10000,
   scrollBody = false,
   compact = false,
+  closeLabel = 'Close',
 }) {
   const theme = useUiStore((s) => s.theme)
   const isDark = theme === 'dark'
@@ -64,7 +65,7 @@ export default function Modal({
               'transition-colors text-xl',
               isDark ? 'text-gray-400 hover:text-white' : 'text-slate-500 hover:text-slate-900',
             ].join(' ')}
-            aria-label="Bağla"
+            aria-label={closeLabel}
           >
             ✕
           </button>

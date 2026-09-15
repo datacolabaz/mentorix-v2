@@ -29,6 +29,14 @@ describe('authLoggedInToastKey', () => {
 })
 
 describe('authLoginErrorMessage', () => {
+  it('maps password failures to the active-language message', () => {
+    const t = (k) => (k === 'auth.toasts.invalidCredentials' ? 'Incorrect email or password' : k)
+    assert.equal(
+      authLoginErrorMessage({ code: 'INVALID_CREDENTIALS', message: 'Azərbaycan dilində backend mətni' }, t),
+      'Incorrect email or password',
+    )
+  })
+
   it('maps GOOGLE_LOGIN_REQUIRED to i18n toast', () => {
     const t = (k) => (k === 'auth.toasts.googleLoginRequired' ? 'Use Google' : k)
     assert.equal(authLoginErrorMessage({ code: 'GOOGLE_LOGIN_REQUIRED' }, t), 'Use Google')
