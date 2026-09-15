@@ -116,6 +116,16 @@ export default function PublicSeoFooter({ className = '' }) {
                 </Link>
               </li>
               <li>
+                <Link to="/privacy" className="text-slate-800 hover:text-emerald-700 transition-colors">
+                  {t('publicFooter.privacy', { defaultValue: 'Məxfilik siyasəti' })}
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="text-slate-800 hover:text-emerald-700 transition-colors">
+                  {t('publicFooter.terms', { defaultValue: 'İstifadə şərtləri' })}
+                </Link>
+              </li>
+              <li>
                 <Link to="/login" className="text-slate-800 font-semibold hover:text-emerald-700 transition-colors">
                   {t('publicFooter.loginRegister')}
                 </Link>

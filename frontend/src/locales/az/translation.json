@@ -1441,6 +1441,8 @@
     "universityPrograms": "Universitet proqramları",
     "loginRegister": "Giriş / qeydiyyat",
     "partnerProgram": "Partner proqramı",
+    "privacy": "Məxfilik siyasəti",
+    "terms": "İstifadə şərtləri",
     "tagline": "Mentorix müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.",
     "copyright": "© 2026 Mentorix.io. Bütün hüquqlar qorunur.",
     "byDatacolab": "Datacolab tərəfindən",
@@ -1461,6 +1463,149 @@
       "universitet-axtarisi": "Universitet proqramı",
       "riyaziyyat-repetitoru": "Riyaziyyat repetitoru",
       "ingilis-dili-repetitoru": "İngilis dili repetitoru"
+    }
+  },
+  "legal": {
+    "eyebrow": "Hüquqi",
+    "backHome": "Ana səhifə",
+    "contactHeading": "Əlaqə",
+    "contactBody": "Məxfilik və ya bu şərtlərlə bağlı suallar:",
+    "companyLine": "Mentorix DataColab (datacolab.az) tərəfindən idarə olunur. Vebsayt: mentorix.io.",
+    "seeAlso": "Həmçinin baxın:",
+    "privacyLink": "Məxfilik siyasəti",
+    "termsLink": "İstifadə şərtləri",
+    "privacy": {
+      "seoTitle": "Məxfilik siyasəti — Mentorix",
+      "seoDesc": "Mentorix şəxsi məlumatları necə toplayır və istifadə edir; Google Calendar və Google Meet OAuth daxil.",
+      "title": "Məxfilik siyasəti",
+      "updated": "Son yenilənmə: 15 sentyabr 2026",
+      "sections": [
+        {
+          "heading": "Biz kimik",
+          "paragraphs": [
+            "Mentorix (mentorix.io) müəllim, tələbə və valideynlər üçün təhsil platformasıdır və DataColab tərəfindən idarə olunur. Bu siyasət nə topladığımızı, niyə topladığımızı və Mentorix Meet / Google Meet dərsləri üçün Google hesabı bağlantısını necə idarə etdiyimizi izah edir."
+          ]
+        },
+        {
+          "heading": "Hansı məlumatları toplayırıq",
+          "paragraphs": [
+            "Mentorix-dən istifadə üsulunuzdan asılı olaraq toplaya bilərik:"
+          ],
+          "bullets": [
+            "Hesab məlumatları: ad, e-poçt, telefon, rol (müəllim, tələbə, valideyn) və təqdim etdiyiniz profil məlumatları.",
+            "Tədris məlumatları: qruplar, cədvəl, imtahanlar, tapşırıqlar, ödəniş metadatası və xidmətin işləməsi üçün lazım olan mesajlar.",
+            "Texniki məlumatlar: IP ünvanı, cihaz/brauzer məlumatı, giriş, təhlükəsizlik və analitika üçün kukilər və oxşar texnologiyalar.",
+            "Abunəlik və ya dərs paketlərinin ödənişi üçün lazım olan ödənişlə bağlı məlumatlar (ödəniş provayderləri vasitəsilə)."
+          ]
+        },
+        {
+          "heading": "Google Calendar və Google Meet (OAuth)",
+          "paragraphs": [
+            "Mentorix-dən Google Meet linki yaratmaq istəyən müəllimlər öz Google hesablarını bağlaya bilərlər. Mentorix məhdud OAuth icazəsi istəyir (adətən OpenID profil/e-poçt kimliyi və Google Calendar hadisələri sahəsi) ki, müəllimin Google hesabında Google Meet konfrans linki olan təqvim hadisələri yarada bilək.",
+            "Bu bağlantını reklam satmaq, poçt qutunuzu oxumaq və ya Mentorix-də başlatdığınız Meet dərsləri üçün lazım olandan kənar Google xidmətlərinə giriş üçün istifadə etmirik.",
+            "OAuth giriş və yeniləmə tokenləri serverlərimizdə şifrələnmiş saxlanılır və yalnız canlı dərs inteqrasiyası üçün istifadə olunur. Müəllim Mentorix ayarlarından Google-u istənilən vaxt ayıra bilər; ayırdıqdan sonra həmin tokenlərdən istifadəni dayandırırıq və saxlanılan bağlantı məlumatlarını silirik."
+          ]
+        },
+        {
+          "heading": "Məlumatları necə istifadə edirik",
+          "paragraphs": [
+            "Şəxsi məlumatları Mentorix-i təmin etmək və yaxşılaşdırmaq üçün istifadə edirik: autentifikasiya, cədvəl, canlı dərslər, imtahanlar, mesajlaşma, billing, dəstək, təhlükəsizlik və məhsul analitikası. Şəxsi məlumatları satmırıq."
+          ]
+        },
+        {
+          "heading": "Paylaşım",
+          "paragraphs": [
+            "Məlumatları yalnız xidməti işlətmək üçün lazım olduqda paylaşırıq: müqaviləli infrastruktur və ödəniş provayderləri ilə, qanun tələb etdikdə və ya siz xahiş etdikdə (məsələn, tələbəni dərsə dəvət). Google, Meet linklərinin müəllimin hesabında yaradılması üçün OAuth razılığı və API çağırışlarını alır; video sessiyaları Google Meet-də Google-un şərtlərinə uyğun işləyir."
+          ]
+        },
+        {
+          "heading": "Saxlama və təhlükəsizlik",
+          "paragraphs": [
+            "Hesabınız aktiv olduğu müddətdə və hüquqi, billing və təhlükəsizlik ehtiyacları üçün lazım olan müddətdə məlumatları saxlayırıq. Provayder OAuth tokenlərinin saxlanmada şifrələnməsi daxil olmaqla, ağlabatan texniki və təşkilati tədbirlər tətbiq edirik."
+          ]
+        },
+        {
+          "heading": "Seçimləriniz",
+          "paragraphs": [
+            "Tətbiqdə profil məlumatlarını yeniləyə, Google Meet bağlantısını ayıra və ya aşağıdakı e-poçtlarla hesabın silinməsini / məlumatlara çıxışı istəyə bilərsiniz. Bəzi qeydlər qanun və ya qanuni biznes ehtiyacları üçün saxlanıla bilər (məsələn, tamamlanmış ödənişlər)."
+          ]
+        },
+        {
+          "heading": "Uşaqlar",
+          "paragraphs": [
+            "Mentorix məktəb və ailələr tərəfindən istifadə oluna bilər. Uyğun hallarda valideynlər və ya qəyyumlar yetkinlik yaşına çatmayanların hesablarına nəzarət etməlidirlər. Uşağın məlumatlarının yanlış toplandığını düşünürsünüzsə, bizimlə əlaqə saxlayın."
+          ]
+        },
+        {
+          "heading": "Dəyişikliklər",
+          "paragraphs": [
+            "Bu siyasəti yeniləyə bilərik. Yenilədikdə yuxarıdakı «Son yenilənmə» tarixi dəyişəcək. Yeniləmədən sonra Mentorix-dən istifadəni davam etdirmək yenilənmiş siyasəti qəbul etdiyiniz deməkdir."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "seoTitle": "İstifadə şərtləri — Mentorix",
+      "seoDesc": "Mentorix istifadəsi, abunəliklər və müəllimin Google Meet / Zoom / Teams hesabında video dərslər haqqında şərtlər.",
+      "title": "İstifadə şərtləri",
+      "updated": "Son yenilənmə: 15 sentyabr 2026",
+      "sections": [
+        {
+          "heading": "Razılaşma",
+          "paragraphs": [
+            "Hesab yaratmaqla və ya mentorix.io-dan istifadə etməklə bu İstifadə şərtləri və Məxfilik siyasətimizlə razılaşırsınız. Mentorix-i məktəb və ya təşkilat adından istifadə edirsinizsə, bu şərtləri həmin təşkilat üçün qəbul etmək səlahiyyətiniz olduğunu təsdiq edirsiniz."
+          ]
+        },
+        {
+          "heading": "Xidmət",
+          "paragraphs": [
+            "Mentorix tədris idarəetməsi alətləri təqdim edir: qruplar, cədvəl, imtahanlar, tapşırıqlar, mesajlaşma, ödəniş izləmə və canlı dərs orkestrasiyası. Əlçatan funksiyalar rolunuz və abunəlik planınızdan asılıdır."
+          ]
+        },
+        {
+          "heading": "Hesablar və qəbul edilən istifadə",
+          "paragraphs": [
+            "Hesab məlumatlarınıza və hesabınız altındakı fəaliyyətə görə məsuliyyət daşıyırsınız. Platformadan sui-istifadə etməməyə razılaşırsınız: icazəsiz giriş cəhdləri, xidmətin pozulması, qanunsuz və ya zərərli məzmun yükləmək, digərlərini təhqir etmək və ya Mentorix-i qüvvədə olan qanunları və ya üçüncü tərəf hüquqlarını pozmaq üçün istifadə."
+          ]
+        },
+        {
+          "heading": "Abunəliklər və ödənişlər",
+          "paragraphs": [
+            "Pullu planlar, SMS kreditləri və digər ödənişli funksiyalar qiymət səhifələrində və məhsulda təsvir olunur. Seçdiyiniz plana və səlahiyyət verdiyiniz ödəniş üsuluna görə haqq tutulur. Müəllim və tələbə arasındakı dərs paketləri həmin tərəflər arasındakı razılaşmadır; Mentorix alətlər və (aktiv olduqda) ödəniş axınları təqdim edir, lakin tədrisin keyfiyyəti və çatdırılması — açıq şəkildə başqa cür bildirmədiyimiz hallar istisna olmaqla — müəllimin məsuliyyətidir."
+          ]
+        },
+        {
+          "heading": "Canlı video (Google Meet, Zoom, Microsoft Teams)",
+          "paragraphs": [
+            "Mentorix müəllimlərə canlı dərslər yaratmağa və idarə etməyə kömək edə bilər, o cümlədən müəllimin bağlı Google, Zoom və ya Microsoft hesabında görüş linkləri yaratmaqla.",
+            "Vacib: video konfrans müəllimin öz provayder hesabında işləyir. Mentorix Zoom Pro, Google Workspace və ya Microsoft 365 lisenziyası satmır və paketə daxil etmir. Pulsuz limitlər (məsələn, Zoom Basic görüş müddəti) həmin provayderlər tərəfindən müəyyən olunur, Mentorix tərəfindən deyil. Mentorix paketlərindəki «limitsiz canlı dərslər» Mentorix-də dərslərin idarə olunmasına aiddir; sizin adınıza üçüncü tərəf video tutumunun limitsiz alınmasına aid deyil."
+          ]
+        },
+        {
+          "heading": "Google Meet / Calendar bağlantısı",
+          "paragraphs": [
+            "Google Calendar / Meet bağlasanız, məhsulda başlatdığınız dərslər üçün Meet linkli təqvim hadisələrinin yaradılmasına və idarəsinə Mentorix-ə icazə verirsiniz. İstənilən vaxt ayıra bilərsiniz. Google hesabınız üçün Google-un şərtlərinə əməl etməlisiniz."
+          ]
+        },
+        {
+          "heading": "Əlçatanlıq və dəyişikliklər",
+          "paragraphs": [
+            "Etibarlı xidmətə çalışırıq, lakin fasiləsiz əlçatanlığa zəmanət vermirik. Ağlabatan bildirişlə funksiyaları, planları və ya bu şərtləri dəyişə bilərik. Dəyişikliklərdən sonra istifadəni davam etdirmək qəbul deməkdir."
+          ]
+        },
+        {
+          "heading": "Məsuliyyətin məhdudlaşdırılması",
+          "paragraphs": [
+            "Qanunun icazə verdiyi maksimum həddə Mentorix və DataColab dolayı, təsadüfi və ya nəticə zərərlərinə, eləcə də üçüncü tərəf xidmətlərindən (Google, Zoom, Microsoft və ödəniş prosessorları daxil) və ya istifadəçilərin təqdim etdiyi məzmun və tədrisdən yaranan itkilərə görə məsuliyyət daşımır."
+          ]
+        },
+        {
+          "heading": "Əlaqə",
+          "paragraphs": [
+            "Bu şərtlərlə bağlı suallar üçün aşağıdakı e-poçtlara yazın. Bu şərtlər Mentorix istifadəçiləri üçündür; əsas əməliyyatlar Azərbaycan / DataColab ilə bağlıdır."
+          ]
+        }
+      ]
     }
   },
   "teachingGroups": {
