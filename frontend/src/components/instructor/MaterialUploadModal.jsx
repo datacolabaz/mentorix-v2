@@ -71,11 +71,10 @@ function buildShareLinks({ material, forGroupStudents, shareExternalLink }) {
       url: materialShareUrl(material.id),
     })
   }
-  if (forGroupStudents && material?.group_id) {
-    links.push({
-      label: 'Qrup kitabxanası linki',
-      url: groupLibraryShareUrl(material.group_id),
-    })
+  if (forGroupStudents) {
+    for (const group of material?.groups || []) {
+      links.push({ label: `${group.name} qrupunun kitabxana linki`, url: groupLibraryShareUrl(group.id) })
+    }
   }
   return links
 }
@@ -87,6 +86,7 @@ export default function MaterialUploadModal({
   quota: quotaProp,
   onUpgrade,
   fields = [],
+  allGroups = [],
   fieldsLoading = false,
 }) {
   const toast = useToast()
@@ -98,7 +98,7 @@ export default function MaterialUploadModal({
   const [forGroupStudents, setForGroupStudents] = useState(true)
   const [shareExternalLink, setShareExternalLink] = useState(true)
   const [subjectId, setSubjectId] = useState('')
-  const [groupId, setGroupId] = useState('')
+  const [groupIds, setGroupIds] = useState([])
   const [quota, setQuota] = useState(quotaProp || null)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -108,7 +108,10 @@ export default function MaterialUploadModal({
   const [tags, setTags] = useState('')
 
   const limitReached = isMaterialsQuotaFull(quota)
-  const groupsInField = useMemo(() => groupsForField(fields, subjectId), [fields, subjectId])
+  const groupsInField = useMemo(
+    () => (subjectId ? groupsForField(fields, subjectId) : allGroups),
+    [allGroups, fields, subjectId],
+  )
 
   const resetForm = useCallback(() => {
     fileRef.current = null
@@ -117,7 +120,7 @@ export default function MaterialUploadModal({
     setForGroupStudents(true)
     setShareExternalLink(true)
     setSubjectId('')
-    setGroupId('')
+    setGroupIds([])
     setProgress(0)
     setDragOver(false)
     setPickingFile(false)
@@ -248,12 +251,8 @@ export default function MaterialUploadModal({
       return
     }
     if (forGroupStudents) {
-      if (!subjectId) {
-        toast('Sahə seçin', 'error')
-        return
-      }
-      if (!groupId) {
-        toast('Qrup seçin', 'error')
+      if (!groupIds.length) {
+        toast('Ən azı bir qrup seçin', 'error')
         return
       }
     }
@@ -266,8 +265,8 @@ export default function MaterialUploadModal({
     fd.append('file', uploadFile, uploadFile.name)
     fd.append('title', title.trim() || uploadFile.name)
     if (forGroupStudents) {
-      fd.append('subject_id', subjectId)
-      fd.append('group_id', groupId)
+      if (subjectId) fd.append('subject_id', subjectId)
+      fd.append('group_ids', JSON.stringify(groupIds))
     }
     if (tags.trim()) {
       fd.append('tags', tags.trim())
@@ -488,12 +487,11 @@ export default function MaterialUploadModal({
                       value={subjectId}
                       onChange={(e) => {
                         setSubjectId(e.target.value)
-                        setGroupId('')
                       }}
                       disabled={uploading || fieldsLoading}
                       className={SELECT_CLS}
                     >
-                      <option value="">— Seçin —</option>
+                      <option value="">Bütün sahələr</option>
                       {fields.map((f) => (
                         <option key={f.id} value={f.id}>
                           {f.name}
@@ -502,30 +500,32 @@ export default function MaterialUploadModal({
                     </select>
                   </label>
 
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qrup</span>
-                    <select
-                      value={groupId}
-                      onChange={(e) => setGroupId(e.target.value)}
-                      disabled={uploading || fieldsLoading || !subjectId}
-                      className={SELECT_CLS}
-                    >
-                      {!subjectId ? (
-                        <option value="">Əvvəlcə sahə seçin</option>
-                      ) : !groupsInField.length ? (
-                        <option value="">Bu sahədə qrup yoxdur</option>
-                      ) : (
-                        <>
-                          <option value="">— Seçin —</option>
-                          {groupsInField.map((g) => (
-                            <option key={g.id} value={g.id}>
-                              {g.name}
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
-                  </label>
+                  <div className="block space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Qruplar</span>
+                      <span className="text-[11px] font-medium text-primary">{groupIds.length} seçilib</span>
+                    </div>
+                    <div className="max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-[#1c1c1c] p-1.5">
+                      {!groupsInField.length ? (
+                        <p className="px-2.5 py-2 text-xs text-gray-400">Bu sahədə qrup yoxdur</p>
+                      ) : groupsInField.map((g) => {
+                        const checked = groupIds.includes(g.id)
+                        return (
+                          <label key={g.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-white hover:bg-white/5">
+                            <input
+                              type="checkbox"
+                              className="accent-primary"
+                              checked={checked}
+                              disabled={uploading || fieldsLoading}
+                              onChange={() => setGroupIds((current) => checked ? current.filter((id) => id !== g.id) : [...current, g.id])}
+                            />
+                            <span>{g.name}{!subjectId && g.subject_name ? ` · ${g.subject_name}` : ''}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-gray-400">Bir materialı eyni anda bir neçə qrupa paylaşa bilərsiniz.</p>
+                  </div>
                 </>
               ) : (
                 <p className="sm:col-span-2 text-xs text-gray-500 leading-relaxed">
