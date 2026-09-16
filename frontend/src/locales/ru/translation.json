@@ -607,12 +607,11 @@
   },
   "live": {
     "historyTitle": "Онлайн-уроки",
-    "historySubtitle": "Уроки Mentorix Live и Google Meet · видео может идти на аккаунте учителя",
+    "historySubtitle": "Живые уроки",
     "startFromGroup": "Начать из группы",
     "createLessonCta": "＋ Создать живой урок",
     "createLessonTitle": "Создать живой урок",
     "pickPlatform": "Выберите платформу",
-    "byoHint": "Meet / Zoom / Teams — аккаунт учителя · Mentorix Live — комната платформы",
     "comingSoon": "Скоро",
     "providerBack": "Назад",
     "selectedProvider": "Платформа: {{name}}",

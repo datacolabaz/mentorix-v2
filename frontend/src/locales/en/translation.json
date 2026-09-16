@@ -607,12 +607,11 @@
   },
   "live": {
     "historyTitle": "Live lessons",
-    "historySubtitle": "Mentorix Live and Google Meet lessons · video can run on the teacher's own account",
+    "historySubtitle": "Live lessons",
     "startFromGroup": "Start from a group",
     "createLessonCta": "＋ Create live lesson",
     "createLessonTitle": "Create live lesson",
     "pickPlatform": "Choose a platform",
-    "byoHint": "Meet / Zoom / Teams — teacher's own account · Mentorix Live — platform room",
     "comingSoon": "Coming soon",
     "providerBack": "Back",
     "selectedProvider": "Platform: {{name}}",

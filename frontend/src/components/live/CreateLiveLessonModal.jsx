@@ -213,7 +213,7 @@ export default function CreateLiveLessonModal({
         {step === 'pick' ? (
           <div className="space-y-3">
             <p className="text-sm text-token-textMuted">{t('live.pickPlatform')}</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {PROVIDERS.map((p) => (
                 <button
                   key={p.id}
