@@ -124,7 +124,7 @@ export default function ParentLayout() {
             'md:static md:inset-auto md:flex-1 md:min-h-0 md:pt-0',
           ].join(' ')}
         >
-        <div className="min-h-full flex flex-col">
+        <div className="min-h-full flex flex-col pb-16">
           <div className="mx-app-content flex-1 min-h-0">
             <Outlet />
           </div>

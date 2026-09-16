@@ -546,7 +546,7 @@ export default function InstructorLayout() {
             'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:min-w-0 lg:pt-0 lg:px-6',
           ].join(' ')}
         >
-        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden box-border">
+        <div className="min-h-full flex flex-col min-w-0 w-full max-w-full overflow-x-hidden box-border pb-16">
           <div className="mt-3 sm:mt-4 min-w-0 max-w-full box-border">
             <BillingBanner
               status={billing?.status}

@@ -230,7 +230,7 @@ export default function CourseLayout() {
             'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0',
           ].join(' ')}
         >
-          <div className="min-h-full flex flex-col">
+          <div className="min-h-full flex flex-col pb-16">
             <div className="mx-app-content flex-1 min-h-0">
               <Outlet />
             </div>

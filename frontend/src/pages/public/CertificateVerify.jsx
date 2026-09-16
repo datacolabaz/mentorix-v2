@@ -65,9 +65,9 @@ export default function CertificateVerify() {
   const modules = Array.isArray(cert?.assessed_modules) ? cert.assessed_modules : []
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] text-gray-900">
+    <div className="min-h-screen flex flex-col bg-[#f4f6fb] text-gray-900">
       <PublicPageTopBar />
-      <div className="max-w-xl mx-auto px-4 py-10">
+      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-10">
         <Card className="p-6 sm:p-8 bg-white border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-6">
             <h1 className="text-xl font-bold text-gray-900">{t('certificates.verify.title', 'Sertifikat doğrulama')}</h1>
@@ -163,7 +163,7 @@ export default function CertificateVerify() {
             </Link>
           </div>
         </Card>
-      </div>
+      </main>
     </div>
   )
 }

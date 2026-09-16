@@ -264,7 +264,7 @@ function OrgSidebarChrome() {
             'lg:static lg:inset-auto lg:flex-1 lg:min-h-0 lg:pt-0',
           ].join(' ')}
         >
-          <div className="min-h-full flex flex-col">
+          <div className="min-h-full flex flex-col pb-16">
             <div className="flex-1 min-h-0">
               {error ? (
                 <p className="px-4 sm:px-6 pt-4 text-sm text-red-300/90">{error}</p>
