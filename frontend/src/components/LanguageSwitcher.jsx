@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import useUiStore from '../hooks/useUi'
 import { UI_LOCALES, uiLocaleMeta } from '../lib/uiLocales'
+import FlagIcon from './common/FlagIcon'
 
 function Chevron({ open, className = 'h-3.5 w-3.5' }) {
   return (
@@ -100,10 +101,8 @@ export default function LanguageSwitcher({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="inline-flex items-center gap-2 min-w-0">
-          <span className="text-base leading-none flag-emoji" aria-hidden>
-            {active.flag}
-          </span>
-          <span className="uppercase tracking-wide hidden min-[380px]:inline">{active.short}</span>
+          <FlagIcon code={active.flagCode || active.code} className="h-4 w-6" />
+          <span className="uppercase tracking-wide">{active.short}</span>
         </span>
         <Chevron open={open} />
       </button>
@@ -136,9 +135,7 @@ export default function LanguageSwitcher({
                         : 'hover:bg-slate-50',
                   ].join(' ')}
                 >
-                  <span className="text-lg leading-none flag-emoji" aria-hidden>
-                    {loc.flag}
-                  </span>
+                  <FlagIcon code={loc.flagCode || loc.code} className="h-4 w-6" />
                   <span>{loc.nativeName}</span>
                 </button>
               </li>

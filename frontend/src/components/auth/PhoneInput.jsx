@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { canonicalAzPhoneE164, isValidAzMobileNational, onlyDigits as azOnlyDigits } from '../../lib/azPhone'
+import FlagIcon from '../common/FlagIcon'
 
 const STORAGE_COUNTRY = 'mx_login_country'
 const STORAGE_PHONE = 'mx_login_phone'
@@ -286,7 +287,7 @@ export default function PhoneInput({
           className="shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 min-h-[48px] rounded-xl bg-[#13112e] border border-indigo-500/20 hover:border-indigo-500/40 text-gray-200 text-sm touch-manipulation"
           aria-label="Ölkə kodu seç"
         >
-          <span className="text-base leading-none">{country.flag}</span>
+          <FlagIcon code={country.id.toLowerCase()} className="h-4 w-6" />
           <span className="font-mono text-xs tabular-nums">+{country.dial}</span>
           <span className="text-xs text-gray-500">▾</span>
         </button>
@@ -345,7 +346,7 @@ export default function PhoneInput({
                 }`}
               >
                 <span className="flex items-center gap-2 min-w-0">
-                  <span className="text-base">{c.flag}</span>
+                  <FlagIcon code={c.id.toLowerCase()} className="h-4 w-6" />
                   <span className="truncate text-gray-200">{c.name}</span>
                 </span>
                 <span className="font-mono text-xs text-gray-400 tabular-nums">+{c.dial}</span>

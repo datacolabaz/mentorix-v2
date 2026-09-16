@@ -11,6 +11,42 @@
   line-height: 1;
 }
 
+/* ------------------------------------------------------------------ *
+ * Cross-platform scrollbar polish                                     *
+ * Windows renders classic ~17px scrollbars while macOS overlays thin  *
+ * ones — this makes scrollable regions (sidebar nav, panels, tables)  *
+ * look inconsistent and squeeze content. Normalize to a thin, rounded *
+ * scrollbar that matches the macOS look on every OS/browser.          *
+ * ------------------------------------------------------------------ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.65);
+}
+.theme-dark * {
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+.theme-dark *::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3);
+}
+.theme-dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.5);
+}
+
+
 /* Azerbaijani language support - ensure proper rendering of ə, ö, ü, ğ, ş, ç */
 body {
   font-family: 'DM Sans', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;

@@ -1,10 +1,10 @@
 /** Canonical UI locales shown in the language dropdown. */
 export const UI_LOCALES = [
-  { code: 'en', short: 'EN', nativeName: 'English', flag: '🇬🇧' },
-  { code: 'az', short: 'AZ', nativeName: 'Azərbaycan', flag: '🇦🇿' },
-  { code: 'ru', short: 'RU', nativeName: 'Русский', flag: '🇷🇺' },
-  { code: 'tr', short: 'TR', nativeName: 'Türkçe', flag: '🇹🇷' },
-  { code: 'de', short: 'DE', nativeName: 'Deutsch', flag: '🇩🇪' },
+  { code: 'en', short: 'EN', nativeName: 'English', flag: '🇬🇧', flagCode: 'gb' },
+  { code: 'az', short: 'AZ', nativeName: 'Azərbaycan', flag: '🇦🇿', flagCode: 'az' },
+  { code: 'ru', short: 'RU', nativeName: 'Русский', flag: '🇷🇺', flagCode: 'ru' },
+  { code: 'tr', short: 'TR', nativeName: 'Türkçe', flag: '🇹🇷', flagCode: 'tr' },
+  { code: 'de', short: 'DE', nativeName: 'Deutsch', flag: '🇩🇪', flagCode: 'de' },
 ]
 
 const CODES = new Set(UI_LOCALES.map((x) => x.code))
