@@ -3,9 +3,12 @@ import { useTranslation } from 'react-i18next'
 import useActiveLocale from '../../hooks/useActiveLocale'
 import { countryFlag } from '../../lib/universityCountries'
 import { countryDisplayName, filterCountriesByQuery } from '../../lib/universityCountryI18n'
+import useUiStore from '../../hooks/useUi'
 
-const inputCls =
-  'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50'
+const inputCls = (light) =>
+  light
+    ? 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-primary/50'
+    : 'w-full rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-primary/50'
 
 export default function CountrySearchPicker({
   selected = [],
@@ -16,6 +19,8 @@ export default function CountrySearchPicker({
 }) {
   const { t } = useTranslation()
   const locale = useActiveLocale()
+  const theme = useUiStore((s) => s.theme)
+  const light = theme !== 'dark'
   const [query, setQuery] = useState('')
 
   const visibleCountries = useMemo(
@@ -35,7 +40,7 @@ export default function CountrySearchPicker({
   return (
     <div className="space-y-2" key={`country-picker-${locale}`}>
       {label ? (
-        <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</label>
+        <label className={['text-[10px] font-bold uppercase tracking-wide', light ? 'text-slate-500' : 'text-gray-500'].join(' ')}>{label}</label>
       ) : null}
 
       {selected.length ? (
@@ -47,12 +52,12 @@ export default function CountrySearchPicker({
                 key={country}
                 type="button"
                 onClick={() => toggle(country)}
-                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-white"
+                className={['inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs', light ? 'text-slate-900' : 'text-white'].join(' ')}
               >
                 <span aria-hidden>{countryFlag(country)}</span>
                 <span>{displayCountry(country)}</span>
                 {count != null ? <span className="text-primary font-semibold">({count})</span> : null}
-                <span className="text-gray-400">×</span>
+                <span className={light ? 'text-slate-500' : 'text-gray-400'}>×</span>
               </button>
             )
           })}
@@ -62,7 +67,7 @@ export default function CountrySearchPicker({
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className={inputCls}
+        className={inputCls(light)}
         placeholder={t('universitySearch.picker.countrySearchPlaceholder')}
       />
 
@@ -78,14 +83,20 @@ export default function CountrySearchPicker({
                 onClick={() => toggle(country)}
                 className={[
                   'w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
-                  active ? 'bg-primary/15 text-white' : 'text-gray-300 hover:bg-white/5',
+                  active
+                    ? light
+                      ? 'bg-primary/15 text-slate-900'
+                      : 'bg-primary/15 text-white'
+                    : light
+                      ? 'text-slate-700 hover:bg-slate-100'
+                      : 'text-gray-300 hover:bg-white/5',
                 ].join(' ')}
               >
                 <span className="inline-flex items-center gap-2 min-w-0">
                   <span aria-hidden>{countryFlag(country)}</span>
                   <span className="truncate">{displayCountry(country)}</span>
                 </span>
-                <span className="shrink-0 text-xs text-gray-500">
+                <span className={['shrink-0 text-xs', light ? 'text-slate-500' : 'text-gray-500'].join(' ')}>
                   {active ? '✓' : null}
                   {count != null ? ` (${count})` : ''}
                 </span>
@@ -93,7 +104,7 @@ export default function CountrySearchPicker({
             )
           })
         ) : (
-          <p className="text-xs text-gray-500 px-1 py-2">{t('universitySearch.picker.noCountryMatch')}</p>
+          <p className={['text-xs px-1 py-2', light ? 'text-slate-500' : 'text-gray-500'].join(' ')}>{t('universitySearch.picker.noCountryMatch')}</p>
         )}
       </div>
     </div>

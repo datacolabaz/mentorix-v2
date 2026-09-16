@@ -5,6 +5,7 @@ import api from '../../lib/api'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
 import { setPageSeo } from '../../lib/pageSeo'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import UniversitySearchWizard from '../../components/university/UniversitySearchWizard'
@@ -114,6 +115,8 @@ export default function UniversityProgramSearch({ embedded = false }) {
   const toast = useToast()
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const theme = useUiStore((s) => s.theme)
+  const light = theme !== 'dark'
   const [searchParams, setSearchParams] = useSearchParams()
 
   const view = searchParams.get('view') || 'wizard'
@@ -361,7 +364,7 @@ export default function UniversityProgramSearch({ embedded = false }) {
                 </p>
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-white font-medium">{resultLabel}</p>
+                <p className={['text-sm font-medium', light ? 'text-slate-900' : 'text-white'].join(' ')}>{resultLabel}</p>
                 {pagination.total_pages > 1 ? (
                   <div className="flex gap-2">
                     <Button
@@ -407,7 +410,7 @@ export default function UniversityProgramSearch({ embedded = false }) {
               {loading ? (
                 <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-56 rounded-2xl bg-white/5 animate-pulse" />
+                    <div key={i} className={['h-56 rounded-2xl animate-pulse', light ? 'bg-slate-200' : 'bg-white/5'].join(' ')} />
                   ))}
                 </div>
               ) : programs.length ? (
@@ -430,8 +433,8 @@ export default function UniversityProgramSearch({ embedded = false }) {
                   </div>
                 )
               ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center">
-                  <p className="text-gray-300">
+                <div className={['rounded-2xl border p-10 text-center', light ? 'border-slate-200 bg-white shadow-sm' : 'border-white/10 bg-white/[0.03]'].join(' ')}>
+                  <p className={light ? 'text-slate-600' : 'text-gray-300'}>
                     {displayEmptyMessage || t('universitySearch.results.noResults')}
                   </p>
                   {displaySuggestDegree ? (
@@ -499,7 +502,7 @@ export default function UniversityProgramSearch({ embedded = false }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
+    <div className={['min-h-screen flex flex-col', light ? 'bg-[#f4f7fa] text-slate-900' : 'bg-[#0a0a0a] text-white'].join(' ')}>
       <PublicPageTopBar
         backTo="/"
         title={t('universitySearch.page.title')}
@@ -513,7 +516,7 @@ export default function UniversityProgramSearch({ embedded = false }) {
         {!user ? (
           <Link
             to="/login"
-            className="inline-flex items-center justify-center min-h-[40px] px-3 text-sm font-semibold text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+            className={['inline-flex items-center justify-center min-h-[40px] px-3 text-sm font-semibold rounded-lg transition-colors', light ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' : 'text-gray-300 hover:text-white hover:bg-white/5'].join(' ')}
           >
             {t('universitySearch.actions.login')}
           </Link>
