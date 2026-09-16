@@ -4,6 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Windows emoji flag support */
+.flag-emoji {
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', sans-serif;
+  font-style: normal;
+  line-height: 1;
+}
+
 @keyframes mxFadeIn {
   from {
     opacity: 0;

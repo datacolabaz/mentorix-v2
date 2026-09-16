@@ -100,7 +100,7 @@ export default function LanguageSwitcher({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="inline-flex items-center gap-2 min-w-0">
-          <span className="text-base leading-none" aria-hidden>
+          <span className="text-base leading-none flag-emoji" aria-hidden>
             {active.flag}
           </span>
           <span className="uppercase tracking-wide hidden min-[380px]:inline">{active.short}</span>
@@ -136,7 +136,7 @@ export default function LanguageSwitcher({
                         : 'hover:bg-slate-50',
                   ].join(' ')}
                 >
-                  <span className="text-lg leading-none" aria-hidden>
+                  <span className="text-lg leading-none flag-emoji" aria-hidden>
                     {loc.flag}
                   </span>
                   <span>{loc.nativeName}</span>

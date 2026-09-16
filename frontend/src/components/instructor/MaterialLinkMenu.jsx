@@ -37,6 +37,8 @@ export default function MaterialLinkMenu({ material, onLinked, onOpenChange, cla
   const [menuStyle, setMenuStyle] = useState(null)
   const [picker, setPicker] = useState(null)
   const [items, setItems] = useState([])
+  const [filteredItems, setFilteredItems] = useState([])
+  const [selectedGroupIds, setSelectedGroupIds] = useState([])
   const [loading, setLoading] = useState(false)
   const [linking, setLinking] = useState(false)
 
@@ -93,19 +95,28 @@ export default function MaterialLinkMenu({ material, onLinked, onOpenChange, cla
   const loadTargets = useCallback(async (type) => {
     setLoading(true)
     setItems([])
+    setFilteredItems([])
     try {
       if (type === 'exam') {
         const d = await api.get('/exams')
-        setItems(Array.isArray(d.exams) ? d.exams : [])
+        const data = Array.isArray(d.exams) ? d.exams : []
+        setItems(data)
+        setFilteredItems(data)
       } else if (type === 'assignment') {
         const d = await api.get('/tasks')
-        setItems(Array.isArray(d.tasks) ? d.tasks : [])
+        const data = Array.isArray(d.tasks) ? d.tasks : []
+        setItems(data)
+        setFilteredItems(data)
       } else if (type === 'student') {
         const d = await api.get('/students')
-        setItems(Array.isArray(d.students) ? d.students : [])
+        const data = Array.isArray(d.students) ? d.students : []
+        setItems(data)
+        setFilteredItems(data)
       } else if (type === 'group' || type === 'lesson') {
         const d = await api.get('/materials/options')
-        setItems(type === 'group' ? d.options?.groups || [] : d.options?.lessons || [])
+        const data = type === 'group' ? d.options?.groups || [] : d.options?.lessons || []
+        setItems(data)
+        setFilteredItems(data)
       }
     } catch (e) {
       toast(e?.message || 'Siyahı yüklənmədi', 'error')
@@ -117,6 +128,7 @@ export default function MaterialLinkMenu({ material, onLinked, onOpenChange, cla
   const openPicker = (type) => {
     setOpen(false)
     setPicker(type)
+    setSelectedGroupIds(type === 'group' ? (material?.groups || []).map((group) => group.id) : [])
     void loadTargets(type)
   }
 
@@ -138,6 +150,14 @@ export default function MaterialLinkMenu({ material, onLinked, onOpenChange, cla
     } finally {
       setLinking(false)
     }
+  }
+
+  const submitGroups = async () => {
+    if (!selectedGroupIds.length) {
+      toast('Ən azı bir qrup seçin', 'error')
+      return
+    }
+    await submitLink(selectedGroupIds)
   }
 
   const pickerMeta = LINK_ACTIONS.find((a) => a.type === picker)
@@ -194,25 +214,62 @@ export default function MaterialLinkMenu({ material, onLinked, onOpenChange, cla
         <div className="space-y-2">
           {loading ? (
             <p className="text-sm text-gray-500 py-6 text-center">Yüklənir…</p>
-          ) : !items.length ? (
+          ) : !filteredItems.length ? (
             <p className="text-sm text-gray-500 py-6 text-center">Siyahı boşdur</p>
           ) : (
-            items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                disabled={linking}
-                onClick={() => void submitLink(item.id)}
-                className="w-full text-left rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50"
-              >
-                {targetLabel(picker, item)}
-              </button>
-            ))
+            <div className="space-y-2">
+              {picker === 'group' && (
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    placeholder="Qrup axtar..."
+                    className="w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/40"
+                    onChange={(e) => {
+                      const query = e.target.value.toLowerCase()
+                      const filtered = items.filter((item) => 
+                        targetLabel(picker, item).toLowerCase().includes(query)
+                      )
+                      setFilteredItems(filtered)
+                    }}
+                  />
+                </div>
+              )}
+              {filteredItems.map((item) => picker === 'group' ? (
+                <label
+                  key={item.id}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[color:var(--border-subtle)] px-3 py-2.5 text-sm text-token-textMain hover:border-primary/40 hover:bg-primary/5"
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-primary"
+                    checked={selectedGroupIds.includes(item.id)}
+                    disabled={linking}
+                    onChange={() => setSelectedGroupIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])}
+                  />
+                  <span>{targetLabel(picker, item)}</span>
+                </label>
+              ) : (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={linking}
+                  onClick={() => void submitLink(item.id)}
+                  className="w-full text-left rounded-xl border border-[color:var(--border-subtle)] px-3 py-2.5 text-sm text-token-textMain hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50"
+                >
+                  {targetLabel(picker, item)}
+                </button>
+              ))}
+            </div>
           )}
-          <div className="pt-2 flex justify-end">
+          <div className="pt-2 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setPicker(null)} disabled={linking}>
               Ləğv et
             </Button>
+            {picker === 'group' && filteredItems.length ? (
+              <Button onClick={() => void submitGroups()} loading={linking} disabled={!selectedGroupIds.length}>
+                {selectedGroupIds.length > 1 ? `${selectedGroupIds.length} qrupa göndər` : 'Qrupa göndər'}
+              </Button>
+            ) : null}
           </div>
         </div>
       </Modal>
