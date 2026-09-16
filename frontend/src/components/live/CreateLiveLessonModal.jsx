@@ -11,8 +11,8 @@ import api from '../../lib/api'
 
 const PROVIDERS = [
   { id: 'google_meet', available: true },
-  { id: 'mentorix_live', available: true },
-  { id: 'zoom', available: false },
+  { id: 'zoom', available: true },
+  { id: 'mentorix_live', available: false },
   { id: 'teams', available: false },
 ]
 
@@ -32,6 +32,7 @@ export default function CreateLiveLessonModal({
   const [loadingConn, setLoadingConn] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [disconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false)
+  const [zoomDisconnectOpen, setZoomDisconnectOpen] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
 
   const reset = useCallback(() => {
@@ -40,6 +41,7 @@ export default function CreateLiveLessonModal({
     setTitle('')
     setWhen('')
     setDisconnectConfirmOpen(false)
+    setZoomDisconnectOpen(false)
   }, [])
 
   useEffect(() => {
@@ -59,13 +61,15 @@ export default function CreateLiveLessonModal({
   }, [])
 
   useEffect(() => {
-    if (open && step === 'details' && provider === 'google_meet') {
+    if (open && step === 'details' && (provider === 'google_meet' || provider === 'zoom')) {
       void loadConnections()
     }
   }, [open, step, provider, loadConnections])
 
   const meetConn = connections?.google_meet
   const meetConnected = Boolean(meetConn?.connected)
+  const zoomConn = connections?.zoom
+  const zoomConnected = Boolean(zoomConn?.connected)
 
   const pickProvider = (id, available) => {
     if (!available) return
@@ -110,6 +114,43 @@ export default function CreateLiveLessonModal({
     }
   }
 
+  const connectZoom = async () => {
+    if (connecting) return
+    setConnecting(true)
+    try {
+      const res = await api.post('/teacher-connections/zoom/start', {
+        returnPath: '/instructor/live/history',
+      })
+      if (res.redirectUrl) {
+        window.location.href = res.redirectUrl
+        return
+      }
+      toast(t('live.zoomConnectFailed'), 'error')
+    } catch (e) {
+      toast(e?.message || t('live.zoomConnectFailed'), 'error')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const disconnectZoom = async () => {
+    if (disconnecting) return
+    setDisconnecting(true)
+    try {
+      await api.delete('/teacher-connections/zoom')
+      setConnections((prev) => ({
+        ...(prev || {}),
+        zoom: { provider: 'zoom', connected: false },
+      }))
+      setZoomDisconnectOpen(false)
+      toast(t('live.zoomDisconnected'))
+    } catch (e) {
+      toast(e?.message || t('live.zoomDisconnectFailed'), 'error')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
   const handleCreate = () => {
     if (!provider) return
     onCreated?.({
@@ -144,9 +185,17 @@ export default function CreateLiveLessonModal({
             <Button type="button" loading={connecting || loadingConn} onClick={() => void connectGoogleMeet()}>
               {t('live.connectGoogleMeet')}
             </Button>
+          ) : provider === 'zoom' && !zoomConnected ? (
+            <Button type="button" loading={connecting || loadingConn} onClick={() => void connectZoom()}>
+              {t('live.connectZoom')}
+            </Button>
           ) : (
             <Button type="button" loading={starting} onClick={handleCreate}>
-              {provider === 'google_meet' ? t('live.createMeetLesson') : t('live.createAndShare')}
+              {provider === 'google_meet'
+                ? t('live.createMeetLesson')
+                : provider === 'zoom'
+                  ? t('live.createZoomLesson')
+                  : t('live.createAndShare')}
             </Button>
           )}
         </div>
@@ -183,15 +232,15 @@ export default function CreateLiveLessonModal({
                   </span>
                   {!p.available ? (
                     <span className="mt-0.5 block text-[11px] text-token-textMuted">
-                      {t('live.comingSoon')}
+                      {p.id === 'mentorix_live' ? t('live.legacyOnly') : t('live.comingSoon')}
                     </span>
                   ) : p.id === 'google_meet' ? (
                     <span className="mt-0.5 block text-[11px] text-token-textMuted">
                       {t('live.providers.google_meetHint')}
                     </span>
-                  ) : p.id === 'mentorix_live' ? (
+                  ) : p.id === 'zoom' ? (
                     <span className="mt-0.5 block text-[11px] text-token-textMuted">
-                      {t('live.providers.mentorix_liveHint')}
+                      {t('live.providers.zoomHint')}
                     </span>
                   ) : null}
                 </button>
@@ -227,6 +276,29 @@ export default function CreateLiveLessonModal({
                 )}
               </div>
             )}
+            {provider === 'zoom' && (
+              <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
+                {loadingConn ? (
+                  <span className="text-token-textMuted">{t('live.loading')}</span>
+                ) : zoomConnected ? (
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <span className="text-token-textMain">
+                      {t('live.zoomConnectedAs', { email: zoomConn.account_email || 'Zoom' })}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={disconnecting || starting}
+                      onClick={() => setZoomDisconnectOpen(true)}
+                      className="text-[11px] text-token-textMuted hover:text-token-textMain hover:underline disabled:opacity-50"
+                    >
+                      {t('live.disconnectAccount')}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-token-textMuted">{t('live.zoomNeedsConnect')}</span>
+                )}
+              </div>
+            )}
             <label className="block space-y-1">
               <span className="text-xs font-medium text-token-textMuted">{t('live.lessonTitle')}</span>
               <input
@@ -257,6 +329,18 @@ export default function CreateLiveLessonModal({
         onConfirm={() => void disconnectGoogleMeet()}
         title={t('live.meetDisconnectConfirmTitle')}
         message={t('live.meetDisconnectConfirmMessage')}
+        confirmLabel={t('live.disconnectAccount')}
+        cancelLabel={t('common.cancel')}
+        loading={disconnecting}
+        danger
+      />
+
+      <ConfirmDialog
+        open={zoomDisconnectOpen}
+        onClose={() => !disconnecting && setZoomDisconnectOpen(false)}
+        onConfirm={() => void disconnectZoom()}
+        title={t('live.zoomDisconnectConfirmTitle')}
+        message={t('live.zoomDisconnectConfirmMessage')}
         confirmLabel={t('live.disconnectAccount')}
         cancelLabel={t('common.cancel')}
         loading={disconnecting}

@@ -5,12 +5,14 @@ const {
   listTeacherConnections,
   startTeacherConnection,
   googleMeetOAuthCallback,
+  zoomOAuthCallback,
   disconnectTeacherConnection,
 } = require('../controllers/teacherConnectionsController');
 
-// OAuth callback — no auth header (browser redirect from Google)
+// OAuth callbacks — no auth header (browser redirect from provider)
 router.get('/google_meet/callback', googleMeetOAuthCallback);
 router.get('/google-meet/callback', googleMeetOAuthCallback);
+router.get('/zoom/callback', zoomOAuthCallback);
 
 router.get('/', authenticate, authorize('instructor'), listTeacherConnections);
 

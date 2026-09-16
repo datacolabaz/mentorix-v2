@@ -2,9 +2,11 @@ const {
   listConnections,
   startOAuth,
   completeGoogleMeetOAuth,
+  completeZoomOAuth,
   disconnectProvider,
 } = require('../services/teacherProviderConnectionService');
-const { frontendConnectRedirect } = require('../lib/googleMeetOAuth');
+const { frontendConnectRedirect: googleFrontendRedirect } = require('../lib/googleMeetOAuth');
+const { frontendConnectRedirect: zoomFrontendRedirect } = require('../lib/zoomOAuth');
 const registry = require('../providers/liveLesson/registry');
 
 const listTeacherConnections = async (req, res) => {
@@ -42,7 +44,7 @@ const googleMeetOAuthCallback = async (req, res) => {
   try {
     if (req.query.error) {
       return res.redirect(
-        frontendConnectRedirect({
+        googleFrontendRedirect({
           error: String(req.query.error_description || req.query.error || 'denied'),
         }),
       );
@@ -50,15 +52,42 @@ const googleMeetOAuthCallback = async (req, res) => {
     const code = req.query.code;
     const state = req.query.state;
     if (!code || !state) {
-      return res.redirect(frontendConnectRedirect({ error: 'missing_code' }));
+      return res.redirect(googleFrontendRedirect({ error: 'missing_code' }));
     }
     const result = await completeGoogleMeetOAuth({ code, state });
     return res.redirect(
-      frontendConnectRedirect({ success: true, returnPath: result.returnPath }),
+      googleFrontendRedirect({ success: true, returnPath: result.returnPath }),
     );
   } catch (e) {
     return res.redirect(
-      frontendConnectRedirect({
+      googleFrontendRedirect({
+        error: e.code || 'oauth_failed',
+      }),
+    );
+  }
+};
+
+const zoomOAuthCallback = async (req, res) => {
+  try {
+    if (req.query.error) {
+      return res.redirect(
+        zoomFrontendRedirect({
+          error: String(req.query.error_description || req.query.error || 'denied'),
+        }),
+      );
+    }
+    const code = req.query.code;
+    const state = req.query.state;
+    if (!code || !state) {
+      return res.redirect(zoomFrontendRedirect({ error: 'missing_code' }));
+    }
+    const result = await completeZoomOAuth({ code, state });
+    return res.redirect(
+      zoomFrontendRedirect({ success: true, returnPath: result.returnPath }),
+    );
+  } catch (e) {
+    return res.redirect(
+      zoomFrontendRedirect({
         error: e.code || 'oauth_failed',
       }),
     );
@@ -87,5 +116,6 @@ module.exports = {
   listTeacherConnections,
   startTeacherConnection,
   googleMeetOAuthCallback,
+  zoomOAuthCallback,
   disconnectTeacherConnection,
 };

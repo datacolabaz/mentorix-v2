@@ -37,20 +37,20 @@ function get(providerId) {
 function listPublicProviders() {
   return [
     {
-      id: 'mentorix_live',
-      available: true,
-      requiresConnection: false,
-    },
-    {
       id: 'google_meet',
       available: true,
       requiresConnection: true,
     },
     {
       id: 'zoom',
-      available: false,
+      available: true,
       requiresConnection: true,
-      comingSoon: true,
+    },
+    {
+      id: 'mentorix_live',
+      available: false,
+      requiresConnection: false,
+      legacyOnly: true,
     },
     {
       id: 'teams',

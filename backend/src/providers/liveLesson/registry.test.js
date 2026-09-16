@@ -18,21 +18,16 @@ describe('liveLesson registry', () => {
     assert.throws(() => registry.get('skype'), (err) => err.status === 400);
   });
 
-  it('lists public providers with zoom/teams coming soon', () => {
+  it('lists public providers with google meet and zoom available, teams coming soon', () => {
     const list = registry.listPublicProviders();
     assert.ok(list.find((p) => p.id === 'google_meet' && p.available));
-    assert.ok(list.find((p) => p.id === 'zoom' && p.comingSoon));
+    assert.ok(list.find((p) => p.id === 'zoom' && p.available));
+    assert.ok(list.find((p) => p.id === 'teams' && p.comingSoon));
+    assert.ok(list.find((p) => p.id === 'mentorix_live' && !p.available));
   });
 
   it('mentorix is always connected', async () => {
     const ok = await registry.get('mentorix_live').isConnected('any');
     assert.equal(ok, true);
-  });
-
-  it('zoom/teams createMeeting returns 501', async () => {
-    await assert.rejects(
-      () => registry.get('zoom').createMeeting('x', { title: 't' }),
-      (err) => err.status === 501 && err.code === 'PROVIDER_NOT_IMPLEMENTED',
-    );
   });
 });

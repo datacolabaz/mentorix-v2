@@ -197,6 +197,9 @@ export default function InstructorSettings() {
   const [connectingMeet, setConnectingMeet] = useState(false)
   const [disconnectingMeet, setDisconnectingMeet] = useState(false)
   const [meetDisconnectConfirm, setMeetDisconnectConfirm] = useState(false)
+  const [connectingZoom, setConnectingZoom] = useState(false)
+  const [disconnectingZoom, setDisconnectingZoom] = useState(false)
+  const [zoomDisconnectConfirm, setZoomDisconnectConfirm] = useState(false)
 
   useEffect(() => {
     setAccountName(user?.full_name || '')
@@ -340,6 +343,17 @@ export default function InstructorSettings() {
       params.delete('meet_error')
       const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
       window.history.replaceState({}, '', next)
+    } else if (params.get('zoom_connected') === '1') {
+      toast(t('live.zoomConnectSuccess'))
+      params.delete('zoom_connected')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
+      window.history.replaceState({}, '', next)
+      void loadMeetConnections()
+    } else if (params.get('zoom_error')) {
+      toast(t('live.zoomConnectFailed'), 'error')
+      params.delete('zoom_error')
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`
+      window.history.replaceState({}, '', next)
     }
   }, [loadMeetConnections, t, toast])
 
@@ -377,6 +391,43 @@ export default function InstructorSettings() {
       toast(e?.message || t('live.meetDisconnectFailed'), 'error')
     } finally {
       setDisconnectingMeet(false)
+    }
+  }
+
+  const connectZoom = async () => {
+    if (connectingZoom) return
+    setConnectingZoom(true)
+    try {
+      const res = await api.post('/teacher-connections/zoom/start', {
+        returnPath: '/instructor/settings',
+      })
+      if (res.redirectUrl) {
+        window.location.href = res.redirectUrl
+        return
+      }
+      toast(t('live.zoomConnectFailed'), 'error')
+    } catch (e) {
+      toast(e?.message || t('live.zoomConnectFailed'), 'error')
+    } finally {
+      setConnectingZoom(false)
+    }
+  }
+
+  const disconnectZoom = async () => {
+    if (disconnectingZoom) return
+    setDisconnectingZoom(true)
+    try {
+      await api.delete('/teacher-connections/zoom')
+      setMeetConnections((prev) => ({
+        ...(prev || {}),
+        zoom: { provider: 'zoom', connected: false },
+      }))
+      setZoomDisconnectConfirm(false)
+      toast(t('live.zoomDisconnected'))
+    } catch (e) {
+      toast(e?.message || t('live.zoomDisconnectFailed'), 'error')
+    } finally {
+      setDisconnectingZoom(false)
     }
   }
 
@@ -725,6 +776,12 @@ export default function InstructorSettings() {
             Google Meet
           </a>
           <a
+            href="#zoom-settings"
+            className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
+          >
+            Zoom
+          </a>
+          <a
             href="#discover-profile"
             className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
           >
@@ -754,11 +811,11 @@ export default function InstructorSettings() {
         </p>
         <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
           {loadingMeetConnections ? (
-            <span className="text-token-textMuted">Yüklənir...</span>
+            <span className="text-token-textMuted">{t('live.loading')}</span>
           ) : meetConnections?.google_meet?.connected ? (
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="text-token-textMain">
-                Qoşuldu: {meetConnections.google_meet.account_email || 'Google'}
+                {t('live.connectedAs', { email: meetConnections.google_meet.account_email || 'Google' })}
               </span>
               <button
                 type="button"
@@ -766,18 +823,55 @@ export default function InstructorSettings() {
                 onClick={() => setMeetDisconnectConfirm(true)}
                 className="text-[11px] text-token-textMuted hover:text-token-textMain hover:underline disabled:opacity-50"
               >
-                Qoşulmanı kəs
+                {t('live.disconnectAccount')}
               </button>
             </div>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-token-textMuted">Google Meet hesabı bağlı deyil</span>
+              <span className="text-token-textMuted">{t('live.meetNeedsConnect')}</span>
               <Button
                 size="sm"
                 loading={connectingMeet}
                 onClick={() => void connectGoogleMeet()}
               >
-                Google Meet Qoş
+                {t('live.connectGoogleMeet')}
+              </Button>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card id="zoom-settings" className={settingsCardCls}>
+        <h2 className={cardTitleCls}>Zoom</h2>
+        <p className={cardTextCls}>
+          {t('live.zoomSettingsDescription')}
+        </p>
+        <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
+          {loadingMeetConnections ? (
+            <span className="text-token-textMuted">{t('live.loading')}</span>
+          ) : meetConnections?.zoom?.connected ? (
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="text-token-textMain">
+                {t('live.connectedAs', { email: meetConnections.zoom.account_email || 'Zoom' })}
+              </span>
+              <button
+                type="button"
+                disabled={disconnectingZoom}
+                onClick={() => setZoomDisconnectConfirm(true)}
+                className="text-[11px] text-token-textMuted hover:text-token-textMain hover:underline disabled:opacity-50"
+              >
+                {t('live.disconnectAccount')}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-token-textMuted">{t('live.zoomNeedsConnect')}</span>
+              <Button
+                size="sm"
+                loading={connectingZoom}
+                onClick={() => void connectZoom()}
+              >
+                {t('live.connectZoom')}
               </Button>
             </div>
           )}
@@ -1623,6 +1717,18 @@ export default function InstructorSettings() {
         confirmLabel={t('live.disconnectAccount')}
         cancelLabel={t('common.cancel')}
         loading={disconnectingMeet}
+        danger
+      />
+
+      <ConfirmDialog
+        open={Boolean(zoomDisconnectConfirm)}
+        onClose={() => !disconnectingZoom && setZoomDisconnectConfirm(false)}
+        onConfirm={() => void disconnectZoom()}
+        title={t('live.zoomDisconnectConfirmTitle')}
+        message={t('live.zoomDisconnectConfirmMessage')}
+        confirmLabel={t('live.disconnectAccount')}
+        cancelLabel={t('common.cancel')}
+        loading={disconnectingZoom}
         danger
       />
 

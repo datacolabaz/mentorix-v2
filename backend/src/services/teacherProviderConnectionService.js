@@ -12,6 +12,16 @@ const {
   hasCalendarEventsScope,
   assertGoogleMeetOAuthConfigured,
 } = require('../lib/googleMeetOAuth');
+const {
+  createPkcePair: createZoomPkcePair,
+  buildAuthorizeUrl: buildZoomAuthorizeUrl,
+  exchangeCodeForTokens: exchangeZoomCodeForTokens,
+  refreshAccessToken: refreshZoomAccessToken,
+  fetchZoomUserInfo,
+  revokeZoomToken,
+  ZOOM_SCOPES,
+  assertZoomOAuthConfigured,
+} = require('../lib/zoomOAuth');
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const ALLOWED_PROVIDERS = new Set(['google_meet', 'zoom', 'teams']);
@@ -57,7 +67,7 @@ async function listConnections(instructorId) {
   const byProvider = Object.fromEntries(rows.map((r) => [r.provider, publicConnection(r)]));
   return {
     google_meet: byProvider.google_meet || { provider: 'google_meet', connected: false, status: null },
-    zoom: byProvider.zoom || { provider: 'zoom', connected: false, status: null, comingSoon: true },
+    zoom: byProvider.zoom || { provider: 'zoom', connected: false, status: null },
     teams: byProvider.teams || { provider: 'teams', connected: false, status: null, comingSoon: true },
   };
 }
@@ -122,29 +132,51 @@ async function startOAuth(instructorId, provider, { returnPath } = {}) {
     err.status = 400;
     throw err;
   }
-  if (provider !== 'google_meet') {
+  if (provider === 'teams') {
     const err = new Error('Bu platforma hələ aktiv deyil');
     err.status = 501;
     err.code = 'PROVIDER_NOT_IMPLEMENTED';
     throw err;
   }
-  assertGoogleMeetOAuthConfigured();
 
   const state = crypto.randomBytes(24).toString('base64url');
-  const { verifier, challenge } = createPkcePair();
   const expiresAt = new Date(Date.now() + OAUTH_STATE_TTL_MS);
 
   await db.query(
     `INSERT INTO oauth_pending_states (state, instructor_id, provider, code_verifier, return_path, expires_at)
      VALUES ($1, $2::uuid, $3, $4, $5, $6)`,
-    [state, instructorId, provider, verifier, returnPath || null, expiresAt.toISOString()],
+    [state, instructorId, provider, '', returnPath || null, expiresAt.toISOString()],
   );
 
   // cleanup old states opportunistically
   await db.query(`DELETE FROM oauth_pending_states WHERE expires_at < NOW()`).catch(() => {});
 
-  const redirectUrl = buildAuthorizeUrl({ state, codeChallenge: challenge });
-  return { redirectUrl, state };
+  if (provider === 'google_meet') {
+    assertGoogleMeetOAuthConfigured();
+    const { verifier, challenge } = createPkcePair();
+    await db.query(
+      `UPDATE oauth_pending_states SET code_verifier = $2 WHERE state = $1`,
+      [state, verifier],
+    );
+    const redirectUrl = buildAuthorizeUrl({ state, codeChallenge: challenge });
+    return { redirectUrl, state };
+  }
+
+  if (provider === 'zoom') {
+    assertZoomOAuthConfigured();
+    const { verifier, challenge } = createZoomPkcePair();
+    await db.query(
+      `UPDATE oauth_pending_states SET code_verifier = $2 WHERE state = $1`,
+      [state, verifier],
+    );
+    const redirectUrl = buildZoomAuthorizeUrl({ state, codeChallenge: challenge });
+    return { redirectUrl, state };
+  }
+
+  const err = new Error('Bu platforma hələ aktiv deyil');
+  err.status = 501;
+  err.code = 'PROVIDER_NOT_IMPLEMENTED';
+  throw err;
 }
 
 async function consumeOAuthState(state) {
@@ -256,6 +288,101 @@ async function completeGoogleMeetOAuth({ code, state }) {
   };
 }
 
+/**
+ * A refresh token must never be carried from one Zoom account to another.
+ * Zoom typically returns a refresh token on every authorization-code exchange,
+ * but keeping a previous one for the same account is safe and robust.
+ */
+function sameZoomAccount(existing, { providerAccountId, accountEmail }) {
+  if (!existing) return false;
+  const oldId = String(existing.provider_account_id || '').trim();
+  const newId = String(providerAccountId || '').trim();
+  if (oldId && newId) return oldId === newId;
+
+  const oldEmail = String(existing.account_email || '').trim().toLowerCase();
+  const newEmail = String(accountEmail || '').trim().toLowerCase();
+  return Boolean(oldEmail && newEmail && oldEmail === newEmail);
+}
+
+async function completeZoomOAuth({ code, state }) {
+  const pending = await consumeOAuthState(state);
+  if (!pending || pending.provider !== 'zoom') {
+    const err = new Error('OAuth state etibarsızdır və ya vaxtı bitib');
+    err.status = 400;
+    err.code = 'INVALID_OAUTH_STATE';
+    throw err;
+  }
+
+  const tokens = await exchangeZoomCodeForTokens(code, pending.code_verifier);
+  const accessToken = tokens.access_token;
+  if (!accessToken) {
+    const err = new Error('Zoom token alınmadı');
+    err.status = 502;
+    throw err;
+  }
+
+  const profile = await fetchZoomUserInfo(accessToken);
+  const accountEmail = profile?.email || null;
+  const providerAccountId = profile?.id || accountEmail || null;
+
+  const expiresIn = Number(tokens.expires_in || 3600);
+  const expiry = new Date(Date.now() + expiresIn * 1000 - 60000);
+
+  const accessEnc = encrypt(accessToken);
+  const refreshEnc = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
+
+  const existing = await getConnectionRow(pending.instructor_id, 'zoom');
+  const keepRefresh =
+    refreshEnc ||
+    (sameZoomAccount(existing, { providerAccountId, accountEmail })
+      ? existing?.refresh_token_enc
+      : null);
+  if (!keepRefresh) {
+    const err = new Error(
+      'Seçilən Zoom hesabı üçün refresh token alınmadı — Zoom hesab seçimini təsdiqləyib yenidən qoşulun',
+    );
+    err.status = 502;
+    err.code = 'ZOOM_REFRESH_MISSING';
+    throw err;
+  }
+
+  const scopesToStore = tokens.scope ? tokens.scope.split(/\s+/) : ZOOM_SCOPES;
+
+  const { rows } = await db.query(
+    `INSERT INTO teacher_provider_connections (
+       instructor_id, provider, provider_account_id, account_email,
+       access_token_enc, refresh_token_enc, token_expires_at, scopes, status, meta
+     ) VALUES (
+       $1::uuid, 'zoom', $2, $3, $4, $5, $6, $7::jsonb, 'active', '{}'::jsonb
+     )
+     ON CONFLICT (instructor_id, provider) DO UPDATE SET
+       provider_account_id = EXCLUDED.provider_account_id,
+       account_email = EXCLUDED.account_email,
+       access_token_enc = EXCLUDED.access_token_enc,
+       refresh_token_enc = COALESCE(EXCLUDED.refresh_token_enc, teacher_provider_connections.refresh_token_enc),
+       token_expires_at = EXCLUDED.token_expires_at,
+       scopes = EXCLUDED.scopes,
+       status = 'active',
+       updated_at = NOW()
+     RETURNING provider, status, account_email, provider_account_id, token_expires_at, updated_at`,
+    [
+      pending.instructor_id,
+      providerAccountId,
+      accountEmail,
+      accessEnc,
+      keepRefresh,
+      expiry.toISOString(),
+      JSON.stringify(scopesToStore),
+    ],
+  );
+
+  return {
+    connection: publicConnection(rows[0]),
+    returnPath: pending.return_path,
+    instructorId: pending.instructor_id,
+  };
+}
+
 async function disconnectProvider(instructorId, provider) {
   if (!ALLOWED_PROVIDERS.has(provider)) {
     const err = new Error('Naməlum provider');
@@ -272,6 +399,16 @@ async function disconnectProvider(instructorId, provider) {
       const tokens = await getDecryptedTokens(row);
       await revokeGoogleToken(tokens.accessToken);
       if (tokens.refreshToken) await revokeGoogleToken(tokens.refreshToken);
+    } catch {
+      // soft-fail
+    }
+  }
+
+  if (provider === 'zoom') {
+    try {
+      const tokens = await getDecryptedTokens(row);
+      await revokeZoomToken(tokens.accessToken);
+      if (tokens.refreshToken) await revokeZoomToken(tokens.refreshToken);
     } catch {
       // soft-fail
     }
@@ -294,8 +431,10 @@ module.exports = {
   markNeedsReauth,
   startOAuth,
   completeGoogleMeetOAuth,
+  completeZoomOAuth,
   disconnectProvider,
   publicConnection,
   sameGoogleAccount,
+  sameZoomAccount,
   ALLOWED_PROVIDERS,
 };
