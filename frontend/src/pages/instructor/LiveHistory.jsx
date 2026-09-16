@@ -227,15 +227,22 @@ export default function InstructorLiveHistory() {
       const code = room?.room_code
       if (!code) throw new Error(t('live.roomCreateFailed'))
 
-      if ((room?.provider || provider) === 'google_meet' && room?.join_url) {
+      const roomProvider = room?.provider || provider || 'mentorix_live'
+      if (roomProvider !== 'mentorix_live' && room?.join_url) {
         setStartOpen(false)
-        toast(t('live.meetLessonCreated'), 'success')
-        try {
-          await navigator.clipboard.writeText(room.join_url)
-          toast(t('live.meetLinkCopied'))
-        } catch {
-          window.prompt(t('live.copySharePrompt'), room.join_url)
-        }
+        setShareSession({
+          roomCode: code,
+          provider: roomProvider,
+          joinUrl: room.join_url,
+          startUrl: room.start_url || room.join_url || null,
+          title: title || room?.title || t('live.historyTitle'),
+          scheduledAt: scheduledAt || room?.scheduled_at,
+          isExternal: true,
+        })
+        toast(
+          t(roomProvider === 'zoom' ? 'live.zoomLessonCreated' : 'live.meetLessonCreated'),
+          'success',
+        )
         void load()
         return
       }
@@ -518,7 +525,7 @@ export default function InstructorLiveHistory() {
                   {canEnterLive(s) ? (
                     <Button size="sm" onClick={() => enterLive(s)}>
                       {s.provider && s.provider !== 'mentorix_live'
-                        ? t('live.openExternal')
+                        ? t(`live.open${s.provider === 'zoom' ? 'Zoom' : 'GoogleMeet'}`)
                         : t('live.openLive')}
                     </Button>
                   ) : null}
