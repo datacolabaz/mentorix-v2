@@ -1064,10 +1064,11 @@
       "language": "Dil"
     },
     "hero": {
-      "pill": "Onlayn imtahan və qiymətləndirmə",
-      "title": "Online imtahan və qiymətləndirmə — daha sadə.",
-      "subtitle": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin.",
-      "startFree": "Pulsuz başla",
+      "pill": "Fərdi müəllimlər, repetitorlar və təlimçilər üçün",
+      "title": "Testləri əllə yoxlamağa saatlar xərcləməyin. 1 dəqiqəyə imtahan yaradın, nəticələri avtomatik görün.",
+      "subtitle": "Sınaq hazırlamaq, bal hesablamaq və tələbə analitikasını aparmaq üçün sərf etdiyiniz rutin iş yükünü AI və avtomatlaşdırma ilə sıfıra endirin.",
+      "startFree": "İlk Sınağınızı İndi Pulsuz Keçirin",
+      "trust": "Kredit kartı tələb olunmur • Zabit/Müəllim qeydiyyatı 1 dəqiqəyə aktivləşir",
       "explore": "Platformanı kəşf et",
       "howItWorks": "Necə işləyir?",
       "demo": "Panelə bax",
@@ -1115,7 +1116,7 @@
     },
     "seo": {
       "title": "Mentorix — onlayn imtahan və qiymətləndirmə",
-      "description": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, təşkilat və iştirakçılar üçün. Pulsuz başlayın.",
+      "description": "Fərdi müəllimlər, repetitorlar və təlimçilər üçün AI ilə sınaq yaradın, nəticələri avtomatik yoxlayın və tələbə analitikasını izləyin. Pulsuz başlayın.",
       "keywords": "onlayn imtahan, qiymətləndirmə, test bankı, müəllim platforması, Mentorix"
     },
     "certificate": {
@@ -1125,15 +1126,15 @@
     },
     "why": {
       "heading": "Problem → Həll",
-      "lead": "Zoom + Forms + Excel + PowerPoint arasında keçid etməyə ehtiyac yoxdur.",
+      "lead": "Sınaq keçirmək asandır, amma 20 tələbənin cavabını tək-tək yoxlayıb analiz etmək saatlar alır?",
       "cards": [
         {
           "title": "Problem",
-          "body": "İmtahan, test, nəticə və materiallar ayrı alətlərdə qalır. Vaxt alətlər arasında keçidə gedir, vahid mənzərə yoxdur."
+          "body": "Sınaq keçirmək asandır, amma 20 tələbənin cavabını tək-tək yoxlayıb analiz etmək saatlar alır?"
         },
         {
           "title": "Həll",
-          "body": "Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin — Mentorix hamısını bir yerdə toplayır."
+          "body": "Mentorix imtahanı bitən kimi balları hesablayır, tələbənin zəif olduğu mövzuları çıxarır və hesabatı hazır təqdim edir."
         }
       ]
     },
@@ -1148,7 +1149,7 @@
         {
           "step": "02",
           "title": "İstifadə məqsədini seç",
-          "body": "Müəllim, təşkilat və ya iştirakçı kimi başlayın."
+          "body": "Fərdi müəllim, repetitor və ya təlimçi kimi başlayın."
         },
         {
           "step": "03",
@@ -1166,8 +1167,8 @@
       "heading": "Əsas funksiyalar",
       "items": [
         {
-          "title": "İmtahan yarat",
-          "body": "Test və imtahanı dəqiqələrlə qurun, link və ya QR ilə paylaşın.",
+          "title": "Sual tapmaqda və ya yazmaqda çətinlik çəkirsiniz?",
+          "body": "AI Generatoru ilə istənilən mövzuda sınaq suallarını saniyələr içində hazırlayın, vaxtınıza qənaət edin.",
           "accent": "from-emerald-500/15"
         },
         {
@@ -1203,17 +1204,17 @@
       ]
     },
     "audiences": {
-      "heading": "Kimlər üçün?",
+      "heading": "Tələbələriniz üçün mürəkkəb qeydiyyat yoxdur",
       "items": [
         {
           "emoji": "👨‍🏫",
-          "title": "Müəllim / Təlimçi",
+          "title": "Fərdi müəllim / Repetitor / Təlimçi",
           "body": "Dərs, test və imtahanlarınızı yaradın, iştirakçıları və nəticələri idarə edin."
         },
         {
           "emoji": "👤",
-          "title": "İştirakçı",
-          "body": "İmtahanlara qoşulun, testləri tamamlayın və nəticələrinizi izləyin."
+          "title": "Tələbə rahatlığı",
+          "body": "Tətbiq yükləmək və ya hesab açmaq məcburiyyəti yoxdur. Linki və ya QR kodu göndərin, tək kliklə imtahana başlasınlar."
         }
       ]
     },
@@ -1222,11 +1223,11 @@
       "items": [
         {
           "q": "Mentorix-də nə edə bilərəm?",
-          "a": "Test və imtahan yarada, vaxtı idarə edə, nəticələri izləyə, qrupları idarə edə və materialları təqdim edə bilərsiniz — Zoom, Forms, Excel və PowerPoint arasında keçid etmədən."
+          "a": "Sınaq və imtahan yaradın, AI Generatoru ilə suallar hazırlayın, nəticələri avtomatik yoxlayın və tələbə analitikasını izləyin."
         },
         {
           "q": "Kimlər üçündür?",
-          "a": "Müəllim və təlimçilər, həmçinin iştirakçılar. İştirakçı kabineti dəvət ilə açılır və pulsuzdur."
+          "a": "Fərdi müəllimlər, repetitorlar və təlimçilər üçündür. Tələbələr hesab açmadan link və ya QR kodla imtahana qoşula bilirlər."
         },
         {
           "q": "Necə başlaya bilərəm?",
@@ -1243,8 +1244,8 @@
       ]
     },
     "ctaBand": {
-      "heading": "İlk imtahanınızı bu gün yaradın.",
-      "subtitle": "Mentorix-i pulsuz sınayın."
+      "heading": "İlk Sınağınızı İndi Pulsuz Keçirin",
+      "subtitle": "Kredit kartı tələb olunmur."
     },
     "pricingTeaser": {
       "label": "Qiymətlər",

@@ -26,6 +26,9 @@ export function useLandingHero(marketing, t, i18n) {
       headline: t('landing.hero.title'),
       subheadline: t('landing.hero.subtitle'),
       primary_cta_label: t('landing.hero.startFree'),
+      trust: t('landing.hero.trust', {
+        defaultValue: 'Kredit kartı tələb olunmur • Qeydiyyat 1 dəqiqəyə aktivləşir',
+      }),
       secondary_explore: t('landing.hero.explore'),
       secondary_how: t('landing.hero.howItWorks'),
       secondary_demo: t('landing.hero.demo'),

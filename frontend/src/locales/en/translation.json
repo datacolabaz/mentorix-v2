@@ -1043,10 +1043,11 @@
       "language": "Language"
     },
     "hero": {
-      "pill": "Online exams and assessment",
-      "title": "Online exams and assessment — made simpler.",
-      "subtitle": "Create your tests, run exams, and follow results from one platform.",
-      "startFree": "Start free",
+      "pill": "For individual teachers, tutors, and instructors",
+      "title": "Stop spending hours checking tests by hand. Create an exam in 1 minute and see results automatically.",
+      "subtitle": "Reduce the routine work of preparing tests, calculating scores, and analyzing students to zero with AI and automation.",
+      "startFree": "Run Your First Test Free Now",
+      "trust": "No credit card required • Teacher registration is active in 1 minute",
       "explore": "Explore the platform",
       "howItWorks": "How it works?",
       "demo": "See the panel",
@@ -1094,7 +1095,7 @@
     },
     "seo": {
       "title": "Mentorix — online exams and assessment",
-      "description": "Create tests, run exams, and follow results from one platform. For teachers, organizations, and participants. Start free.",
+      "description": "For individual teachers, tutors, and instructors: create tests with AI, check results automatically, and follow student analytics. Start free.",
       "keywords": "online exams, assessment, question bank, teacher platform, Mentorix"
     },
     "certificate": {
@@ -1104,15 +1105,15 @@
     },
     "why": {
       "heading": "Problem → Solution",
-      "lead": "No more hopping between Zoom, Forms, Excel, and PowerPoint.",
+      "lead": "Running a test is easy, but checking and analyzing 20 students' answers one by one takes hours?",
       "cards": [
         {
           "title": "Problem",
-          "body": "Exams, tests, results, and materials live in separate tools. Time goes to switching apps instead of seeing the full picture."
+          "body": "Running a test is easy, but checking and analyzing 20 students' answers one by one takes hours?"
         },
         {
           "title": "Solution",
-          "body": "Create your tests, run exams, and follow results from one platform — Mentorix keeps it all together."
+          "body": "Mentorix calculates scores as soon as the exam ends, identifies weak topics, and presents a ready report."
         }
       ]
     },
@@ -1127,7 +1128,7 @@
         {
           "step": "02",
           "title": "Choose how you’ll use it",
-          "body": "Start as a teacher, organization, or participant."
+          "body": "Start as an individual teacher, tutor, or instructor."
         },
         {
           "step": "03",
@@ -1145,8 +1146,8 @@
       "heading": "Core features",
       "items": [
         {
-          "title": "Create an exam",
-          "body": "Build a test in minutes and share it by link or QR.",
+          "title": "Struggling to find or write questions?",
+          "body": "Create practice questions on any topic in seconds with the AI Generator and save time.",
           "accent": "from-emerald-500/15"
         },
         {
@@ -1182,17 +1183,17 @@
       ]
     },
     "audiences": {
-      "heading": "Who is it for?",
+      "heading": "No complicated registration for your students",
       "items": [
         {
           "emoji": "👨‍🏫",
-          "title": "Teacher / Trainer",
+          "title": "Individual teacher / Tutor / Instructor",
           "body": "Create lessons, tests, and exams, and manage participants and results."
         },
         {
           "emoji": "👤",
-          "title": "Participant",
-          "body": "Join exams, complete tests, and follow your results."
+          "title": "Student convenience",
+          "body": "No app download or account creation required. Send the link or QR code and let them start the exam with one click."
         }
       ]
     },
@@ -1201,11 +1202,11 @@
       "items": [
         {
           "q": "What can I do in Mentorix?",
-          "a": "Create tests and exams, control timing, follow results, manage groups, and present materials — without hopping between Zoom, Forms, Excel, and PowerPoint."
+          "a": "Create tests and exams, prepare questions with the AI Generator, check results automatically, and follow student analytics."
         },
         {
           "q": "Who is it for?",
-          "a": "Teachers and trainers, and participants. The participant workspace opens by invitation and stays free."
+          "a": "For individual teachers, tutors, and instructors. Students can join by link or QR code without creating an account."
         },
         {
           "q": "How do I start?",
@@ -1222,8 +1223,8 @@
       ]
     },
     "ctaBand": {
-      "heading": "Create your first exam today.",
-      "subtitle": "Try Mentorix for free."
+      "heading": "Run Your First Test Free Now",
+      "subtitle": "No credit card required."
     },
     "pricingTeaser": {
       "label": "Pricing",

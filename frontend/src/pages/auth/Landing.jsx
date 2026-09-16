@@ -237,6 +237,7 @@ export default function Landing() {
               >
                 {hero.primary_cta_label}
               </button>
+              <p className="text-center text-xs text-slate-500 leading-relaxed">{hero.trust}</p>
               {user ? null : <PublicGoogleSignIn className="w-full" />}
               <button
                 type="button"
