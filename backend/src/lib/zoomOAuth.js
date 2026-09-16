@@ -42,7 +42,7 @@ function zoomRedirectUri() {
 
 function assertZoomOAuthConfigured() {
   if (!zoomClientId() || !zoomClientSecret() || !zoomRedirectUri()) {
-    const err = new Error('Zoom OAuth konfiqurasiya olunmayıb (ZOOM_CLIENT_ID/SECRET + ZOOM_REDIRECT_URI)');
+    const err = new Error('Zoom inteqrasiyası hazırda aktiv deyil. Administrator konfiqurasiya etməlidir.');
     err.status = 503;
     err.code = 'ZOOM_OAUTH_NOT_CONFIGURED';
     throw err;
