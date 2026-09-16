@@ -283,19 +283,21 @@ export default function InstructorLiveHistory() {
 
   const enterLive = (session) => {
     if (!session) return
-    if (session.provider && session.provider !== 'mentorix_live' && session.join_url) {
+    const isExternal = session.provider && session.provider !== 'mentorix_live'
+    if (isExternal && (session.start_url || session.join_url)) {
+      const targetUrl = session.start_url || session.join_url
       // Google Meet account warning check
       const warningDismissed = localStorage.getItem('meet_account_warning_dismissed') === 'true'
       const ownerEmail = session.connection_account_email || session.owner_email || null
 
       if (!warningDismissed && ownerEmail && session.provider === 'google_meet') {
         setMeetOwnerEmail(ownerEmail)
-        setPendingMeetUrl(session.join_url)
+        setPendingMeetUrl(targetUrl)
         setMeetWarningOpen(true)
         return
       }
 
-      window.open(session.join_url, '_blank', 'noopener,noreferrer')
+      window.open(targetUrl, '_blank', 'noopener,noreferrer')
       return
     }
     if (!session.room_code) return
@@ -306,6 +308,20 @@ export default function InstructorLiveHistory() {
     if (!session?.room_code) return
     setSharingId(session.id)
     try {
+      const isExternal = session.provider && session.provider !== 'mentorix_live'
+      if (isExternal && session.join_url) {
+        setShareSession({
+          roomCode: session.room_code,
+          provider: session.provider,
+          joinUrl: session.join_url,
+          startUrl: session.start_url || null,
+          title: session.title || t('live.historyTitle'),
+          scheduledAt: session.scheduled_at,
+          isExternal: true,
+        })
+        return
+      }
+
       let inviteRes = await api.get(`/live/rooms/${encodeURIComponent(session.room_code)}/guest-invite`)
       if (!inviteRes?.invite) {
         const hoursUntil = session.scheduled_at
@@ -581,10 +597,14 @@ export default function InstructorLiveHistory() {
         session={shareSession}
         onClose={() => setShareSession(null)}
         onEnterLive={() => {
-          if (!shareSession?.roomCode) return
-          navigate(`/live/${encodeURIComponent(shareSession.roomCode)}`)
+          if (!shareSession) return
+          if (shareSession.isExternal && (shareSession.startUrl || shareSession.joinUrl)) {
+            window.open(shareSession.startUrl || shareSession.joinUrl, '_blank', 'noopener,noreferrer')
+            return
+          }
+          if (shareSession.roomCode) navigate(`/live/${encodeURIComponent(shareSession.roomCode)}`)
         }}
-        onRevoke={revokeShareLink}
+        onRevoke={shareSession?.isExternal ? undefined : revokeShareLink}
       />
 
       <GoogleMeetAccountWarning

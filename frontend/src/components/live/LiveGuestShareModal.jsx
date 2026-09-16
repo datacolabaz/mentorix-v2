@@ -97,8 +97,8 @@ export default function LiveGuestShareModal({
               </div>
             </div>
           ) : null}
-          <div className="rounded-xl border border-[color:var(--border-subtle)] p-3 bg-black/20">
-            <p className="text-[11px] font-mono text-primary break-all">{joinUrl}</p>
+          <div className="rounded-xl border border-[color:var(--border-subtle)] p-3 bg-token-surfaceMain">
+            <p className="text-[11px] font-mono text-token-textMain break-all">{joinUrl}</p>
           </div>
           <div className="flex flex-col gap-2">
             <Button className="w-full justify-center" variant="secondary" onClick={() => void copyLink()} disabled={revoked || !joinUrl}>
