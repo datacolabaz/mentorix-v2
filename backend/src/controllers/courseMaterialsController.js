@@ -37,6 +37,7 @@ function mapMaterialRow(row) {
     file_size: row.file_size,
     original_filename: row.original_filename,
     group_id: row.group_id,
+    groups: Array.isArray(row.groups) ? row.groups : [],
     subject_id: row.subject_id,
     enrollment_lesson_id: row.enrollment_lesson_id,
     assignment_id: row.assignment_id,
@@ -127,6 +128,19 @@ const postMaterial = async (req, res) => {
       fileSize,
       originalFilename: req.file.originalname || null,
       groupId: req.body.group_id || null,
+      groupIds: (() => {
+        const raw = req.body.group_ids || req.body.groupIds || null;
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'string') {
+          try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [raw];
+          } catch {
+            return raw.split(',');
+          }
+        }
+        return raw ? [raw] : [];
+      })(),
       subjectId: req.body.subject_id || null,
       enrollmentLessonId: req.body.enrollment_lesson_id || null,
       assignmentId: req.body.assignment_id || null,
@@ -279,7 +293,7 @@ const linkMaterial = async (req, res) => {
       req.user.id,
       req.params.id,
       req.body?.target_type,
-      req.body?.target_id,
+      req.body?.target_ids || req.body?.target_id,
     );
     const full = await listInstructorMaterials(req.user.id, {});
     const mapped = full.find((r) => String(r.id) === String(req.params.id));

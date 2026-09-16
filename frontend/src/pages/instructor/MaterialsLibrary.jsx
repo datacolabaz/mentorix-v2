@@ -240,6 +240,7 @@ export default function InstructorMaterialsLibrary() {
         onSuccess={onUploadSuccess}
         quota={quota}
         fields={fields}
+        allGroups={allGroups}
         fieldsLoading={fieldsLoading}
         onUpgrade={() => navigate('/instructor/settings?tab=plans')}
       />
@@ -380,8 +381,17 @@ export default function InstructorMaterialsLibrary() {
                         <p className="text-[11px] text-token-textMuted mt-1">
                           {localizedFileKind(m.file_type, m.file_url)} · {formatMaterialsBytes(m.file_size)}
                         </p>
-                        {m.group_name ? (
-                          <p className="text-[11px] text-primary/90 mt-1 truncate">{t('materials.group', { name: m.group_name })}</p>
+                        {(m.groups?.length || m.group_name) ? (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {(m.groups?.length ? m.groups : [{ id: m.group_id, name: m.group_name }]).slice(0, 2).map((group) => (
+                              <span key={group.id || group.name} className="max-w-full truncate rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                {group.name}
+                              </span>
+                            ))}
+                            {(m.groups?.length || 0) > 2 ? (
+                              <span className="rounded-md bg-token-surfaceCard px-1.5 py-0.5 text-[10px] text-token-textMuted">+{m.groups.length - 2}</span>
+                            ) : null}
+                          </div>
                         ) : null}
                         {usageLine(m) ? (
                           <p className="text-[10px] text-token-textMuted mt-1">{usageLine(m)}</p>

@@ -11,6 +11,19 @@
   line-height: 1;
 }
 
+/* Azerbaijani language support - ensure proper rendering of ə, ö, ü, ğ, ş, ç */
+body {
+  font-family: 'DM Sans', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Better fallback for Azerbaijani characters across platforms */
+.az-text {
+  font-family: 'DM Sans', 'Segoe UI', 'Arial Unicode MS', 'Code2000', 'Noto Sans', sans-serif;
+  unicode-bidi: embed;
+}
+
 @keyframes mxFadeIn {
   from {
     opacity: 0;

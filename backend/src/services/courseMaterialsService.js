@@ -106,7 +106,10 @@ async function listInstructorMaterials(instructorId, filters = {}) {
   let i = 2;
 
   if (filters.group_id) {
-    clauses.push(`cm.group_id = $${i++}`);
+    clauses.push(`EXISTS (
+      SELECT 1 FROM course_material_groups cmg_filter
+      WHERE cmg_filter.material_id = cm.id AND cmg_filter.group_id = $${i++}
+    )`);
     params.push(filters.group_id);
   }
   if (filters.subject_id) {
@@ -134,6 +137,7 @@ async function listInstructorMaterials(instructorId, filters = {}) {
             cm.group_id, cm.subject_id, cm.enrollment_lesson_id, cm.assignment_id, cm.created_at,
             cm.tags, cm.is_shared, cm.share_token, cm.view_count,
             ig.name AS group_name,
+            COALESCE(group_access.groups, '[]'::json) AS groups,
             isub.name AS subject_name,
             a.title AS assignment_title,
             el.lesson_number, el.starts_at AS lesson_starts_at,
@@ -142,6 +146,16 @@ async function listInstructorMaterials(instructorId, filters = {}) {
             (SELECT COUNT(*)::int FROM course_material_guest_students cmgs WHERE cmgs.material_id = cm.id) AS guest_student_count
      FROM course_materials cm
      LEFT JOIN instructor_groups ig ON ig.id = cm.group_id
+     LEFT JOIN LATERAL (
+       SELECT json_agg(
+         json_build_object('id', ig_access.id, 'name', ig_access.name, 'subject_id', ig_access.subject_id, 'subject_name', isub_access.name)
+         ORDER BY isub_access.sort_order NULLS LAST, isub_access.name, ig_access.sort_order NULLS LAST, ig_access.name
+       ) AS groups
+       FROM course_material_groups cmg_access
+       JOIN instructor_groups ig_access ON ig_access.id = cmg_access.group_id
+       LEFT JOIN instructor_subjects isub_access ON isub_access.id = ig_access.subject_id
+       WHERE cmg_access.material_id = cm.id
+     ) group_access ON true
      LEFT JOIN instructor_subjects isub ON isub.id = cm.subject_id
      LEFT JOIN assignments a ON a.id = cm.assignment_id
      LEFT JOIN enrollment_lessons el ON el.id = cm.enrollment_lesson_id
@@ -161,12 +175,35 @@ async function createCourseMaterial({
   fileSize,
   originalFilename,
   groupId,
+  groupIds,
   subjectId,
   enrollmentLessonId,
   assignmentId,
   tags,
 }) {
   const tagList = normalizeTags(tags);
+  const normalizedGroupIds = [...new Set(
+    (Array.isArray(groupIds) ? groupIds : groupIds ? [groupIds] : groupId ? [groupId] : [])
+      .map((id) => String(id || '').trim())
+      .filter(Boolean),
+  )];
+  
+  if (normalizedGroupIds.length) {
+    const { rows: ownedGroups } = await db.query(
+      `SELECT id, subject_id FROM instructor_groups WHERE instructor_id = $1 AND id = ANY($2::uuid[])`,
+      [instructorId, normalizedGroupIds],
+    );
+    if (ownedGroups.length !== normalizedGroupIds.length) {
+      const err = new Error('Seçilən qruplardan biri sizə aid deyil');
+      err.status = 403;
+      throw err;
+    }
+    groupId = normalizedGroupIds[0];
+    if (!subjectId && ownedGroups.every((group) => String(group.subject_id) === String(ownedGroups[0].subject_id))) {
+      subjectId = ownedGroups[0].subject_id;
+    }
+  }
+  
   const { rows } = await db.query(
     `INSERT INTO course_materials (
        instructor_id, title, file_url, storage_filename, file_type, file_size, original_filename,
@@ -189,7 +226,17 @@ async function createCourseMaterial({
       tagList,
     ],
   );
-  return rows[0];
+  
+  const material = rows[0];
+  if (normalizedGroupIds.length) {
+    await db.query(
+      `INSERT INTO course_material_groups (material_id, group_id)
+       SELECT $1::uuid, UNNEST($2::uuid[])
+       ON CONFLICT (material_id, group_id) DO NOTHING`,
+      [material.id, normalizedGroupIds],
+    );
+  }
+  return material;
 }
 
 async function getMaterialById(materialId) {
@@ -507,20 +554,36 @@ async function linkMaterialToTarget(instructorId, materialId, targetType, target
   }
 
   if (type === 'group') {
+    const targetIds = [...new Set((Array.isArray(targetId) ? targetId : [targetId]).map((id) => String(id || '').trim()).filter(Boolean))];
+    if (!targetIds.length) {
+      const err = new Error('Ən azı bir qrup seçin');
+      err.status = 400;
+      throw err;
+    }
     const { rows } = await db.query(
-      `SELECT id, subject_id FROM instructor_groups WHERE id = $1 AND instructor_id = $2 LIMIT 1`,
-      [tid, instructorId],
+      `SELECT id, subject_id FROM instructor_groups WHERE instructor_id = $1 AND id = ANY($2::uuid[])`,
+      [instructorId, targetIds],
     );
-    if (!rows[0]) {
+    if (rows.length !== targetIds.length) {
       const err = new Error('Qrup tapılmadı');
       err.status = 404;
       throw err;
     }
-    await db.query(
-      `UPDATE course_materials SET group_id = $3, subject_id = $4 WHERE id = $1 AND instructor_id = $2`,
-      [materialId, instructorId, tid, rows[0].subject_id],
-    );
-    return { target_type: 'group', target_id: tid };
+    await db.transaction(async (trx) => {
+      await trx.query('DELETE FROM course_material_groups WHERE material_id = $1', [materialId]);
+      await trx.query(
+        `INSERT INTO course_material_groups (material_id, group_id)
+         SELECT $1::uuid, UNNEST($2::uuid[])
+         ON CONFLICT (material_id, group_id) DO NOTHING`,
+        [materialId, targetIds],
+      );
+      const subjectId = rows.every((group) => String(group.subject_id) === String(rows[0].subject_id)) ? rows[0].subject_id : null;
+      await trx.query(
+        `UPDATE course_materials SET group_id = $3, subject_id = $4 WHERE id = $1 AND instructor_id = $2`,
+        [materialId, instructorId, targetIds[0], subjectId],
+      );
+    });
+    return { target_type: 'group', target_ids: targetIds };
   }
 
   if (type === 'lesson') {

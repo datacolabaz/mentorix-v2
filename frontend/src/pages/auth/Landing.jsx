@@ -223,10 +223,10 @@ export default function Landing() {
               <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_12px_rgba(0,229,176,0.9)]" />
               {hero.pill}
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight w-full max-w-xl">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight w-full max-w-xl az-text">
               {hero.headline}
             </h1>
-            <p className="text-base sm:text-lg text-slate-600 leading-relaxed w-full max-w-md lg:max-w-xl">
+            <p className="text-base sm:text-lg text-slate-600 leading-relaxed w-full max-w-md lg:max-w-xl az-text">
               {hero.subheadline}
             </p>
             <div className="flex flex-col w-full max-w-md lg:max-w-xl gap-3">
