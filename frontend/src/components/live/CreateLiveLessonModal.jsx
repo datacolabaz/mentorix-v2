@@ -1,5 +1,5 @@
 /**
- * Platform picker + details for creating a live lesson (Mentorix Live / Google Meet).
+ * Platform picker + details for creating a live lesson.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +12,6 @@ import api from '../../lib/api'
 const PROVIDERS = [
   { id: 'google_meet', available: true },
   { id: 'zoom', available: true },
-  { id: 'mentorix_live', available: false },
   { id: 'teams', available: false },
 ]
 
@@ -214,7 +213,7 @@ export default function CreateLiveLessonModal({
         {step === 'pick' ? (
           <div className="space-y-3">
             <p className="text-sm text-token-textMuted">{t('live.pickPlatform')}</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {PROVIDERS.map((p) => (
                 <button
                   key={p.id}
@@ -232,7 +231,7 @@ export default function CreateLiveLessonModal({
                   </span>
                   {!p.available ? (
                     <span className="mt-0.5 block text-[11px] text-token-textMuted">
-                      {p.id === 'mentorix_live' ? t('live.legacyOnly') : t('live.comingSoon')}
+                      {t('live.comingSoon')}
                     </span>
                   ) : p.id === 'google_meet' ? (
                     <span className="mt-0.5 block text-[11px] text-token-textMuted">
@@ -246,7 +245,6 @@ export default function CreateLiveLessonModal({
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-token-textMuted">{t('live.byoHint')}</p>
           </div>
         ) : (
           <div className="space-y-3">

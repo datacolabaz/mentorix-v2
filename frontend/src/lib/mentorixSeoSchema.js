@@ -48,7 +48,7 @@ export const MENTORIX_SITE_NAV = [
   {
     name: 'Haqqımızda',
     path: '/haqqimizda',
-    description: 'Mentorix təhsil ekosistemi haqqında',
+    description: 'mentorix.io təhsil ekosistemi haqqında',
   },
   {
     name: 'Partner proqramı',
@@ -72,8 +72,8 @@ export function buildWebSiteSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Mentorix',
-    alternateName: 'Mentorix.io',
+    name: 'mentorix.io',
+    alternateName: 'mentorix.io',
     url: `${SITE_ORIGIN}/`,
     description: MENTORIX_SEO_DESCRIPTION,
     inLanguage: 'az',
@@ -92,8 +92,8 @@ export function buildOrganizationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Mentorix',
-    legalName: 'Mentorix.io',
+    name: 'mentorix.io',
+    legalName: 'mentorix.io',
     url: `${SITE_ORIGIN}/`,
     logo: `${SITE_ORIGIN}/favicon.png`,
     description: MENTORIX_SEO_DESCRIPTION,
@@ -112,7 +112,7 @@ export function buildSiteNavigationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'SiteNavigationElement',
-    name: 'Mentorix əsas naviqasiya',
+    name: 'mentorix.io əsas naviqasiya',
     hasPart: MENTORIX_SITE_NAV.map((item) => ({
       '@type': 'WebPage',
       name: item.name,
@@ -126,7 +126,7 @@ export function buildSiteSectionsItemListSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'Mentorix platforma bölmələri',
+    name: 'mentorix.io platforma bölmələri',
     description: MENTORIX_SEO_TITLE,
     itemListElement: MENTORIX_SITE_NAV.map((item, i) => ({
       '@type': 'ListItem',
@@ -157,7 +157,7 @@ export function buildPrimarySiteNavigationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'SiteNavigationElement',
-    name: 'Mentorix əsas naviqasiya',
+    name: 'mentorix.io əsas naviqasiya',
     hasPart: [
       { '@type': 'WebPage', name: 'Ana səhifə', url: absoluteUrl('/') },
       { '@type': 'WebPage', name: 'Müəllimlər üçün', url: absoluteUrl('/muellimler-ucun') },
@@ -205,11 +205,11 @@ export function buildPricingProductSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: 'Mentorix abunəlik paketləri',
-    description: 'Mentorix təhsil ekosistemi üçün aylıq abunəlik paketləri — müəllimlər və təhsil xidməti təminatçıları.',
+    name: 'mentorix.io abunəlik paketləri',
+    description: 'mentorix.io təhsil ekosistemi üçün aylıq abunəlik paketləri — müəllimlər və təhsil xidməti təminatçıları.',
     brand: {
       '@type': 'Brand',
-      name: 'Mentorix',
+      name: 'mentorix.io',
     },
     url: pricingUrl,
     offers: PRICING_PLAN_OFFERS.map((plan) => ({

@@ -1,0 +1,1 @@
+- [Frontend package firewall](package-firewall.md) — locked packages blocked by Replit’s security policy may need a safe direct-dependency upgrade before builds can run.

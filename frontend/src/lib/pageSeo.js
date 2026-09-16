@@ -21,6 +21,10 @@ const DEFAULT_TITLE = MENTORIX_SEO_TITLE
 const DEFAULT_DESCRIPTION = MENTORIX_SEO_DESCRIPTION
 const DEFAULT_KEYWORDS = MENTORIX_SEO_KEYWORDS
 
+function normalizeSeoBrand(value) {
+  return String(value || '').replace(/mentorix(?:\.io)?/gi, 'mentorix.io')
+}
+
 function upsertMeta(name, content) {
   if (!content) return
   let el = document.querySelector(`meta[name="${name}"]`)
@@ -88,9 +92,9 @@ export function setPageSeo({
 }) {
   if (typeof document === 'undefined') return
 
-  const nextTitle = title || DEFAULT_TITLE
-  const nextDescription = description || DEFAULT_DESCRIPTION
-  const nextKeywords = keywords || DEFAULT_KEYWORDS
+   const nextTitle = normalizeSeoBrand(title || DEFAULT_TITLE)
+   const nextDescription = normalizeSeoBrand(description || DEFAULT_DESCRIPTION)
+   const nextKeywords = normalizeSeoBrand(keywords || DEFAULT_KEYWORDS)
   const href = absoluteHref(canonicalPath)
   const image = ogImage || DEFAULT_OG_IMAGE
 
@@ -108,7 +112,7 @@ export function setPageSeo({
   }
   link.setAttribute('href', href)
 
-  upsertOg('og:site_name', 'Mentorix.io')
+   upsertOg('og:site_name', 'mentorix.io')
   upsertOg('og:title', nextTitle)
   upsertOg('og:description', nextDescription)
   upsertOg('og:url', href)
@@ -127,7 +131,10 @@ export function setPageSeo({
   upsertMeta('twitter:image', image)
   upsertMeta('twitter:image:alt', nextTitle)
 
-  upsertJsonLd('mx-breadcrumb-ld', buildBreadcrumbSchema(breadcrumbs))
+   const normalizedBreadcrumbs = Array.isArray(breadcrumbs)
+     ? breadcrumbs.map((item) => ({ ...item, name: normalizeSeoBrand(item?.name) }))
+     : breadcrumbs
+   upsertJsonLd('mx-breadcrumb-ld', buildBreadcrumbSchema(normalizedBreadcrumbs))
   upsertJsonLd('mx-person-ld', person ? buildPersonSchema(person) : null)
   upsertJsonLd('mx-pricing-ld', pricingProduct ? buildPricingProductSchema() : null)
 }
@@ -146,7 +153,7 @@ export function resetPageSeo() {
     description: DEFAULT_DESCRIPTION,
     canonicalPath: '/',
     keywords: DEFAULT_KEYWORDS,
-    breadcrumbs: [{ name: 'Mentorix', path: '/' }],
+    breadcrumbs: [{ name: 'mentorix.io', path: '/' }],
   })
 }
 

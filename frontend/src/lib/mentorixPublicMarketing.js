@@ -1,17 +1,17 @@
 import { AI_PLAN_LIMITS } from '../constants/aiPlanLimits'
 import { defaultPlatformContact } from './platformContact'
 
-export const MENTORIX_SEO_TITLE = 'Mentorix — onlayn imtahan və qiymətləndirmə'
+export const MENTORIX_SEO_TITLE = 'mentorix.io — onlayn imtahan və qiymətləndirmə'
 
 export const MENTORIX_SEO_DESCRIPTION =
   'Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, tələbə və valideyn — hamısı bir yerdə. Pulsuz başlayın.'
 
 export const MENTORIX_SEO_KEYWORDS =
-  'təhsil platforması, təhsil ekosistemi, müəllim paneli, tələbə kabineti, valideyn kabineti, imtahan sistemi, tapşırıq idarəetməsi, müəllim axtarışı, ödəniş izləmə, SMS bildirişləri, tədris qrupları, Mentorix'
+  'təhsil platforması, təhsil ekosistemi, müəllim paneli, tələbə kabineti, valideyn kabineti, imtahan sistemi, tapşırıq idarəetməsi, müəllim axtarışı, ödəniş izləmə, SMS bildirişləri, tədris qrupları, mentorix.io'
 
 /** Ana səhifədə təbii formada — Google açar sözləri */
 export const MENTORIX_SEO_HOMEPAGE_LINE =
-  'Mentorix müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.'
+  'mentorix.io müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.'
 
 export const MENTORIX_TAGLINE = MENTORIX_SEO_HOMEPAGE_LINE
 
