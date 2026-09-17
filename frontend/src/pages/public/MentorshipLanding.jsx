@@ -222,6 +222,35 @@ export default function MentorshipLanding() {
         </section>
 
         <section className="max-w-5xl mx-auto px-4 py-14 sm:py-20">
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+            <div className="rounded-3xl bg-emerald-500 p-7 sm:p-10 text-slate-950">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-950/70">Şirkətlər üçün</p>
+              <h2 className="mt-3 text-2xl sm:text-3xl font-bold">Komandanız üçün ölçülə bilən inkişaf proqramı</h2>
+              <p className="mt-4 max-w-xl leading-relaxed text-emerald-950/80">
+                İşçiləri doğru mentorlarla uyğunlaşdırın, məqsədləri və görüşləri bir məkanda izləyin, inkişafı real nəticələrlə ölçün.
+              </p>
+              <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                {['Komanda uyğunluğu', 'Vahid dashboard', 'Nəticə hesabatı'].map((item) => (
+                  <div key={item} className="rounded-2xl bg-white/30 p-3 text-sm font-bold">{item}</div>
+                ))}
+              </div>
+              <Link to="/partner" className="mt-8 inline-flex items-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                Biznes həllini müzakirə et →
+              </Link>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-7 sm:p-10">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">Niyə Mentorix?</p>
+              <h3 className="mt-3 text-2xl font-bold text-slate-900">Mentorluq yalnız video görüş deyil</h3>
+              <ul className="mt-6 space-y-4 text-sm leading-relaxed text-slate-600">
+                <li className="flex gap-3"><span className="font-bold text-emerald-600">01</span><span>Hər məqsəd üçün aydın başlanğıc diaqnostikası və yol xəritəsi.</span></li>
+                <li className="flex gap-3"><span className="font-bold text-emerald-600">02</span><span>Sessiyalar arasında tapşırıq, geribildirim və növbəti addım.</span></li>
+                <li className="flex gap-3"><span className="font-bold text-emerald-600">03</span><span>Yoxlanmış profil, şəffaf qiymət və nəticəyə əsaslanan seçim.</span></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section className="max-w-5xl mx-auto px-4 py-14 sm:py-20">
           <div className="rounded-3xl bg-slate-900 px-6 py-10 sm:px-10 sm:py-14 text-white">
             <div className="max-w-2xl space-y-4">
               <h2 className="text-2xl sm:text-3xl font-bold">{t('mentorship.bottomTitle')}</h2>

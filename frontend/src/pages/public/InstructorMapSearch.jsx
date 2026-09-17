@@ -41,6 +41,8 @@ export default function InstructorMapSearch() {
   const toast = useToast()
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [whatsappBusy, setWhatsappBusy] = useState(false)
+  const [favoriteIds, setFavoriteIds] = useState(() => new Set())
+  const [favoriteBusyId, setFavoriteBusyId] = useState(null)
   const [highlightId, setHighlightId] = useState(null)
   const cardRefs = useRef(new Map())
   const listScrollRef = useRef(null)
@@ -68,6 +70,25 @@ export default function InstructorMapSearch() {
   const [searchParams] = useSearchParams()
   const location = useLocation()
   const categoryFromUrl = searchParams.get('category')
+
+  useEffect(() => {
+    let cancelled = false
+    if (!isAuthenticated) {
+      setFavoriteIds(new Set())
+      return undefined
+    }
+    void api
+      .get('/favorites')
+      .then((res) => {
+        if (!cancelled) setFavoriteIds(new Set((res?.favorites || []).map((item) => String(item.id))))
+      })
+      .catch(() => {
+        if (!cancelled) setFavoriteIds(new Set())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated])
 
   const locationPhrase = useMemo(
     () => formatResultsLocationPhraseI18n(region, bakuDistrict, locale),
@@ -290,6 +311,37 @@ export default function InstructorMapSearch() {
     })
   }
 
+  const onToggleFavorite = async (instructor) => {
+    if (!isAuthenticated) {
+      setAuthModalOpen(true)
+      return
+    }
+    const id = String(instructor?.id || '')
+    if (!id || favoriteBusyId) return
+    const wasFavorite = favoriteIds.has(id)
+    setFavoriteBusyId(id)
+    setFavoriteIds((current) => {
+      const next = new Set(current)
+      if (wasFavorite) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    try {
+      await api({ method: wasFavorite ? 'delete' : 'post', url: `/favorites/${encodeURIComponent(id)}` })
+      toast(wasFavorite ? 'Favoritlərdən çıxarıldı' : 'Favoritlərə əlavə edildi', 'success')
+    } catch (error) {
+      setFavoriteIds((current) => {
+        const next = new Set(current)
+        if (wasFavorite) next.add(id)
+        else next.delete(id)
+        return next
+      })
+      toast(error?.message || 'Favorit yadda saxlanmadı', 'error')
+    } finally {
+      setFavoriteBusyId(null)
+    }
+  }
+
   const handleCategoryPick = (pick) => {
     setDiscoverFilters((f) => ({
       ...f,
@@ -504,6 +556,9 @@ export default function InstructorMapSearch() {
                       onInquiry={onInquiryClick}
                       onWhatsApp={onWhatsAppClick}
                       whatsappBusy={whatsappBusy}
+                      isFavorite={favoriteIds.has(String(p.id))}
+                      favoriteBusy={favoriteBusyId === String(p.id)}
+                      onToggleFavorite={onToggleFavorite}
                     />
                   ))}
                 </div>

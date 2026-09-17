@@ -18,6 +18,9 @@ export default function TeacherMapListCard({
   onInquiry,
   onWhatsApp,
   whatsappBusy,
+  isFavorite = false,
+  favoriteBusy = false,
+  onToggleFavorite,
 }) {
   const { t } = useTranslation()
   const locale = useActiveLocale()
@@ -103,6 +106,24 @@ export default function TeacherMapListCard({
             {t('marketplace.card.viewProfile')}
           </Link>
         </div>
+      </button>
+
+      <button
+        type="button"
+        aria-label={isFavorite ? 'Favoritlərdən çıxar' : 'Favoritlərə əlavə et'}
+        aria-pressed={isFavorite}
+        disabled={favoriteBusy}
+        onClick={(event) => {
+          event.stopPropagation()
+          onToggleFavorite?.(p)
+        }}
+        className={`absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border text-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:cursor-wait disabled:opacity-60 ${
+          isFavorite
+            ? 'border-rose-200 bg-rose-50 text-rose-500'
+            : 'border-slate-200 bg-white text-slate-400 hover:border-rose-200 hover:text-rose-400'
+        }`}
+      >
+        {isFavorite ? '♥' : '♡'}
       </button>
 
       <div className="grid grid-cols-2 gap-1.5 w-full sm:flex sm:flex-col sm:w-auto sm:shrink-0 sm:self-center sm:min-w-[7.5rem]">

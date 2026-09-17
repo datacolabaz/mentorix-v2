@@ -92,6 +92,7 @@ app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/generation', require('./routes/generation'));
 app.use('/api/partner', require('./routes/partner'));
 app.use('/api/mentor', require('./routes/mentor'));
+app.use('/api/favorites', require('./routes/favorites'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>
