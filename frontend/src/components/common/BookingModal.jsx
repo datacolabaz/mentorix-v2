@@ -4,7 +4,8 @@ import Modal from './Modal'
 import Button from './Button'
 import { useToast } from './Toast'
 
-export default function BookingModal({ isOpen, onClose, mentorName = 'Mentor', onBookSuccess }) {
+export default function BookingModal({ open, isOpen, onClose, mentorName = 'Mentor', onBookSuccess }) {
+  const isVisible = Boolean(open || isOpen)
   const { t } = useTranslation()
   const toast = useToast()
   const [step, setStep] = useState(1)
@@ -63,10 +64,10 @@ export default function BookingModal({ isOpen, onClose, mentorName = 'Mentor', o
     onClose()
   }
 
-  if (!isOpen) return null
+  if (!isVisible) return null
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="1-ə-1 Mentor Sessiyası Təyin Et">
+    <Modal open={isVisible} onClose={handleClose} title="1-ə-1 Mentor Sessiyası Təyin Et">
       <div className="space-y-5">
         {/* Step Indicator */}
         <div className="flex items-center justify-between border-b border-token-border pb-3">

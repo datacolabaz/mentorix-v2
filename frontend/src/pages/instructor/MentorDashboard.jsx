@@ -19,6 +19,13 @@ export default function MentorDashboard() {
   const isDark = theme === 'dark'
 
   const [bookingOpen, setBookingOpen] = useState(false)
+  const [serviceModalOpen, setServiceModalOpen] = useState(false)
+  const [newService, setNewService] = useState({
+    title: '',
+    topic: 'Karyera planlaması',
+    price: '',
+    duration: '60 dəqiqə',
+  })
 
   const [services, setServices] = useState([])
 
@@ -61,16 +68,17 @@ export default function MentorDashboard() {
           <button
             type="button"
             onClick={() => setBookingOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:brightness-95 text-[#041018] shadow-sm transition-all"
           >
             <span>📅</span> Yeni sessiya təyin et
           </button>
-          <Link
-            to="/instructor/teaching-groups"
+          <button
+            type="button"
+            onClick={() => setServiceModalOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-token-border bg-token-surface hover:bg-token-surfaceHover text-token-text transition-all"
           >
             <span>➕</span> Yeni xidmət
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -80,30 +88,30 @@ export default function MentorDashboard() {
           className={[
             'rounded-2xl border p-4 sm:p-5 transition-all shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4',
             isDark
-              ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-200'
-              : 'bg-emerald-50/90 border-emerald-200 text-emerald-950',
+              ? 'bg-slate-900 border-slate-800 text-slate-100'
+              : 'bg-white border-slate-200 text-slate-900',
           ].join(' ')}
         >
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-lg">🧭</span>
-              <h2 className="font-bold text-sm sm:text-base">
+              <h2 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                 Mentor profilinizi tamamlayın
               </h2>
               <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                 {profileCompletion}% tamamlanıb
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
               Daha çox mentee tərəfindən tapılmaq və 1-on-1 müraciətlər almaq üçün profilinizi tamamlayın.
             </p>
             {missingProfileSteps.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300 pt-0.5">
-                <span className="font-semibold">Çatışmayan:</span>
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 pt-0.5">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Çatışmayan:</span>
                 {missingProfileSteps.map((step) => (
                   <span
                     key={step}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/70 dark:bg-black/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-900 dark:text-emerald-200 text-[11px]"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-medium"
                   >
                     ○ {step}
                   </span>
@@ -343,12 +351,13 @@ export default function MentorDashboard() {
               Mentee-lərə təklif etdiyiniz fərdi sessiyalar və aylıq mentorluq paketləri
             </p>
           </div>
-          <Link
-            to="/instructor/teaching-groups"
+          <button
+            type="button"
+            onClick={() => setServiceModalOpen(true)}
             className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-500"
           >
             <span>+</span> Yeni xidmət əlavə et
-          </Link>
+          </button>
         </div>
 
         {services.length === 0 ? (
@@ -360,12 +369,13 @@ export default function MentorDashboard() {
             <p className="text-xs text-token-textMuted mt-1">
               Mentee-lərin sizə müraciət edə bilməsi üçün ilk fərdi mentorluq xidmətinizi yaradın.
             </p>
-            <Link
-              to="/instructor/teaching-groups"
+            <button
+              type="button"
+              onClick={() => setServiceModalOpen(true)}
               className="inline-flex mt-3 px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:brightness-95 text-[#041018] shadow-sm transition-all"
             >
               + İlk xidməti əlavə et
-            </Link>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -404,11 +414,119 @@ export default function MentorDashboard() {
 
       {/* Booking Modal (3-Step Wizard) */}
       <BookingModal
-        isOpen={bookingOpen}
+        open={bookingOpen}
         onClose={() => setBookingOpen(false)}
         mentorName={user?.full_name || 'Mentor'}
         onBookSuccess={() => toast('Sessiya uğurla planlaşdırıldı!', 'success')}
       />
+
+      {/* Service Create Modal */}
+      {serviceModalOpen && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && setServiceModalOpen(false)}
+        >
+          <div className="w-full max-w-md bg-white dark:bg-surface-2 rounded-2xl border border-slate-200 dark:border-white/10 p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Yeni Mentorluq Xidməti Əlavə Et</h3>
+              <button
+                type="button"
+                onClick={() => setServiceModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">Xidmətin Adı</label>
+                <input
+                  type="text"
+                  value={newService.title}
+                  onChange={(e) => setNewService({ ...newService, title: e.target.value })}
+                  placeholder="məs: Python & AI Fərdi Mentorluq"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">Mövzu / Sahə</label>
+                <select
+                  value={newService.topic}
+                  onChange={(e) => setNewService({ ...newService, topic: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-primary"
+                >
+                  <option value="Karyera planlaması">Karyera planlaması</option>
+                  <option value="Proqramlaşdırma & İT">Proqramlaşdırma & İT</option>
+                  <option value="Data & Süni İntellekt">Data & Süni İntellekt</option>
+                  <option value="UI/UX Dizayn">UI/UX Dizayn</option>
+                  <option value="Xaricdə Təhsil">Xaricdə Təhsil</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">Qiymət</label>
+                  <input
+                    type="text"
+                    value={newService.price}
+                    onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                    placeholder="məs: 40 AZN"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">Format / Müddət</label>
+                  <input
+                    type="text"
+                    value={newService.duration}
+                    onChange={(e) => setNewService({ ...newService, duration: e.target.value })}
+                    placeholder="məs: 60 dəqiqə"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setServiceModalOpen(false)}
+                className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800"
+              >
+                Ləğv et
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!newService.title.trim()) {
+                    toast('Xidmətin adını qeyd edin', 'error')
+                    return
+                  }
+                  setServices((prev) => [
+                    ...prev,
+                    {
+                      id: Date.now(),
+                      title: newService.title,
+                      topic: newService.topic,
+                      price: newService.price || 'Razılaşma ilə',
+                      duration: newService.duration || '60 dəqiqə',
+                      active: true,
+                    },
+                  ])
+                  setServiceModalOpen(false)
+                  setNewService({ title: '', topic: 'Karyera planlaması', price: '', duration: '60 dəqiqə' })
+                  toast('Yeni mentorluq xidməti əlavə edildi!', 'success')
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:brightness-95 text-[#041018] shadow-sm transition-all"
+              >
+                Xidməti Əlavə Et
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

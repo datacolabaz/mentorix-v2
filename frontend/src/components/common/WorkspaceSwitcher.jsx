@@ -93,8 +93,8 @@ export default function WorkspaceSwitcher({ className = '' }) {
             isMentor
               ? 'bg-primary/10 border-primary/30 text-slate-900 dark:text-primary'
               : isTeacher
-                ? 'bg-slate-100 border-slate-300 text-slate-700 dark:bg-white/10 dark:border-white/15 dark:text-slate-200'
-                : 'bg-primary/10 border-primary/30 text-slate-900 dark:text-primary',
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400',
           ].join(' ')}
         >
           {activeBadge}
@@ -122,7 +122,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
               onClick={() => handleSwitch('student', '/student')}
               className={[
                 'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
-                  isStudent
+                isStudent
                   ? isDark
                     ? 'bg-primary/15 text-primary'
                     : 'bg-primary/10 text-slate-900'
@@ -135,7 +135,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
                 <span className="text-base">🎓</span>
                 <span>{t('workspace.student', { defaultValue: 'İştirakçı / Mentee kabineti' })}</span>
               </div>
-              {isStudent && <span className="text-xs font-bold text-primary">✓</span>}
+              {isStudent && <span className="text-xs font-bold text-emerald-500">✓</span>}
             </button>
 
             {/* Teacher */}
@@ -147,8 +147,8 @@ export default function WorkspaceSwitcher({ className = '' }) {
                 'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
                 isTeacher
                   ? isDark
-                    ? 'bg-white/10 text-white'
-                    : 'bg-slate-100 text-slate-900'
+                    ? 'bg-blue-500/20 text-blue-300'
+                    : 'bg-blue-50 text-blue-800'
                   : isDark
                     ? 'hover:bg-white/5 text-gray-300'
                     : 'hover:bg-slate-50 text-slate-700',
@@ -161,7 +161,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
                   <div className="text-[10px] text-slate-400 font-normal mt-0.5">Teacher dashboard</div>
                 </div>
               </div>
-              {isTeacher && <span className="text-xs font-bold text-primary">✓</span>}
+              {isTeacher && <span className="text-xs font-bold text-blue-500">✓</span>}
             </button>
 
             {/* Mentor */}
