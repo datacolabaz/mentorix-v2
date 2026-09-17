@@ -30,19 +30,19 @@ export default function Footer() {
 
   const footer = (
     <footer
-      className="fixed right-0 bottom-0 z-[1000] border-t border-white/10 bg-surface-2/95 shadow-[0_-4px_16px_rgba(0,0,0,0.12)]"
+      className="fixed right-0 bottom-0 z-[1000] border-t border-slate-200 bg-slate-50/95 shadow-[0_-4px_16px_rgba(15,23,42,0.06)] backdrop-blur-sm"
       style={{ left: `${leftOffset}px` }}
     >
-      <div className="px-4 sm:px-6 py-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/50">
-          <div className="text-center sm:text-left">{t('layout.footer.copyright')}</div>
-          <div className="text-center sm:text-right">
+      <div className="px-6 py-4 pr-16 sm:pr-20">
+        <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="text-left">{t('layout.footer.copyright')}</div>
+          <div className="text-right">
             {t('layout.footer.poweredBy')}{' '}
             <a
               href="https://datacolab.az"
               target="_blank"
               rel="noreferrer"
-              className="font-semibold text-white/70 hover:text-white transition-colors"
+              className="font-semibold text-slate-600 hover:text-slate-900 transition-colors"
             >
               DataColab
             </a>
