@@ -290,25 +290,41 @@ async function studentCanAccessMaterial(studentId, material) {
   );
   if (examLinkRows[0]) return true;
 
-  if (material.group_id) {
-    const { rows } = await db.query(
-      `SELECT 1 FROM instructor_group_members igm
-       WHERE igm.group_id = $1 AND igm.student_id = $2
+  const { rows: groupAccessRows } = await db.query(
+    `SELECT 1
+     FROM (
+       SELECT $2::uuid AS group_id
+       WHERE $2::uuid IS NOT NULL
        UNION
+       SELECT cmg.group_id
+       FROM course_material_groups cmg
+       WHERE cmg.material_id = $1
+     ) material_groups
+     WHERE EXISTS (
+       SELECT 1 FROM instructor_group_members igm
+       WHERE igm.group_id = material_groups.group_id AND igm.student_id = $3
+     )
+     OR EXISTS (
        SELECT 1 FROM enrollments e
-       WHERE e.group_id = $1 AND e.student_id = $2 AND e.status IN ('active','pending_setup')
-       LIMIT 1`,
-      [material.group_id, studentId],
-    );
-    if (rows[0]) return true;
-  }
+       WHERE e.group_id = material_groups.group_id
+         AND e.student_id = $3
+         AND e.status IN ('active','pending_setup')
+     )
+     LIMIT 1`,
+    [material.id, material.group_id || null, studentId],
+  );
+  if (groupAccessRows[0]) return true;
 
   if (!material.group_id && !material.assignment_id) {
     const { rows } = await db.query(
       `SELECT 1 FROM enrollments e
-       WHERE e.instructor_id = $1 AND e.student_id = $2 AND e.status IN ('active','pending_setup')
+       WHERE e.instructor_id = $1 AND e.student_id = $2
+         AND e.status IN ('active','pending_setup')
+         AND NOT EXISTS (
+           SELECT 1 FROM course_material_groups cmg WHERE cmg.material_id = $3
+         )
        LIMIT 1`,
-      [material.instructor_id, studentId],
+      [material.instructor_id, studentId, material.id],
     );
     return Boolean(rows[0]);
   }
@@ -321,12 +337,27 @@ async function listStudentMaterials(studentId, { groupId, enrollmentId } = {}) {
   let groupClause = '';
 
   if (groupId) {
-    groupClause = 'AND (cm.group_id = $2 OR cm.group_id IS NULL)';
+    groupClause = `AND (
+      cm.group_id IS NULL
+      OR cm.group_id = $2
+      OR EXISTS (
+        SELECT 1 FROM course_material_groups cmg_filter
+        WHERE cmg_filter.material_id = cm.id AND cmg_filter.group_id = $2
+      )
+    )`;
     params.push(groupId);
   } else if (enrollmentId) {
     groupClause = `AND (
       cm.group_id IS NULL
       OR cm.group_id = (SELECT group_id FROM enrollments WHERE id = $2 AND student_id = $1 LIMIT 1)
+      OR EXISTS (
+        SELECT 1
+        FROM course_material_groups cmg_filter
+        WHERE cmg_filter.material_id = cm.id
+          AND cmg_filter.group_id = (
+            SELECT group_id FROM enrollments WHERE id = $2 AND student_id = $1 LIMIT 1
+          )
+      )
     )`;
     params.push(enrollmentId);
   }
@@ -347,6 +378,23 @@ async function listStudentMaterials(studentId, { groupId, enrollmentId } = {}) {
      WHERE (
        cmgs.material_id IS NOT NULL
        OR (cm.group_id IS NOT NULL AND (igm.student_id IS NOT NULL OR e.id IS NOT NULL))
+       OR EXISTS (
+         SELECT 1
+         FROM course_material_groups cmg_access
+         WHERE cmg_access.material_id = cm.id
+           AND (
+             EXISTS (
+               SELECT 1 FROM instructor_group_members igm_access
+               WHERE igm_access.group_id = cmg_access.group_id AND igm_access.student_id = $1
+             )
+             OR EXISTS (
+               SELECT 1 FROM enrollments e_access
+               WHERE e_access.group_id = cmg_access.group_id
+                 AND e_access.student_id = $1
+                 AND e_access.status IN ('active','pending_setup')
+             )
+           )
+       )
        OR (cm.assignment_id IS NOT NULL AND sa.id IS NOT NULL)
        OR (cm.group_id IS NULL AND cm.assignment_id IS NULL AND EXISTS (
          SELECT 1 FROM enrollments ex
