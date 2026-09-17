@@ -4,6 +4,7 @@ import api from '../lib/api'
 import {
   buildInstructorNavSectionsFromClient,
   buildInstructorNavSections,
+  buildMentorNavSections,
   defaultMentorNavSections,
 } from '../constants/instructorNav'
 import useAuthStore from './useAuth'
@@ -38,7 +39,7 @@ export function useInstructorNavSections() {
 
   const [rawSections, setRawSections] = useState(() =>
     isMentor
-      ? buildInstructorNavSections({ sections: defaultMentorNavSections() })
+      ? buildMentorNavSections()
       : buildInstructorNavSections(),
   )
   const [loading, setLoading] = useState(true)
@@ -50,7 +51,7 @@ export function useInstructorNavSections() {
 
   const refresh = useCallback(async () => {
     if (isMentor) {
-      setRawSections(buildInstructorNavSections({ sections: defaultMentorNavSections() }))
+      setRawSections(buildMentorNavSections())
       setLoading(false)
       return
     }
@@ -68,7 +69,7 @@ export function useInstructorNavSections() {
 
   useEffect(() => {
     if (isMentor) {
-      setRawSections(buildInstructorNavSections({ sections: defaultMentorNavSections() }))
+      setRawSections(buildMentorNavSections())
     } else {
       void refresh()
     }

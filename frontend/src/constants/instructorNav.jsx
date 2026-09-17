@@ -242,6 +242,19 @@ export function defaultInstructorNavSections() {
   ]
 }
 
+export function buildMentorNavSections() {
+  const sections = defaultMentorNavSections()
+  return sections.map((section) => {
+    const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
+    const items = keys.map(itemFromKey).filter(Boolean)
+    return {
+      id: section.id,
+      title: section.title,
+      items,
+    }
+  }).filter((s) => s.items.length > 0)
+}
+
 /** API `nav.sections` və ya admin payload `sections` → InstructorLayout NAV_SECTIONS */
 export function buildInstructorNavSections(navPayload) {
   const sections = Array.isArray(navPayload?.sections) ? navPayload.sections : defaultInstructorNavSections()
