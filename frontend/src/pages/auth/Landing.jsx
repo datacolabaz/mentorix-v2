@@ -234,7 +234,7 @@ export default function Landing() {
               <button
                 type="button"
                 onClick={() => goRegister('hero_teacher')}
-                className="flex-1 inline-flex justify-center items-center text-center rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-3.5 min-h-[50px] text-sm font-bold text-white shadow-md shadow-blue-100 transition-all"
+                className="flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary hover:brightness-95 px-4 py-3.5 min-h-[50px] text-sm font-bold text-[#041018] shadow-lg shadow-primary/20 transition-all"
               >
                 Müəllimlər üçün: Pulsuz Sınaq Yarat
               </button>
@@ -290,8 +290,8 @@ export default function Landing() {
                 "Gecə saatlarında test kağızlarını tək-tək yoxlamaqdan, balları hesablamaqdan və səhvləri analiz etməkdən yorulmusunuz?"
               </p>
             </div>
-            <div className="p-5 sm:p-6 rounded-2xl border border-blue-200 bg-blue-50/40 space-y-2">
-              <div className="flex items-center gap-2 text-blue-700 font-bold text-sm">
+            <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/50 space-y-2">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
                 <span className="text-base">🟢</span> Həll
               </div>
               <p className="text-xs sm:text-sm text-slate-800 leading-relaxed">
@@ -304,99 +304,99 @@ export default function Landing() {
         {/* SECTION 5: HƏDƏF KÜTLƏ ÜZRƏ XÜSUSİYYƏTLƏR (SEGMENTATION) */}
         <section className="space-y-6">
           <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs uppercase font-bold tracking-widest text-blue-600">Tək Platforma · Üç Əsas Qüvvə</span>
+            <span className="text-xs uppercase font-bold tracking-widest text-emerald-600">Tək Platforma · Üç Əsas Qüvvə</span>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Hər Rol Üçün Fərdiləşdirilmiş Təcrübə</h2>
             <p className="text-sm sm:text-base text-slate-600">Müəllim, tələbə və mentorlar üçün ayrı-ayrı tətbiqlər axtarmağa ehtiyac yoxdur.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
             {/* Blok A: Müəllimlər və Repetitorlar */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center text-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">
                   👨‍🏫
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-blue-600">MÜƏLLİMLƏR ÜÇÜN</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">MÜƏLLİMLƏR ÜÇÜN</span>
                   <h3 className="text-lg font-bold text-slate-900 mt-0.5">Sual tapmaq və ya yazmaq üçün saatlarla vaxt xərcləməyin</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>AI Sual Generatoru:</strong> Mövzunu yazın, saniyələr içində test hazırlasın.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Avtomatik Bal:</strong> Tələbə bitirən kimi nəticə və analitika hazır olsun.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Davamiyyət & Ödəniş:</strong> Qruplar, jurnallar və SMS bildirişləri.</span>
                   </li>
                 </ul>
               </div>
               <Link
                 to="/muellimler-ucun"
-                className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold bg-primary hover:brightness-95 text-[#041018] transition-colors"
               >
                 Müəllim panelini kəşf et →
               </Link>
             </div>
 
             {/* Blok B: Tələbələr və Valideynlər */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center text-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-2xl">
                   🎓
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-blue-700">TƏLƏBƏ & VALİDEYN</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">TƏLƏBƏ & VALİDEYN</span>
                   <h3 className="text-lg font-bold text-slate-900 mt-0.5">Mürəkkəb qeydiyyat və ya proqram yükləmək məcburiyyəti yoxdur</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Asan Sınaq Girişi:</strong> Qeydiyyat tələb olunmadan link və QR ilə qoşulma.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Repetitor Axtarışı:</strong> Rayonunuza və fənninizə uyğun müəllim tapın.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Şəxsi Kabinet:</strong> Nəticələrinizi və inkişaf qrafikinizi pulsuz izləyin.</span>
                   </li>
                 </ul>
               </div>
               <Link
                 to="/search"
-                className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold bg-primary hover:brightness-95 text-[#041018] transition-all"
               >
                 Müəllim və ya Repetitor tap →
               </Link>
             </div>
 
             {/* Blok C: Mentorluq Platforması */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center text-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">
                   🚀
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-blue-600">MENTORLUQ</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">MENTORLUQ</span>
                   <h3 className="text-lg font-bold text-slate-900 mt-0.5">Hədəflərinizə çatmaq üçün peşəkar mentorlardan 1-ə-1 rəhbərlik alın</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Geniş Mentor Şəbəkəsi:</strong> İT, Karyera, Dizayn və Biznes üzrə görüşlər.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Fərdi Yol Xəritəsi:</strong> Hədəfə çatmaq üçün addım-addım plan və tapşırıqlar.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Tək Hesab Rahatlığı:</strong> İstər mentor olun, istərsə də mentee.</span>
                   </li>
                 </ul>
@@ -404,7 +404,7 @@ export default function Landing() {
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   to="/mentorship"
-                  className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white text-center transition-colors"
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold bg-primary hover:brightness-95 text-[#041018] text-center transition-colors"
                 >
                   Mentor Tap
                 </Link>
@@ -429,7 +429,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
             <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Beynəlxalq Sınaqlar</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Beynəlxalq Sınaqlar</span>
               <h3 className="text-xl font-bold text-slate-900">Sertifikatlı İmtahanlar</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
                 İT, Data Analytics, Cloud və xarici dil imtahanlarına hazırlıq; hər tamamlanmış imtahan üçün unikal QR kodla doğrulanan rəsmi sertifikat təqdim olunur.
@@ -438,7 +438,7 @@ export default function Landing() {
             <div className="pt-2">
               <Link
                 to="/imtahanlar"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700"
               >
                 Pulsuz İmtahan Tap →
               </Link>
@@ -447,7 +447,7 @@ export default function Landing() {
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
             <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Xaricdə Təhsil & Təqaüd</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Xaricdə Təhsil & Təqaüd</span>
               <h3 className="text-xl font-bold text-slate-900">Universitet və Proqram Axtarışı</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
                 Avropa, ABŞ və Asiya universitetlərində bakalavr, magistr və doktorantura proqramlarını ölkə, illik xərc, təqaüd və qəbul vaxtına görə dərhal axtarın.
@@ -456,7 +456,7 @@ export default function Landing() {
             <div className="pt-2">
               <Link
                 to="/universities"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800"
               >
                 Universitet Proqramlarını Axtar →
               </Link>
@@ -468,28 +468,28 @@ export default function Landing() {
         {/* SECTION 5: NECƏ İŞLƏYİR? (HOW IT WORKS - 4 SADƏ ADDIM) */}
         <section id="mx-steps" className="space-y-6 scroll-mt-24">
           <div className="text-center max-w-xl mx-auto space-y-1">
-            <span className="text-xs uppercase font-bold tracking-widest text-blue-600">Sadə Və Sürətli</span>
+            <span className="text-xs uppercase font-bold tracking-widest text-emerald-600">Sadə Və Sürətli</span>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Necə İşləyir?</h2>
             <p className="text-sm text-slate-600">4 sadə addımla təhsilinizi və mentorluq prosesinizi başladın.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
-              <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">01</div>
+              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">01</div>
               <div className="text-base font-bold text-slate-900">Pulsuz hesab açın</div>
               <p className="text-xs text-slate-600 leading-relaxed">30 saniyəyə qeydiyyatdan keçin və ya Google ilə dərhal daxil olun.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
-              <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">02</div>
+              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">02</div>
               <div className="text-base font-bold text-slate-900">Sınaq və ya Mentor seçin</div>
               <p className="text-xs text-slate-600 leading-relaxed">AI ilə avtomatik test yaradın və ya məqsədinizə uyğun mentor tapın.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
-              <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">03</div>
+              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">03</div>
               <div className="text-base font-bold text-slate-900">Paylaşın və ya Qoşulun</div>
               <p className="text-xs text-slate-600 leading-relaxed">Link və ya QR kodla tələbələrinizi dəvət edin, 1-on-1 görüş təyin edin.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-blue-700 flex items-center justify-center text-sm font-bold">4</div>
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">4</div>
               <div className="text-base font-bold text-slate-900">Nəticəni Analiz Edin</div>
               <p className="text-xs text-slate-600 leading-relaxed">Avtomatik qiymətləndirmə, zəif mövzular və inkişaf analitikası alın.</p>
             </div>
@@ -499,7 +499,7 @@ export default function Landing() {
         {/* SECTION 6: REAL İSTİFADƏÇİ RƏYLƏRİ */}
         <section className="space-y-6">
           <div className="text-center max-w-xl mx-auto space-y-1">
-            <span className="text-xs uppercase font-bold tracking-widest text-blue-600">Etibar Və Təcrübə</span>
+            <span className="text-xs uppercase font-bold tracking-widest text-emerald-600">Etibar Və Təcrübə</span>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">İstifadəçilərimiz Nə Deyir?</h2>
             <p className="text-sm text-slate-600">Platformamızdan gündəlik istifadə edən müəllim və mentee-lərin təcrübəsi.</p>
           </div>
@@ -514,7 +514,7 @@ export default function Landing() {
                   <div className="text-xs font-bold text-slate-900">Rəna Məmmədova</div>
                   <div className="text-[11px] text-slate-500">Riyaziyyat müəllimi & Repetitor</div>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-blue-600 font-semibold">Müəllim</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-semibold">Müəllim</span>
               </div>
             </div>
 
@@ -551,7 +551,7 @@ export default function Landing() {
               onClick={() =>
                 trackEvent('mx_landing_marketplace_cta', { surface: 'marketplace_section', action: 'map_search' })
               }
-              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3.5 min-h-[48px] text-sm font-bold text-blue-600 hover:bg-emerald-100 transition-colors"
+              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3.5 min-h-[48px] text-sm font-bold text-emerald-600 hover:bg-emerald-100 transition-colors"
             >
               {marketplaceCtaLabel}
             </Link>
@@ -601,7 +601,7 @@ export default function Landing() {
                 <details key={`faq-${i}`} className="group p-4 sm:p-5">
                   <summary className="cursor-pointer text-base font-semibold text-slate-900 list-none flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
                     <span>{it.q}</span>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-blue-600 text-xl font-bold leading-none group-open:rotate-45 transition-transform">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 text-xl font-bold leading-none group-open:rotate-45 transition-transform">
                       +
                     </span>
                   </summary>
@@ -615,7 +615,7 @@ export default function Landing() {
         {/* SECTION 7: YEKUN CALL TO ACTION */}
         <section id="mx-cta" className="rounded-3xl border border-slate-200 bg-white p-7 sm:p-10 shadow-sm scroll-mt-8 text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="space-y-2 max-w-xl">
-            <span className="text-xs uppercase font-bold tracking-widest text-blue-700">Dərhal Başlayın</span>
+            <span className="text-xs uppercase font-bold tracking-widest text-emerald-700">Dərhal Başlayın</span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Təhsil Prosesinizi Bu Gün Rəqəmsallaşdırın</h2>
             <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
               Müəllimlər, tələbələr və mentorlar üçün vahid ekosistem. İndi başlayın və ilk sınağınızı 1 dəqiqəyə yaradın.
@@ -625,7 +625,7 @@ export default function Landing() {
             <button
               type="button"
               onClick={() => goRegister('cta_band')}
-              className="inline-flex justify-center items-center rounded-xl bg-blue-600 hover:bg-blue-700 px-6 py-4 min-h-[50px] text-sm sm:text-base font-semibold text-white shadow-md shadow-blue-100 transition-all"
+              className="inline-flex justify-center items-center rounded-xl bg-primary hover:brightness-95 px-6 py-4 min-h-[50px] text-sm sm:text-base font-bold text-[#041018] shadow-lg shadow-primary/20 transition-all"
             >
               Pulsuz Başla
             </button>

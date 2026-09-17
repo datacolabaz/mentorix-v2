@@ -68,7 +68,7 @@ export default function FloatingServiceWidget() {
       className="fixed bottom-6 right-6 z-40 w-80 max-w-[calc(100vw-3rem)] bg-white border border-slate-200/90 rounded-2xl shadow-xl shadow-slate-200/60 p-4 transition-all duration-300"
     >
       <div className="flex justify-between items-center mb-2">
-        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full tracking-wide">
+        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full tracking-wide">
           {current.tag}
         </span>
         <button
@@ -84,7 +84,7 @@ export default function FloatingServiceWidget() {
       </div>
 
       <div className="flex items-start gap-3 my-2.5">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center text-lg shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center text-lg shrink-0">
           {current.icon}
         </div>
         <div className="min-w-0">
@@ -103,7 +103,7 @@ export default function FloatingServiceWidget() {
               onClick={() => setIndex(i)}
               aria-label={`Slide ${i + 1}`}
               className={`h-1.5 transition-all rounded-full ${
-                i === index ? 'w-5 bg-blue-600' : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                i === index ? 'w-5 bg-emerald-500' : 'w-1.5 bg-slate-200 hover:bg-slate-300'
               }`}
             />
           ))}
@@ -111,7 +111,7 @@ export default function FloatingServiceWidget() {
 
         <Link
           to={current.linkTo}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
         >
           <span>{current.linkText}</span>
           <span>→</span>

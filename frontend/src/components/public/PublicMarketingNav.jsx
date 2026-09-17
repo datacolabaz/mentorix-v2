@@ -20,7 +20,7 @@ const MENU_BTN =
   'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/35 bg-primary/15 text-primary hover:bg-primary/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80'
 
 const CTA_BTN =
-  'shrink-0 whitespace-nowrap rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 text-xs sm:text-sm font-semibold shadow-sm transition-all'
+  'shrink-0 whitespace-nowrap rounded-lg bg-primary hover:brightness-95 text-[#041018] px-3.5 py-2 text-xs sm:text-sm font-bold shadow-sm transition-all'
 
 const LINKS = [
   { to: '/muellimler-ucun', labelKey: 'landing.nav.forTeachers' },
