@@ -28,6 +28,7 @@ import {
   useLandingCtaBand,
 } from '../../lib/landingCopy'
 import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
+import FloatingServiceWidget from '../../components/common/FloatingServiceWidget'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 
@@ -639,6 +640,8 @@ export default function Landing() {
 
         <PublicSeoFooter className="rounded-none sm:rounded-2xl overflow-hidden" />
       </div>
+
+      <FloatingServiceWidget />
 
       {demoOpen ? (
         <div

@@ -467,7 +467,6 @@ export default function App() {
 
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
     </Routes>
-      <DigitalMentorHost />
     </DigitalMentorProvider>
   )
 }
