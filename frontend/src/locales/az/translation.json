@@ -282,6 +282,10 @@
         "title": "Müəllim / Təlimçi",
         "desc": "Testlər və imtahanlar yaradın, iştirakçıları və nəticələri idarə edin."
       },
+      "mentor": {
+        "title": "Mentor",
+        "desc": "Məqsədlərə çatmaq üçün yol xəritəsi, geribildirim və davamlı dəstək verin."
+      },
       "education_center": {
         "title": "Təşkilat",
         "desc": "Qiymətləndirmə proseslərini komanda və qruplar üzrə idarə edin."

@@ -63,6 +63,8 @@ function profileComplete(persona, p) {
   switch (persona) {
     case PERSONAS.TEACHER:
       return Boolean(p.subject && p.teaching_format && p.student_count)
+    case PERSONAS.MENTOR:
+      return true
     case PERSONAS.EDUCATION_CENTER:
       return Boolean(p.center_name && p.teacher_count && p.student_count && p.exam_purpose)
     case PERSONAS.STUDENT:

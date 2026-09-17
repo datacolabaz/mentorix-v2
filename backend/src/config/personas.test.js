@@ -16,6 +16,7 @@ const {
 describe('personas config', () => {
   it('maps each persona to an authorization role without treating course as a persona', () => {
     assert.equal(authRoleForPersona(PERSONAS.TEACHER), 'instructor');
+    assert.equal(authRoleForPersona(PERSONAS.MENTOR), 'instructor');
     assert.equal(authRoleForPersona(PERSONAS.EDUCATION_CENTER), 'course');
     assert.equal(authRoleForPersona(PERSONAS.STUDENT), 'student');
     assert.equal(authRoleForPersona(PERSONAS.PARENT), 'parent');
@@ -31,6 +32,14 @@ describe('personas config', () => {
   it('treats partner profile as complete without extra fields', () => {
     assert.equal(requiredProfileComplete(PERSONAS.PARTNER, {}), true);
     assert.deepEqual(sanitizePersonaProfile(PERSONAS.PARTNER, { note: '  hi  ', extra: 1 }), { note: 'hi' });
+  });
+
+  it('accepts mentor profiles without requiring an extra onboarding form', () => {
+    assert.equal(requiredProfileComplete(PERSONAS.MENTOR, {}), true);
+    assert.deepEqual(
+      sanitizePersonaProfile(PERSONAS.MENTOR, { mentorship_focus: ' AI ', extra: 1 }),
+      { mentorship_focus: 'AI' },
+    );
   });
 
   it('maps legacy signup roles to personas', () => {

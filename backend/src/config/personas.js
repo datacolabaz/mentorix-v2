@@ -5,6 +5,7 @@
 
 const PERSONAS = Object.freeze({
   TEACHER: 'teacher',
+  MENTOR: 'mentor',
   EDUCATION_CENTER: 'education_center',
   STUDENT: 'student',
   PARENT: 'parent',
@@ -15,6 +16,7 @@ const PERSONAS = Object.freeze({
 
 const PERSONA_ORDER = Object.freeze([
   PERSONAS.TEACHER,
+  PERSONAS.MENTOR,
   PERSONAS.EDUCATION_CENTER,
   PERSONAS.STUDENT,
   PERSONAS.PARENT,
@@ -26,6 +28,7 @@ const PERSONA_ORDER = Object.freeze([
 /** Partner has no dedicated auth role — referral cabinet is role-agnostic. */
 const PERSONA_TO_AUTH_ROLE = Object.freeze({
   [PERSONAS.TEACHER]: 'instructor',
+  [PERSONAS.MENTOR]: 'instructor',
   [PERSONAS.EDUCATION_CENTER]: 'course',
   [PERSONAS.STUDENT]: 'student',
   [PERSONAS.PARENT]: 'parent',
@@ -112,6 +115,10 @@ function sanitizePersonaProfile(persona, raw) {
         teaching_format: pickEnum(src.teaching_format, TEACHING_FORMATS),
         student_count: pickEnum(src.student_count, COUNT_BUCKETS_SMALL),
       });
+    case PERSONAS.MENTOR:
+      return compactObject({
+        mentorship_focus: cleanStr(src.mentorship_focus, 160),
+      });
     case PERSONAS.EDUCATION_CENTER:
       return compactObject({
         center_name: cleanStr(src.center_name, 160),
@@ -153,6 +160,8 @@ function requiredProfileComplete(persona, profile) {
   switch (String(persona || '').trim()) {
     case PERSONAS.TEACHER:
       return Boolean(p.subject && p.teaching_format && p.student_count);
+    case PERSONAS.MENTOR:
+      return true;
     case PERSONAS.EDUCATION_CENTER:
       return Boolean(p.center_name && p.teacher_count && p.student_count && p.exam_purpose);
     case PERSONAS.STUDENT:

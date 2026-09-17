@@ -282,6 +282,10 @@
         "title": "Teacher / Trainer",
         "desc": "Create tests and exams, and manage participants and results."
       },
+      "mentor": {
+        "title": "Mentor",
+        "desc": "Guide people toward their goals with roadmaps, feedback and ongoing support."
+      },
       "education_center": {
         "title": "Organization",
         "desc": "Run assessment across teams and groups from one place."

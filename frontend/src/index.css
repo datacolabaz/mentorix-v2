@@ -239,6 +239,9 @@ body {
   h1, h2, h3, h4 {
     @apply font-display;
   }
+  h1, h2, h3, h4, h5, h6, p, span, button, a, input, textarea, select, option {
+    font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  }
   /* Headings inherit high-contrast heading token by default so pages that do
      not set an explicit color are always readable in Light Mode. Elements that
      opt into an explicit color (utility class / inline) still override this. */
@@ -251,8 +254,8 @@ body {
 }
 
 @layer utilities {
-  .font-body { font-family: 'DM Sans', sans-serif; }
-  .font-display { font-family: 'Syne', sans-serif; }
+  .font-body { font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
+  .font-display { font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
   /* iOS Safari: type=password Keychain overlay — mətn kimi maskalanır */
   .mx-login-password-mask {
     -webkit-text-security: disc;

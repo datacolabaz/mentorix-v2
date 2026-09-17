@@ -25,6 +25,7 @@ export {
 /** Public picker: teacher / participant / partner. Other personas stay valid for existing accounts. */
 export const PRIMARY_PERSONA_ORDER = Object.freeze([
   PERSONAS.TEACHER,
+  PERSONAS.MENTOR,
   PERSONAS.STUDENT,
   PERSONAS.PARTNER,
 ])
@@ -40,6 +41,11 @@ export const PERSONA_UI = Object.freeze({
     icon: 'instructors',
     titleKey: 'onboarding.personas.teacher.title',
     descKey: 'onboarding.personas.teacher.desc',
+  },
+  [PERSONAS.MENTOR]: {
+    icon: 'instructors',
+    titleKey: 'onboarding.personas.mentor.title',
+    descKey: 'onboarding.personas.mentor.desc',
   },
   [PERSONAS.EDUCATION_CENTER]: {
     icon: 'building',

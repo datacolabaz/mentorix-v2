@@ -2,6 +2,7 @@
 
 export const PERSONAS = Object.freeze({
   TEACHER: 'teacher',
+  MENTOR: 'mentor',
   EDUCATION_CENTER: 'education_center',
   STUDENT: 'student',
   PARENT: 'parent',
@@ -12,6 +13,7 @@ export const PERSONAS = Object.freeze({
 
 export const PERSONA_ORDER = Object.freeze([
   PERSONAS.TEACHER,
+  PERSONAS.MENTOR,
   PERSONAS.EDUCATION_CENTER,
   PERSONAS.STUDENT,
   PERSONAS.PARENT,
@@ -24,6 +26,7 @@ export const PERSONA_ORDER = Object.freeze([
  * Partner is referral-only: no dedicated auth role (see applyPersonaSelection). */
 export const PERSONA_TO_AUTH_ROLE = Object.freeze({
   [PERSONAS.TEACHER]: 'instructor',
+  [PERSONAS.MENTOR]: 'instructor',
   [PERSONAS.EDUCATION_CENTER]: 'course',
   [PERSONAS.STUDENT]: 'student',
   [PERSONAS.PARENT]: 'parent',

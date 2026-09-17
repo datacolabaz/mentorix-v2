@@ -41,7 +41,7 @@ export default function BrandSvg({ className = '', size = 'sidebar' }) {
         fill="currentColor"
         fontSize="26"
         fontWeight="800"
-        fontFamily="Syne, ui-sans-serif, system-ui"
+        fontFamily="Inter, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
         letterSpacing="0.3px"
       >
         Mentorix
