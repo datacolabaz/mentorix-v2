@@ -34,6 +34,8 @@ const {
   getActiveRoles,
   getLoginEligibleRoles,
   ensureLoginRoleGranted,
+  grantUserRole,
+  grantCourseRoleToUser,
 } = require('../services/userRolesService');
 const { pickEmailLoginRole } = require('../lib/pickEmailLoginRole');
 const { grantBasicTrialForInstructor } = require('../services/basicTrialIpService');
