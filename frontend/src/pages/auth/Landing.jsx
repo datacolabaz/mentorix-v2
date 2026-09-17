@@ -256,20 +256,20 @@ export default function Landing() {
         {/* SECTION 2: SOSİAL SÜBUT VƏ METRİKALAR */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">⚡ 1 dəqiqəyə</div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">AI dəstəyi ilə sınaq suallarının hazırlanması</p>
+            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">⚡ 1 Dəqiqəyə</div>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">AI sınaq generatoru</p>
           </div>
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
             <div className="text-2xl sm:text-3xl font-extrabold text-blue-600">📊 100% Avtomatik</div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">Cavabların yoxlanılması, balların hesablanması və zəif mövzu analitikası</p>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">Cavabların yoxlanılması və analitika</p>
           </div>
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-            <div className="text-2xl sm:text-3xl font-extrabold text-purple-600">📲 0 Proqram Tələbi</div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">Tələbələr üçün tətbiq yükləmədən QR/Linklə tək kliklə giriş</p>
+            <div className="text-2xl sm:text-3xl font-extrabold text-purple-600">📲 0 Tətbiq Məcburiyyəti</div>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">Link/QR ilə tək kliklə giriş</p>
           </div>
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
             <div className="text-2xl sm:text-3xl font-extrabold text-amber-600">🎓 QR-Rəsmi</div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">İT, Data və Beynəlxalq imtahanlar üçün doğrulana bilən rəsmi sertifikatlar</p>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">Doğrulana bilən beynəlxalq sertifikatlar</p>
           </div>
         </section>
 
@@ -316,7 +316,7 @@ export default function Landing() {
                   👨‍🏫
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Müəllim Paneli</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">MÜƏLLİMLƏR ÜÇÜN</span>
                   <h3 className="text-lg font-bold text-slate-900 mt-0.5">Sual tapmaq və ya yazmaq üçün saatlarla vaxt xərcləməyin</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
@@ -349,7 +349,7 @@ export default function Landing() {
                   🎓
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Tələbə Və Valideynlər</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-700">TƏLƏBƏ & VALİDEYN</span>
                   <h3 className="text-lg font-bold text-slate-900 mt-0.5">Mürəkkəb qeydiyyat və ya proqram yükləmək məcburiyyəti yoxdur</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
@@ -382,7 +382,7 @@ export default function Landing() {
                   🚀
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-purple-700">Mentorluq Platforması</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-700">MENTORLUQ</span>
                   <h3 className="text-lg font-bold text-slate-900 mt-0.5">Hədəflərinizə çatmaq üçün peşəkar mentorlardan 1-ə-1 rəhbərlik alın</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
