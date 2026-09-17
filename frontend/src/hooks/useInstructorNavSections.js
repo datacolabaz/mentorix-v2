@@ -45,6 +45,19 @@ export function useInstructorNavSections() {
   const isMentor = activeWorkspace ? activeWorkspace === 'mentor' : String(user?.persona || '').toLowerCase() === 'mentor'
 
   useEffect(() => {
+    const persona = String(user?.persona || '').toLowerCase()
+    if (!persona || activeWorkspace) return
+    const initialWorkspace = persona === 'mentor' ? 'mentor' : persona === 'teacher' ? 'teacher' : ''
+    if (!initialWorkspace) return
+    try {
+      localStorage.setItem('mx_active_workspace', initialWorkspace)
+    } catch {
+      /* ignore storage failures */
+    }
+    setActiveWorkspace(initialWorkspace)
+  }, [user?.persona, activeWorkspace])
+
+  useEffect(() => {
     const onWorkspaceSwitch = (event) => setActiveWorkspace(String(event.detail || '').toLowerCase())
     window.addEventListener('mx:workspace-switched', onWorkspaceSwitch)
     return () => window.removeEventListener('mx:workspace-switched', onWorkspaceSwitch)
