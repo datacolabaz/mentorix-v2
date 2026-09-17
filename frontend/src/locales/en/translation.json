@@ -1044,10 +1044,10 @@
     },
     "hero": {
       "pill": "For individual teachers, tutors, and instructors",
-      "title": "Stop spending hours checking tests by hand. Create an exam in 1 minute and see results automatically.",
-      "subtitle": "Reduce the routine work of preparing tests, calculating scores, and analyzing students to zero with AI and automation.",
-      "startFree": "Run Your First Test Free Now",
-      "trust": "No credit card required • Teacher registration is active in 1 minute",
+      "title": "Stop losing hours checking exams. Create a test in 1 minute and see results instantly.",
+      "subtitle": "An AI-powered exam platform for individual teachers and tutors. Question banks, automatic scoring, and student analytics — all in one panel.",
+      "startFree": "Create Your First Test Free Now",
+      "trust": "No credit card required • Registration takes 30 seconds",
       "explore": "Explore the platform",
       "howItWorks": "How it works?",
       "demo": "See the panel",
@@ -1105,15 +1105,15 @@
     },
     "why": {
       "heading": "Problem → Solution",
-      "lead": "Running a test is easy, but checking and analyzing 20 students' answers one by one takes hours?",
+      "lead": "Tired of checking test papers one by one and calculating scores at midnight?",
       "cards": [
         {
           "title": "Problem",
-          "body": "Running a test is easy, but checking and analyzing 20 students' answers one by one takes hours?"
+          "body": "Tired of checking test papers one by one and calculating scores at midnight?"
         },
         {
           "title": "Solution",
-          "body": "Mentorix calculates scores as soon as the exam ends, identifies weak topics, and presents a ready report."
+          "body": "As soon as the exam ends, Mentorix checks every answer in seconds, calculates scores, and analytically identifies weak topics. You focus on teaching."
         }
       ]
     },
@@ -1122,23 +1122,23 @@
       "items": [
         {
           "step": "01",
-          "title": "Create an account",
-          "body": "Sign up — no credit card required."
+          "title": "Open a free account",
+          "body": "Register in 30 seconds without a credit card."
         },
         {
           "step": "02",
-          "title": "Choose how you’ll use it",
-          "body": "Start as an individual teacher, tutor, or instructor."
+          "title": "Prepare the test instantly",
+          "body": "Choose from your question bank or form an exam in seconds with AI support."
         },
         {
           "step": "03",
-          "title": "Create your exam",
-          "body": "Pick questions from the bank and share the exam."
+          "title": "Share by link or QR code",
+          "body": "Let students join instantly from any device (phone, tablet, or computer)."
         },
         {
           "step": "04",
-          "title": "Analyze the results",
-          "body": "See answers, scores, and weak topics on one dashboard."
+          "title": "Get results automatically",
+          "body": "The system checks answers, calculates scores, and presents ready analytics."
         }
       ]
     },
@@ -1146,39 +1146,24 @@
       "heading": "Core features",
       "items": [
         {
-          "title": "Struggling to find or write questions?",
-          "body": "Create practice questions on any topic in seconds with the AI Generator and save time.",
+          "title": "Stop spending hours finding or writing questions",
+          "body": "Choose the topic and difficulty — Mentorix AI Generator creates precise test questions in seconds. Build your question bank in seconds, not from scratch.",
           "accent": "from-emerald-500/15"
         },
         {
-          "title": "Question bank",
-          "body": "Write questions once and reuse them in the next exam.",
+          "title": "Automatic results",
+          "body": "You never need to calculate a single score by hand — results are ready as soon as the exam ends.",
           "accent": "from-sky-500/15"
         },
         {
-          "title": "Time control",
-          "body": "Set duration, open time, and close time from the same place.",
+          "title": "One-click access",
+          "body": "Your student does not need to install an app — send the link and let them start the exam with one click.",
           "accent": "from-amber-500/15"
         },
         {
-          "title": "Results",
-          "body": "See scores as answers come in — without exporting to Excel.",
+          "title": "Visual student analytics",
+          "body": "Reporting to parents is now simple — show exactly which topics each student is falling behind in with visual charts.",
           "accent": "from-purple-500/15"
-        },
-        {
-          "title": "Analytics",
-          "body": "Spot which questions and topics are weak, with charts.",
-          "accent": "from-rose-500/15"
-        },
-        {
-          "title": "Participants and groups",
-          "body": "Groups, invite links, and participant lists live on one dashboard.",
-          "accent": "from-cyan-500/15"
-        },
-        {
-          "title": "Present materials",
-          "body": "Share lesson materials and presentations in the same flow as exams.",
-          "accent": "from-teal-500/15"
         }
       ]
     },

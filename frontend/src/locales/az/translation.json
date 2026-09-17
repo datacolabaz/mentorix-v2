@@ -1065,10 +1065,10 @@
     },
     "hero": {
       "pill": "Fərdi müəllimlər, repetitorlar və təlimçilər üçün",
-      "title": "Testləri əllə yoxlamağa saatlar xərcləməyin. 1 dəqiqəyə imtahan yaradın, nəticələri avtomatik görün.",
-      "subtitle": "Sınaq hazırlamaq, bal hesablamaq və tələbə analitikasını aparmaq üçün sərf etdiyiniz rutin iş yükünü AI və avtomatlaşdırma ilə sıfıra endirin.",
-      "startFree": "İlk Sınağınızı İndi Pulsuz Keçirin",
-      "trust": "Kredit kartı tələb olunmur • Zabit/Müəllim qeydiyyatı 1 dəqiqəyə aktivləşir",
+      "title": "İmtahan yoxlamaqla saatlar itirməyin. 1 dəqiqəyə sınaq yaradın, nəticələri anında görün.",
+      "subtitle": "Fərdi müəllimlər və repetitorlar üçün AI dəstəkli imtahan platforması. Sual bankı, avtomatik bal hesablama və tələbə analitikası — hamısı tək paneldə.",
+      "startFree": "İlkin Sınağını İndi Pulsuz Yaradın",
+      "trust": "Kredit kartı tələb olunmur • Qeydiyyat 30 saniyə alır",
       "explore": "Platformanı kəşf et",
       "howItWorks": "Necə işləyir?",
       "demo": "Panelə bax",
@@ -1126,15 +1126,15 @@
     },
     "why": {
       "heading": "Problem → Həll",
-      "lead": "Sınaq keçirmək asandır, amma 20 tələbənin cavabını tək-tək yoxlayıb analiz etmək saatlar alır?",
+      "lead": "Gecə saat 12-də test kağızlarını tək-tək yoxlamaqdan və balları hesablamaqdan yorulmusunuz?",
       "cards": [
         {
           "title": "Problem",
-          "body": "Sınaq keçirmək asandır, amma 20 tələbənin cavabını tək-tək yoxlayıb analiz etmək saatlar alır?"
+          "body": "Gecə saat 12-də test kağızlarını tək-tək yoxlamaqdan və balları hesablamaqdan yorulmusunuz?"
         },
         {
           "title": "Həll",
-          "body": "Mentorix imtahanı bitən kimi balları hesablayır, tələbənin zəif olduğu mövzuları çıxarır və hesabatı hazır təqdim edir."
+          "body": "Mentorix imtahan bitən kimi bütün cavabları saniyələr içində yoxlayır, balları hesablayır və tələbənin zəif olduğu mövzuları analitik şəkildə çıxarır. Siz sadəcə dərs keçməyə fokuslanırsınız."
         }
       ]
     },
@@ -1143,23 +1143,23 @@
       "items": [
         {
           "step": "01",
-          "title": "Qeydiyyatdan keç",
-          "body": "Hesab açın — kredit kartı tələb olunmur."
+          "title": "Pulsuz hesab açın",
+          "body": "Kredit kartı tələb olunmadan 30 saniyəyə qeydiyyatdan keçin."
         },
         {
           "step": "02",
-          "title": "İstifadə məqsədini seç",
-          "body": "Fərdi müəllim, repetitor və ya təlimçi kimi başlayın."
+          "title": "Sınağı dərhal hazırlayın",
+          "body": "Sual bankınızdan seçin və ya AI dəstəyi ilə saniyələr içində imtahan formalaşdırın."
         },
         {
           "step": "03",
-          "title": "İmtahanını yarat",
-          "body": "Test bankından suallar seçin və imtahanı paylaşın."
+          "title": "Link və ya QR kodla paylaşın",
+          "body": "Tələbələriniz istənilən cihazdan (telefon, planşet, kompüter) dərhal qoşulsun."
         },
         {
           "step": "04",
-          "title": "Nəticələri analiz et",
-          "body": "Cavabları, balları və zəif mövzuları bir paneldə görün."
+          "title": "Nəticəni avtomatik alın",
+          "body": "Sistem cavabları yoxlayır, balları hesablayır və hazır analitikanı təqdim edir."
         }
       ]
     },
@@ -1167,39 +1167,24 @@
       "heading": "Əsas funksiyalar",
       "items": [
         {
-          "title": "Sual tapmaqda və ya yazmaqda çətinlik çəkirsiniz?",
-          "body": "AI Generatoru ilə istənilən mövzuda sınaq suallarını saniyələr içində hazırlayın, vaxtınıza qənaət edin.",
+          "title": "Sual tapmaq və ya yazmaq üçün saatlarla vaxt xərcləməyin",
+          "body": "Mövzunu və çətinlik dərəcəsini seçin — Mentorix AI Generatoru sizə saniyələr ərzində dəqiq sınaq sualları hazırlasın. Sual bankınızı sıfırdan deyil, saniyələr içində qurun.",
           "accent": "from-emerald-500/15"
         },
         {
-          "title": "Test bankı",
-          "body": "Sualları bir dəfə yığın, növbəti imtahanlarda yenidən istifadə edin.",
+          "title": "Avtomatik nəticələr",
+          "body": "Bir balı belə əllə hesablamağa ehtiyac yoxdur — İmtahan bitən kimi nəticələr hazırdır.",
           "accent": "from-sky-500/15"
         },
         {
-          "title": "Vaxt idarəetməsi",
-          "body": "İmtahan müddətini, açılış və bağlanış saatını eyni yerdən təyin edin.",
+          "title": "Tək kliklə qoşulma",
+          "body": "Tələbəniz üçün proqram yükləmək məcburiyyəti yoxdur — Linki göndərin, tək kliklə imtahana başlasınlar.",
           "accent": "from-amber-500/15"
         },
         {
-          "title": "Nəticələr",
-          "body": "Cavablar daxil olan kimi nəticələri görün — Excel-ə köçürmədən.",
+          "title": "Vizual tələbə analitikası",
+          "body": "Valideynlərə hesabat vermək indi çox asandır — Hər tələbənin hansı mövzuda gerilədiyini vizual diaqramlarla göstərin.",
           "accent": "from-purple-500/15"
-        },
-        {
-          "title": "Analitika",
-          "body": "Hansı sual və mövzuda zəiflik olduğunu qrafiklə izləyin.",
-          "accent": "from-rose-500/15"
-        },
-        {
-          "title": "İştirakçı və qrupların idarə edilməsi",
-          "body": "Qruplar, dəvət linki və iştirakçı siyahısı bir paneldədir.",
-          "accent": "from-cyan-500/15"
-        },
-        {
-          "title": "Materialların təqdimatı",
-          "body": "Dərs materiallarını və təqdimatları imtahan axını ilə eyni platformada paylaşın.",
-          "accent": "from-teal-500/15"
         }
       ]
     },
