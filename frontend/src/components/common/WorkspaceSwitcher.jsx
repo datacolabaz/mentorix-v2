@@ -91,7 +91,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
           className={[
             'text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md border shrink-0',
             isMentor
-              ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400'
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
               : isTeacher
                 ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
                 : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400',
@@ -173,8 +173,8 @@ export default function WorkspaceSwitcher({ className = '' }) {
                 'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
                 isMentor
                   ? isDark
-                    ? 'bg-purple-500/20 text-purple-300'
-                    : 'bg-purple-50 text-purple-800'
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : 'bg-emerald-50 text-emerald-800'
                   : isDark
                     ? 'hover:bg-white/5 text-gray-300'
                     : 'hover:bg-slate-50 text-slate-700',
@@ -188,9 +188,9 @@ export default function WorkspaceSwitcher({ className = '' }) {
                 </div>
               </div>
               {isMentor ? (
-                <span className="text-xs font-bold text-purple-500">✓</span>
+                <span className="text-xs font-bold text-emerald-600">✓</span>
               ) : (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-semibold">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold">
                   Aktivləşdir
                 </span>
               )}

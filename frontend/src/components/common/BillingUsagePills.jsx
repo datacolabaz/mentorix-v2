@@ -95,25 +95,25 @@ function PlanIcon({ kind }) {
 
 function UsageRow({ kind, label, value, warn }) {
   const tone = warn
-    ? 'bg-amber-50 text-amber-700 border-amber-200'
+    ? 'bg-amber-50 text-amber-800 border-amber-300'
     : kind === 'ai'
-      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
       : kind === 'sms'
-        ? 'bg-amber-50 text-amber-700 border-amber-200'
-        : 'bg-slate-50 text-slate-600 border-slate-200'
+        ? 'bg-amber-50 text-amber-800 border-amber-300'
+        : 'bg-slate-100 text-slate-800 border-slate-300'
   return (
-    <div className="flex min-w-0 items-start gap-2">
-      <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg border ${tone}`}>
+    <div className="flex min-w-0 items-start gap-2.5">
+      <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${tone}`}>
         <PlanIcon kind={kind} />
       </span>
       <div className="min-w-0">
-        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-none">
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-snug">
           {label}
         </p>
         <p
           className={[
-            'text-xs font-semibold tabular-nums mt-0.5 leading-tight',
-            warn ? 'text-amber-700 dark:text-amber-200' : 'text-slate-800 dark:text-slate-200',
+            'text-xs sm:text-sm font-bold tabular-nums mt-0.5 leading-snug tracking-tight',
+            warn ? 'text-amber-800 dark:text-amber-300' : 'text-slate-950 dark:text-white',
           ].join(' ')}
         >
           {value}
