@@ -483,7 +483,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
           <div className="flex gap-2 flex-wrap">
             {Object.entries(TYPES).map(([type, label]) => (
               <button key={type} onClick={() => addQuestion(type)}
-                className="px-3 py-2 text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-xl hover:bg-indigo-500/30 transition-colors">
+                className="px-3 py-2 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors">
                 + {label}
               </button>
             ))}
@@ -500,7 +500,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                 {/* Sual basligi */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-indigo-300">{idx + 1}. {TYPES[q.question_type]}</span>
+                    <span className="text-xs font-bold text-slate-700">{idx + 1}. {TYPES[q.question_type]}</span>
                     {q.question_type === 'closed' &&
                       meta.wrong_penalty_enabled !== false && (
                       <span className="text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-lg">
@@ -768,8 +768,8 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
               {meta.student_ids.length === students.length ? 'Hamisini sil' : 'Hamisini sec'}
             </button>
           </div>
-          <p className="text-xs text-amber-200/85 leading-relaxed">
-            CRM tələbələri seçə bilərsiniz — və ya heç kim seçməyib yalnız <strong className="text-amber-100">link/QR</strong>{' '}
+          <p className="text-sm text-slate-600 leading-relaxed">
+            CRM tələbələri seçə bilərsiniz — və ya heç kim seçməyib yalnız <strong className="font-semibold text-slate-800">link/QR</strong>{' '}
             paylaşın: qonaqlar ad, soyad və telefonla qeydiyyatsız qoşula bilər.
           </p>
  
@@ -777,7 +777,7 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
             {studentsLoading ? (
               <p className="text-token-textMuted text-sm text-center py-8">Tələbələr yüklənir…</p>
             ) : !students.length ? (
-              <p className="text-amber-200/80 text-sm text-center py-6 px-2">
+              <p className="text-slate-500 text-sm text-center py-6 px-2">
                 Hələ tələbə yoxdur — əvvəl &quot;Tələbələrim&quot; bölməsindən əlavə edin.
               </p>
             ) : (
