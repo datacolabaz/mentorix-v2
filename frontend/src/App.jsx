@@ -100,6 +100,7 @@ import PartnerProgramLanding from './pages/partner/PartnerProgramLanding'
 import PartnerReferralLanding from './pages/PartnerReferralLanding'
 
 import StudentDashboard from './pages/student/Dashboard'
+import MentorshipDashboard from './pages/student/MentorshipDashboard'
 import StudentExams from './pages/student/Exams'
 import StudentPayments from './pages/student/Payments'
 import StudentSchedule from './pages/student/Schedule'
@@ -404,6 +405,7 @@ export default function App() {
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
+        <Route path="mentorship" element={<MentorshipDashboard />} />
         <Route path="groups" element={<StudentMyGroups />} />
         <Route path="join" element={<StudentJoinRedirect />} />
         <Route path="schedule" element={<StudentSchedule />} />

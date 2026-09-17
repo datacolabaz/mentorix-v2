@@ -62,7 +62,7 @@ export default function MentorshipLanding() {
   }, [t])
 
   return (
-    <div className="min-h-[100svh] bg-[#e8edf5] text-slate-800 flex flex-col">
+    <div className="min-h-[100svh] bg-[#f4f7fa] text-slate-800 flex flex-col">
       <PublicMarketingNav />
 
       <main className="flex-1">
@@ -75,46 +75,46 @@ export default function MentorshipLanding() {
               {t('auth.backHome', { defaultValue: '← Ana səhifə' })}
             </Link>
           </div>
-          <div className="max-w-3xl space-y-6 rounded-[2rem] bg-slate-950 p-6 shadow-xl shadow-slate-900/15 sm:p-10">
-            <p className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">
+          <div className="max-w-4xl space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
+            <p className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
               {t('mentorship.eyebrow')}
             </p>
-            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.08] text-white">
+            <h1 className="max-w-3xl text-4xl sm:text-6xl font-bold tracking-tight leading-[1.08] text-slate-950">
               {t('mentorship.title')}
             </h1>
-            <p className="text-lg sm:text-xl leading-relaxed text-slate-300 max-w-2xl">
+            <p className="text-lg sm:text-xl leading-relaxed text-slate-600 max-w-2xl">
               {t('mentorship.description')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link
                 to="/mentorship/goals"
-                className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-3.5 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-colors"
+                className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3.5 text-base font-bold text-[#041018] hover:brightness-95 transition-all"
               >
                 {t('mentorship.startCta')} →
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-base font-semibold text-white hover:border-emerald-300 hover:bg-emerald-400/10 transition-colors"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-base font-semibold text-slate-800 hover:border-emerald-300 hover:bg-emerald-50 transition-colors"
               >
                 {t('mentorship.mentorCta')}
               </Link>
             </div>
 
-            <div className="mt-8 grid gap-3 border-y border-white/10 py-5 sm:grid-cols-3">
+            <div className="mt-8 grid gap-3 border-y border-slate-200 py-5 sm:grid-cols-3">
               {TRUST_POINTS.map(([title, text]) => (
-                <div key={title} className="rounded-xl bg-white/10 p-3">
-                  <p className="text-sm font-bold text-white">{title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-300">{text}</p>
+                <div key={title} className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-sm font-bold text-slate-900">{title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600">{text}</p>
                 </div>
               ))}
             </div>
-            <Link to="/mentorship/safety" className="mt-3 inline-flex text-xs font-bold text-emerald-300 hover:text-emerald-200 hover:underline">
+            <Link to="/mentorship/safety" className="mt-3 inline-flex text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline">
               Etibar, təhlükəsizlik və refund qaydalarını oxu →
             </Link>
 
             {/* TAB SELECTOR: mentor discovery and open mentee requests */}
             <div className="pt-6">
-              <div className="inline-flex p-1.5 rounded-2xl bg-white/10 border border-white/10">
+              <div className="inline-flex p-1.5 rounded-2xl bg-slate-100 border border-slate-200">
                 <button
                   type="button"
                   onClick={() => handleTabChange('mentors')}
@@ -122,7 +122,7 @@ export default function MentorshipLanding() {
                     'flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all',
                     activeTab === 'mentors'
                       ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-300 hover:text-white',
+                      : 'text-slate-600 hover:text-slate-900',
                   ].join(' ')}
                 >
                   <span aria-hidden="true">01</span>
@@ -135,7 +135,7 @@ export default function MentorshipLanding() {
                     'flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all',
                     activeTab === 'mentees'
                       ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-300 hover:text-white',
+                      : 'text-slate-600 hover:text-slate-900',
                   ].join(' ')}
                 >
                   <span aria-hidden="true">02</span>
@@ -169,7 +169,7 @@ export default function MentorshipLanding() {
                 </p>
                 <Link
                   to="/instructor"
-                  className="inline-flex shrink-0 items-center justify-center px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+                  className="inline-flex shrink-0 items-center justify-center px-3.5 py-2 rounded-xl text-xs font-bold bg-primary hover:brightness-95 text-[#041018] shadow-sm"
                 >
                   Mentor Kabinetinə Keç →
                 </Link>
@@ -235,7 +235,7 @@ export default function MentorshipLanding() {
                   <div key={item} className="rounded-2xl bg-white/30 p-3 text-sm font-bold">{item}</div>
                 ))}
               </div>
-              <Link to="/partner" className="mt-8 inline-flex items-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">
+              <Link to="/partner" className="mt-8 inline-flex items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-[#041018] hover:brightness-95">
                 Biznes həllini müzakirə et →
               </Link>
             </div>
@@ -258,7 +258,7 @@ export default function MentorshipLanding() {
               <p className="text-slate-300 leading-relaxed">{t('mentorship.bottomText')}</p>
               <Link
                 to="/mentorship/goals"
-                className="inline-flex mt-2 items-center rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-300 transition-colors"
+                className="inline-flex mt-2 items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-[#041018] hover:brightness-95 transition-all"
               >
                 {t('mentorship.startCta')} →
               </Link>

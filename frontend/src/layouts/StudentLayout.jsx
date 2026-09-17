@@ -42,6 +42,7 @@ const NAV_GROUP_DEFS = [
     label: 'MANAGEMENT',
     items: [
       { to: '/student', key: 'progress', labelKey: 'nav.student.progress', label: 'Proqresim', icon: 'progress', end: true },
+      { to: '/student/mentorship', key: 'mentorship', labelKey: 'nav.student.mentorship', label: 'Mentorluq', icon: 'instructors' },
       { to: '/student/groups', key: 'groups', labelKey: 'nav.student.groups', label: 'Qruplarım', icon: 'courses' },
       { to: '/student/schedule', key: 'schedule', labelKey: 'nav.student.schedule', label: 'Cədvəlim', icon: 'schedule' },
       { to: '/student/chat', key: 'groupChat', labelKey: 'nav.student.groupChat', label: 'Qrup çatı', icon: 'chat' },
