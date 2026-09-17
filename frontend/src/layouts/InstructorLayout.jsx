@@ -85,6 +85,15 @@ export default function InstructorLayout() {
   const mainRef = useRef(null)
   const showMobileSidebar = navOpen && !sidebarHidden
   const { sections: navSections } = useInstructorNavSections()
+  const isMentorRoute = [
+    '/instructor/roadmap',
+    '/instructor/students',
+    '/instructor/tasks',
+    '/instructor/schedule',
+    '/instructor/teaching-groups',
+    '/instructor/analytics',
+    '/instructor/materials',
+  ].includes(location.pathname)
   const isActiveMentorWorkspace = (() => {
     try {
       const workspace = String(localStorage.getItem('mx_active_workspace') || '').toLowerCase()
@@ -92,7 +101,7 @@ export default function InstructorLayout() {
     } catch {
       /* ignore storage failures */
     }
-    return String(user?.persona || '').toLowerCase() === 'mentor'
+    return isMentorRoute || String(user?.persona || '').toLowerCase() === 'mentor'
   })()
   const renderedNavSections = isActiveMentorWorkspace ? buildMentorNavSections() : navSections
 
