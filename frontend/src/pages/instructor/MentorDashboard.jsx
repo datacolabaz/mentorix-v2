@@ -10,35 +10,6 @@ import { useToast } from '../../components/common/Toast'
 import BookingModal from '../../components/common/BookingModal'
 import RoadmapTracker from '../../components/common/RoadmapTracker'
 
-const MENTOR_WORKSPACE_GROUPS = [
-  {
-    title: 'İdarəetmə və nəzarət',
-    description: 'Gündəlik əlaqə, görüş və mentor–mentee münasibətləri.',
-    items: [
-      { to: '/instructor/schedule', label: 'Görüşlərim və cədvəl', detail: 'Sessiyaları planla, vaxtı və statusu izləyin.', icon: '01' },
-      { to: '/instructor/students', label: 'Əlaqələrim', detail: 'Aktiv mentee-lər və münasibət tarixçəsi.', icon: '02' },
-      { to: '/instructor/inquiries', label: 'Müraciətlər', detail: 'Yeni mentorluq sorğularına cavab verin.', icon: '03' },
-    ],
-  },
-  {
-    title: 'İnkişaf və keyfiyyət',
-    description: 'Məqsədi ölçülə bilən nəticəyə və davamlı təcrübəyə çevirin.',
-    items: [
-      { to: '/instructor/roadmap', label: 'Hədəflər və yol xəritəsi', detail: 'Milestone, növbəti addım və progress.', icon: '04' },
-      { to: '/instructor/tasks', label: 'Sessiya qeydləri və tapşırıqlar', detail: 'Görüş sonrası action plan və rəy.', icon: '05' },
-      { to: '/instructor/analytics', label: 'Rəylər və qiymətləndirmə', detail: 'Məmnuniyyət və nəticə siqnallarını izləyin.', icon: '06' },
-    ],
-  },
-  {
-    title: 'Təklif və resurslar',
-    description: 'Mentorluq modelinizi, materialları və etik sərhədləri idarə edin.',
-    items: [
-      { to: '/instructor/teaching-groups', label: 'Mentorluq modelləri', detail: '1:1, sprint və paket təkliflərini qurun.', icon: '07' },
-      { to: '/instructor/materials', label: 'Resurslar və etika', detail: 'Paylaşılacaq materiallar və təhlükəsiz iş qaydaları.', icon: '08' },
-    ],
-  },
-]
-
 export default function MentorDashboard() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
@@ -148,33 +119,6 @@ export default function MentorDashboard() {
           </Link>
         </div>
       )}
-
-      <section className="rounded-3xl border border-token-border bg-token-surface p-5 sm:p-6 shadow-sm" aria-labelledby="mentor-workspace-title">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-600">Mentor workspace</p>
-            <h2 id="mentor-workspace-title" className="mt-1 text-lg sm:text-xl font-bold text-token-text">Mentorluq idarəetmə mərkəzi</h2>
-            <p className="mt-1 max-w-2xl text-xs sm:text-sm leading-relaxed text-token-textMuted">Beynəlxalq mentorluq praktikalarında istifadə olunan dövrə: əlaqə → məqsəd → sessiya → tapşırıq → rəy → nəticə.</p>
-          </div>
-          <Link to="/mentorship/safety" className="text-xs font-bold text-emerald-600 hover:text-emerald-500">Etika və təhlükəsizlik qaydaları →</Link>
-        </div>
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
-          {MENTOR_WORKSPACE_GROUPS.map((group) => (
-            <div key={group.title} className="rounded-2xl border border-token-border bg-token-surfaceHover/40 p-4">
-              <h3 className="text-sm font-bold text-token-text">{group.title}</h3>
-              <p className="mt-1 min-h-10 text-xs leading-relaxed text-token-textMuted">{group.description}</p>
-              <div className="mt-3 space-y-2">
-                {group.items.map((item) => (
-                  <Link key={item.to} to={item.to} className="group flex items-start gap-3 rounded-xl border border-token-border bg-token-surface p-3 transition hover:border-emerald-400/60 hover:shadow-sm">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300">{item.icon}</span>
-                    <span className="min-w-0"><span className="block text-xs font-bold text-token-text group-hover:text-emerald-600">{item.label}</span><span className="mt-0.5 block text-[11px] leading-relaxed text-token-textMuted">{item.detail}</span></span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* 3. Primary KPI Cards (Row 1 & Row 2) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
