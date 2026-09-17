@@ -60,7 +60,7 @@ export default function MentorshipLanding() {
               to="/"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
             >
-              ← {t('auth.backHome', { defaultValue: 'Ana səhifə' })}
+              {t('auth.backHome', { defaultValue: '← Ana səhifə' })}
             </Link>
           </div>
           <div className="max-w-3xl space-y-6">
