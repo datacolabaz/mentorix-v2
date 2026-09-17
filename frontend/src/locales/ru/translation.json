@@ -87,7 +87,9 @@
       "communication": "СВЯЗЬ",
       "default": "Раздел",
       "content": "КОНТЕНТ",
-      "organization": "ОРГАНИЗАЦИЯ"
+      "organization": "ОРГАНИЗАЦИЯ",
+      "mentoring": "МЕНТОРСТВО",
+      "services": "УСЛУГИ"
     },
     "instructor": {
       "dashboard": "Дашборд",
@@ -108,6 +110,17 @@
       "payments": "Платежи",
       "notifications": "Уведомления",
       "settings": "Настройки"
+    },
+    "mentor": {
+      "dashboard": "Дашборд",
+      "applications": "Заявки",
+      "mentees": "Менти",
+      "sessions": "Сессии",
+      "schedule": "Календарь",
+      "messages": "Сообщения",
+      "services": "Услуги ментора",
+      "packages": "Цены / Пакеты",
+      "earnings": "Доход"
     },
     "student": {
       "progress": "Мой прогресс",

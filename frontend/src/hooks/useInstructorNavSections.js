@@ -4,7 +4,9 @@ import api from '../lib/api'
 import {
   buildInstructorNavSectionsFromClient,
   buildInstructorNavSections,
+  defaultMentorNavSections,
 } from '../constants/instructorNav'
+import useAuthStore from './useAuth'
 import { localizeInstructorNavSections } from '../lib/localizeNav'
 
 const NAV_REFRESH_EVENT = 'mx:instructor-nav-updated'
@@ -31,7 +33,14 @@ export function notifyInstructorNavUpdated() {
 
 export function useInstructorNavSections() {
   const { t, i18n } = useTranslation()
-  const [rawSections, setRawSections] = useState(() => buildInstructorNavSections())
+  const { user } = useAuthStore()
+  const isMentor = String(user?.persona || '').toLowerCase() === 'mentor'
+
+  const [rawSections, setRawSections] = useState(() =>
+    isMentor
+      ? buildInstructorNavSections({ sections: defaultMentorNavSections() })
+      : buildInstructorNavSections(),
+  )
   const [loading, setLoading] = useState(true)
 
   const sections = useMemo(
@@ -40,6 +49,11 @@ export function useInstructorNavSections() {
   )
 
   const refresh = useCallback(async () => {
+    if (isMentor) {
+      setRawSections(buildInstructorNavSections({ sections: defaultMentorNavSections() }))
+      setLoading(false)
+      return
+    }
     try {
       const nav = await fetchInstructorNavConfig()
       if (nav?.sections?.length) {
@@ -50,7 +64,15 @@ export function useInstructorNavSections() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isMentor])
+
+  useEffect(() => {
+    if (isMentor) {
+      setRawSections(buildInstructorNavSections({ sections: defaultMentorNavSections() }))
+    } else {
+      void refresh()
+    }
+  }, [isMentor, refresh])
 
   useEffect(() => {
     let cancelled = false

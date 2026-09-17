@@ -87,7 +87,9 @@
       "communication": "ƏLAQƏ",
       "default": "Bölmə",
       "content": "MƏZMUN",
-      "organization": "TƏŞKİLAT"
+      "organization": "TƏŞKİLAT",
+      "mentoring": "MENTORLUQ",
+      "services": "XİDMƏTLƏR"
     },
     "instructor": {
       "dashboard": "Dashboard",
@@ -108,6 +110,17 @@
       "payments": "Ödənişlər",
       "notifications": "Bildirişlər",
       "settings": "Tənzimləmələr"
+    },
+    "mentor": {
+      "dashboard": "Dashboard",
+      "applications": "Müraciətlər",
+      "mentees": "Mentee-lər",
+      "sessions": "Sessiyalar",
+      "schedule": "Təqvim",
+      "messages": "Mesajlar",
+      "services": "Mentor xidmətləri",
+      "packages": "Qiymətlər / Paketlər",
+      "earnings": "Qazanc"
     },
     "student": {
       "progress": "Proqresim",

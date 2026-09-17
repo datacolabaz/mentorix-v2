@@ -87,7 +87,9 @@
       "communication": "COMMUNICATION",
       "default": "Section",
       "content": "CONTENT",
-      "organization": "ORGANIZATION"
+      "organization": "ORGANIZATION",
+      "mentoring": "MENTORING",
+      "services": "SERVICES"
     },
     "instructor": {
       "dashboard": "Dashboard",
@@ -108,6 +110,17 @@
       "payments": "Payments",
       "notifications": "Notifications",
       "settings": "Settings"
+    },
+    "mentor": {
+      "dashboard": "Dashboard",
+      "applications": "Applications",
+      "mentees": "Mentees",
+      "sessions": "Sessions",
+      "schedule": "Calendar",
+      "messages": "Messages",
+      "services": "Mentor Services",
+      "packages": "Pricing / Packages",
+      "earnings": "Earnings"
     },
     "student": {
       "progress": "My progress",

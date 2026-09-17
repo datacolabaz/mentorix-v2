@@ -156,7 +156,10 @@ export default function WorkspaceSwitcher({ className = '' }) {
             >
               <div className="flex items-center gap-2">
                 <span className="text-base">👨‍🏫</span>
-                <span>{t('workspace.teacher', { defaultValue: 'Müəllim kabineti' })}</span>
+                <div>
+                  <div className="font-bold leading-none">{t('workspace.teacher', { defaultValue: 'Müəllim kabineti' })}</div>
+                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">Teacher dashboard</div>
+                </div>
               </div>
               {isTeacher && <span className="text-xs font-bold text-blue-500">✓</span>}
             </button>
@@ -178,8 +181,11 @@ export default function WorkspaceSwitcher({ className = '' }) {
               ].join(' ')}
             >
               <div className="flex items-center gap-2">
-                <span className="text-base">🚀</span>
-                <span>{t('workspace.mentor', { defaultValue: 'Mentor kabineti' })}</span>
+                <span className="text-base">🧭</span>
+                <div>
+                  <div className="font-bold leading-none">{t('workspace.mentor', { defaultValue: 'Mentor kabineti' })}</div>
+                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">Mentor dashboard</div>
+                </div>
               </div>
               {isMentor ? (
                 <span className="text-xs font-bold text-purple-500">✓</span>
@@ -189,6 +195,26 @@ export default function WorkspaceSwitcher({ className = '' }) {
                 </span>
               )}
             </button>
+
+            {/* Partner */}
+            <Link
+              to="/partner/dashboard"
+              onClick={() => setIsOpen(false)}
+              className={[
+                'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
+                isDark
+                  ? 'hover:bg-white/5 text-gray-300'
+                  : 'hover:bg-slate-50 text-slate-700',
+              ].join(' ')}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">🤝</span>
+                <div>
+                  <div className="font-bold leading-none">{t('nav.partnerCabinet', { defaultValue: 'Partner kabineti' })}</div>
+                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">Partner dashboard</div>
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
       )}

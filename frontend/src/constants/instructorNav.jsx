@@ -26,6 +26,52 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   payments: { to: '/instructor/payments', labelKey: 'nav.instructor.payments', label: 'Ödənişlər', icon: 'payments' },
   notifications: { to: '/instructor/notifications', labelKey: 'nav.instructor.notifications', label: 'Bildirişlər', icon: 'notifications' },
   settings: { to: '/instructor/settings', labelKey: 'nav.instructor.settings', label: 'Tənzimləmələr', icon: 'settings' },
+
+  // Mentor Workspace spesifik linklər
+  mentor_dashboard: { to: '/instructor', labelKey: 'nav.mentor.dashboard', label: 'Dashboard', icon: 'dashboard', end: true },
+  mentor_applications: { to: '/instructor/inquiries', labelKey: 'nav.mentor.applications', label: 'Müraciətlər', icon: 'notifications', badgeKey: 'join_requests' },
+  mentor_mentees: { to: '/instructor/students', labelKey: 'nav.mentor.mentees', label: 'Mentee-lər', icon: 'students' },
+  mentor_sessions: { to: '/instructor/live/history', labelKey: 'nav.mentor.sessions', label: 'Sessiyalar', icon: 'live' },
+  mentor_schedule: { to: '/instructor/schedule', labelKey: 'nav.mentor.schedule', label: 'Təqvim', icon: 'schedule' },
+  mentor_messages: { to: '/instructor/notifications', labelKey: 'nav.mentor.messages', label: 'Mesajlar', icon: 'notifications' },
+  mentor_services: { to: '/instructor/teaching-groups', labelKey: 'nav.mentor.services', label: 'Mentor xidmətləri', icon: 'courses' },
+  mentor_packages: { to: '/instructor/settings', labelKey: 'nav.mentor.packages', label: 'Qiymətlər / Paketlər', icon: 'settings' },
+  mentor_earnings: { to: '/instructor/payments', labelKey: 'nav.mentor.earnings', label: 'Qazanc', icon: 'payments' },
+}
+
+export function defaultMentorNavSections() {
+  return [
+    {
+      id: 'dashboard',
+      title: 'DASHBOARD',
+      enabled: true,
+      itemKeys: ['mentor_dashboard'],
+    },
+    {
+      id: 'mentoring',
+      title: 'MENTORLUQ',
+      enabled: true,
+      itemKeys: [
+        'mentor_applications',
+        'mentor_mentees',
+        'mentor_sessions',
+        'mentor_schedule',
+        'mentor_messages',
+      ],
+    },
+    {
+      id: 'services',
+      title: 'XİDMƏTLƏR',
+      enabled: true,
+      itemKeys: ['mentor_services', 'mentor_packages'],
+    },
+    {
+      id: 'analytics',
+      title: 'ANALİTİKA',
+      enabled: true,
+      itemKeys: ['analytics', 'mentor_earnings'],
+    },
+  ]
 }
 
 /** Sidebar linkləri yalnız bu bölmədə görünsün. */
