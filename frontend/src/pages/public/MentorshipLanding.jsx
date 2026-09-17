@@ -15,6 +15,18 @@ const GOALS = [
 
 const STEPS = ['goal', 'match', 'grow']
 
+const TRUST_POINTS = [
+  ['Yoxlanmış təcrübə', 'Mentorun peşəkar və akademik fonu aydın göstərilir.'],
+  ['Aydın nəticə', 'Hər görüş yol xəritəsi, tapşırıq və növbəti addımla tamamlanır.'],
+  ['Daha az risk', 'Uyğunluğu əvvəlcə intro və diaqnostika ilə yoxlayın.'],
+]
+
+const OPEN_REQUESTS = [
+  { tag: 'Karyera', title: 'Junior developer üçün hazırlıq', detail: 'Portfel, CV və mock interview üzrə 4 həftəlik dəstək.' },
+  { tag: 'AI & Data', title: 'Data analitika portfelinin tamamlanması', detail: 'SQL, Power BI və real layihə üzərində yazılı geribildirim.' },
+  { tag: 'Xaricdə təhsil', title: 'Magistratura müraciət planı', detail: 'Motivation letter, təqaüd və müraciət cədvəli üzrə istiqamət.' },
+]
+
 export default function MentorshipLanding() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
@@ -88,7 +100,19 @@ export default function MentorshipLanding() {
               </Link>
             </div>
 
-            {/* TAB SELECTOR: [🧭 Mentorlar] | [🎓 Mentee-lər / Açıq Sorğular] */}
+            <div className="mt-8 grid gap-3 border-y border-slate-200 py-5 sm:grid-cols-3">
+              {TRUST_POINTS.map(([title, text]) => (
+                <div key={title} className="rounded-xl bg-white/70 p-3">
+                  <p className="text-sm font-bold text-slate-900">{title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600">{text}</p>
+                </div>
+              ))}
+            </div>
+            <Link to="/mentorship/safety" className="mt-3 inline-flex text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline">
+              Etibar, təhlükəsizlik və refund qaydalarını oxu →
+            </Link>
+
+            {/* TAB SELECTOR: mentor discovery and open mentee requests */}
             <div className="pt-6">
               <div className="inline-flex p-1.5 rounded-2xl bg-slate-200/80 border border-slate-300">
                 <button
@@ -101,7 +125,7 @@ export default function MentorshipLanding() {
                       : 'text-slate-600 hover:text-slate-900',
                   ].join(' ')}
                 >
-                  <span>🧭</span>
+                  <span aria-hidden="true">01</span>
                   <span>Mentor Tap</span>
                 </button>
                 <button
@@ -114,7 +138,7 @@ export default function MentorshipLanding() {
                       : 'text-slate-600 hover:text-slate-900',
                   ].join(' ')}
                 >
-                  <span>🎓</span>
+                  <span aria-hidden="true">02</span>
                   <span>Mentee / Açıq Sorğular</span>
                 </button>
               </div>
@@ -152,41 +176,18 @@ export default function MentorshipLanding() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  {
-                    name: 'Aysel Məmmədova',
-                    tag: 'Karyera Keçidi',
-                    field: 'Python & AI',
-                    goal: 'Junior Developer roluna hazırlıq və mock interview dəstəyi axtarır.',
-                    status: 'Açıq müraciət',
-                  },
-                  {
-                    name: 'Murad Əliyev',
-                    tag: 'Data Analytics',
-                    field: 'SQL & PowerBI',
-                    goal: 'Portfeli tamamlamaq və real layihə üzərində mentor rəyi almaq istəyir.',
-                    status: 'Açıq müraciət',
-                  },
-                  {
-                    name: 'Leyla Həsənli',
-                    tag: 'Xaricdə Təhsil',
-                    field: 'Almaniya Magistratura',
-                    goal: 'Motivation letter və təqaüd müraciəti üçün akademik mentor axtarır.',
-                    status: 'Açıq müraciət',
-                  },
-                ].map((m, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3 flex flex-col justify-between">
+                {OPEN_REQUESTS.map((request) => (
+                  <div key={request.title} className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3 flex flex-col justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md">
-                          {m.tag}
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                          {request.tag}
                         </span>
-                        <span className="text-[11px] text-emerald-700 font-semibold">{m.status}</span>
+                        <span className="text-[11px] text-emerald-700 font-semibold">Açıq sorğu</span>
                       </div>
-                      <div className="text-base font-bold text-slate-900">{m.name}</div>
-                      <div className="text-xs font-semibold text-slate-500">{m.field}</div>
+                      <div className="text-base font-bold text-slate-900">{request.title}</div>
                       <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                        "{m.goal}"
+                        {request.detail}
                       </p>
                     </div>
                     <Link

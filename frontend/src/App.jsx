@@ -25,6 +25,7 @@ import UniversityProgramSearch from './pages/public/UniversityProgramSearch'
 import PublicSeoLanding from './pages/public/PublicSeoLanding'
 import MentorshipLanding from './pages/public/MentorshipLanding'
 import MentorshipGoals from './pages/public/MentorshipGoals'
+import MentorshipSafety from './pages/public/MentorshipSafety'
 import Favorites from './pages/account/Favorites'
 import LegalDocumentPage from './pages/public/LegalDocumentPage'
 import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
@@ -238,6 +239,7 @@ export default function App() {
       <Route path="/universities" element={<UniversityProgramSearch />} />
       <Route path="/mentorship" element={<MentorshipLanding />} />
       <Route path="/mentorship/goals" element={<MentorshipGoals />} />
+      <Route path="/mentorship/safety" element={<MentorshipSafety />} />
       <Route path="/account/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
       {PUBLIC_SEO_LANDINGS.map((l) => (
         <Route key={l.path} path={l.path} element={<PublicSeoLanding />} />

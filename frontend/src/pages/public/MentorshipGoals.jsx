@@ -10,14 +10,14 @@ const AVAILABILITY = ['weekdayMorning', 'weekdayEvening', 'weekend']
 
 export default function MentorshipGoals() {
   const { t } = useTranslation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [goal, setGoal] = useState(() => {
     const initial = searchParams.get('goal')
     return GOALS.includes(initial) ? initial : ''
   })
-  const [level, setLevel] = useState('')
-  const [availability, setAvailability] = useState('')
-  const [budget, setBudget] = useState('')
+  const [level, setLevel] = useState(() => LEVELS.includes(searchParams.get('level')) ? searchParams.get('level') : '')
+  const [availability, setAvailability] = useState(() => AVAILABILITY.includes(searchParams.get('availability')) ? searchParams.get('availability') : '')
+  const [budget, setBudget] = useState(() => ['starter', 'standard', 'premium'].includes(searchParams.get('budget')) ? searchParams.get('budget') : '')
 
   const ready = Boolean(goal && level && availability && budget)
   const summary = useMemo(() => {
@@ -30,6 +30,16 @@ export default function MentorshipGoals() {
     })
   }, [availability, budget, goal, level, ready, t])
 
+  const selectValue = (key, value, setter) => {
+    setter(value)
+    const next = new URLSearchParams(searchParams)
+    next.set(key, value)
+    setSearchParams(next, { replace: true })
+  }
+
+  const selectedCount = [goal, level, availability, budget].filter(Boolean).length
+  const goalPath = `/mentorship/goals?${searchParams.toString()}`
+
   return (
     <div className="min-h-[100svh] bg-[#f4f6fb] text-slate-800 flex flex-col">
       <PublicMarketingNav />
@@ -40,7 +50,13 @@ export default function MentorshipGoals() {
         <div className="mt-8 max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">{t('mentorship.goalsPage.eyebrow')}</p>
           <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">{t('mentorship.goalsPage.title')}</h1>
-          <p className="mt-3 text-base sm:text-lg leading-relaxed text-slate-600">{t('mentorship.goalsPage.description')}</p>
+          <p className="text-base sm:text-lg leading-relaxed text-slate-600">{t('mentorship.goalsPage.description')}</p>
+          <div className="mt-5 flex items-center gap-3" aria-label={`4 addımdan ${selectedCount} tamamlandı`}>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${(selectedCount / 4) * 100}%` }} />
+            </div>
+            <span className="text-xs font-bold text-slate-600">{selectedCount}/4 tamamlandı</span>
+          </div>
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.25fr_0.75fr] items-start">
@@ -52,7 +68,7 @@ export default function MentorshipGoals() {
                   <button
                     key={item}
                     type="button"
-                    onClick={() => setGoal(item)}
+                    onClick={() => selectValue('goal', item, setGoal)}
                     className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-colors ${
                       goal === item
                         ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
@@ -65,9 +81,9 @@ export default function MentorshipGoals() {
               </div>
             </div>
 
-            <ChoiceGroup label={t('mentorship.goalsPage.levelLabel')} value={level} onChange={setLevel} options={LEVELS.map((item) => [item, t(`mentorship.goalsPage.levels.${item}`)])} />
-            <ChoiceGroup label={t('mentorship.goalsPage.availabilityLabel')} value={availability} onChange={setAvailability} options={AVAILABILITY.map((item) => [item, t(`mentorship.goalsPage.availability.${item}`)])} />
-            <ChoiceGroup label={t('mentorship.goalsPage.budgetLabel')} value={budget} onChange={setBudget} options={['starter', 'standard', 'premium'].map((item) => [item, t(`mentorship.goalsPage.budgets.${item}`)])} />
+            <ChoiceGroup label={t('mentorship.goalsPage.levelLabel')} value={level} onChange={(value) => selectValue('level', value, setLevel)} options={LEVELS.map((item) => [item, t(`mentorship.goalsPage.levels.${item}`)])} />
+            <ChoiceGroup label={t('mentorship.goalsPage.availabilityLabel')} value={availability} onChange={(value) => selectValue('availability', value, setAvailability)} options={AVAILABILITY.map((item) => [item, t(`mentorship.goalsPage.availability.${item}`)])} />
+            <ChoiceGroup label={t('mentorship.goalsPage.budgetLabel')} value={budget} onChange={(value) => selectValue('budget', value, setBudget)} options={['starter', 'standard', 'premium'].map((item) => [item, t(`mentorship.goalsPage.budgets.${item}`)])} />
           </section>
 
           <aside className="rounded-2xl border border-slate-200 bg-slate-900 p-6 text-white lg:sticky lg:top-24">
@@ -90,7 +106,7 @@ export default function MentorshipGoals() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">{t('mentorship.goalsPage.availabilityLabel')}:</span>
-                <span className={availability ? 'font-semibold text-emerald-300' : 'text-amber-300/90 font-medium'}>
+                  <span className={availability ? 'font-semibold text-emerald-300' : 'text-slate-500 font-medium'}>
                   {availability ? t(`mentorship.goalsPage.availability.${availability}`) : 'Seçilməyib'}
                 </span>
               </div>
@@ -104,7 +120,7 @@ export default function MentorshipGoals() {
 
             <div className="mt-6 border-t border-white/10 pt-5">
               <Link
-                to={ready ? '/login?next=%2Fmentorship%2Fgoals' : '#'}
+                to={ready ? `/login?next=${encodeURIComponent(goalPath)}` : '#'}
                 onClick={(e) => {
                   if (!ready) {
                     e.preventDefault()
@@ -120,7 +136,7 @@ export default function MentorshipGoals() {
                 {t('mentorship.goalsPage.continue')}
               </Link>
               {!ready ? (
-                <p className="mt-2 text-center text-xs text-amber-300/80">
+                <p className="mt-2 text-center text-xs text-slate-400">
                   Davam etmək üçün bütün 4 addımı seçin
                 </p>
               ) : null}
