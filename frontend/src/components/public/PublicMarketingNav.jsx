@@ -24,6 +24,7 @@ const CTA_BTN =
 
 const LINKS = [
   { to: '/muellimler-ucun', labelKey: 'landing.nav.forTeachers' },
+  { to: '/mentorship', labelKey: 'landing.nav.mentorship' },
   { to: '/imtahanlar', labelKey: 'landing.nav.examsTests' },
   { to: '/partner', labelKey: 'landing.nav.partner' },
 ]

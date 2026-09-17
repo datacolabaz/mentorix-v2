@@ -1026,12 +1026,59 @@
       "pendingPhoneReady": "{{count}} students have a phone ready — assign a package and schedule with «Complete setup»; this alert stays until you finish."
     }
   },
+  "mentorship": {
+    "navLabel": "Mentorship",
+    "seoTitle": "Mentorship marketplace — Mentorix",
+    "seoDescription": "Find a verified mentor for your career, technology, university and language goals, with a clear path forward.",
+    "seoKeywords": "mentorship, find a mentor, career mentor, programming mentor, IELTS mentor",
+    "eyebrow": "From goal to progress",
+    "title": "You do not need another lesson. You need a mentor for your next step.",
+    "description": "Choose your goal, discover verified mentors and move forward with a clear roadmap and ongoing feedback.",
+    "startCta": "Choose my goal",
+    "mentorCta": "Join as a mentor",
+    "howEyebrow": "How mentorship works",
+    "howTitle": "From your goal to your next milestone",
+    "howDescription": "Mentorix brings the right person, plan, sessions and feedback together so progress does not stop after one conversation.",
+    "bottomTitle": "Find the support behind your next step.",
+    "bottomText": "Start with one goal. Mentorix helps you see the right direction and turn it into practical progress.",
+    "goals": {
+      "career": { "title": "Grow my career", "text": "Practical support for CVs, interviews, first jobs and career changes." },
+      "technology": { "title": "Learn technology", "text": "Build programming, AI and data skills through real projects." },
+      "university": { "title": "Prepare for university", "text": "Plan admissions, scholarships and study abroad with clarity." },
+      "language": { "title": "Improve my language", "text": "Focused practice and feedback for speaking, IELTS and academic language." }
+    },
+    "steps": {
+      "goal": { "title": "Define your goal", "text": "Tell us your current level, target outcome and available time." },
+      "match": { "title": "Choose your mentor", "text": "Compare verified mentors by experience, language, schedule and budget." },
+      "grow": { "title": "Grow with a plan", "text": "Track sessions, tasks, milestones and feedback as you move forward." }
+    },
+    "goalsPage": {
+      "back": "Back to mentorship",
+      "eyebrow": "Find your direction",
+      "title": "Define your goal in a few steps",
+      "description": "Your answers will help us find relevant mentors and offers. We do not show fake results — first we need to understand what you need.",
+      "goalLabel": "What do you want to achieve?",
+      "levelLabel": "Your current level",
+      "availabilityLabel": "Your weekly availability",
+      "budgetLabel": "Monthly budget range",
+      "previewEyebrow": "Your summary",
+      "previewTitle": "Next step",
+      "previewEmpty": "Complete the choices to see a summary before starting your personalized mentor search.",
+      "continue": "Continue",
+      "privacyNote": "Your answers are used only to personalize mentor recommendations.",
+      "summary": "You are starting {{goal}} from a {{level}} level, with {{availability}} availability and a {{budget}} range.",
+      "levels": { "beginner": "Beginner", "developing": "Developing", "experienced": "Experienced" },
+      "availability": { "weekdayMorning": "Weekday mornings", "weekdayEvening": "Weekday evenings", "weekend": "Weekends" },
+      "budgets": { "starter": "Up to 50 AZN", "standard": "50–150 AZN", "premium": "More than 150 AZN" }
+    }
+  },
   "landing": {
     "nav": {
       "findTeacher": "Find a teacher",
       "universities": "Universities",
       "features": "Features",
       "forTeachers": "For teachers",
+      "mentorship": "Mentorship",
       "examsTests": "Exams / Tests",
       "partner": "Become a partner",
       "plans": "Pricing",

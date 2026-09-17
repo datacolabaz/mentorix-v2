@@ -21,6 +21,11 @@ export const MENTORIX_SITE_NAV = [
     description: 'Onlayn imtahan və test sistemi — QR və linklə paylaşım',
   },
   {
+    name: 'Mentorluq',
+    path: '/mentorship',
+    description: 'Məqsəd əsaslı mentor tapma və inkişaf proqramları',
+  },
+  {
     name: 'Tapşırıqlar',
     path: '/tapshiriqlar',
     description: 'Ev tapşırığı təyini, təslim və müəllim yoxlaması',
