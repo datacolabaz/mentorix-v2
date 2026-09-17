@@ -35,7 +35,20 @@ export function notifyInstructorNavUpdated() {
 export function useInstructorNavSections() {
   const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
-  const isMentor = String(user?.persona || '').toLowerCase() === 'mentor'
+  const [activeWorkspace, setActiveWorkspace] = useState(() => {
+    try {
+      return String(localStorage.getItem('mx_active_workspace') || '').toLowerCase()
+    } catch {
+      return ''
+    }
+  })
+  const isMentor = activeWorkspace ? activeWorkspace === 'mentor' : String(user?.persona || '').toLowerCase() === 'mentor'
+
+  useEffect(() => {
+    const onWorkspaceSwitch = (event) => setActiveWorkspace(String(event.detail || '').toLowerCase())
+    window.addEventListener('mx:workspace-switched', onWorkspaceSwitch)
+    return () => window.removeEventListener('mx:workspace-switched', onWorkspaceSwitch)
+  }, [])
 
   const [rawSections, setRawSections] = useState(() =>
     isMentor

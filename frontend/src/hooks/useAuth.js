@@ -114,6 +114,8 @@ const useAuthStore = create((set) => ({
     }
     localStorage.setItem('mx_token', data.token)
     localStorage.setItem('mx_user', JSON.stringify(data.user))
+    localStorage.setItem('mx_active_workspace', String(target || '').toLowerCase())
+    window.dispatchEvent(new CustomEvent('mx:workspace-switched', { detail: String(target || '').toLowerCase() }))
     set({ user: data.user, token: data.token })
     return data
   },
@@ -137,6 +139,7 @@ const useAuthStore = create((set) => ({
     }
     localStorage.removeItem('mx_token')
     localStorage.removeItem('mx_user')
+    localStorage.removeItem('mx_active_workspace')
     set({ user: null, token: null })
   },
 
