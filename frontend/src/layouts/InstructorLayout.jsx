@@ -85,11 +85,14 @@ export default function InstructorLayout() {
   const showMobileSidebar = navOpen && !sidebarHidden
   const { sections: navSections } = useInstructorNavSections()
 
+  const isMentorPersona = String(user?.persona || '').toLowerCase() === 'mentor'
   const instructorRoleLabel = isPartnerPersona(user)
     ? t('layout.partnerRole', { defaultValue: 'Partner' })
-    : user?.public_label === 'trainer'
-      ? t('layout.trainer')
-      : t('layout.teacher')
+    : isMentorPersona
+      ? 'Mentor'
+      : user?.public_label === 'trainer'
+        ? t('layout.trainer')
+        : t('layout.teacher')
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false

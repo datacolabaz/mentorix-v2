@@ -60,6 +60,7 @@ import { DigitalMentorProvider } from './mentor/DigitalMentorProvider'
 import DigitalMentorHost from './mentor/DigitalMentorHost'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
+import MentorDashboard from './pages/instructor/MentorDashboard'
 import InstructorStudents from './pages/instructor/Students'
 import InstructorSchedule from './pages/instructor/Schedule'
 import InstructorExams from './pages/instructor/Exams'
@@ -211,6 +212,12 @@ function ScrollToTop() {
   return null
 }
 
+function InstructorOrMentorDashboard() {
+  const { user } = useAuthStore()
+  const isMentor = String(user?.persona || "").toLowerCase() === "mentor"
+  return isMentor ? <MentorDashboard key="mentor" /> : <InstructorDashboard key="instructor" />
+}
+
 export default function App() {
   const { user } = useAuthStore()
 
@@ -355,7 +362,7 @@ export default function App() {
       <Route path="/courses/*" element={<Navigate to="/instructor/teaching-groups" replace />} />
 
       <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
-        <Route index element={<InstructorDashboard />} />
+        <Route index element={<InstructorOrMentorDashboard />} />
         <Route path="students" element={<InstructorStudents />} />
         <Route path="teaching-groups" element={<InstructorTeachingGroups />} />
         <Route path="chat" element={<GroupChatPage role="instructor" basePath="/instructor/chat" />} />

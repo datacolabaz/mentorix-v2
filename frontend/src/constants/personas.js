@@ -26,8 +26,8 @@ export {
 export const PRIMARY_PERSONA_ORDER = Object.freeze([
   PERSONAS.TEACHER,
   PERSONAS.MENTOR,
-  PERSONAS.STUDENT,
   PERSONAS.PARTNER,
+  PERSONAS.STUDENT,
 ])
 
 export function pickerPersonaIds(current) {

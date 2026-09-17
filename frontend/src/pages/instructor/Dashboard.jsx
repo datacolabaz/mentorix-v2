@@ -20,7 +20,6 @@ import PresenceDot from '../../components/common/PresenceDot'
 import { moneyLocale as moneyLocaleTag } from '../../lib/uiLocale'
 import { formatYmMonthShort } from '../../lib/azMonths'
 import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
-import MentorDashboard from './MentorDashboard'
 
 const DEFAULT_DASH = {
   income_this_month: 0,
@@ -42,11 +41,6 @@ export default function InstructorDashboard() {
   const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const navigate = useNavigate()
-
-  const isMentor = String(user?.persona || '').toLowerCase() === 'mentor'
-  if (isMentor) {
-    return <MentorDashboard />
-  }
   const { theme, setOverlayLock } = useUiStore()
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
