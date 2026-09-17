@@ -95,13 +95,14 @@ export default function InstructorLayout() {
     '/instructor/materials',
   ].includes(location.pathname)
   const isActiveMentorWorkspace = (() => {
+    if (String(user?.persona || '').toLowerCase() === 'mentor') return true
     try {
       const workspace = String(localStorage.getItem('mx_active_workspace') || '').toLowerCase()
       if (workspace) return workspace === 'mentor'
     } catch {
       /* ignore storage failures */
     }
-    return isMentorRoute || String(user?.persona || '').toLowerCase() === 'mentor'
+    return isMentorRoute
   })()
   const renderedNavSections = isActiveMentorWorkspace ? buildMentorNavSections() : navSections
 

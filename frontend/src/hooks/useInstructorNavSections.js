@@ -42,7 +42,7 @@ export function useInstructorNavSections() {
       return ''
     }
   })
-  const isMentor = activeWorkspace ? activeWorkspace === 'mentor' : String(user?.persona || '').toLowerCase() === 'mentor'
+  const isMentor = String(user?.persona || '').toLowerCase() === 'mentor' || activeWorkspace === 'mentor'
 
   useEffect(() => {
     const persona = String(user?.persona || '').toLowerCase()
