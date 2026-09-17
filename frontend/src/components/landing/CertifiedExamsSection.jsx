@@ -163,7 +163,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
       className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white px-6 py-8 sm:px-10 sm:py-10 shadow-sm"
     >
       <div className="flex items-center justify-between gap-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
           <span aria-hidden>🎓</span>
           {t('certifiedExams.badge')}
         </div>

@@ -314,7 +314,7 @@ export default function Landing() {
               onClick={() =>
                 trackEvent('mx_landing_marketplace_cta', { surface: 'marketplace_section', action: 'map_search' })
               }
-              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-5 py-3.5 min-h-[48px] text-sm font-bold text-primary hover:bg-primary/20 transition-colors"
+              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3.5 min-h-[48px] text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
             >
               {marketplaceCtaLabel}
             </Link>
