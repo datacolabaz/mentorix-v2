@@ -3686,7 +3686,7 @@
   },
   "certifiedExams": {
     "badge": "Sertifikatlı İmtahanlar",
-    "title": "Bilikini sertifikatla təsdiqlə",
+    "title": "Biliyini sertifikatla təsdiqlə",
     "description": "Beynəlxalq imtahanlardan IT, Data Analytics, Cloud və digər peşəkar bacarıqlara qədər — sahəni seç, imtahan ver, QR ilə doğrulanan sertifikat qazan.",
     "assessmentOne": "{{count}} Assessment",
     "assessmentOther": "{{count}} Assessments",
