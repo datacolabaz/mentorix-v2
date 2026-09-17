@@ -20,7 +20,7 @@ const MENU_BTN =
   'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/35 bg-primary/15 text-primary hover:bg-primary/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80'
 
 const CTA_BTN =
-  'shrink-0 whitespace-nowrap rounded-lg bg-primary px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-bold text-[#041018] hover:brightness-95'
+  'shrink-0 whitespace-nowrap rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 text-xs sm:text-sm font-semibold shadow-sm transition-all'
 
 const LINKS = [
   { to: '/muellimler-ucun', labelKey: 'landing.nav.forTeachers' },
@@ -67,12 +67,12 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
   const tone = isDark ? 'dark' : 'light'
 
   const loginBtn = isDark
-    ? 'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-primary px-2.5 sm:px-3 py-2 min-h-11 lg:min-h-[36px] lg:px-3 lg:py-1.5 text-xs sm:text-sm font-semibold hover:bg-primary/25'
-    : 'shrink-0 whitespace-nowrap rounded-lg bg-primary/15 border border-primary/35 text-emerald-800 px-2.5 sm:px-3 py-2 min-h-11 lg:min-h-[36px] lg:px-3 lg:py-1.5 text-xs sm:text-sm font-semibold hover:bg-primary/25'
+    ? 'shrink-0 whitespace-nowrap rounded-lg bg-transparent text-gray-300 hover:bg-white/10 hover:text-white px-3 py-2 min-h-11 lg:min-h-[36px] lg:px-3 lg:py-1.5 text-xs sm:text-sm font-medium transition-colors'
+    : 'shrink-0 whitespace-nowrap rounded-lg bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-2 min-h-11 lg:min-h-[36px] lg:px-3 lg:py-1.5 text-xs sm:text-sm font-medium transition-colors'
 
   const menuBtn = isDark
-    ? 'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/35 bg-primary/15 text-primary hover:bg-primary/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80'
-    : 'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/80'
+    ? 'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500'
+    : 'lg:hidden shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500'
 
   useEffect(() => {
     if (!compact) setMobileNavOpen(false)
