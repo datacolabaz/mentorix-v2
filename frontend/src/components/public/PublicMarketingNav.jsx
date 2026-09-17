@@ -26,7 +26,8 @@ const LINKS = [
   { to: '/muellimler-ucun', labelKey: 'landing.nav.forTeachers' },
   { to: '/mentorship', labelKey: 'landing.nav.mentorship' },
   { to: '/imtahanlar', labelKey: 'landing.nav.examsTests' },
-  { to: '/partner', labelKey: 'landing.nav.partner' },
+  { to: '/universities', labelKey: 'landing.nav.universities' },
+  { to: '/qiymetler', labelKey: 'landing.nav.plans' },
 ]
 
 function linkClass(pathname, to, isDark) {
