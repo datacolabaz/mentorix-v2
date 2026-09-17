@@ -1,4 +1,13 @@
 {
+  "workspace": {
+    "student": "Participant / Mentee Workspace",
+    "teacher": "Teacher Workspace",
+    "mentor": "Mentor Workspace",
+    "switchPrompt": "Switch profile/workspace",
+    "selectRole": "Workspace Mode",
+    "switched": "Workspace switched",
+    "switchError": "Could not switch workspace"
+  },
   "common": {
     "loading": "Loading…",
     "save": "Save",

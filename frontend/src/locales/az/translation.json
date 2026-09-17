@@ -1,4 +1,13 @@
 {
+  "workspace": {
+    "student": "İştirakçı / Mentee kabineti",
+    "teacher": "Müəllim kabineti",
+    "mentor": "Mentor kabineti",
+    "switchPrompt": "Profil/Kabineti dəyiş",
+    "selectRole": "İş Rejimi / Kabinet",
+    "switched": "Kabinet dəyişdirildi",
+    "switchError": "Keçid zamanı xəta baş verdi"
+  },
   "common": {
     "loading": "Yüklənir…",
     "save": "Yadda saxla",

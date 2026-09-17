@@ -107,6 +107,17 @@ const useAuthStore = create((set) => ({
     set({ user, token })
   },
 
+  switchWorkspace: async (target) => {
+    const data = await api.post('/auth/switch-workspace', { target })
+    if (!data?.token || !data?.user) {
+      throw new Error(data?.message || 'Kabinet dəyişdirilə bilmədi')
+    }
+    localStorage.setItem('mx_token', data.token)
+    localStorage.setItem('mx_user', JSON.stringify(data.user))
+    set({ user: data.user, token: data.token })
+    return data
+  },
+
   logout: () => {
     trackLogout()
     const uid = JSON.parse(localStorage.getItem('mx_user') || 'null')?.id

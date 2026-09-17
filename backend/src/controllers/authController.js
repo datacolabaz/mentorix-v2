@@ -1268,6 +1268,94 @@ const updatePersona = async (req, res) => {
   }
 };
 
+/**
+ * Multi-role Workspace Switcher (Single Identity Architecture).
+ * Allows switching between Student/Mentee, Teacher, Mentor, and Course roles.
+ */
+const switchWorkspace = async (req, res) => {
+  try {
+    const me = await loadUserLiteById(req.user.id);
+    if (!me || me.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (!guardEmailVerifiedBeforeToken(res, me)) return;
+
+    const target = String(req.body?.target || req.body?.role || req.body?.persona || '').trim().toLowerCase();
+    if (!target) {
+      return res.status(400).json({ success: false, message: 'Hədəf kabinet təyin olunmayıb' });
+    }
+
+    let targetRole = null;
+    let targetPersona = null;
+
+    if (target === 'mentor') {
+      targetRole = 'instructor';
+      targetPersona = 'mentor';
+      await grantUserRole(me.id, 'instructor');
+      await applyPersonaSelection({
+        userId: me.id,
+        persona: 'mentor',
+        profile: req.body?.profile || {},
+        req,
+        requireComplete: false,
+        merge: true,
+      });
+    } else if (target === 'teacher' || target === 'instructor') {
+      targetRole = 'instructor';
+      targetPersona = 'teacher';
+      await grantUserRole(me.id, 'instructor');
+      await applyPersonaSelection({
+        userId: me.id,
+        persona: 'teacher',
+        profile: req.body?.profile || {},
+        req,
+        requireComplete: false,
+        merge: true,
+      });
+    } else if (target === 'student' || target === 'mentee') {
+      targetRole = 'student';
+      targetPersona = 'student';
+      await grantUserRole(me.id, 'student');
+      await applyPersonaSelection({
+        userId: me.id,
+        persona: 'student',
+        profile: req.body?.profile || {},
+        req,
+        requireComplete: false,
+        merge: true,
+      });
+    } else if (target === 'course') {
+      targetRole = 'course';
+      targetPersona = 'education_center';
+      await grantCourseRoleToUser(me.id);
+      await applyPersonaSelection({
+        userId: me.id,
+        persona: 'education_center',
+        profile: req.body?.profile || {},
+        req,
+        requireComplete: false,
+        merge: true,
+      });
+    } else {
+      return res.status(400).json({ success: false, message: 'Etibarsız kabinet növü' });
+    }
+
+    // Update session JWT with new active role
+    const token = signRoleSession({ id: me.id, role: targetRole });
+    const fresh = await loadUserLiteById(me.id);
+    const userOut = await enrichUserForClient(fresh, targetRole);
+    logAuthLogin(req, fresh, targetRole);
+
+    return res.json({
+      success: true,
+      token,
+      user: userOut,
+      active_workspace: targetPersona || targetRole,
+    });
+  } catch (err) {
+    console.error('switchWorkspace error:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Kabinet dəyişdirilə bilmədi' });
+  }
+};
+
 /** İctimai qeydiyyat — rol soruşulmur; onboarding sonra tamamlanır. */
 const signup = async (req, res) => {
   try {
@@ -2430,6 +2518,7 @@ module.exports = {
   selectOnboardingRole,
   selectOnboardingPersona,
   updatePersona,
+  switchWorkspace,
   signup,
   loginWithEmail,
   resendVerificationEmail,

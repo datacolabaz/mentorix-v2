@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import useUiStore from '../../hooks/useUi'
 import LocaleThemeBar from '../LocaleThemeBar'
+import WorkspaceSwitcher from './WorkspaceSwitcher'
 
 export default function SidebarPreferences({ onLogout, className = '' }) {
   const { t } = useTranslation()
@@ -10,6 +11,7 @@ export default function SidebarPreferences({ onLogout, className = '' }) {
 
   return (
     <div className={className}>
+      <WorkspaceSwitcher className="mb-3" />
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs font-semibold text-token-textMuted px-1">{t('layout.language')}</div>
         <LocaleThemeBar className="justify-end" menuPlacement="top" />
