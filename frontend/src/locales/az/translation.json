@@ -89,7 +89,11 @@
       "content": "MƏZMUN",
       "organization": "TƏŞKİLAT",
       "mentoring": "MENTORLUQ",
-      "services": "XİDMƏTLƏR"
+      "services": "XİDMƏTLƏR",
+      "core_management": "İDARƏETMƏ VƏ NƏZARƏT",
+      "development": "İNKİŞAF VƏ HƏDƏFLƏR",
+      "programs": "PROQRAMLAR VƏ FORMATLAR",
+      "quality": "KEYFİYYƏT VƏ RESURSLAR"
     },
     "instructor": {
       "dashboard": "Dashboard",
@@ -112,11 +116,18 @@
       "settings": "Tənzimləmələr"
     },
     "mentor": {
-      "dashboard": "Dashboard",
+      "dashboard": "Dashboard (İcmal)",
+      "discovery": "Mentor / Mentee Tap",
+      "schedule": "Görüşlərim və Cədvəl",
+      "connections": "Əlaqələrim (My Connections)",
+      "roadmap": "Hədəflər və Yol Xəritəsi",
+      "notes_tasks": "Sessiya Qeydləri və Tapşırıqlar",
+      "models": "Mentorluq Modelləri",
+      "reviews": "Rəylər və Qiymətləndirmə",
+      "ethics_resources": "Resurslar və Etika Qaydaları",
       "applications": "Müraciətlər",
       "mentees": "Mentee-lər",
       "sessions": "Sessiyalar",
-      "schedule": "Təqvim",
       "messages": "Mesajlar",
       "services": "Mentor xidmətləri",
       "packages": "Qiymətlər / Paketlər",

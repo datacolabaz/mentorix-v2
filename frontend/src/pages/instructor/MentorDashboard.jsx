@@ -7,6 +7,8 @@ import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import KpiCard from '../../components/common/KpiCard'
 import { useToast } from '../../components/common/Toast'
+import BookingModal from '../../components/common/BookingModal'
+import RoadmapTracker from '../../components/common/RoadmapTracker'
 
 export default function MentorDashboard() {
   const { t } = useTranslation()
@@ -15,6 +17,8 @@ export default function MentorDashboard() {
   const { theme } = useUiStore()
   const toast = useToast()
   const isDark = theme === 'dark'
+
+  const [bookingOpen, setBookingOpen] = useState(false)
 
   const [services, setServices] = useState([
     {
@@ -111,12 +115,13 @@ export default function MentorDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <Link
-            to="/instructor/schedule"
+          <button
+            type="button"
+            onClick={() => setBookingOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all"
           >
-            <span>📅</span> Təqvimə bax
-          </Link>
+            <span>📅</span> Yeni sessiya təyin et
+          </button>
           <Link
             to="/instructor/teaching-groups"
             className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-token-border bg-token-surface hover:bg-token-surfaceHover text-token-text transition-all"
@@ -433,6 +438,16 @@ export default function MentorDashboard() {
           ))}
         </div>
       </Card>
+      {/* 6. Hədəflər və Yol Xəritəsi (Interactive Action Plan) */}
+      <RoadmapTracker />
+
+      {/* Booking Modal (3-Step Wizard) */}
+      <BookingModal
+        isOpen={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        mentorName={user?.full_name || 'Mentor'}
+        onBookSuccess={() => toast('Sessiya uğurla planlaşdırıldı!', 'success')}
+      />
     </div>
   )
 }

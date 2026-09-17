@@ -89,7 +89,11 @@
       "content": "КОНТЕНТ",
       "organization": "ОРГАНИЗАЦИЯ",
       "mentoring": "МЕНТОРСТВО",
-      "services": "УСЛУГИ"
+      "services": "УСЛУГИ",
+      "core_management": "УПРАВЛЕНИЕ И КОНТРОЛЬ",
+      "development": "РАЗВИТИЕ И ЦЕЛИ",
+      "programs": "ПРОГРАММЫ И ФОРМАТЫ",
+      "quality": "КАЧЕСТВО И РЕСУРСЫ"
     },
     "instructor": {
       "dashboard": "Дашборд",
@@ -112,11 +116,18 @@
       "settings": "Настройки"
     },
     "mentor": {
-      "dashboard": "Дашборд",
+      "dashboard": "Дашборд (Обзор)",
+      "discovery": "Найти Ментора / Менти",
+      "schedule": "Встречи и Расписание",
+      "connections": "Мои связи (Connections)",
+      "roadmap": "Цели и Дорожная карта",
+      "notes_tasks": "Заметки сессий и Задания",
+      "models": "Модели менторства",
+      "reviews": "Отзывы и Оценка",
+      "ethics_resources": "Ресурсы и Кодекс этики",
       "applications": "Заявки",
       "mentees": "Менти",
       "sessions": "Сессии",
-      "schedule": "Календарь",
       "messages": "Сообщения",
       "services": "Услуги ментора",
       "packages": "Цены / Пакеты",

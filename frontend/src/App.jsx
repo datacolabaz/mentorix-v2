@@ -61,6 +61,7 @@ import DigitalMentorHost from './mentor/DigitalMentorHost'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
 import MentorDashboard from './pages/instructor/MentorDashboard'
+import RoadmapTracker from './components/common/RoadmapTracker'
 import InstructorStudents from './pages/instructor/Students'
 import InstructorSchedule from './pages/instructor/Schedule'
 import InstructorExams from './pages/instructor/Exams'
@@ -381,6 +382,7 @@ export default function App() {
         <Route path="presentations" element={<InstructorPresentations />} />
         <Route path="presentations/:id" element={<InstructorPresentationViewer />} />
         <Route path="live/history" element={<InstructorLiveHistory />} />
+        <Route path="roadmap" element={<div className="p-4 sm:p-6 max-w-5xl mx-auto"><RoadmapTracker /></div>} />
         <Route path="university-programs" element={<InstructorUniversityPrograms />} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />

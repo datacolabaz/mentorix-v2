@@ -27,49 +27,43 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   notifications: { to: '/instructor/notifications', labelKey: 'nav.instructor.notifications', label: 'Bildirişlər', icon: 'notifications' },
   settings: { to: '/instructor/settings', labelKey: 'nav.instructor.settings', label: 'Tənzimləmələr', icon: 'settings' },
 
-  // Mentor Workspace spesifik linklər
-  mentor_dashboard: { to: '/instructor', labelKey: 'nav.mentor.dashboard', label: 'Dashboard', icon: 'dashboard', end: true },
-  mentor_applications: { to: '/instructor/inquiries', labelKey: 'nav.mentor.applications', label: 'Müraciətlər', icon: 'notifications', badgeKey: 'join_requests' },
-  mentor_mentees: { to: '/instructor/students', labelKey: 'nav.mentor.mentees', label: 'Mentee-lər', icon: 'students' },
-  mentor_sessions: { to: '/instructor/live/history', labelKey: 'nav.mentor.sessions', label: 'Sessiyalar', icon: 'live' },
-  mentor_schedule: { to: '/instructor/schedule', labelKey: 'nav.mentor.schedule', label: 'Təqvim', icon: 'schedule' },
-  mentor_messages: { to: '/instructor/notifications', labelKey: 'nav.mentor.messages', label: 'Mesajlar', icon: 'notifications' },
-  mentor_services: { to: '/instructor/teaching-groups', labelKey: 'nav.mentor.services', label: 'Mentor xidmətləri', icon: 'courses' },
-  mentor_packages: { to: '/instructor/settings', labelKey: 'nav.mentor.packages', label: 'Qiymətlər / Paketlər', icon: 'settings' },
-  mentor_earnings: { to: '/instructor/payments', labelKey: 'nav.mentor.earnings', label: 'Qazanc', icon: 'payments' },
+  // Mentor Workspace spesifik linklər (EMCC / Beynəlxalq Standart)
+  mentor_dashboard: { to: '/instructor', labelKey: 'nav.mentor.dashboard', label: 'Dashboard (İcmal)', icon: 'dashboard', end: true },
+  mentor_discovery: { to: '/mentorship', labelKey: 'nav.mentor.discovery', label: 'Mentor / Mentee Tap', icon: 'instructors' },
+  mentor_schedule: { to: '/instructor/schedule', labelKey: 'nav.mentor.schedule', label: 'Görüşlərim və Cədvəl', icon: 'schedule' },
+  mentor_connections: { to: '/instructor/students', labelKey: 'nav.mentor.connections', label: 'Əlaqələrim (My Connections)', icon: 'students' },
+  mentor_roadmap: { to: '/instructor/roadmap', labelKey: 'nav.mentor.roadmap', label: 'Hədəflər və Yol Xəritəsi', icon: 'tasks' },
+  mentor_notes_tasks: { to: '/instructor/tasks', labelKey: 'nav.mentor.notes_tasks', label: 'Sessiya Qeydləri və Tapşırıqlar', icon: 'tasks' },
+  mentor_models: { to: '/instructor/teaching-groups', labelKey: 'nav.mentor.models', label: 'Mentorluq Modelləri', icon: 'courses' },
+  mentor_reviews: { to: '/instructor/analytics', labelKey: 'nav.mentor.reviews', label: 'Rəylər və Qiymətləndirmə', icon: 'analytics' },
+  mentor_ethics_resources: { to: '/instructor/materials', labelKey: 'nav.mentor.ethics_resources', label: 'Resurslar və Etika Qaydaları', icon: 'materials' },
 }
 
 export function defaultMentorNavSections() {
   return [
     {
-      id: 'dashboard',
-      title: 'DASHBOARD',
+      id: 'core_management',
+      title: 'İDARƏETMƏ VƏ NƏZARƏT',
       enabled: true,
-      itemKeys: ['mentor_dashboard'],
+      itemKeys: ['mentor_dashboard', 'mentor_discovery', 'mentor_schedule', 'mentor_connections'],
     },
     {
-      id: 'mentoring',
-      title: 'MENTORLUQ',
+      id: 'development',
+      title: 'İNKİŞAF VƏ HƏDƏFLƏR',
       enabled: true,
-      itemKeys: [
-        'mentor_applications',
-        'mentor_mentees',
-        'mentor_sessions',
-        'mentor_schedule',
-        'mentor_messages',
-      ],
+      itemKeys: ['mentor_roadmap', 'mentor_notes_tasks'],
     },
     {
-      id: 'services',
-      title: 'XİDMƏTLƏR',
+      id: 'programs',
+      title: 'PROQRAMLAR VƏ FORMATLAR',
       enabled: true,
-      itemKeys: ['mentor_services', 'mentor_packages'],
+      itemKeys: ['mentor_models'],
     },
     {
-      id: 'analytics',
-      title: 'ANALİTİKA',
+      id: 'quality',
+      title: 'KEYFİYYƏT VƏ RESURSLAR',
       enabled: true,
-      itemKeys: ['analytics', 'mentor_earnings'],
+      itemKeys: ['mentor_reviews', 'mentor_ethics_resources'],
     },
   ]
 }

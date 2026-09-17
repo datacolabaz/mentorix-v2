@@ -89,7 +89,11 @@
       "content": "CONTENT",
       "organization": "ORGANIZATION",
       "mentoring": "MENTORING",
-      "services": "SERVICES"
+      "services": "SERVICES",
+      "core_management": "CORE MANAGEMENT",
+      "development": "DEVELOPMENT & GOALS",
+      "programs": "PROGRAMS & FORMATS",
+      "quality": "QUALITY & RESOURCES"
     },
     "instructor": {
       "dashboard": "Dashboard",
@@ -112,11 +116,18 @@
       "settings": "Settings"
     },
     "mentor": {
-      "dashboard": "Dashboard",
+      "dashboard": "Dashboard (Overview)",
+      "discovery": "Find Mentor / Mentee",
+      "schedule": "Bookings & Calendar",
+      "connections": "My Connections",
+      "roadmap": "Goals & Roadmap",
+      "notes_tasks": "Session Notes & Tasks",
+      "models": "Mentoring Models",
+      "reviews": "Feedback & Rating",
+      "ethics_resources": "Resources & Code of Ethics",
       "applications": "Applications",
       "mentees": "Mentees",
       "sessions": "Sessions",
-      "schedule": "Calendar",
       "messages": "Messages",
       "services": "Mentor Services",
       "packages": "Pricing / Packages",
