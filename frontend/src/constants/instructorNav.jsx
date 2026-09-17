@@ -28,34 +28,34 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   settings: { to: '/instructor/settings', labelKey: 'nav.instructor.settings', label: 'Tənzimləmələr', icon: 'settings' },
 
   // Mentor Workspace spesifik linklər (EMCC / Beynəlxalq Standart)
-  mentor_dashboard: { to: '/instructor', labelKey: 'nav.mentor.dashboard', label: 'Dashboard (İcmal)', icon: 'dashboard', end: true },
-  mentor_discovery: { to: '/mentorship?tab=mentees', labelKey: 'nav.mentor.discovery', label: 'Mentor / Mentee Tap', icon: 'instructors' },
-  mentor_schedule: { to: '/instructor/schedule', labelKey: 'nav.mentor.schedule', label: 'Görüşlərim və Cədvəl', icon: 'schedule' },
-  mentor_connections: { to: '/instructor/students', labelKey: 'nav.mentor.connections', label: 'Əlaqələrim (My Connections)', icon: 'students' },
-  mentor_roadmap: { to: '/instructor/roadmap', labelKey: 'nav.mentor.roadmap', label: 'Hədəflər və Yol Xəritəsi', icon: 'tasks' },
-  mentor_notes_tasks: { to: '/instructor/tasks', labelKey: 'nav.mentor.notes_tasks', label: 'Sessiya Qeydləri və Tapşırıqlar', icon: 'tasks' },
-  mentor_models: { to: '/instructor/teaching-groups', labelKey: 'nav.mentor.models', label: 'Mentorluq Modelləri', icon: 'courses' },
-  mentor_reviews: { to: '/instructor/analytics', labelKey: 'nav.mentor.reviews', label: 'Rəylər və Qiymətləndirmə', icon: 'analytics' },
-  mentor_ethics_resources: { to: '/instructor/materials', labelKey: 'nav.mentor.ethics_resources', label: 'Resurslar və Etika Qaydaları', icon: 'materials' },
+  mentor_dashboard: { to: '/instructor', labelKey: 'nav.mentor.dashboard', label: 'İcmal', icon: 'dashboard', end: true },
+  mentor_discovery: { to: '/mentorship?tab=mentees', labelKey: 'nav.mentor.discovery', label: 'Mentorları kəşf et', icon: 'instructors' },
+  mentor_schedule: { to: '/instructor/schedule', labelKey: 'nav.mentor.schedule', label: 'Görüşlər və cədvəl', icon: 'schedule' },
+  mentor_connections: { to: '/instructor/students', labelKey: 'nav.mentor.connections', label: 'Mentee-lərim', icon: 'students' },
+  mentor_roadmap: { to: '/instructor/roadmap', labelKey: 'nav.mentor.roadmap', label: 'Məqsədlər və yol xəritəsi', icon: 'tasks' },
+  mentor_notes_tasks: { to: '/instructor/tasks', labelKey: 'nav.mentor.notes_tasks', label: 'Sessiya qeydləri', icon: 'tasks' },
+  mentor_models: { to: '/instructor/teaching-groups', labelKey: 'nav.mentor.models', label: 'Modellər və paketlər', icon: 'courses' },
+  mentor_reviews: { to: '/instructor/analytics', labelKey: 'nav.mentor.reviews', label: 'Rəylər və nəticələr', icon: 'analytics' },
+  mentor_ethics_resources: { to: '/instructor/materials', labelKey: 'nav.mentor.ethics_resources', label: 'Resurslar və etika', icon: 'materials' },
 }
 
 export function defaultMentorNavSections() {
   return [
     {
       id: 'core_management',
-      title: 'İDARƏETMƏ VƏ NƏZARƏT',
+      title: 'ƏSAS İDARƏETMƏ',
       enabled: true,
       itemKeys: ['mentor_dashboard', 'mentor_discovery', 'mentor_schedule', 'mentor_connections'],
     },
     {
       id: 'development',
-      title: 'İNKİŞAF VƏ HƏDƏFLƏR',
+      title: 'MƏQSƏD VƏ İNKİŞAF',
       enabled: true,
       itemKeys: ['mentor_roadmap', 'mentor_notes_tasks'],
     },
     {
       id: 'programs',
-      title: 'PROQRAMLAR VƏ FORMATLAR',
+      title: 'TƏKLİFLƏR',
       enabled: true,
       itemKeys: ['mentor_models'],
     },
