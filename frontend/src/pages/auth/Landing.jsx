@@ -528,7 +528,7 @@ export default function Landing() {
                   <div className="text-xs font-bold text-slate-900">Kamran Əliyev</div>
                   <div className="text-[11px] text-slate-500">Data Analytics Mentee</div>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-semibold">Mentee</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">Mentee</span>
               </div>
             </div>
           </div>

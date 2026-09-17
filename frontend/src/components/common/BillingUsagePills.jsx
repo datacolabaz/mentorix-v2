@@ -102,22 +102,22 @@ function UsageRow({ kind, label, value, warn }) {
         ? 'bg-amber-50 text-amber-700 border-amber-200'
         : 'bg-slate-50 text-slate-600 border-slate-200'
   return (
-    <div className="flex min-w-0 items-start gap-2.5">
-      <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${tone}`}>
+    <div className="flex min-w-0 items-start gap-2">
+      <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg border ${tone}`}>
         <PlanIcon kind={kind} />
       </span>
       <div className="min-w-0">
-      <p className="text-xs font-semibold text-token-textMuted leading-snug">
-        {label}
-      </p>
-      <p
-        className={[
-          'text-base font-bold tabular-nums mt-0.5 leading-snug tracking-tight',
-          warn ? 'text-amber-700 dark:text-amber-200' : 'text-token-textMain',
-        ].join(' ')}
-      >
-        {value}
-      </p>
+        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-none">
+          {label}
+        </p>
+        <p
+          className={[
+            'text-xs font-semibold tabular-nums mt-0.5 leading-tight',
+            warn ? 'text-amber-700 dark:text-amber-200' : 'text-slate-800 dark:text-slate-200',
+          ].join(' ')}
+        >
+          {value}
+        </p>
       </div>
     </div>
   )
