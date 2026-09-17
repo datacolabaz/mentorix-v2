@@ -23,6 +23,7 @@ import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
+import { buildMentorNavSections } from '../constants/instructorNav'
 import InstructorAvatar from '../components/common/InstructorAvatar'
 import {
   localizeDiscoverProfileAlert,
@@ -84,6 +85,16 @@ export default function InstructorLayout() {
   const mainRef = useRef(null)
   const showMobileSidebar = navOpen && !sidebarHidden
   const { sections: navSections } = useInstructorNavSections()
+  const isActiveMentorWorkspace = (() => {
+    try {
+      const workspace = String(localStorage.getItem('mx_active_workspace') || '').toLowerCase()
+      if (workspace) return workspace === 'mentor'
+    } catch {
+      /* ignore storage failures */
+    }
+    return String(user?.persona || '').toLowerCase() === 'mentor'
+  })()
+  const renderedNavSections = isActiveMentorWorkspace ? buildMentorNavSections() : navSections
 
   const isMentorPersona = String(user?.persona || '').toLowerCase() === 'mentor'
   const instructorRoleLabel = isPartnerPersona(user)
@@ -491,7 +502,7 @@ export default function InstructorLayout() {
 
         <nav className="flex-1 p-4 overflow-y-auto min-h-0">
           <div className="space-y-4">
-            {navSections.map((section) => (
+            {renderedNavSections.map((section) => (
               <div key={section.id || section.title} className="space-y-2">
                 <div className="px-4 pt-2">
                   <div className={`text-xs tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
