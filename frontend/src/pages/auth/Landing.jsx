@@ -221,13 +221,13 @@ export default function Landing() {
           <div className="w-full min-w-0 space-y-4 flex flex-col items-center text-center lg:items-start lg:text-left lg:justify-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
               <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.9)]" />
-              Təhsildə Bütöv Rəqəmsal Ekosistem
+              🚀 AI Dəstəkli Bütöv Təhsil Ekosistemi
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.15] w-full max-w-xl az-text">
-              Təhsildə Yeni Era: Müəllim, Tələbə və Mentorlar Tək Ekosistemdə
+              Təhsildə Yeni Era: Müəllim, Tələbə və Mentorlar Vahid Platformada
             </h1>
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed w-full max-w-md lg:max-w-xl az-text">
-              AI dəstəkli imtahan yaradılması, avtomatik qiymətləndirmə, fərdi mentorluq və repetitor axtarışı — hamısı tək platformada.
+              AI ilə 1 dəqiqəyə imtahan yaradın, cavabları avtomatik qiymətləndirin, peşəkar mentorlardan 1-ə-1 rəhbərlik alın və ya fənninizə uyğun repetitor tapın — hamısı tək paneldə.
             </p>
             <div className="flex flex-col sm:flex-row w-full max-w-md lg:max-w-xl gap-3 pt-2">
               <button
@@ -235,17 +235,17 @@ export default function Landing() {
                 onClick={() => goRegister('hero_teacher')}
                 className="flex-1 inline-flex justify-center items-center text-center rounded-xl bg-primary px-4 py-3.5 min-h-[50px] text-sm font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95 transition-all"
               >
-                Müəllimlər üçün: 1 dəqiqəyə sınaq yarat
+                Müəllimlər üçün: Pulsuz Sınaq Yarat
               </button>
               <Link
                 to="/mentorship"
                 className="flex-1 inline-flex justify-center items-center text-center rounded-xl border border-slate-300 bg-white px-4 py-3.5 min-h-[50px] text-sm font-semibold text-slate-800 hover:bg-slate-50 shadow-sm transition-all"
               >
-                Tələbələr və Valideynlər: Mentor tap
+                Tələbələr üçün: Mentor və ya Müəllim Tap
               </Link>
             </div>
             <p className="text-xs text-slate-500">
-              ⚡ Kredit kartı tələb olunmur · 30 saniyəyə daxil olun
+              Kredit kartı tələb olunmur • Qeydiyyat 30 saniyə alır
             </p>
             {user ? null : <PublicGoogleSignIn className="w-full max-w-md lg:max-w-xl" />}
           </div>
@@ -257,27 +257,50 @@ export default function Landing() {
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">⚡ 1 dəqiqəyə</div>
-            <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">AI Sınaq Generatoru</div>
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">Mövzunu seçin, suallar saniyələr içində hazır olsun.</p>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">AI dəstəyi ilə sınaq suallarının hazırlanması</p>
           </div>
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-            <div className="text-2xl sm:text-3xl font-extrabold text-blue-600">📊 100%</div>
-            <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">Avtomatik Qiymətləndirmə</div>
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">İmtahan bitən kimi bal və zəif mövzu analitikası.</p>
+            <div className="text-2xl sm:text-3xl font-extrabold text-blue-600">📊 100% Avtomatik</div>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">Cavabların yoxlanılması, balların hesablanması və zəif mövzu analitikası</p>
           </div>
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-            <div className="text-2xl sm:text-3xl font-extrabold text-purple-600">🎯 0 Tətbiq</div>
-            <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">Məcburiyyəti Yoxdur</div>
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">Tək kliklə QR və ya linklə imtahana və dərsə giriş.</p>
+            <div className="text-2xl sm:text-3xl font-extrabold text-purple-600">📲 0 Proqram Tələbi</div>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">Tələbələr üçün tətbiq yükləmədən QR/Linklə tək kliklə giriş</p>
           </div>
           <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600">🎓 QR Kodlu</div>
-            <div className="text-xs sm:text-sm font-bold text-slate-800 mt-1">Rəsmi Sertifikatlar</div>
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 leading-relaxed">Beynəlxalq formatda onlayn doğrulanan sənədlər.</p>
+            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600">🎓 QR-Rəsmi</div>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1.5 leading-relaxed">İT, Data və Beynəlxalq imtahanlar üçün doğrulana bilən rəsmi sertifikatlar</p>
           </div>
         </section>
 
-        {/* SECTION 3: ROLLAR ÜZRƏ DƏYƏR TƏKLİFİ (TARGET AUDIENCE SEGMENTATION) */}
+                {/* SECTION 4: PROBLEM -> HƏLL BLOKU */}
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-9 space-y-6 shadow-sm">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+              Test yoxlamaqla saatlar itirməyin — Dərslərinizə fokuslanın
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="p-5 sm:p-6 rounded-2xl border border-rose-200 bg-rose-50/70 space-y-2">
+              <div className="flex items-center gap-2 text-rose-700 font-bold text-sm">
+                <span className="text-base">🔴</span> Problem
+              </div>
+              <p className="text-xs sm:text-sm text-rose-900 leading-relaxed font-medium">
+                "Gecə saatlarında test kağızlarını tək-tək yoxlamaqdan, balları hesablamaqdan və səhvləri analiz etməkdən yorulmusunuz?"
+              </p>
+            </div>
+            <div className="p-5 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 space-y-2">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
+                <span className="text-base">🟢</span> Həll
+              </div>
+              <p className="text-xs sm:text-sm text-emerald-950 leading-relaxed font-medium">
+                "Mentorix imtahan bitən kimi bütün cavabları saniyələr içində yoxlayır, balları hesablayır və tələbənin zəif olduğu mövzuları analitik şəkildə çıxarır. Siz sadəcə dərs keçməyə fokuslanırsınız."
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 5: HƏDƏF KÜTLƏ ÜZRƏ XÜSUSİYYƏTLƏR (SEGMENTATION) */}
         <section className="space-y-6">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs uppercase font-bold tracking-widest text-emerald-600">Tək Platforma · Üç Əsas Qüvvə</span>
@@ -293,8 +316,8 @@ export default function Landing() {
                   👨‍🏫
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Müəllim & Repetitor</span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">İmtahan yoxlamaqla saatlar itirməyin</h3>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Müəllim Paneli</span>
+                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Sual tapmaq və ya yazmaq üçün saatlarla vaxt xərcləməyin</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
                   <li className="flex items-start gap-2">
@@ -326,8 +349,8 @@ export default function Landing() {
                   🎓
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Tələbə & Valideyn</span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Rahat öyrənmə və düzgün seçim imkanı</h3>
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Tələbə Və Valideynlər</span>
+                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Mürəkkəb qeydiyyat və ya proqram yükləmək məcburiyyəti yoxdur</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
                   <li className="flex items-start gap-2">
@@ -360,7 +383,7 @@ export default function Landing() {
                 </div>
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-purple-700">Mentorluq Platforması</span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Mütəxəssislərdən 1-on-1 rəhbərlik alın</h3>
+                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Hədəflərinizə çatmaq üçün peşəkar mentorlardan 1-ə-1 rəhbərlik alın</h3>
                 </div>
                 <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
                   <li className="flex items-start gap-2">
@@ -396,7 +419,13 @@ export default function Landing() {
         </section>
 
         {/* SECTION 4: SERTİFİKATLI İMTAHANLAR VƏ XARİCDƏ TƏHSİL */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+        <section className="space-y-4">
+          <div className="text-center max-w-xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+              Gələcək Karyeranıza İndidən Yatırım Edin
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
             <div className="space-y-2">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Beynəlxalq Sınaqlar</span>
@@ -410,7 +439,7 @@ export default function Landing() {
                 to="/imtahanlar"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800"
               >
-                Sertifikatlı sınaqlara bax →
+                Pulsuz İmtahan Tap →
               </Link>
             </div>
           </div>
@@ -428,11 +457,12 @@ export default function Landing() {
                 to="/universities"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800"
               >
-                Universitetləri axtar →
+                Universitet Proqramlarını Axtar →
               </Link>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* SECTION 5: NECƏ İŞLƏYİR? (HOW IT WORKS - 4 SADƏ ADDIM) */}
         <section id="mx-steps" className="space-y-6 scroll-mt-24">
@@ -443,17 +473,17 @@ export default function Landing() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-bold">1</div>
+              <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">01</div>
               <div className="text-base font-bold text-slate-900">Pulsuz hesab açın</div>
               <p className="text-xs text-slate-600 leading-relaxed">30 saniyəyə qeydiyyatdan keçin və ya Google ilə dərhal daxil olun.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-bold">2</div>
+              <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">02</div>
               <div className="text-base font-bold text-slate-900">Sınaq və ya Mentor seçin</div>
               <p className="text-xs text-slate-600 leading-relaxed">AI ilə avtomatik test yaradın və ya məqsədinizə uyğun mentor tapın.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-bold">3</div>
+              <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">03</div>
               <div className="text-base font-bold text-slate-900">Paylaşın və ya Qoşulun</div>
               <p className="text-xs text-slate-600 leading-relaxed">Link və ya QR kodla tələbələrinizi dəvət edin, 1-on-1 görüş təyin edin.</p>
             </div>
@@ -585,9 +615,9 @@ export default function Landing() {
         <section id="mx-cta" className="rounded-3xl border border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-100/60 p-7 sm:p-10 shadow-sm scroll-mt-8 text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="space-y-2 max-w-xl">
             <span className="text-xs uppercase font-bold tracking-widest text-emerald-800">Dərhal Başlayın</span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Təhsil prosesinizi bu gün rəqəmsallaşdırın</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Təhsil Prosesinizi Bu Gün Rəqəmsallaşdırın</h2>
             <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-              Kredit kartı tələb olunmur. 30 saniyəyə ilk sınağınızı yaradın və ya mentorluğa başlayın.
+              Müəllimlər, tələbələr və mentorlar üçün vahid ekosistem. İndi başlayın və ilk sınağınızı 1 dəqiqəyə yaradın.
             </p>
           </div>
           <div className="shrink-0 flex flex-col sm:flex-row gap-3">
