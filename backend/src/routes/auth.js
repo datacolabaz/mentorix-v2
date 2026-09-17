@@ -7,6 +7,7 @@ const {
   selectOnboardingRole,
   selectOnboardingPersona,
   updatePersona,
+  switchWorkspace,
   signup,
   loginWithEmail,
   resendVerificationEmail,
