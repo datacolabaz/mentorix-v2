@@ -18,11 +18,11 @@ import {
 } from '../../constants/personas'
 
 const inputClass =
-  'w-full bg-surface-1 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+  'w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-slate-900 text-sm outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all'
 
 function FieldLabel({ htmlFor, children }) {
   return (
-    <label htmlFor={htmlFor} className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+    <label htmlFor={htmlFor} className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
       {children}
     </label>
   )
@@ -312,10 +312,10 @@ export default function PersonaOnboarding() {
           </div>
         </header>
         <div className="flex items-center justify-center px-0 pb-8">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#10141b] p-6 text-center">
-            <Brand size="md" tone="dark" centered />
-            <h1 className="mt-5 text-white font-display font-bold text-xl">{t('onboarding.unauthorizedTitle')}</h1>
-            <p className="mt-2 text-sm text-gray-400">{t('onboarding.unauthorizedBody')}</p>
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-lg">
+            <Brand size="md" tone="light" centered />
+            <h1 className="mt-5 text-slate-900 font-display font-bold text-xl">{t('onboarding.unauthorizedTitle')}</h1>
+            <p className="mt-2 text-sm text-slate-600">{t('onboarding.unauthorizedBody')}</p>
             <Button className="w-full justify-center mt-5" onClick={() => navigate('/login')}>
               {t('auth.login')}
             </Button>
@@ -391,39 +391,39 @@ export default function PersonaOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07090c] px-4 pb-8 sm:pb-12">
+    <div className="min-h-screen bg-[#f4f6fb] text-slate-800 px-4 pb-8 sm:pb-12">
       <header className="pt-3 sm:pt-5 pb-4">
         <div className="mx-auto w-full max-w-3xl flex items-center justify-between gap-3">
           <Link
             to="/login"
             onClick={() => logout()}
-            className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-gray-400 hover:text-white transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap"
           >
-            {t('auth.backHome')}
+            ← {t('auth.backHome')}
           </Link>
         </div>
       </header>
       <div className="mx-auto w-full max-w-3xl">
         <div className="flex justify-center mb-6 sm:mb-8">
-          <Brand size="login" tone="dark" />
+          <Brand size="login" tone="light" />
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-[#10141b] p-5 sm:p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-9 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
           {step === 'pick' ? (
             <>
               <div className="text-center max-w-xl mx-auto">
-                <h1 className="text-white font-display font-bold text-2xl sm:text-[1.75rem] leading-tight">
+                <h1 className="text-slate-900 font-display font-bold text-2xl sm:text-[1.75rem] leading-tight">
                   {t('onboarding.title')}
                 </h1>
-                <p className="mt-2 text-sm text-gray-400 leading-relaxed">{t('onboarding.subtitle')}</p>
+                <p className="mt-2.5 text-sm text-slate-600 leading-relaxed">{t('onboarding.subtitle')}</p>
                 {user?.email ? (
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs font-medium text-slate-400">
                     {t('onboarding.forAccount', { email: user.email })}
                   </p>
                 ) : null}
               </div>
 
-              <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {pickerIds.map((id) => {
                   const meta = PERSONA_UI[id]
                   const selected = picked === id
@@ -440,29 +440,29 @@ export default function PersonaOnboarding() {
                         togglePersona(id)
                       }}
                       className={[
-                        'text-left rounded-2xl border p-4 transition-all duration-200 min-h-[112px]',
-                        'hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/[0.06]',
+                        'text-left rounded-2xl border p-5 transition-all duration-200 min-h-[120px] flex flex-col justify-between',
+                        'hover:-translate-y-0.5 hover:border-emerald-500/50 hover:bg-emerald-50/60 shadow-sm',
                         selected
-                          ? 'border-primary bg-primary/10 shadow-[0_0_0_1px_rgba(34,224,136,0.35)]'
-                          : 'border-white/10 bg-white/[0.03]',
+                          ? 'border-emerald-500 bg-emerald-50/90 ring-2 ring-emerald-500/30'
+                          : 'border-slate-200 bg-white hover:shadow-md',
                       ].join(' ')}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-3.5">
                         <span
                           className={[
                             'mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border',
                             selected
-                              ? 'bg-primary/20 border-primary/40 text-primary'
-                              : 'bg-white/5 border-white/10 text-gray-300',
+                              ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+                              : 'bg-slate-50 border-slate-200 text-slate-600',
                           ].join(' ')}
                         >
                           <NavIcon name={meta.icon} className="w-5 h-5" />
                         </span>
                         <div className="min-w-0">
-                          <div className={`font-semibold ${selected ? 'text-white' : 'text-gray-100'}`}>
+                          <div className={`font-semibold text-base ${selected ? 'text-emerald-950' : 'text-slate-900'}`}>
                             {t(meta.titleKey)}
                           </div>
-                          <div className="text-xs text-gray-400 mt-1 leading-relaxed">{t(meta.descKey)}</div>
+                          <div className="text-xs text-slate-600 mt-1.5 leading-relaxed">{t(meta.descKey)}</div>
                         </div>
                       </div>
                     </button>
@@ -477,14 +477,14 @@ export default function PersonaOnboarding() {
               ) : null}
 
               <Button
-                className="w-full justify-center mt-6"
+                className="w-full justify-center mt-7 !py-3.5 !text-base !font-semibold shadow-sm"
                 loading={busy}
                 disabled={!fromJoinInvite && !picked}
                 onClick={() => void continueFromPick()}
               >
                 {t('onboarding.continue')}
               </Button>
-              <p className="mt-3 text-center text-xs text-gray-500 leading-relaxed">
+              <p className="mt-3 text-center text-xs text-slate-500 leading-relaxed">
                 {picked === PERSONAS.PARTNER
                   ? t('onboarding.continueHintPartner', {
                       defaultValue: 'Davam et — Partner kabinetinə keçəcəksiniz.',
@@ -498,31 +498,31 @@ export default function PersonaOnboarding() {
             <>
               <button
                 type="button"
-                className="text-xs font-semibold text-gray-400 hover:text-white mb-4"
+                className="text-xs font-semibold text-slate-600 hover:text-slate-900 mb-4 transition-colors"
                 onClick={() => setStep('pick')}
               >
                 ← {t('common.back')}
               </button>
               <div className="flex items-start gap-3 mb-5">
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/20 border border-primary/40 text-primary shrink-0">
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-100 border border-emerald-300 text-emerald-700 shrink-0">
                   <NavIcon name={selectedUi?.icon} className="w-5 h-5" />
                 </span>
                 <div>
-                  <h2 className="text-white font-display font-bold text-xl">{t(selectedUi?.titleKey)}</h2>
-                  <p className="text-sm text-gray-400 mt-1">{t('onboarding.detailsHint')}</p>
+                  <h2 className="text-slate-900 font-display font-bold text-xl">{t(selectedUi?.titleKey)}</h2>
+                  <p className="text-sm text-slate-600 mt-1">{t('onboarding.detailsHint')}</p>
                 </div>
               </div>
 
               <PersonaDetailsForm persona={picked} profile={profile} setProfile={setProfile} t={t} />
 
               {error ? (
-                <p className="mt-4 text-sm text-red-300" role="alert">
+                <p className="mt-4 text-sm text-rose-600" role="alert">
                   {error}
                 </p>
               ) : null}
 
               <Button
-                className="w-full justify-center mt-6"
+                className="w-full justify-center mt-6 !py-3.5 !text-base !font-semibold shadow-sm"
                 loading={busy}
                 disabled={!canFinish}
                 onClick={() => void submitPicked()}

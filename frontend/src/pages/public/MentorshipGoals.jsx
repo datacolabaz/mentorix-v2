@@ -74,15 +74,56 @@ export default function MentorshipGoals() {
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-300">{t('mentorship.goalsPage.previewEyebrow')}</p>
             <h2 className="mt-3 text-xl font-bold">{t('mentorship.goalsPage.previewTitle')}</h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-300">{summary || t('mentorship.goalsPage.previewEmpty')}</p>
+
+            <div className="mt-5 space-y-2 text-xs text-slate-300">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">{t('mentorship.goalsPage.goalLabel')}:</span>
+                <span className={goal ? 'font-semibold text-emerald-300' : 'text-slate-500'}>
+                  {goal ? t(`mentorship.goals.${goal}.title`) : 'Seçilməyib'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">{t('mentorship.goalsPage.levelLabel')}:</span>
+                <span className={level ? 'font-semibold text-emerald-300' : 'text-slate-500'}>
+                  {level ? t(`mentorship.goalsPage.levels.${level}`) : 'Seçilməyib'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">{t('mentorship.goalsPage.availabilityLabel')}:</span>
+                <span className={availability ? 'font-semibold text-emerald-300' : 'text-amber-300/90 font-medium'}>
+                  {availability ? t(`mentorship.goalsPage.availability.${availability}`) : 'Seçilməyib'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">{t('mentorship.goalsPage.budgetLabel')}:</span>
+                <span className={budget ? 'font-semibold text-emerald-300' : 'text-slate-500'}>
+                  {budget ? t(`mentorship.goalsPage.budgets.${budget}`) : 'Seçilməyib'}
+                </span>
+              </div>
+            </div>
+
             <div className="mt-6 border-t border-white/10 pt-5">
               <Link
-                to={ready ? '/login?next=%2Fmentorship%2Fgoals' : '/login'}
-                className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-bold transition-colors ${
-                  ready ? 'bg-emerald-400 text-slate-950 hover:bg-emerald-300' : 'bg-white/10 text-white/60'
+                to={ready ? '/login?next=%2Fmentorship%2Fgoals' : '#'}
+                onClick={(e) => {
+                  if (!ready) {
+                    e.preventDefault()
+                  }
+                }}
+                aria-disabled={!ready}
+                className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-bold transition-all ${
+                  ready
+                    ? 'bg-emerald-400 text-slate-950 hover:bg-emerald-300 shadow-md shadow-emerald-500/20 cursor-pointer'
+                    : 'bg-white/10 text-white/40 cursor-not-allowed'
                 }`}
               >
                 {t('mentorship.goalsPage.continue')}
               </Link>
+              {!ready ? (
+                <p className="mt-2 text-center text-xs text-amber-300/80">
+                  Davam etmək üçün bütün 4 addımı seçin
+                </p>
+              ) : null}
               <p className="mt-3 text-xs leading-relaxed text-slate-400">{t('mentorship.goalsPage.privacyNote')}</p>
             </div>
           </aside>
