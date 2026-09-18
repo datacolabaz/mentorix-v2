@@ -44,6 +44,21 @@ Mentee dashboard artıq demo məlumat yox, mentorun yaratdığı real məqsədl�
 
 Keyfiyyət dövrəsi üçün tamamlanmış sessiyadan sonra mentor dördölçülü refleksiya sorğusu göndərə bilir: məqsəd aydınlığı, sessiya faydası, psixoloji təhlükəsizlik və irəliləyişə inam. Mentee cavabı mentor nəticə panelində marketinq reytinqi kimi deyil, prosesin təkmilləşdirilməsi siqnalı kimi göstərilir.
 
+## AI dəstəkli sessiya sənədləşdirilməsi
+
+Mentor xam sessiya qeydini daxil etdikdən sonra sistem mövcud Anthropic inteqrasiyasının sürətli, qənaətli modelindən istifadə edərək strukturlaşdırılmış qaralama yaradır. Qaralama mentee ilə paylaşılacaq xülasə, qərarlar, risk və maneələr, həmçinin məsul tərəf və tövsiyə olunan son tarixlə action item-lərdən ibarətdir.
+
+Bu axın **human-in-the-loop** prinsipinə əsaslanır. AI nəticəsi avtomatik saxlanmır və mentee ilə avtomatik paylaşılmır. Mentor xülasəni redaktə edir, action item-ləri seçir, məsul şəxsi və tarixi dəyişir, sonra vahid təsdiq əməliyyatı ilə sessiyanı və seçilmiş tapşırıqları atomik şəkildə saxlayır.
+
+Məxfilik və təhlükəsizlik tədbirləri aşağıdakılardır:
+
+- Sessiya qeydləri yalnız server tərəfdən AI provayderinə göndərilir və generation audit qeydində xam mətn saxlanmır.
+- Prompt daxilində istifadəçi qeydləri etibarsız məlumat kimi işarələnir; modelə qeyddəki göstərişləri icra etməmək tapşırılır.
+- Modelin cavabı sərt tətbiq səviyyəli sxemlə yoxlanır, element sayı və mətn uzunluğu məhdudlaşdırılır.
+- Şəxsi mentor qeydləri mentee workspace API-sindən çıxarılır.
+- AI çağırışı mövcud saatlıq rate limit və aylıq AI generasiya krediti ilə qorunur.
+- Provayder xətaları və hesab məlumatları istifadəçiyə xam formada göstərilmir.
+
 ## References
 
 [1]: https://helphub.mentorloop.com/hc/en-us/articles/4929793709199-Setting-SMART-Goals "Setting SMART Goals"

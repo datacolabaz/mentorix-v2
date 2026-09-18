@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import useMentorWorkspace from '../../../hooks/useMentorWorkspace'
 import { useToast } from '../../../components/common/Toast'
 import { EmptyState, Field, formatDate, inputClass, MentorCard, MentorIcon, MentorModal, MentorPage, MentorPageHeader, PrimaryButton, SecondaryButton, SectionTitle, StatusPill, menteeName } from '../../../components/mentor/MentorWorkspaceUI'
@@ -28,7 +29,7 @@ export default function MentorNotes() {
   }
 
   return <MentorPage>
-    <MentorPageHeader eyebrow="İcra və davamlılıq" title="Sessiya qeydləri və öhdəliklər" description="Müzakirəni unudulan mətndən ölçülə bilən növbəti addıma çevirin. Şəxsi mentor qeydləri və mentee ilə paylaşılan xülasə ayrı saxlanılır." action={<PrimaryButton onClick={() => setOpen(true)}><MentorIcon name="plus" size={15} /> Növbəti addım</PrimaryButton>} />
+    <MentorPageHeader eyebrow="İcra və davamlılıq" title="Sessiya qeydləri və öhdəliklər" description="Müzakirəni unudulan mətndən ölçülə bilən növbəti addıma çevirin. Şəxsi mentor qeydləri və mentee ilə paylaşılan xülasə ayrı saxlanılır." secondary={<Link to="/instructor/schedule" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-extrabold text-[#087f70] hover:bg-emerald-100"><MentorIcon name="star" size={15} /> AI xülasə yarat</Link>} action={<PrimaryButton onClick={() => setOpen(true)}><MentorIcon name="plus" size={15} /> Növbəti addım</PrimaryButton>} />
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><MentorCard className="p-4"><p className="text-xs text-slate-500">Açıq öhdəlik</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{loading ? '—' : openActions.length}</p></MentorCard><MentorCard className="p-4"><p className="text-xs text-slate-500">Tamamlanan</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{completedActions.length}</p></MentorCard><MentorCard className="p-4"><p className="text-xs text-slate-500">Qeydli sessiya</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{sessionNotes.length}</p></MentorCard><MentorCard className="p-4"><p className="text-xs text-slate-500">Tamamlama faizi</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{data.actions.length ? Math.round(completedActions.length / data.actions.length * 100) : 0}%</p></MentorCard></div>
 
     <div className="flex gap-1 rounded-xl bg-slate-100 p-1 sm:w-fit"><button type="button" onClick={() => setTab('actions')} className={`rounded-lg px-4 py-2 text-xs font-extrabold ${tab === 'actions' ? 'bg-white text-[#087f70] shadow-sm' : 'text-slate-500'}`}>Öhdəliklər</button><button type="button" onClick={() => setTab('notes')} className={`rounded-lg px-4 py-2 text-xs font-extrabold ${tab === 'notes' ? 'bg-white text-[#087f70] shadow-sm' : 'text-slate-500'}`}>Sessiya qeydləri</button></div>

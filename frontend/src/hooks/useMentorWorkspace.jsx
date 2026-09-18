@@ -83,6 +83,8 @@ export function MentorWorkspaceProvider({ children }) {
     updateMilestone: (goalId, id, payload) => mutate(() => api.patch(`/mentor/goals/${encodeURIComponent(goalId)}/milestones/${encodeURIComponent(id)}`, payload)),
     createSession: (payload) => mutate(() => api.post('/mentor/sessions', payload)),
     updateSession: (id, payload) => mutate(() => api.patch(`/mentor/sessions/${encodeURIComponent(id)}`, payload)),
+    analyzeSession: (id, payload) => api.post(`/mentor/sessions/${encodeURIComponent(id)}/ai-summary`, payload),
+    completeSession: (id, payload) => mutate(() => api.post(`/mentor/sessions/${encodeURIComponent(id)}/complete`, payload)),
     createAction: (payload) => mutate(() => api.post('/mentor/actions', payload)),
     updateAction: (id, payload) => mutate(() => api.patch(`/mentor/actions/${encodeURIComponent(id)}`, payload)),
     createService: (payload) => mutate(() => api.post('/mentor/services', payload)),

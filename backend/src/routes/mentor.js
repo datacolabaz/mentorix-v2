@@ -2,6 +2,8 @@ const express = require('express');
 const { authenticate, authorize } = require('../middleware/auth');
 const { getOnboarding, patchOnboarding, postAsk } = require('../controllers/mentorController');
 const workspace = require('../controllers/mentorWorkspaceController');
+const sessionAi = require('../controllers/mentorSessionAiController');
+const { generationRateLimit } = require('../middleware/generationRateLimit');
 
 const router = express.Router();
 
@@ -21,6 +23,8 @@ router.post('/goals/:id/milestones', instructorOnly, workspace.createMilestone);
 router.patch('/goals/:id/milestones/:milestoneId', instructorOnly, workspace.updateMilestone);
 router.post('/sessions', instructorOnly, workspace.createSession);
 router.patch('/sessions/:id', instructorOnly, workspace.updateSession);
+router.post('/sessions/:id/ai-summary', instructorOnly, generationRateLimit, sessionAi.generateSessionDraft);
+router.post('/sessions/:id/complete', instructorOnly, sessionAi.completeSessionWithDraft);
 router.post('/actions', instructorOnly, workspace.createAction);
 router.patch('/actions/:id', instructorOnly, workspace.updateAction);
 router.post('/services', instructorOnly, workspace.createService);
