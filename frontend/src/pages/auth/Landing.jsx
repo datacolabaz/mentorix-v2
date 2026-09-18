@@ -87,7 +87,6 @@ export default function Landing() {
   const ctaBand = useLandingCtaBand(marketing, t, i18n)
 
   const showMarketplace = isMarketingSectionVisible(marketing.marketplace)
-  const showUniversities = isMarketingSectionVisible(marketing.universities)
 
   const goRegister = (surface) => {
     trackEvent('mx_landing_cta_primary', { surface, event_type: 'register_click' })
@@ -225,7 +224,7 @@ export default function Landing() {
               🚀 AI Dəstəkli Bütöv Təhsil Ekosistemi
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.15] w-full max-w-xl az-text">
-              Təhsildə Yeni Era: Müəllim, Tələbə və Mentorlar Vahid Platformada
+              Öyrən, Öyrət, Mentor Ol — Hamısı Bir Platformada.
             </h1>
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed w-full max-w-md lg:max-w-xl az-text">
               AI ilə 1 dəqiqəyə imtahan yaradın, cavabları avtomatik qiymətləndirin, peşəkar mentorlardan 1-ə-1 rəhbərlik alın və ya fənninizə uyğun repetitor tapın — hamısı tək paneldə.
@@ -419,51 +418,26 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* SECTION 4: SERTİFİKATLI İMTAHANLAR VƏ XARİCDƏ TƏHSİL */}
+        {/* SECTION 4: SERTİFİKATLI İMTAHANLAR */}
         <section className="space-y-4">
-          <div className="text-center max-w-xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              Gələcək Karyeranıza İndidən Yatırım Edin
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-            <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Beynəlxalq Sınaqlar</span>
-              <h3 className="text-xl font-bold text-slate-900">Sertifikatlı İmtahanlar</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                İT, Data Analytics, Cloud və xarici dil imtahanlarına hazırlıq; hər tamamlanmış imtahan üçün unikal QR kodla doğrulanan rəsmi sertifikat təqdim olunur.
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-9 space-y-4 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Beynəlxalq Standartlı Sınaqlar</span>
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900">Sertifikatlı İmtahanlar və Qiymətləndirmə</h3>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                İT, Data Analytics, Cloud & DevOps və xarici dil imtahanlarına hazırlıq; hər tamamlanmış imtahan üçün unikal QR kodla doğrulanan rəsmi sertifikat təqdim olunur.
               </p>
             </div>
-            <div className="pt-2">
+            <div className="shrink-0">
               <Link
                 to="/imtahanlar"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700"
+                className="inline-flex items-center justify-center px-5 py-3.5 rounded-xl text-xs sm:text-sm font-bold bg-primary hover:brightness-95 text-[#041018] shadow-sm transition-all"
               >
-                Pulsuz İmtahan Tap →
+                Sınaq İmtahanlarına Bax →
               </Link>
             </div>
           </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-            <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Xaricdə Təhsil & Təqaüd</span>
-              <h3 className="text-xl font-bold text-slate-900">Universitet və Proqram Axtarışı</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Avropa, ABŞ və Asiya universitetlərində bakalavr, magistr və doktorantura proqramlarını ölkə, illik xərc, təqaüd və qəbul vaxtına görə dərhal axtarın.
-              </p>
-            </div>
-            <div className="pt-2">
-              <Link
-                to="/universities"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800"
-              >
-                Universitet Proqramlarını Axtar →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
 
         {/* SECTION 5: NECƏ İŞLƏYİR? (HOW IT WORKS - 4 SADƏ ADDIM) */}
         <section id="mx-steps" className="space-y-6 scroll-mt-24">
@@ -558,27 +532,7 @@ export default function Landing() {
           </section>
         ) : null}
 
-        {showUniversities ? (
-          <section
-            id="mx-universities"
-            className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-sm motion-safe:transition motion-safe:duration-300 motion-safe:hover:-translate-y-1 hover:border-slate-300"
-          >
-            <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
-              {t('landing.universities.badge')}
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t('landing.universities.title')}</h2>
-            <p className="text-base text-slate-600 leading-relaxed max-w-2xl">{t('landing.universities.desc')}</p>
-            <Link
-              to="/universities"
-              onClick={() =>
-                trackEvent('mx_landing_universities_cta', { surface: 'universities_section', action: 'open_search' })
-              }
-              className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl border border-slate-200 px-5 py-3.5 min-h-[48px] text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
-            >
-              {t('landing.universities.cta')}
-            </Link>
-          </section>
-        ) : null}
+
 
         <section id="mx-pricing-teaser" className="scroll-mt-24">
           <p className="text-base text-slate-600">

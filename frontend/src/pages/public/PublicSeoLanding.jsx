@@ -166,8 +166,11 @@ export default function PublicSeoLanding() {
         {landing.showPricingPlans ? (
           <section className="space-y-8">
             {showPricingAudience ? <PricingAudienceExplainer variant="faq" /> : null}
-            {isPricingPage ? <PublicPricingAudienceGroups plans={plans} /> : null}
-            <PublicPricingCompare plans={plans} hideIntro={isPricingPage} tableOnly={isPricingPage} />
+            {isPricingPage ? (
+              <PublicPricingAudienceGroups plans={plans} />
+            ) : (
+              <PublicPricingCompare plans={plans} hideIntro={false} tableOnly={false} />
+            )}
           </section>
         ) : null}
 
