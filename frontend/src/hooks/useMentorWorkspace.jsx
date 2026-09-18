@@ -38,6 +38,7 @@ const EMPTY = {
   services: [],
   resources: [],
   agreements: [],
+  feedback: [],
   mentees: [],
 }
 
@@ -89,6 +90,7 @@ export function MentorWorkspaceProvider({ children }) {
     createResource: (payload) => mutate(() => api.post('/mentor/resources', payload)),
     deleteResource: (id) => mutate(() => api.delete(`/mentor/resources/${encodeURIComponent(id)}`)),
     saveAgreement: (payload) => mutate(() => api.put('/mentor/agreements', payload)),
+    requestFeedback: (payload) => mutate(() => api.post('/mentor/feedback-requests', payload)),
   }), [mutate])
 
   const value = useMemo(() => ({ active, data, loading, error, refresh, ...actions }), [active, data, loading, error, refresh, actions])

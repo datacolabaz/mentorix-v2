@@ -36,6 +36,14 @@ Yeni backend modeli `mentorship_goals`, `mentorship_milestones`, `mentorship_ses
 
 Frontend-də `MentorWorkspaceProvider` bütün mentor səhifələrinə eyni məlumat vəziyyətini verir. `/instructor` route-ları aktiv workspace `mentor` olduqda mentor səhifələrini, `teacher` olduqda mövcud müəllim səhifələrini göstərir. Beləliklə Single Identity və workspace switching qorunur.
 
+## İkinci iterasiya: bağlı iş axınları
+
+İkinci iterasiyada məqsəd, sessiya və öhdəliklər arasındakı əlaqə gücləndirilib. Yol xəritəsində mərhələ tamamlandıqda məqsəd tərəqqisi avtomatik hesablanır; məqsədlər axtarıla, statusa görə süzülə və redaktə edilə bilir. Sessiyalar konkret məqsədə bağlanır, vaxt və gündəlik sonradan dəyişdirilə bilir, sessiya sonunda yaradılan öhdəlik isə həmin məqsəd və sessiya ilə birlikdə saxlanılır.
+
+Mentee dashboard artıq demo məlumat yox, mentorun yaratdığı real məqsədləri, paylaşılan sessiya xülasələrini, öhdəlikləri və resursları göstərir. Şəxsi mentor qeydləri backend səviyyəsində mentee cavabından çıxarılır.
+
+Keyfiyyət dövrəsi üçün tamamlanmış sessiyadan sonra mentor dördölçülü refleksiya sorğusu göndərə bilir: məqsəd aydınlığı, sessiya faydası, psixoloji təhlükəsizlik və irəliləyişə inam. Mentee cavabı mentor nəticə panelində marketinq reytinqi kimi deyil, prosesin təkmilləşdirilməsi siqnalı kimi göstərilir.
+
 ## References
 
 [1]: https://helphub.mentorloop.com/hc/en-us/articles/4929793709199-Setting-SMART-Goals "Setting SMART Goals"

@@ -11,6 +11,8 @@ router.use(authorize('instructor', 'student', 'admin'));
 router.get('/onboarding', getOnboarding);
 router.patch('/onboarding', patchOnboarding);
 router.post('/ask', postAsk);
+router.get('/mentee-workspace', authorize('student'), workspace.getMenteeWorkspace);
+router.post('/feedback-requests/:id/respond', authorize('student'), workspace.respondToFeedback);
 const instructorOnly = authorize('instructor');
 router.get('/workspace', instructorOnly, workspace.getWorkspace);
 router.post('/goals', instructorOnly, workspace.createGoal);
@@ -27,5 +29,6 @@ router.post('/resources', instructorOnly, workspace.createResource);
 router.delete('/resources/:id', instructorOnly, workspace.deleteResource);
 router.put('/agreements', instructorOnly, workspace.upsertAgreement);
 router.patch('/inquiries/:id/status', instructorOnly, workspace.updateInquiryStatus);
+router.post('/feedback-requests', instructorOnly, workspace.createFeedbackRequest);
 
 module.exports = router;

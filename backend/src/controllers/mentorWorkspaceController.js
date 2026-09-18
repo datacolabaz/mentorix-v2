@@ -52,7 +52,7 @@ async function hasOwnedReference(table, mentorId, id) {
 async function getWorkspace(req, res, next) {
   try {
     const mentorId = req.user.id;
-    const [goals, milestones, sessions, actions, services, resources, agreements] = await Promise.all([
+    const [goals, milestones, sessions, actions, services, resources, agreements, feedback] = await Promise.all([
       db.query(`SELECT * FROM mentorship_goals WHERE mentor_id = $1 ORDER BY status = 'active' DESC, updated_at DESC`, [mentorId]),
       db.query(`SELECT m.* FROM mentorship_milestones m JOIN mentorship_goals g ON g.id = m.goal_id WHERE g.mentor_id = $1 ORDER BY m.sort_order, m.created_at`, [mentorId]),
       db.query(`SELECT * FROM mentorship_sessions WHERE mentor_id = $1 ORDER BY scheduled_at DESC NULLS LAST, created_at DESC`, [mentorId]),
@@ -60,6 +60,7 @@ async function getWorkspace(req, res, next) {
       db.query(`SELECT * FROM mentorship_services WHERE mentor_id = $1 ORDER BY active DESC, updated_at DESC`, [mentorId]),
       db.query(`SELECT * FROM mentorship_resources WHERE mentor_id = $1 ORDER BY created_at DESC`, [mentorId]),
       db.query(`SELECT * FROM mentorship_agreements WHERE mentor_id = $1 ORDER BY updated_at DESC`, [mentorId]),
+      db.query(`SELECT * FROM mentorship_feedback_requests WHERE mentor_id = $1 ORDER BY requested_at DESC`, [mentorId]),
     ]);
     const milestoneByGoal = milestones.rows.reduce((map, row) => {
       (map[row.goal_id] ||= []).push(row);
@@ -72,6 +73,7 @@ async function getWorkspace(req, res, next) {
       services: services.rows,
       resources: resources.rows,
       agreements: agreements.rows,
+      feedback: feedback.rows,
     });
   } catch (err) {
     return next(err);
@@ -141,14 +143,18 @@ async function createSession(req, res, next) {
     const title = ensureTitle(req.body?.title, res, 'Sessiyanın adını yazın');
     if (!title) return;
     const menteeId = uuid(req.body?.mentee_id);
+    const goalId = uuid(req.body?.goal_id);
     if (!(await hasMenteeAccess(req.user.id, menteeId))) {
       return res.status(403).json({ success: false, message: 'Bu mentee ilə aktiv əlaqəniz yoxdur' });
     }
+    if (!(await hasOwnedReference('mentorship_goals', req.user.id, goalId))) {
+      return res.status(403).json({ success: false, message: 'Məqsəd sizə aid deyil' });
+    }
     const agenda = Array.isArray(req.body?.agenda) ? req.body.agenda.map((x) => text(x, 240)).filter(Boolean).slice(0, 12) : [];
     const { rows } = await db.query(
-      `INSERT INTO mentorship_sessions (mentor_id, mentee_id, title, scheduled_at, duration_minutes, format, status, agenda, private_notes, shared_summary, check_in)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11) RETURNING *`,
-      [req.user.id, menteeId, title, req.body?.scheduled_at || null, number(req.body?.duration_minutes, 15, 480, 60), enumValue(req.body?.format, ['online', 'in_person', 'phone'], 'online'), enumValue(req.body?.status, ['planned', 'completed', 'cancelled'], 'planned'), JSON.stringify(agenda), text(req.body?.private_notes, 6000), text(req.body?.shared_summary, 4000), number(req.body?.check_in, 1, 5, null)],
+      `INSERT INTO mentorship_sessions (mentor_id, mentee_id, goal_id, title, scheduled_at, duration_minutes, format, status, agenda, private_notes, shared_summary, check_in)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12) RETURNING *`,
+      [req.user.id, menteeId, goalId, title, req.body?.scheduled_at || null, number(req.body?.duration_minutes, 15, 480, 60), enumValue(req.body?.format, ['online', 'in_person', 'phone'], 'online'), enumValue(req.body?.status, ['planned', 'completed', 'cancelled'], 'planned'), JSON.stringify(agenda), text(req.body?.private_notes, 6000), text(req.body?.shared_summary, 4000), number(req.body?.check_in, 1, 5, null)],
     );
     return res.status(201).json({ session: rows[0] });
   } catch (err) { return next(err); }
@@ -157,12 +163,16 @@ async function createSession(req, res, next) {
 async function updateSession(req, res, next) {
   try {
     const agenda = Array.isArray(req.body?.agenda) ? JSON.stringify(req.body.agenda.map((x) => text(x, 240)).filter(Boolean).slice(0, 12)) : null;
+    const goalId = uuid(req.body?.goal_id);
+    if (!(await hasOwnedReference('mentorship_goals', req.user.id, goalId))) {
+      return res.status(403).json({ success: false, message: 'Məqsəd sizə aid deyil' });
+    }
     const { rows } = await db.query(
       `UPDATE mentorship_sessions SET title = COALESCE($3,title), scheduled_at = COALESCE($4,scheduled_at),
        duration_minutes = COALESCE($5,duration_minutes), format = COALESCE($6,format), status = COALESCE($7,status),
        agenda = COALESCE($8::jsonb,agenda), private_notes = COALESCE($9,private_notes), shared_summary = COALESCE($10,shared_summary),
-       check_in = COALESCE($11,check_in), updated_at = NOW() WHERE id = $1 AND mentor_id = $2 RETURNING *`,
-      [uuid(req.params.id), req.user.id, text(req.body?.title, 180), req.body?.scheduled_at || null, number(req.body?.duration_minutes, 15, 480, null), enumValue(req.body?.format, ['online', 'in_person', 'phone'], null), enumValue(req.body?.status, ['planned', 'completed', 'cancelled'], null), agenda, text(req.body?.private_notes, 6000), text(req.body?.shared_summary, 4000), number(req.body?.check_in, 1, 5, null)],
+       check_in = COALESCE($11,check_in), goal_id = COALESCE($12, goal_id), updated_at = NOW() WHERE id = $1 AND mentor_id = $2 RETURNING *`,
+      [uuid(req.params.id), req.user.id, text(req.body?.title, 180), req.body?.scheduled_at || null, number(req.body?.duration_minutes, 15, 480, null), enumValue(req.body?.format, ['online', 'in_person', 'phone'], null), enumValue(req.body?.status, ['planned', 'completed', 'cancelled'], null), agenda, text(req.body?.private_notes, 6000), text(req.body?.shared_summary, 4000), number(req.body?.check_in, 1, 5, null), goalId],
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Sessiya tapılmadı' });
     return res.json({ session: rows[0] });
@@ -279,6 +289,79 @@ async function updateInquiryStatus(req, res, next) {
   } catch (err) { return next(err); }
 }
 
+async function createFeedbackRequest(req, res, next) {
+  try {
+    const menteeId = uuid(req.body?.mentee_id);
+    const sessionId = uuid(req.body?.session_id);
+    if (!menteeId || !(await hasMenteeAccess(req.user.id, menteeId))) {
+      return res.status(403).json({ success: false, message: 'Bu mentee ilə aktiv əlaqəniz yoxdur' });
+    }
+    const session = sessionId ? await db.query(
+      `SELECT 1 FROM mentorship_sessions WHERE id = $1 AND mentor_id = $2 AND mentee_id = $3 AND status = 'completed' LIMIT 1`,
+      [sessionId, req.user.id, menteeId],
+    ) : { rowCount: 0 };
+    if (!session.rowCount) return res.status(403).json({ success: false, message: 'Tamamlanmış sessiya tapılmadı' });
+    const { rows } = await db.query(
+      `INSERT INTO mentorship_feedback_requests (mentor_id, mentee_id, session_id)
+       VALUES ($1,$2,$3)
+       ON CONFLICT (mentor_id, mentee_id, session_id) DO UPDATE SET status = 'pending', requested_at = NOW(), responded_at = NULL,
+         goal_clarity = NULL, session_value = NULL, psychological_safety = NULL, progress_confidence = NULL, comment = NULL
+       RETURNING *`,
+      [req.user.id, menteeId, sessionId],
+    );
+    return res.status(201).json({ feedback: rows[0] });
+  } catch (err) { return next(err); }
+}
+
+async function getMenteeWorkspace(req, res, next) {
+  try {
+    const menteeId = req.user.id;
+    const [mentors, goals, milestones, sessions, actions, agreements, resources, feedback] = await Promise.all([
+      db.query(`SELECT DISTINCT u.id, u.full_name, u.email FROM enrollments e JOIN users u ON u.id = e.instructor_id WHERE e.student_id = $1 ORDER BY u.full_name`, [menteeId]),
+      db.query(`SELECT * FROM mentorship_goals WHERE mentee_id = $1 ORDER BY status = 'active' DESC, updated_at DESC`, [menteeId]),
+      db.query(`SELECT m.* FROM mentorship_milestones m JOIN mentorship_goals g ON g.id = m.goal_id WHERE g.mentee_id = $1 ORDER BY m.sort_order, m.created_at`, [menteeId]),
+      db.query(`SELECT id, mentor_id, mentee_id, goal_id, title, scheduled_at, duration_minutes, format, status,
+        agenda, shared_summary, check_in, created_at, updated_at
+        FROM mentorship_sessions WHERE mentee_id = $1 ORDER BY scheduled_at DESC NULLS LAST, created_at DESC`, [menteeId]),
+      db.query(`SELECT * FROM mentorship_actions WHERE mentee_id = $1 ORDER BY status = 'done', due_date NULLS LAST, created_at DESC`, [menteeId]),
+      db.query(`SELECT * FROM mentorship_agreements WHERE mentee_id = $1 AND status IN ('shared','accepted') ORDER BY updated_at DESC`, [menteeId]),
+      db.query(`SELECT r.* FROM mentorship_resources r WHERE r.visibility = 'mentees' AND r.mentor_id IN (SELECT instructor_id FROM enrollments WHERE student_id = $1) ORDER BY r.created_at DESC`, [menteeId]),
+      db.query(`SELECT * FROM mentorship_feedback_requests WHERE mentee_id = $1 ORDER BY requested_at DESC`, [menteeId]),
+    ]);
+    const milestoneByGoal = milestones.rows.reduce((map, row) => {
+      (map[row.goal_id] ||= []).push(row);
+      return map;
+    }, {});
+    return res.json({
+      mentors: mentors.rows,
+      goals: goals.rows.map((goal) => ({ ...goal, milestones: milestoneByGoal[goal.id] || [] })),
+      sessions: sessions.rows,
+      actions: actions.rows,
+      agreements: agreements.rows,
+      resources: resources.rows,
+      feedback: feedback.rows,
+    });
+  } catch (err) { return next(err); }
+}
+
+async function respondToFeedback(req, res, next) {
+  try {
+    const scores = ['goal_clarity', 'session_value', 'psychological_safety', 'progress_confidence'];
+    const values = scores.map((key) => number(req.body?.[key], 1, 5, null));
+    if (values.some((value) => value == null)) {
+      return res.status(400).json({ success: false, message: 'Bütün dörd göstəricini qiymətləndirin' });
+    }
+    const { rows } = await db.query(
+      `UPDATE mentorship_feedback_requests SET goal_clarity = $3, session_value = $4, psychological_safety = $5,
+       progress_confidence = $6, comment = $7, status = 'completed', responded_at = NOW()
+       WHERE id = $1 AND mentee_id = $2 AND status = 'pending' RETURNING *`,
+      [uuid(req.params.id), req.user.id, ...values, text(req.body?.comment, 2000)],
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, message: 'Rəy sorğusu tapılmadı' });
+    return res.json({ feedback: rows[0] });
+  } catch (err) { return next(err); }
+}
+
 module.exports = {
   getWorkspace,
   createGoal,
@@ -295,4 +378,7 @@ module.exports = {
   deleteResource,
   upsertAgreement,
   updateInquiryStatus,
+  createFeedbackRequest,
+  getMenteeWorkspace,
+  respondToFeedback,
 };

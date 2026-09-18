@@ -58,8 +58,8 @@ export function Metric({ label, value, note, icon = 'trend' }) {
   return <MentorCard className="p-4 sm:p-5"><div className="flex items-start justify-between gap-3"><p className="text-xs font-semibold text-slate-500">{label}</p><span className="text-[#087f70]"><MentorIcon name={icon} size={18} /></span></div><p className="mt-4 text-2xl font-black tracking-tight text-[#0a2928]">{value}</p>{note && <p className="mt-1 text-[11px] text-slate-400">{note}</p>}</MentorCard>
 }
 
-export function EmptyState({ icon = 'target', title, text, action, link }) {
-  const body = <><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-[#087f70]"><MentorIcon name={icon} size={20} /></span><p className="mt-3 text-sm font-extrabold text-[#0a2928]">{title}</p><p className="mx-auto mt-1 max-w-md text-xs leading-5 text-slate-500">{text}</p>{action && <span className="mt-4 inline-flex items-center gap-1 text-xs font-extrabold text-[#087f70]">{action} <MentorIcon name="arrow" size={13} /></span>}</>
+export function EmptyState({ icon = 'target', title, text, action, link, onAction }) {
+  const body = <><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-[#087f70]"><MentorIcon name={icon} size={20} /></span><p className="mt-3 text-sm font-extrabold text-[#0a2928]">{title}</p><p className="mx-auto mt-1 max-w-md text-xs leading-5 text-slate-500">{text}</p>{action && (onAction ? <button type="button" onClick={onAction} className="mt-4 inline-flex items-center gap-1 text-xs font-extrabold text-[#087f70]">{action} <MentorIcon name="arrow" size={13} /></button> : <span className="mt-4 inline-flex items-center gap-1 text-xs font-extrabold text-[#087f70]">{action} <MentorIcon name="arrow" size={13} /></span>)}</>
   return link ? <Link to={link} className="block rounded-xl border border-dashed border-slate-200 px-5 py-8 text-center transition hover:border-[#087f70]">{body}</Link> : <div className="rounded-xl border border-dashed border-slate-200 px-5 py-8 text-center">{body}</div>
 }
 
