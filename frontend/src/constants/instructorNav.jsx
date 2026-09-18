@@ -29,7 +29,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
 
   // Mentor Workspace spesifik linklər (EMCC / Beynəlxalq Standart)
   mentor_dashboard: { to: '/instructor', labelKey: 'nav.mentor.dashboard', label: 'İcmal', icon: 'dashboard', end: true },
-  mentor_discovery: { to: '/mentorship?tab=mentees', labelKey: 'nav.mentor.discovery', label: 'Mentorları kəşf et', icon: 'instructors' },
+  mentor_discovery: { to: '/instructor/inquiries', labelKey: 'nav.mentor.requests', label: 'Yeni müraciətlər', icon: 'instructors' },
   mentor_schedule: { to: '/instructor/schedule', labelKey: 'nav.mentor.schedule', label: 'Görüşlər və cədvəl', icon: 'schedule' },
   mentor_connections: { to: '/instructor/students', labelKey: 'nav.mentor.connections', label: 'Mentee-lərim', icon: 'students' },
   mentor_roadmap: { to: '/instructor/roadmap', labelKey: 'nav.mentor.roadmap', label: 'Məqsədlər və yol xəritəsi', icon: 'tasks' },

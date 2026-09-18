@@ -86,6 +86,7 @@ export default function InstructorLayout() {
   const showMobileSidebar = navOpen && !sidebarHidden
   const { sections: navSections } = useInstructorNavSections()
   const isMentorRoute = [
+    '/instructor/inquiries',
     '/instructor/roadmap',
     '/instructor/students',
     '/instructor/tasks',
@@ -106,7 +107,7 @@ export default function InstructorLayout() {
   })()
   const renderedNavSections = isActiveMentorWorkspace ? buildMentorNavSections() : navSections
 
-  const isMentorPersona = String(user?.persona || '').toLowerCase() === 'mentor'
+  const isMentorPersona = isActiveMentorWorkspace
   const instructorRoleLabel = isPartnerPersona(user)
     ? t('layout.partnerRole', { defaultValue: 'Partner' })
     : isMentorPersona
@@ -597,8 +598,8 @@ export default function InstructorLayout() {
                     ? 'border-red-500/40 bg-red-500/10 text-red-200'
                     : 'border-red-600/30 bg-red-50 text-red-950'
                   : theme === 'dark'
-                    ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-200'
-                    : 'border-amber-600/30 bg-amber-50 text-amber-950'
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                    : 'border-emerald-600/30 bg-emerald-50 text-emerald-950'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -613,7 +614,7 @@ export default function InstructorLayout() {
                         ? 'text-white/85'
                         : limitStatus.level === 'critical'
                           ? 'text-red-950/90'
-                          : 'text-amber-950/90',
+                          : 'text-emerald-950/90',
                     ].join(' ')}
                   >
                     {limitStatus.message}
@@ -624,7 +625,7 @@ export default function InstructorLayout() {
                   className={
                     theme === 'dark'
                       ? 'shrink-0 text-white/70 hover:text-white transition-colors'
-                      : 'shrink-0 text-amber-900/55 hover:text-amber-950 transition-colors'
+                      : 'shrink-0 text-emerald-900/55 hover:text-emerald-950 transition-colors'
                   }
                   aria-label={t('layout.close')}
                 >
@@ -638,8 +639,8 @@ export default function InstructorLayout() {
             <div
               className={`mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full w-full ${
                 theme === 'dark'
-                  ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-100'
-                  : 'border-indigo-600/30 bg-indigo-50 text-indigo-950'
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                  : 'border-emerald-600/30 bg-emerald-50 text-emerald-950'
               }`}
             >
               <div className="min-w-0">

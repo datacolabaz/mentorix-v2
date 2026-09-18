@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
+import { MentorWorkspaceProvider, useIsMentorWorkspace } from './hooks/useMentorWorkspace.jsx'
 
 import AuthPage from './pages/auth/AuthPage'
 import Landing from './pages/auth/Landing'
@@ -63,7 +64,14 @@ import DigitalMentorHost from './mentor/DigitalMentorHost'
 
 import InstructorDashboard from './pages/instructor/Dashboard'
 import MentorDashboard from './pages/instructor/MentorDashboard'
-import RoadmapTracker from './components/common/RoadmapTracker'
+import MentorGoals from './pages/instructor/mentor/MentorGoals'
+import MentorSessions from './pages/instructor/mentor/MentorSessions'
+import MentorConnections from './pages/instructor/mentor/MentorConnections'
+import MentorRequests from './pages/instructor/mentor/MentorRequests'
+import MentorNotes from './pages/instructor/mentor/MentorNotes'
+import MentorOffers from './pages/instructor/mentor/MentorOffers'
+import MentorOutcomes from './pages/instructor/mentor/MentorOutcomes'
+import MentorResources from './pages/instructor/mentor/MentorResources'
 import InstructorStudents from './pages/instructor/Students'
 import InstructorSchedule from './pages/instructor/Schedule'
 import InstructorExams from './pages/instructor/Exams'
@@ -217,9 +225,13 @@ function ScrollToTop() {
 }
 
 function InstructorOrMentorDashboard() {
-  const { user } = useAuthStore()
-  const isMentor = String(user?.persona || "").toLowerCase() === "mentor"
+  const isMentor = useIsMentorWorkspace()
   return isMentor ? <MentorDashboard key="mentor" /> : <InstructorDashboard key="instructor" />
+}
+
+function MentorOrInstructorPage({ mentor: MentorPage, instructor: InstructorPage }) {
+  const isMentor = useIsMentorWorkspace()
+  return isMentor ? <MentorPage /> : <InstructorPage />
 }
 
 export default function App() {
@@ -367,27 +379,27 @@ export default function App() {
       <Route path="/courses" element={<Navigate to="/instructor/teaching-groups" replace />} />
       <Route path="/courses/*" element={<Navigate to="/instructor/teaching-groups" replace />} />
 
-      <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
+      <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><MentorWorkspaceProvider><InstructorLayout /></MentorWorkspaceProvider></ProtectedRoute>}>
         <Route index element={<InstructorOrMentorDashboard />} />
-        <Route path="students" element={<InstructorStudents />} />
-        <Route path="teaching-groups" element={<InstructorTeachingGroups />} />
+        <Route path="students" element={<MentorOrInstructorPage mentor={MentorConnections} instructor={InstructorStudents} />} />
+        <Route path="teaching-groups" element={<MentorOrInstructorPage mentor={MentorOffers} instructor={InstructorTeachingGroups} />} />
         <Route path="chat" element={<GroupChatPage role="instructor" basePath="/instructor/chat" />} />
         <Route path="direct-chat" element={<DirectChatPage role="instructor" />} />
         <Route path="assignment-chat" element={<AssignmentChatPage role="instructor" />} />
         <Route path="join-requests" element={<InstructorJoinRequests />} />
-        <Route path="inquiries" element={<StudentInquiries />} />
-        <Route path="schedule" element={<InstructorSchedule />} />
+        <Route path="inquiries" element={<MentorOrInstructorPage mentor={MentorRequests} instructor={StudentInquiries} />} />
+        <Route path="schedule" element={<MentorOrInstructorPage mentor={MentorSessions} instructor={InstructorSchedule} />} />
         <Route path="exams" element={<InstructorExams />} />
         <Route path="certificates" element={<InstructorCertificates />} />
         <Route path="attendance" element={<InstructorAttendance />} />
-        <Route path="analytics" element={<InstructorAnalytics />} />
-        <Route path="tasks" element={<InstructorTasks />} />
+        <Route path="analytics" element={<MentorOrInstructorPage mentor={MentorOutcomes} instructor={InstructorAnalytics} />} />
+        <Route path="tasks" element={<MentorOrInstructorPage mentor={MentorNotes} instructor={InstructorTasks} />} />
         <Route path="ai-generator" element={<InstructorAIQuestionGenerator />} />
-        <Route path="materials" element={<InstructorMaterialsLibrary />} />
+        <Route path="materials" element={<MentorOrInstructorPage mentor={MentorResources} instructor={InstructorMaterialsLibrary} />} />
         <Route path="presentations" element={<InstructorPresentations />} />
         <Route path="presentations/:id" element={<InstructorPresentationViewer />} />
         <Route path="live/history" element={<InstructorLiveHistory />} />
-        <Route path="roadmap" element={<div className="p-4 sm:p-6 max-w-5xl mx-auto"><RoadmapTracker /></div>} />
+        <Route path="roadmap" element={<MentorGoals />} />
         <Route path="university-programs" element={<InstructorUniversityPrograms />} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />

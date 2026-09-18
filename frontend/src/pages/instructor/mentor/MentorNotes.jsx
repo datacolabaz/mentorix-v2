@@ -1,0 +1,43 @@
+import { useMemo, useState } from 'react'
+import useMentorWorkspace from '../../../hooks/useMentorWorkspace'
+import { useToast } from '../../../components/common/Toast'
+import { EmptyState, Field, formatDate, inputClass, MentorCard, MentorIcon, MentorModal, MentorPage, MentorPageHeader, PrimaryButton, SecondaryButton, SectionTitle, StatusPill, menteeName } from '../../../components/mentor/MentorWorkspaceUI'
+
+export default function MentorNotes() {
+  const { data, loading, createAction, updateAction } = useMentorWorkspace()
+  const toast = useToast()
+  const [tab, setTab] = useState('actions')
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ title: '', mentee_id: '', goal_id: '', due_date: '', owner_type: 'mentee' })
+  const openActions = useMemo(() => data.actions.filter((item) => item.status !== 'done'), [data.actions])
+  const completedActions = data.actions.filter((item) => item.status === 'done')
+  const sessionNotes = data.sessions.filter((item) => item.private_notes || item.shared_summary)
+
+  async function saveAction() {
+    if (!form.title.trim()) return toast('Öhdəliyin adını yazın', 'error')
+    setSaving(true)
+    try { await createAction(form); setForm({ title: '', mentee_id: '', goal_id: '', due_date: '', owner_type: 'mentee' }); setOpen(false); toast('Növbəti addım əlavə edildi', 'success') }
+    catch (err) { toast(err?.message || 'Öhdəlik əlavə edilmədi', 'error') }
+    finally { setSaving(false) }
+  }
+
+  async function toggle(item) {
+    try { await updateAction(item.id, { status: item.status === 'done' ? 'todo' : 'done' }) }
+    catch (err) { toast(err?.message || 'Status yenilənmədi', 'error') }
+  }
+
+  return <MentorPage>
+    <MentorPageHeader eyebrow="İcra və davamlılıq" title="Sessiya qeydləri və öhdəliklər" description="Müzakirəni unudulan mətndən ölçülə bilən növbəti addıma çevirin. Şəxsi mentor qeydləri və mentee ilə paylaşılan xülasə ayrı saxlanılır." action={<PrimaryButton onClick={() => setOpen(true)}><MentorIcon name="plus" size={15} /> Növbəti addım</PrimaryButton>} />
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><MentorCard className="p-4"><p className="text-xs text-slate-500">Açıq öhdəlik</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{loading ? '—' : openActions.length}</p></MentorCard><MentorCard className="p-4"><p className="text-xs text-slate-500">Tamamlanan</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{completedActions.length}</p></MentorCard><MentorCard className="p-4"><p className="text-xs text-slate-500">Qeydli sessiya</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{sessionNotes.length}</p></MentorCard><MentorCard className="p-4"><p className="text-xs text-slate-500">Tamamlama faizi</p><p className="mt-3 text-2xl font-black text-[#0a2928]">{data.actions.length ? Math.round(completedActions.length / data.actions.length * 100) : 0}%</p></MentorCard></div>
+
+    <div className="flex gap-1 rounded-xl bg-slate-100 p-1 sm:w-fit"><button type="button" onClick={() => setTab('actions')} className={`rounded-lg px-4 py-2 text-xs font-extrabold ${tab === 'actions' ? 'bg-white text-[#087f70] shadow-sm' : 'text-slate-500'}`}>Öhdəliklər</button><button type="button" onClick={() => setTab('notes')} className={`rounded-lg px-4 py-2 text-xs font-extrabold ${tab === 'notes' ? 'bg-white text-[#087f70] shadow-sm' : 'text-slate-500'}`}>Sessiya qeydləri</button></div>
+
+    {tab === 'actions' ? <div className="grid gap-6 lg:grid-cols-[1fr_.38fr]">
+      <MentorCard><SectionTitle title="İcra lövhəsi" description="Hər öhdəliyin sahibi, tarixi və aid olduğu məqsəd görünür." /><div className="mt-5 space-y-3">{!data.actions.length && <EmptyState icon="check" title="Açıq öhdəlik yoxdur" text="Sessiyanın sonunda konkret bir növbəti addım əlavə edin." action="Öhdəlik yarat" />}{data.actions.map((item) => { const goal = data.goals.find((x) => String(x.id) === String(item.goal_id)); const mentee = data.mentees.find((x) => String(x.id) === String(item.mentee_id)); return <label key={item.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 hover:border-[#087f70]"><input type="checkbox" checked={item.status === 'done'} onChange={() => toggle(item)} className="mt-0.5 h-4 w-4 rounded accent-[#087f70]"/><div className="min-w-0 flex-1"><p className={`text-sm font-bold ${item.status === 'done' ? 'text-slate-400 line-through' : 'text-[#0a2928]'}`}>{item.title}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400"><span>{item.owner_type === 'mentor' ? 'Mentor' : item.owner_type === 'shared' ? 'Birgə' : 'Mentee'} məsuliyyətində</span><span>{menteeName(mentee)}</span>{goal && <span>Məqsəd: {goal.title}</span>}<span>{formatDate(item.due_date)}</span></div></div><StatusPill value={item.status} /></label>})}</div></MentorCard>
+      <MentorCard className="h-fit bg-[#f7faf8]"><SectionTitle title="Yaxşı öhdəlik necə olur?" /><div className="mt-5 space-y-4">{[['Konkret','Bir fel ilə başlayır: hazırla, göndər, araşdır.'],['Ölçülə bilən','Bitdiyini hər iki tərəf anlaya bilir.'],['Sahibli','Mentor, mentee və ya birgə məsuliyyət bəllidir.'],['Tarixli','Növbəti sessiyadan əvvəl son tarix var.']].map(([title,text]) => <div key={title}><p className="text-xs font-extrabold text-[#0a2928]">{title}</p><p className="mt-1 text-[11px] leading-5 text-slate-500">{text}</p></div>)}</div></MentorCard>
+    </div> : <MentorCard><SectionTitle title="Qeyd arxivi" description="Paylaşılan xülasə şəffaflığı, şəxsi qeyd isə mentorun müşahidəsini qoruyur." /><div className="mt-5 space-y-4">{!sessionNotes.length && <EmptyState icon="note" title="Qeyd edilmiş sessiya yoxdur" text="Sessiya səhifəsindən görüşü tamamlayın və əsas qərarları qeyd edin." action="Sessiyalar səhifəsinə keç" link="/instructor/schedule" />}{sessionNotes.map((session) => <article key={session.id} className="rounded-2xl border border-slate-200 p-5"><div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="text-sm font-black text-[#0a2928]">{session.title}</h3><p className="mt-1 text-[11px] text-slate-400">{formatDate(session.scheduled_at)}</p></div><StatusPill value={session.status} /></div><div className="mt-4 grid gap-3 md:grid-cols-2"><div className="rounded-xl bg-emerald-50/60 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-[#087f70]">Mentee ilə paylaşılan</p><p className="mt-2 text-xs leading-5 text-slate-600">{session.shared_summary || 'Xülasə yazılmayıb.'}</p></div><div className="rounded-xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Yalnız mentor üçün</p><p className="mt-2 text-xs leading-5 text-slate-600">{session.private_notes || 'Şəxsi qeyd yazılmayıb.'}</p></div></div></article>)}</div></MentorCard>}
+
+    <MentorModal open={open} title="Növbəti addım yarat" description="Öhdəliyi məqsədə və mentee-yə bağlayın." onClose={() => setOpen(false)} footer={<><SecondaryButton onClick={() => setOpen(false)}>Ləğv et</SecondaryButton><PrimaryButton disabled={saving} onClick={saveAction}>Əlavə et</PrimaryButton></>}><div className="space-y-4"><Field label="Növbəti addım"><input autoFocus className={inputClass} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="məsələn, CV-nin ilk versiyasını paylaş" /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Mentee"><select className={inputClass} value={form.mentee_id} onChange={(e) => setForm({ ...form, mentee_id: e.target.value })}><option value="">Seçilməyib</option>{data.mentees.map((x) => <option key={x.id} value={x.id}>{menteeName(x)}</option>)}</select></Field><Field label="Məsul tərəf"><select className={inputClass} value={form.owner_type} onChange={(e) => setForm({ ...form, owner_type: e.target.value })}><option value="mentee">Mentee</option><option value="mentor">Mentor</option><option value="shared">Birgə</option></select></Field></div><Field label="Aid olduğu məqsəd"><select className={inputClass} value={form.goal_id} onChange={(e) => setForm({ ...form, goal_id: e.target.value })}><option value="">Məqsəd seçilməyib</option>{data.goals.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}</select></Field><Field label="Son tarix"><input type="date" className={inputClass} value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></Field></div></MentorModal>
+  </MentorPage>
+}
