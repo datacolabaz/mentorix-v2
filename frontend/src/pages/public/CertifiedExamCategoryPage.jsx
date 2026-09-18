@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import Brand from '../../components/common/Brand'
+import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import LevelBadge from '../../components/public/LevelBadge'
 import CertifiedExamAuthGate from '../../components/public/CertifiedExamAuthGate'
@@ -9,37 +9,49 @@ import api from '../../lib/api'
 import { CERTIFIED_OG_IMAGE, setPageSeo } from '../../lib/pageSeo'
 import { buildCertifiedExamSharePath, copyCertifiedExamShareUrl } from '../../lib/certifiedExamShareUrl'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
 import { useToast } from '../../components/common/Toast'
 
-function ExamCard({ exam, categorySlug, onStart, onCopyLink, t, highlighted = false }) {
+function ExamCard({ exam, categorySlug, onStart, onCopyLink, t, isDark, highlighted = false }) {
   const detailPath = exam.slug && categorySlug ? buildCertifiedExamSharePath(categorySlug, exam.slug) : null
 
   return (
     <article
       id={`exam-${exam.id}`}
       className={[
-        'rounded-xl border bg-black/25 p-4 space-y-2 transition scroll-mt-24',
-        highlighted ? 'border-primary ring-2 ring-primary/40 shadow-[0_0_24px_-8px_rgba(0,229,176,0.45)]' : 'border-white/10 hover:border-primary/25',
+        'rounded-xl border p-4 space-y-2 transition scroll-mt-24',
+        highlighted
+          ? 'border-primary ring-2 ring-primary/40 shadow-[0_0_24px_-8px_rgba(0,229,176,0.45)]'
+          : isDark
+            ? 'border-white/10 bg-black/25 hover:border-primary/25'
+            : 'border-slate-200 bg-white hover:border-primary/40 shadow-sm',
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-2">
         {detailPath ? (
-          <Link to={detailPath} className="text-sm font-semibold text-white leading-snug hover:text-primary">
+          <Link
+            to={detailPath}
+            className={`text-sm font-semibold leading-snug hover:text-primary ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}
+          >
             {exam.title}
           </Link>
         ) : (
-          <h3 className="text-sm font-semibold text-white leading-snug">{exam.title}</h3>
+          <h3 className={`text-sm font-semibold leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            {exam.title}
+          </h3>
         )}
         <LevelBadge level={exam.level} />
       </div>
-      <p className="text-xs text-gray-500">
+      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
         {t('certifiedExams.examMeta', {
           questions: exam.question_count,
           minutes: exam.duration_minutes,
           pass: exam.pass_pct,
         })}
       </p>
-      <p className="text-xs text-gray-400">
+      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
         {t('certifiedExams.instructor')}: {exam.instructor_name}
       </p>
       <div className="flex flex-col gap-2">
@@ -54,7 +66,11 @@ function ExamCard({ exam, categorySlug, onStart, onCopyLink, t, highlighted = fa
           <button
             type="button"
             onClick={() => onCopyLink(exam)}
-            className="w-full rounded-lg border border-white/10 text-gray-400 px-3 py-2 text-xs font-semibold hover:border-white/20 hover:text-gray-200"
+            className={`w-full rounded-lg border px-3 py-2 text-xs font-semibold ${
+              isDark
+                ? 'border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200'
+                : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
+            }`}
           >
             {t('certifiedExams.copyShareLink')}
           </button>
@@ -64,7 +80,7 @@ function ExamCard({ exam, categorySlug, onStart, onCopyLink, t, highlighted = fa
   )
 }
 
-function CareerPathTimeline({ path, onOpen, t }) {
+function CareerPathTimeline({ path, onOpen, t, isDark }) {
   const { i18n } = useTranslation()
   const [steps, setSteps] = useState([])
   const [loading, setLoading] = useState(true)
@@ -90,18 +106,24 @@ function CareerPathTimeline({ path, onOpen, t }) {
   const statusIcon = { completed: '✅', ready: '🔓', locked: '🔒' }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#121212]/80 p-5 space-y-4">
+    <div
+      className={`rounded-2xl border p-5 space-y-4 ${
+        isDark ? 'border-white/10 bg-[#121212]/80' : 'border-slate-200 bg-white shadow-sm'
+      }`}
+    >
       <div className="flex items-start gap-3">
         <span className="text-2xl" aria-hidden>
           {path.icon || '🛤️'}
         </span>
         <div>
-          <h3 className="text-base font-semibold text-white">{path.name}</h3>
-          {path.description ? <p className="text-xs text-gray-400 mt-1">{path.description}</p> : null}
+          <h3 className={`text-base font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{path.name}</h3>
+          {path.description ? (
+            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{path.description}</p>
+          ) : null}
         </div>
       </div>
       {loading ? (
-        <p className="text-xs text-gray-500">{t('certifiedExams.loading')}</p>
+        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>{t('certifiedExams.loading')}</p>
       ) : (
         <ol className="space-y-0 border-l border-primary/25 ml-3 pl-4">
           {steps.map((step) => (
@@ -110,7 +132,7 @@ function CareerPathTimeline({ path, onOpen, t }) {
                 {statusIcon[step.status] || '🔒'}
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-white">{step.title}</span>
+                <span className={`text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{step.title}</span>
                 <LevelBadge level={step.level} />
               </div>
               {step.status !== 'locked' ? (
@@ -131,7 +153,9 @@ function CareerPathTimeline({ path, onOpen, t }) {
                   {t('certifiedExams.startStep')}
                 </button>
               ) : (
-                <p className="text-[10px] text-gray-500 mt-1">{t('certifiedExams.completePreviousSteps')}</p>
+                <p className={`text-[10px] mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
+                  {t('certifiedExams.completePreviousSteps')}
+                </p>
               )}
             </li>
           ))}
@@ -148,6 +172,8 @@ export default function CertifiedExamCategoryPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useAuthStore()
+  const theme = useUiStore((s) => s.theme)
+  const isDark = theme === 'dark'
   const { t, i18n } = useTranslation()
   const [tab, setTab] = useState('exams')
   const [data, setData] = useState(null)
@@ -237,42 +263,44 @@ export default function CertifiedExamCategoryPage() {
   const category = data?.category
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-gray-100 flex flex-col">
-      <header className="border-b border-white/10 bg-[#0b0b0b]/95 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <Link to="/" className="shrink-0">
-            <Brand compact />
-          </Link>
-          <Link to="/sertifikatli-imtahanlar" className="text-sm text-primary hover:underline">
-            {t('certifiedExams.backToCatalog')}
-          </Link>
-        </div>
-      </header>
+    <div className={`mx-public-page theme-${theme} min-h-screen flex flex-col ${isDark ? 'bg-[#0b0b0b] text-gray-100' : 'bg-[#f4f6fb] text-slate-900'}`}>
+      <PublicMarketingNav />
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 space-y-6">
         {loading ? (
-          <p className="text-sm text-gray-500">{t('certifiedExams.loading')}</p>
+          <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>{t('certifiedExams.loading')}</p>
         ) : !category ? (
-          <p className="text-sm text-red-300">{t('certifiedExams.categoryNotFound')}</p>
+          <p className={`text-sm ${isDark ? 'text-red-300' : 'text-red-600'}`}>{t('certifiedExams.categoryNotFound')}</p>
         ) : (
           <>
             <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Link to="/sertifikatli-imtahanlar" className="text-xs text-primary font-semibold hover:underline">
+                  {t('certifiedExams.backToCatalog')}
+                </Link>
+              </div>
               <div className="text-3xl" aria-hidden>
                 {category.icon || '📚'}
               </div>
-              <h1 className="text-2xl font-semibold text-white">
+              <h1 className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {t(`certifiedExams.categories.${category.slug}`, { defaultValue: category.name })}
               </h1>
-              {category.description ? <p className="text-sm text-gray-400">{category.description}</p> : null}
+              {category.description ? (
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>{category.description}</p>
+              ) : null}
             </div>
 
-            <div className="flex gap-2 border-b border-white/10 pb-2">
+            <div className={`flex gap-2 border-b pb-2 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setTab('exams')}
                 className={[
-                  'px-4 py-2 text-sm font-semibold rounded-t-lg',
-                  tab === 'exams' ? 'text-primary border-b-2 border-primary' : 'text-gray-400',
+                  'px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors',
+                  tab === 'exams'
+                    ? 'text-primary border-b-2 border-primary'
+                    : isDark
+                      ? 'text-gray-400 hover:text-gray-200'
+                      : 'text-slate-500 hover:text-slate-800',
                 ].join(' ')}
               >
                 {t('certifiedExams.tabExams')}
@@ -281,8 +309,12 @@ export default function CertifiedExamCategoryPage() {
                 type="button"
                 onClick={() => setTab('paths')}
                 className={[
-                  'px-4 py-2 text-sm font-semibold rounded-t-lg',
-                  tab === 'paths' ? 'text-primary border-b-2 border-primary' : 'text-gray-400',
+                  'px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors',
+                  tab === 'paths'
+                    ? 'text-primary border-b-2 border-primary'
+                    : isDark
+                      ? 'text-gray-400 hover:text-gray-200'
+                      : 'text-slate-500 hover:text-slate-800',
                 ].join(' ')}
               >
                 {t('certifiedExams.tabPaths')}
@@ -291,10 +323,16 @@ export default function CertifiedExamCategoryPage() {
 
             {tab === 'exams' ? (
               totalExams === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-[#121212]/90 p-6 space-y-3 max-w-lg">
-                  <p className="text-sm text-gray-300">{t('certifiedExams.comingSoonExams')}</p>
+                <div
+                  className={`rounded-2xl border p-6 space-y-3 max-w-lg ${
+                    isDark ? 'border-white/10 bg-[#121212]/90' : 'border-slate-200 bg-white shadow-sm'
+                  }`}
+                >
+                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
+                    {t('certifiedExams.comingSoonExams')}
+                  </p>
                   {waitSuccess ? (
-                    <div className="rounded-xl border border-primary/35 bg-primary/10 px-4 py-3 text-sm text-primary">
+                    <div className="rounded-xl border border-primary/35 bg-primary/10 px-4 py-3 text-sm text-primary font-medium">
                       {waitSuccess}
                     </div>
                   ) : (
@@ -305,14 +343,24 @@ export default function CertifiedExamCategoryPage() {
                         value={waitEmail}
                         onChange={(e) => setWaitEmail(e.target.value)}
                         placeholder="email@example.com"
-                        className="flex-1 rounded-xl bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm"
+                        className={`flex-1 rounded-xl border px-3 py-2 text-sm outline-none transition-colors ${
+                          isDark
+                            ? 'bg-[#0f0f0f] border-white/10 text-white focus:border-primary/50'
+                            : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-primary/50'
+                        }`}
                       />
-                      <button type="submit" disabled={waitBusy} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-[#041018]">
+                      <button
+                        type="submit"
+                        disabled={waitBusy}
+                        className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-[#041018] hover:brightness-95 transition-all"
+                      >
                         {t('certifiedExams.waitlistNotify')}
                       </button>
                     </form>
                   )}
-                  <p className="text-[11px] text-gray-500">{t('certifiedExams.waitlistHint')}</p>
+                  <p className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
+                    {t('certifiedExams.waitlistHint')}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-8">
@@ -320,7 +368,13 @@ export default function CertifiedExamCategoryPage() {
                     group.exams?.length ? (
                       <section key={group.id} className="space-y-3">
                         {group.is_parent_direct ? null : (
-                          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">{group.name}</h2>
+                          <h2
+                            className={`text-sm font-semibold uppercase tracking-wider ${
+                              isDark ? 'text-gray-400' : 'text-slate-500'
+                            }`}
+                          >
+                            {group.name}
+                          </h2>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {group.exams.map((exam) => (
@@ -331,6 +385,7 @@ export default function CertifiedExamCategoryPage() {
                               onStart={startExam}
                               onCopyLink={copyShareLink}
                               t={t}
+                              isDark={isDark}
                               highlighted={highlightExamId === exam.id}
                             />
                           ))}
@@ -341,11 +396,13 @@ export default function CertifiedExamCategoryPage() {
                 </div>
               )
             ) : (data.career_paths || []).length === 0 ? (
-              <p className="text-sm text-gray-500">{t('certifiedExams.comingSoonPaths')}</p>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
+                {t('certifiedExams.comingSoonPaths')}
+              </p>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {(data.career_paths || []).map((path) => (
-                  <CareerPathTimeline key={path.id} path={path} onOpen={startExam} t={t} />
+                  <CareerPathTimeline key={path.id} path={path} onOpen={startExam} t={t} isDark={isDark} />
                 ))}
               </div>
             )}
