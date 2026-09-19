@@ -94,6 +94,9 @@ app.use('/api/partner', require('./routes/partner'));
 app.use('/api/mentor', require('./routes/mentor'));
 app.use('/api/favorites', require('./routes/favorites'));
 
+app.get('/ZOOM_verify_0f26929a49814d8caf522cd2103f8a36.html', (req, res) =>
+  res.type('text/plain').send('ZOOM_verify_0f26929a49814d8caf522cd2103f8a36')
+);
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/api/meta', (req, res) =>
   res.json({
