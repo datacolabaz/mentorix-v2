@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import PublicMarketingNav from '../../components/public/PublicMarketingNav'
+import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import api from '../../lib/api'
 import { setPageSeo } from '../../lib/pageSeo'
@@ -57,7 +57,12 @@ export default function CertifiedExamsCatalog() {
 
   return (
     <div className={`mx-public-page theme-${theme} min-h-screen flex flex-col ${isDark ? 'bg-[#0b0b0b] text-gray-100' : 'bg-[#f4f6fb] text-slate-900'}`}>
-      <PublicMarketingNav />
+      <PublicPageTopBar
+        backTo="/"
+        title={t('certifiedExams.catalogTitle')}
+        subtitle={t('certifiedExams.catalogDescription')}
+        compactOnMobile
+      />
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 sm:py-10 space-y-8">
         <div className="space-y-3">
