@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../hooks/useAuth'
+import useUiStore from '../../hooks/useUi'
 import api from '../../lib/api'
 import { useToast } from '../common/Toast'
 import GoogleSignInButton from '../auth/GoogleSignInButton'
@@ -11,6 +12,8 @@ const RETURN_KEY = 'mx_return_after_login'
 
 export default function CertifiedExamAuthGate({ open, exam, onClose }) {
   const { t } = useTranslation()
+  const theme = useUiStore((s) => s.theme)
+  const isDark = theme === 'dark'
   const { user, setSession } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
@@ -80,27 +83,37 @@ export default function CertifiedExamAuthGate({ open, exam, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-indigo-500/25 bg-[#13112e] p-5 sm:p-6 shadow-2xl space-y-4"
+        className={`w-full max-w-md rounded-2xl border p-5 sm:p-6 shadow-2xl space-y-4 ${
+          isDark ? 'border-white/10 bg-[#13112e] text-white' : 'border-slate-200 bg-white text-slate-900'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-wider text-primary font-semibold">{t('certifiedExams.authGateBadge')}</p>
-            <h2 className="text-lg font-semibold text-white mt-1">{t('certifiedExams.authGateTitle')}</h2>
+            <h2 className={`text-lg font-semibold mt-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              {t('certifiedExams.authGateTitle')}
+            </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 text-gray-400 hover:text-white px-2 py-1 rounded-lg"
+            className={`shrink-0 px-2 py-1 rounded-lg transition-colors ${
+              isDark ? 'text-gray-400 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+            }`}
             aria-label={t('certifiedExams.authClose')}
           >
             ✕
           </button>
         </div>
-        <p className="text-sm text-gray-400 leading-relaxed">
+        <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
           {t('certifiedExams.authGateDescription', { title: exam.title })}
         </p>
-        <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-gray-400 space-y-1">
+        <div
+          className={`rounded-xl border p-3 text-xs space-y-1 ${
+            isDark ? 'border-white/10 bg-black/25 text-gray-400' : 'border-slate-200 bg-slate-50 text-slate-600'
+          }`}
+        >
           <p>
             {t('certifiedExams.examMeta', {
               questions: exam.question_count,
@@ -116,7 +129,7 @@ export default function CertifiedExamAuthGate({ open, exam, onClose }) {
           <GoogleSignInButton onCredential={handleGoogleCredential} disabled={authBusy} />
           <Link
             to={registerHref}
-            className="block w-full text-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-[#041018] hover:brightness-95"
+            className="block w-full text-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-[#041018] hover:brightness-95 transition-all"
           >
             {t('certifiedExams.authRegister')}
           </Link>
