@@ -224,7 +224,7 @@ export default function Landing() {
               🚀 AI Dəstəkli Bütöv Təhsil Ekosistemi
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.15] w-full max-w-xl az-text">
-              Öyrən, Öyrət, Mentor Ol — Hamısı Bir Platformada.
+              Öyrən, Öyrət, Mentor Ol. Hamısı Bir Platformada.
             </h1>
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed w-full max-w-md lg:max-w-xl az-text">
               AI ilə 1 dəqiqəyə imtahan yaradın, cavabları avtomatik qiymətləndirin, peşəkar mentorlardan 1-ə-1 rəhbərlik alın və ya fənninizə uyğun repetitor tapın — hamısı tək paneldə.
