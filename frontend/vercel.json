@@ -19,7 +19,7 @@
   "rewrites": [
     {
       "source": "/sitemap.xml",
-      "destination": "/api/public/sitemap.xml"
+      "destination": "/api/sitemap.xml"
     },
     {
       "source": "/sertifikatli-imtahanlar/:categorySlug/:examSlug",

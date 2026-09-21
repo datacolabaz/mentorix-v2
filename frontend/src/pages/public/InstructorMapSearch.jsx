@@ -411,6 +411,7 @@ export default function InstructorMapSearch() {
         onWhatsApp={onWhatsAppClick}
         onFocusTutor={handleAiFocusTutor}
         whatsappBusy={whatsappBusy}
+        fallbackResultCount={count}
       />
       {!isLgUp ? (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
