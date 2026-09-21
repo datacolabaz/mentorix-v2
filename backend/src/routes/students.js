@@ -1666,6 +1666,11 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
     const { rows: enr } = await db.query(
       `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, enrollment_source)
        VALUES ($1, $2, 'pending_setup', NOW(), 'group')
+       ON CONFLICT (instructor_id, student_id) DO UPDATE
+       SET status = 'pending_setup',
+           enrolled_at = NOW(),
+           enrollment_source = 'group',
+           deleted_at = NULL
        RETURNING id`,
       [g.instructor_id, req.user.id],
     );

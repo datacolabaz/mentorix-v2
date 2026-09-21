@@ -898,6 +898,13 @@ const attachStudentByEmail = async (req, res) => {
     const { rows: enr } = await db.query(
       `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, group_id, subject_id, enrollment_source)
        VALUES ($1::uuid, $2::uuid, 'pending_setup', NOW(), $3::uuid, $4::uuid, 'manual')
+       ON CONFLICT (instructor_id, student_id) DO UPDATE
+       SET status = 'pending_setup',
+           enrolled_at = NOW(),
+           group_id = EXCLUDED.group_id,
+           subject_id = EXCLUDED.subject_id,
+           enrollment_source = 'manual',
+           deleted_at = NULL
        RETURNING id`,
       [instructorId, student.id, groupId, subjectId],
     );

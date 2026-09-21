@@ -352,6 +352,13 @@ async function createJoinRequest({
     const { rows: enr } = await client.query(
       `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, subject_id, group_id, enrollment_source)
        VALUES ($1, $2, 'pending_approval', NOW(), $3, $4, 'group')
+       ON CONFLICT (instructor_id, student_id) DO UPDATE
+       SET status = 'pending_approval',
+           enrolled_at = NOW(),
+           subject_id = $3,
+           group_id = $4,
+           enrollment_source = 'group',
+           deleted_at = NULL
        RETURNING id`,
       [g.instructor_id, studentId, g.subject_id || null, g.group_id],
     );
