@@ -329,92 +329,102 @@ async function createJoinRequest({
     studentMessage: STUDENT_LIMIT_MESSAGE,
   });
 
-  const result = await db.transaction(async (client) => {
-    await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
-    if (phoneCanon) await upsertStudentContactPhone(client, studentId, phoneCanon);
+  try {
+    const result = await db.transaction(async (client) => {
+      await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
+      if (phoneCanon) await upsertStudentContactPhone(client, studentId, phoneCanon);
 
-    const pr = await client.query(
-      `UPDATE student_profiles SET
-         parent_name = COALESCE(NULLIF($1, ''), parent_name),
-         parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
-         phone_number = COALESCE($3, phone_number)
-       WHERE user_id = $4`,
-      [parentName, parentPhoneCanon || parentPhoneRaw || null, phoneCanon, studentId],
-    );
-    if (pr.rowCount === 0) {
-      await client.query(
-        `INSERT INTO student_profiles (user_id, parent_name, parent_phone, phone_number)
-         VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4)`,
-        [studentId, parentName, parentPhoneCanon || parentPhoneRaw || null, phoneCanon],
+      const pr = await client.query(
+        `UPDATE student_profiles SET
+           parent_name = COALESCE(NULLIF($1, ''), parent_name),
+           parent_phone = COALESCE(NULLIF($2, ''), parent_phone),
+           phone_number = COALESCE($3, phone_number)
+         WHERE user_id = $4`,
+        [parentName, parentPhoneCanon || parentPhoneRaw || null, phoneCanon, studentId],
       );
-    }
+      if (pr.rowCount === 0) {
+        await client.query(
+          `INSERT INTO student_profiles (user_id, parent_name, parent_phone, phone_number)
+           VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4)`,
+          [studentId, parentName, parentPhoneCanon || parentPhoneRaw || null, phoneCanon],
+        );
+      }
 
-    const { rows: enr } = await client.query(
-      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, subject_id, group_id, enrollment_source)
-       VALUES ($1, $2, 'pending_approval', NOW(), $3, $4, 'group')
-       ON CONFLICT (instructor_id, student_id) DO UPDATE
-       SET status = 'pending_approval',
-           enrolled_at = NOW(),
-           subject_id = $3,
-           group_id = $4,
-           enrollment_source = 'group',
-           deleted_at = NULL
-       RETURNING id`,
-      [g.instructor_id, studentId, g.subject_id || null, g.group_id],
-    );
-    const enrollmentId = enr[0].id;
+      const { rows: enr } = await client.query(
+        `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, subject_id, group_id, enrollment_source)
+         VALUES ($1, $2, 'pending_approval', NOW(), $3, $4, 'group')
+         ON CONFLICT (instructor_id, student_id) DO UPDATE
+         SET status = 'pending_approval',
+             enrolled_at = NOW(),
+             subject_id = $3,
+             group_id = $4,
+             enrollment_source = 'group',
+             deleted_at = NULL
+         RETURNING id`,
+        [g.instructor_id, studentId, g.subject_id || null, g.group_id],
+      );
+      const enrollmentId = enr[0].id;
 
-    await applyGroupScheduleToEnrollment(enrollmentId, g.group_id).catch(() => {});
+      await applyGroupScheduleToEnrollment(enrollmentId, g.group_id).catch(() => {});
 
-    const { rows: reqRows } = await client.query(
-      `INSERT INTO student_join_requests (
-         enrollment_id, instructor_id, group_id, student_id, status,
-         first_name, last_name, phone_number, parent_name, parent_phone,
-         payment_terms_accepted_at, terms_snapshot,
-         referral_source_id, referral_notes
-       ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, NOW(), $10::jsonb, $11, $12)
-       RETURNING id, status, created_at`,
-      [
-        enrollmentId,
+      const { rows: reqRows } = await client.query(
+        `INSERT INTO student_join_requests (
+           enrollment_id, instructor_id, group_id, student_id, status,
+           first_name, last_name, phone_number, parent_name, parent_phone,
+           payment_terms_accepted_at, terms_snapshot,
+           referral_source_id, referral_notes
+         ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, NOW(), $10::jsonb, $11, $12)
+         RETURNING id, status, created_at`,
+        [
+          enrollmentId,
+          g.instructor_id,
+          g.group_id,
+          studentId,
+          firstName,
+          lastName,
+          phoneCanon,
+          parentName || null,
+          parentPhoneCanon || parentPhoneRaw || null,
+          JSON.stringify(terms_snapshot),
+          referralSourceId,
+          referralNotes || null,
+        ],
+      );
+
+      await trackInstructorStudentLink(
         g.instructor_id,
-        g.group_id,
         studentId,
-        firstName,
-        lastName,
-        phoneCanon,
-        parentName || null,
-        parentPhoneCanon || parentPhoneRaw || null,
-        JSON.stringify(terms_snapshot),
-        referralSourceId,
-        referralNotes || null,
-      ],
-    );
+        { verifiedPhone: phoneCanon || undefined, skipLimitCheck: true },
+        client,
+      );
 
-    await trackInstructorStudentLink(
-      g.instructor_id,
-      studentId,
-      { verifiedPhone: phoneCanon || undefined, skipLimitCheck: true },
-      client,
-    );
+      return {
+        enrollment_id: enrollmentId,
+        request_id: reqRows[0].id,
+        group: {
+          id: g.group_id,
+          name: g.group_name,
+          subject: g.subject_name,
+        },
+      };
+    });
+
+    await notifyInstructorJoinRequest(g.instructor_id, fullName, g.group_name);
 
     return {
-      enrollment_id: enrollmentId,
-      request_id: reqRows[0].id,
-      group: {
-        id: g.group_id,
-        name: g.group_name,
-        subject: g.subject_name,
-      },
+      ...result,
+      message: 'Sorğunuz göndərildi. Müəllim təsdiqlədikdən sonra qrupa əlavə olunacaqsınız.',
+      code: 'PENDING_APPROVAL',
     };
-  });
-
-  await notifyInstructorJoinRequest(g.instructor_id, fullName, g.group_name);
-
-  return {
-    ...result,
-    message: 'Sorğunuz göndərildi. Müəllim təsdiqlədikdən sonra qrupa əlavə olunacaqsınız.',
-    code: 'PENDING_APPROVAL',
-  };
+  } catch (err) {
+    if (err.code === '23505') {
+      const customErr = new Error('Sorğunuz artıq göndərilib — müəllimin təsdiqini gözləyin');
+      customErr.statusCode = 409;
+      customErr.code = 'ALREADY_PENDING';
+      throw customErr;
+    }
+    throw err;
+  }
 }
 
 async function listPendingJoinRequests(instructorId) {

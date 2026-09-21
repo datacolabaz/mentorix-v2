@@ -245,6 +245,7 @@ export default function JoinClass() {
 
   const submitRequest = async (e) => {
     e?.preventDefault?.()
+    if (busy) return
     if (!initialCode) return toast('Dəvət linki düzgün deyil', 'error')
     if (!user) return toast('Əvvəlcə Google ilə daxil olun', 'error')
     if (user.role !== 'student') {
@@ -531,7 +532,7 @@ export default function JoinClass() {
               className="w-full justify-center"
               type="button"
               loading={busy}
-              disabled={busy || joinStateLoading}
+              disabled={busy || authBusy || joinStateLoading || !isStudentSession}
               onClick={() => {
                 if (!termsAccepted) {
                   toast('Ödəniş şərtləri ilə razılaşın', 'error')
