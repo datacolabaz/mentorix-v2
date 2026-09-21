@@ -389,7 +389,9 @@ export default function InstructorMapSearch() {
       <MarketplaceAiSearchPanel
         userLat={null}
         userLng={null}
-        defaultExpanded={isLgUp}
+        // Keep the standard teacher results in focus. AI search remains one
+        // click away instead of occupying the first viewport on desktop.
+        defaultExpanded={false}
         onApplyFilters={handleAiApplyFilters}
         onInquiry={onInquiryClick}
         onWhatsApp={onWhatsAppClick}
@@ -603,7 +605,7 @@ export default function InstructorMapSearch() {
         <aside
           className={[
             'order-2 flex flex-col min-h-0 overflow-hidden bg-white border-t lg:border-t-0 border-slate-200 shrink-0',
-            'lg:flex-none lg:w-[42%]',
+            'lg:flex-none lg:w-[34%]',
             // Mobile: content-sized bottom panel (not half the viewport) so cards stay visible
             isLgUp ? '' : mobileFiltersOpen ? 'max-h-[min(48vh,26rem)]' : 'max-h-[min(38vh,18rem)]',
           ].join(' ')}
