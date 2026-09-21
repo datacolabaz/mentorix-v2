@@ -248,33 +248,9 @@ async function createJoinRequest({
 
   const fullName = `${firstName} ${lastName}`.trim();
 
-  const { rows: existing } = await db.query(
-    `SELECT e.id, e.status, sjr.id AS request_id, sjr.status AS request_status
-     FROM enrollments e
-     LEFT JOIN student_join_requests sjr ON sjr.enrollment_id = e.id
-     WHERE e.student_id = $1
-       AND e.group_id = $2
-       AND (e.deleted_at IS NULL)
-       AND COALESCE(LOWER(TRIM(e.status)), '') NOT IN ('rejected', 'left', 'archived')`,
-    [studentId, g.group_id],
-  );
-  const prev = existing[0];
-  if (prev) {
-    const st = String(prev.status || '').toLowerCase();
-    const reqSt = String(prev.request_status || '').toUpperCase();
-    if (st === 'active' || (st === 'pending_setup' && reqSt === 'APPROVED')) {
-      const err = new Error('Bu qrupa artıq qoşulmusunuz');
-      err.statusCode = 409;
-      err.code = 'ALREADY_JOINED';
-      throw err;
-    }
-    if (st === 'pending_approval' && reqSt === 'PENDING') {
-      const err = new Error('Sorğunuz artıq göndərilib — müəllimin təsdiqini gözləyin');
-      err.statusCode = 409;
-      err.code = 'ALREADY_PENDING';
-      throw err;
-    }
-  }
+  // Duplicate detection happens again inside the transaction below. Keeping
+  // it there is important: the form can be submitted twice before either
+  // request becomes visible to this initial read.
 
   const parentName = parent_name != null ? String(parent_name).trim() : '';
   const parentPhoneRaw = parent_phone != null ? String(parent_phone).trim() : '';
@@ -349,13 +325,97 @@ async function createJoinRequest({
       );
     }
 
-    const { rows: enr } = await client.query(
-      `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, subject_id, group_id, enrollment_source)
-       VALUES ($1, $2, 'pending_approval', NOW(), $3, $4, 'group')
-       RETURNING id`,
-      [g.instructor_id, studentId, g.subject_id || null, g.group_id],
+    // The database keeps one enrollment per instructor/student pair. A double
+    // click, browser retry, or two tabs can pass the pre-check concurrently,
+    // so lock and reuse that enrollment inside the transaction instead of
+    // attempting a second INSERT that violates the unique constraint.
+    const { rows: existingEnrollments } = await client.query(
+      `SELECT e.id,
+              e.status,
+              e.group_id,
+              sjr.id AS request_id,
+              sjr.status AS request_status
+       FROM enrollments e
+       LEFT JOIN student_join_requests sjr ON sjr.enrollment_id = e.id
+       WHERE e.instructor_id = $1
+         AND e.student_id = $2
+         AND e.deleted_at IS NULL
+       ORDER BY e.created_at DESC NULLS LAST
+       LIMIT 1
+       FOR UPDATE OF e`,
+      [g.instructor_id, studentId],
     );
-    const enrollmentId = enr[0].id;
+    const existingEnrollment = existingEnrollments[0];
+    const existingGroupId = existingEnrollment?.group_id ? String(existingEnrollment.group_id) : '';
+    const targetGroupId = String(g.group_id);
+    const existingStatus = String(existingEnrollment?.status || '').toLowerCase();
+    if (existingEnrollment && existingGroupId && existingGroupId !== targetGroupId) {
+      const err = new Error('Bu müəllimə artıq qoşulmusunuz');
+      err.statusCode = 409;
+      err.code = 'ALREADY_JOINED';
+      throw err;
+    }
+
+    if (existingEnrollment && ['active', 'pending_setup'].includes(existingStatus)) {
+      return {
+        enrollment_id: existingEnrollment.id,
+        request_id: existingEnrollment.request_id || null,
+        group: {
+          id: g.group_id,
+          name: g.group_name,
+          subject: g.subject_name,
+        },
+        message: 'Bu qrupa artıq qoşulmusunuz',
+        code: 'ALREADY_JOINED',
+        idempotent: true,
+      };
+    }
+
+    if (
+      existingEnrollment &&
+      existingEnrollment.request_id &&
+      ['PENDING', 'APPROVED'].includes(String(existingEnrollment.request_status || '').toUpperCase())
+    ) {
+      return {
+        enrollment_id: existingEnrollment.id,
+        request_id: existingEnrollment.request_id,
+        group: {
+          id: g.group_id,
+          name: g.group_name,
+          subject: g.subject_name,
+        },
+        message:
+          String(existingEnrollment.request_status).toUpperCase() === 'APPROVED'
+            ? 'Bu qrupa artıq qoşulmusunuz'
+            : 'Sorğunuz artıq göndərilib — müəllimin təsdiqini gözləyin',
+        code:
+          String(existingEnrollment.request_status).toUpperCase() === 'APPROVED'
+            ? 'ALREADY_JOINED'
+            : 'ALREADY_PENDING',
+        idempotent: true,
+      };
+    }
+
+    let enrollmentId = existingEnrollment?.id;
+    if (enrollmentId) {
+      await client.query(
+        `UPDATE enrollments
+         SET status = 'pending_approval',
+             subject_id = $2,
+             group_id = $3,
+             enrollment_source = 'group'
+         WHERE id = $1`,
+        [enrollmentId, g.subject_id || null, g.group_id],
+      );
+    } else {
+      const { rows: enr } = await client.query(
+        `INSERT INTO enrollments (instructor_id, student_id, status, enrolled_at, subject_id, group_id, enrollment_source)
+         VALUES ($1, $2, 'pending_approval', NOW(), $3, $4, 'group')
+         RETURNING id`,
+        [g.instructor_id, studentId, g.subject_id || null, g.group_id],
+      );
+      enrollmentId = enr[0].id;
+    }
 
     await applyGroupScheduleToEnrollment(enrollmentId, g.group_id).catch(() => {});
 
@@ -366,6 +426,23 @@ async function createJoinRequest({
          payment_terms_accepted_at, terms_snapshot,
          referral_source_id, referral_notes
        ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, NOW(), $10::jsonb, $11, $12)
+       ON CONFLICT (enrollment_id) DO UPDATE SET
+         instructor_id = EXCLUDED.instructor_id,
+         group_id = EXCLUDED.group_id,
+         student_id = EXCLUDED.student_id,
+         status = 'PENDING',
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name,
+         phone_number = EXCLUDED.phone_number,
+         parent_name = EXCLUDED.parent_name,
+         parent_phone = EXCLUDED.parent_phone,
+         payment_terms_accepted_at = EXCLUDED.payment_terms_accepted_at,
+         terms_snapshot = EXCLUDED.terms_snapshot,
+         referral_source_id = EXCLUDED.referral_source_id,
+         referral_notes = EXCLUDED.referral_notes,
+         resolved_at = NULL,
+         resolved_by = NULL,
+         rejection_reason = NULL
        RETURNING id, status, created_at`,
       [
         enrollmentId,
@@ -398,8 +475,11 @@ async function createJoinRequest({
         name: g.group_name,
         subject: g.subject_name,
       },
+      idempotent: Boolean(existingEnrollment?.request_id),
     };
   });
+
+  if (result.idempotent) return result;
 
   await notifyInstructorJoinRequest(g.instructor_id, fullName, g.group_name);
 
