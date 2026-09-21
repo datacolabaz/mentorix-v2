@@ -87,6 +87,7 @@ export default function MarketplaceAiSearchPanel({
   onFocusTutor,
   whatsappBusy,
   defaultExpanded = true,
+  fallbackResultCount = 0,
 }) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
@@ -223,12 +224,18 @@ export default function MarketplaceAiSearchPanel({
                 {isEmptyResult ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
                     <p className="text-sm font-semibold text-slate-900">
-                      {tutors?.empty_state?.title || t('marketplace.ai.emptyTitle')}
+                      {fallbackResultCount > 0
+                        ? 'AI axtarışına uyğun müəllim tapılmadı'
+                        : tutors?.empty_state?.title || t('marketplace.ai.emptyTitle')}
                     </p>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      {tutors?.empty_state?.message || t('marketplace.ai.emptyMessage')}
+                      {fallbackResultCount > 0
+                        ? `Ümumi siyahıda ${fallbackResultCount} müəllim göstərilir. Filterləri dəyişərək daha uyğun nəticələrə baxa bilərsiniz.`
+                        : tutors?.empty_state?.message || t('marketplace.ai.emptyMessage')}
                     </p>
-                    <p className="text-xs text-primary/90 font-medium pt-1">{t('marketplace.ai.emptyHint')}</p>
+                    {fallbackResultCount > 0 ? null : (
+                      <p className="text-xs text-primary/90 font-medium pt-1">{t('marketplace.ai.emptyHint')}</p>
+                    )}
                     {tutors?.empty_state?.instructor_cta ? (
                       <Link
                         to={tutors.empty_state.instructor_cta.path}
