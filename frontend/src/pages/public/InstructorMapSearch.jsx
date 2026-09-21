@@ -240,17 +240,31 @@ export default function InstructorMapSearch() {
     return sortInstructorsForMapListing(instructors, () => 0)
   }, [instructors])
 
-  const count = instructorsSorted.length
+  const isInitialBrowse =
+    kind === 'all' &&
+    !discoverFilters.category_id &&
+    discoverFilters.format === 'any' &&
+    !discoverFilters.area_id &&
+    !bakuDistrict &&
+    !includeNeighbors &&
+    region === BAKU
+
+  const displayedInstructors = useMemo(
+    () => (isInitialBrowse ? instructorsSorted.slice(0, 8) : instructorsSorted),
+    [instructorsSorted, isInitialBrowse],
+  )
+
+  const count = displayedInstructors.length
   const mobileTotalPages = Math.max(1, Math.ceil(count / MOBILE_PAGE_SIZE))
   const visibleInstructors = useMemo(() => {
-    if (isLgUp) return instructorsSorted
+    if (isLgUp) return displayedInstructors
     const start = (mobilePage - 1) * MOBILE_PAGE_SIZE
-    return instructorsSorted.slice(start, start + MOBILE_PAGE_SIZE)
-  }, [instructorsSorted, isLgUp, mobilePage])
+    return displayedInstructors.slice(start, start + MOBILE_PAGE_SIZE)
+  }, [displayedInstructors, isLgUp, mobilePage])
 
   useEffect(() => {
     setMobilePage(1)
-  }, [instructorsSorted, kind, discoverFilters, region, bakuDistrict, includeNeighbors])
+  }, [displayedInstructors, kind, discoverFilters, region, bakuDistrict, includeNeighbors])
 
   useEffect(() => {
     if (!isLgUp && mobilePage > mobileTotalPages) {
@@ -391,7 +405,7 @@ export default function InstructorMapSearch() {
         userLng={null}
         // Keep the standard teacher results in focus. AI search remains one
         // click away instead of occupying the first viewport on desktop.
-        defaultExpanded={false}
+        defaultExpanded={isInitialBrowse}
         onApplyFilters={handleAiApplyFilters}
         onInquiry={onInquiryClick}
         onWhatsApp={onWhatsAppClick}
@@ -505,12 +519,14 @@ export default function InstructorMapSearch() {
             {hasFetched && !fetchError ? (
               <>
                 <p className="text-base sm:text-lg font-semibold text-slate-900 leading-snug">
-                  {regionResultsHeadline(count, kind, locationPhrase)}
+                  {isInitialBrowse ? 'Tövsiyə olunan müəllimlər' : regionResultsHeadline(count, kind, locationPhrase)}
                 </p>
                 {loading ? (
                   <p className="text-xs text-slate-500">
                     {t('marketplace.distance.refreshing')}
                   </p>
+                ) : isInitialBrowse ? (
+                  <p className="text-xs text-slate-500">Axtarışınızı dəqiqləşdirin və sizə uyğun müəllimləri tapın.</p>
                 ) : null}
               </>
             ) : loading ? (
