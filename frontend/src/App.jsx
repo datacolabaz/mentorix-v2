@@ -1,15 +1,15 @@
-import { useEffect, useLayoutEffect } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 import { MentorWorkspaceProvider, useIsMentorWorkspace } from './hooks/useMentorWorkspace.jsx'
 
-import AuthPage from './pages/auth/AuthPage'
-import Landing from './pages/auth/Landing'
-import VerifyEmail from './pages/auth/VerifyEmail'
-import VerifyPhone from './pages/auth/VerifyPhone'
-import ResetPassword from './pages/auth/ResetPassword'
-import PersonaOnboarding from './pages/auth/PersonaOnboarding'
-import GenericAppHome from './pages/app/Home'
+const AuthPage = lazy(() => import('./pages/auth/AuthPage'))
+const Landing = lazy(() => import('./pages/auth/Landing'))
+const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'))
+const VerifyPhone = lazy(() => import('./pages/auth/VerifyPhone'))
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
+const PersonaOnboarding = lazy(() => import('./pages/auth/PersonaOnboarding'))
+const GenericAppHome = lazy(() => import('./pages/app/Home'))
 import {
   consumeReturnAfterLogin,
   dashboardPathForUser,
@@ -21,131 +21,139 @@ import {
   userNeedsOnboarding,
   ONBOARDING_PATH,
 } from './lib/postAuth'
-import InstructorMapSearch from './pages/public/InstructorMapSearch'
-import UniversityProgramSearch from './pages/public/UniversityProgramSearch'
-import PublicSeoLanding from './pages/public/PublicSeoLanding'
-import MentorshipLanding from './pages/public/MentorshipLanding'
-import MentorshipGoals from './pages/public/MentorshipGoals'
-import MentorshipSafety from './pages/public/MentorshipSafety'
-import Favorites from './pages/account/Favorites'
-import LegalDocumentPage from './pages/public/LegalDocumentPage'
+const InstructorMapSearch = lazy(() => import('./pages/public/InstructorMapSearch'))
+const UniversityProgramSearch = lazy(() => import('./pages/public/UniversityProgramSearch'))
+const PublicSeoLanding = lazy(() => import('./pages/public/PublicSeoLanding'))
+const MentorshipLanding = lazy(() => import('./pages/public/MentorshipLanding'))
+const MentorshipGoals = lazy(() => import('./pages/public/MentorshipGoals'))
+const MentorshipSafety = lazy(() => import('./pages/public/MentorshipSafety'))
+const Favorites = lazy(() => import('./pages/account/Favorites'))
+const LegalDocumentPage = lazy(() => import('./pages/public/LegalDocumentPage'))
 import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
-import PublicInstructorProfile from './pages/public/PublicInstructorProfile'
-import LibraryInvite from './pages/public/LibraryInvite'
-import MaterialInvite from './pages/public/MaterialInvite'
-import MaterialPublicPreview from './pages/public/MaterialPublicPreview'
-import MentorixLive from './pages/live/MentorixLive'
-import LiveGuestJoin from './pages/live/LiveGuestJoin'
-import LiveRecordingShare from './pages/live/LiveRecordingShare'
-import InstructorLiveHistory from './pages/instructor/LiveHistory'
+const PublicInstructorProfile = lazy(() => import('./pages/public/PublicInstructorProfile'))
+const LibraryInvite = lazy(() => import('./pages/public/LibraryInvite'))
+const MaterialInvite = lazy(() => import('./pages/public/MaterialInvite'))
+const MaterialPublicPreview = lazy(() => import('./pages/public/MaterialPublicPreview'))
+const MentorixLive = lazy(() => import('./pages/live/MentorixLive'))
+const LiveGuestJoin = lazy(() => import('./pages/live/LiveGuestJoin'))
+const LiveRecordingShare = lazy(() => import('./pages/live/LiveRecordingShare'))
+const InstructorLiveHistory = lazy(() => import('./pages/instructor/LiveHistory'))
 import AdminLayout from './layouts/AdminLayout'
 import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
 import ParentLayout from './layouts/ParentLayout'
 import OrgLayout from './layouts/OrgLayout'
 
-import AdminDashboard from './pages/admin/Dashboard'
-import AdminInstructors from './pages/admin/Instructors'
-import AdminStudents from './pages/admin/Students'
-import AdminClasses from './pages/admin/Classes'
-import AdminPayments from './pages/admin/Payments'
-import AdminNotifications from './pages/admin/Notifications'
-import AdminSettings from './pages/admin/Settings'
-import AdminMarketingLogin from './pages/admin/MarketingLogin'
-import AdminInstructorNav from './pages/admin/InstructorNav'
-import AdminCategories from './pages/admin/AdminCategories'
-import AdminUniversityPrograms from './pages/admin/AdminUniversityPrograms'
-import AdminAnalytics from './pages/admin/AdminAnalytics'
-import AdminCertifiedExamVerifications from './pages/admin/AdminCertifiedExamVerifications'
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'))
+const AdminInstructors = lazy(() => import('./pages/admin/Instructors'))
+const AdminStudents = lazy(() => import('./pages/admin/Students'))
+const AdminClasses = lazy(() => import('./pages/admin/Classes'))
+const AdminPayments = lazy(() => import('./pages/admin/Payments'))
+const AdminNotifications = lazy(() => import('./pages/admin/Notifications'))
+const AdminSettings = lazy(() => import('./pages/admin/Settings'))
+const AdminMarketingLogin = lazy(() => import('./pages/admin/MarketingLogin'))
+const AdminInstructorNav = lazy(() => import('./pages/admin/InstructorNav'))
+const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'))
+const AdminUniversityPrograms = lazy(() => import('./pages/admin/AdminUniversityPrograms'))
+const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'))
+const AdminCertifiedExamVerifications = lazy(() => import('./pages/admin/AdminCertifiedExamVerifications'))
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
 import PresenceHeartbeat from './components/analytics/PresenceHeartbeat'
 import { DigitalMentorProvider } from './mentor/DigitalMentorProvider'
 import DigitalMentorHost from './mentor/DigitalMentorHost'
 
-import InstructorDashboard from './pages/instructor/Dashboard'
-import MentorDashboard from './pages/instructor/MentorDashboard'
-import MentorGoals from './pages/instructor/mentor/MentorGoals'
-import MentorSessions from './pages/instructor/mentor/MentorSessions'
-import MentorConnections from './pages/instructor/mentor/MentorConnections'
-import MentorRequests from './pages/instructor/mentor/MentorRequests'
-import MentorNotes from './pages/instructor/mentor/MentorNotes'
-import MentorOffers from './pages/instructor/mentor/MentorOffers'
-import MentorOutcomes from './pages/instructor/mentor/MentorOutcomes'
-import MentorResources from './pages/instructor/mentor/MentorResources'
-import InstructorStudents from './pages/instructor/Students'
-import InstructorSchedule from './pages/instructor/Schedule'
-import InstructorExams from './pages/instructor/Exams'
-import InstructorAttendance from './pages/instructor/Attendance'
-import InstructorAnalytics from './pages/instructor/Analytics'
-import InstructorPayments from './pages/instructor/Payments'
-import InstructorNotifications from './pages/instructor/Notifications'
-import InstructorSettings from './pages/instructor/Settings'
-import InstructorTeachingGroups from './pages/instructor/TeachingGroups'
-import InstructorJoinRequests from './pages/instructor/JoinRequests'
-import StudentInquiries from './pages/instructor/StudentInquiries'
-import InstructorTasks from './pages/instructor/Tasks'
-import InstructorAIQuestionGenerator from './pages/instructor/AIQuestionGenerator'
-import InstructorMaterialsLibrary from './pages/instructor/MaterialsLibrary'
-import InstructorPresentations from './pages/instructor/Presentations'
-import InstructorPresentationViewer from './pages/instructor/PresentationViewer'
-import InstructorPresentationPresent from './pages/instructor/PresentationPresent'
-import InstructorUniversityPrograms from './pages/instructor/InstructorUniversityPrograms'
-import PaymentSuccess from './pages/instructor/PaymentSuccess'
-import PaymentFail from './pages/instructor/PaymentFail'
-import PaymentPending from './pages/instructor/PaymentPending'
-import CertificateVerify from './pages/public/CertificateVerify'
-import CertifiedExamsCatalog from './pages/public/CertifiedExamsCatalog'
-import CertifiedExamCategoryPage from './pages/public/CertifiedExamCategoryPage'
-import CertifiedExamDetailPage from './pages/public/CertifiedExamDetailPage'
-import StudentCertificates from './pages/student/Certificates'
-import InstructorCertificates from './pages/instructor/Certificates'
-import AdminBilling from './pages/admin/AdminBilling'
-import AdminPartners from './pages/admin/AdminPartners'
-import AdminInventory from './pages/admin/AdminInventory'
-import ParentNotifications from './pages/parent/Notifications'
-import PartnerDashboard from './pages/partner/PartnerDashboard'
-import PartnerProgramLanding from './pages/partner/PartnerProgramLanding'
-import PartnerReferralLanding from './pages/PartnerReferralLanding'
+const InstructorDashboard = lazy(() => import('./pages/instructor/Dashboard'))
+const MentorDashboard = lazy(() => import('./pages/instructor/MentorDashboard'))
+const MentorGoals = lazy(() => import('./pages/instructor/mentor/MentorGoals'))
+const MentorSessions = lazy(() => import('./pages/instructor/mentor/MentorSessions'))
+const MentorConnections = lazy(() => import('./pages/instructor/mentor/MentorConnections'))
+const MentorRequests = lazy(() => import('./pages/instructor/mentor/MentorRequests'))
+const MentorNotes = lazy(() => import('./pages/instructor/mentor/MentorNotes'))
+const MentorOffers = lazy(() => import('./pages/instructor/mentor/MentorOffers'))
+const MentorOutcomes = lazy(() => import('./pages/instructor/mentor/MentorOutcomes'))
+const MentorResources = lazy(() => import('./pages/instructor/mentor/MentorResources'))
+const InstructorStudents = lazy(() => import('./pages/instructor/Students'))
+const InstructorSchedule = lazy(() => import('./pages/instructor/Schedule'))
+const InstructorExams = lazy(() => import('./pages/instructor/Exams'))
+const InstructorAttendance = lazy(() => import('./pages/instructor/Attendance'))
+const InstructorAnalytics = lazy(() => import('./pages/instructor/Analytics'))
+const InstructorPayments = lazy(() => import('./pages/instructor/Payments'))
+const InstructorNotifications = lazy(() => import('./pages/instructor/Notifications'))
+const InstructorSettings = lazy(() => import('./pages/instructor/Settings'))
+const InstructorTeachingGroups = lazy(() => import('./pages/instructor/TeachingGroups'))
+const InstructorJoinRequests = lazy(() => import('./pages/instructor/JoinRequests'))
+const StudentInquiries = lazy(() => import('./pages/instructor/StudentInquiries'))
+const InstructorTasks = lazy(() => import('./pages/instructor/Tasks'))
+const InstructorAIQuestionGenerator = lazy(() => import('./pages/instructor/AIQuestionGenerator'))
+const InstructorMaterialsLibrary = lazy(() => import('./pages/instructor/MaterialsLibrary'))
+const InstructorPresentations = lazy(() => import('./pages/instructor/Presentations'))
+const InstructorPresentationViewer = lazy(() => import('./pages/instructor/PresentationViewer'))
+const InstructorPresentationPresent = lazy(() => import('./pages/instructor/PresentationPresent'))
+const InstructorUniversityPrograms = lazy(() => import('./pages/instructor/InstructorUniversityPrograms'))
+const PaymentSuccess = lazy(() => import('./pages/instructor/PaymentSuccess'))
+const PaymentFail = lazy(() => import('./pages/instructor/PaymentFail'))
+const PaymentPending = lazy(() => import('./pages/instructor/PaymentPending'))
+const CertificateVerify = lazy(() => import('./pages/public/CertificateVerify'))
+const CertifiedExamsCatalog = lazy(() => import('./pages/public/CertifiedExamsCatalog'))
+const CertifiedExamCategoryPage = lazy(() => import('./pages/public/CertifiedExamCategoryPage'))
+const CertifiedExamDetailPage = lazy(() => import('./pages/public/CertifiedExamDetailPage'))
+const StudentCertificates = lazy(() => import('./pages/student/Certificates'))
+const InstructorCertificates = lazy(() => import('./pages/instructor/Certificates'))
+const AdminBilling = lazy(() => import('./pages/admin/AdminBilling'))
+const AdminPartners = lazy(() => import('./pages/admin/AdminPartners'))
+const AdminInventory = lazy(() => import('./pages/admin/AdminInventory'))
+const ParentNotifications = lazy(() => import('./pages/parent/Notifications'))
+const PartnerDashboard = lazy(() => import('./pages/partner/PartnerDashboard'))
+const PartnerProgramLanding = lazy(() => import('./pages/partner/PartnerProgramLanding'))
+const PartnerReferralLanding = lazy(() => import('./pages/PartnerReferralLanding'))
 
-import StudentDashboard from './pages/student/Dashboard'
-import MentorshipDashboard from './pages/student/MentorshipDashboard'
-import StudentExams from './pages/student/Exams'
-import StudentPayments from './pages/student/Payments'
-import StudentSchedule from './pages/student/Schedule'
-import StudentTasks from './pages/student/Tasks'
-import StudentMaterials from './pages/student/Materials'
-import StudentNotifications from './pages/student/Notifications'
-import StudentJoinClass from './pages/student/JoinClass'
-import StudentJoinRedirect from './pages/student/StudentJoinRedirect'
-import StudentExamInvite from './pages/student/ExamInvite'
-import StudentTaskInvite from './pages/student/TaskInvite'
-import StudentMyGroups from './pages/student/MyGroups'
-import GroupChatPage from './pages/chat/GroupChatPage'
-import DirectChatPage from './pages/chat/DirectChatPage'
-import AssignmentChatPage from './pages/chat/AssignmentChatPage'
+const StudentDashboard = lazy(() => import('./pages/student/Dashboard'))
+const MentorshipDashboard = lazy(() => import('./pages/student/MentorshipDashboard'))
+const StudentExams = lazy(() => import('./pages/student/Exams'))
+const StudentPayments = lazy(() => import('./pages/student/Payments'))
+const StudentSchedule = lazy(() => import('./pages/student/Schedule'))
+const StudentTasks = lazy(() => import('./pages/student/Tasks'))
+const StudentMaterials = lazy(() => import('./pages/student/Materials'))
+const StudentNotifications = lazy(() => import('./pages/student/Notifications'))
+const StudentJoinClass = lazy(() => import('./pages/student/JoinClass'))
+const StudentJoinRedirect = lazy(() => import('./pages/student/StudentJoinRedirect'))
+const StudentExamInvite = lazy(() => import('./pages/student/ExamInvite'))
+const StudentTaskInvite = lazy(() => import('./pages/student/TaskInvite'))
+const StudentMyGroups = lazy(() => import('./pages/student/MyGroups'))
+const GroupChatPage = lazy(() => import('./pages/chat/GroupChatPage'))
+const DirectChatPage = lazy(() => import('./pages/chat/DirectChatPage'))
+const AssignmentChatPage = lazy(() => import('./pages/chat/AssignmentChatPage'))
 import { StudentGroupProvider } from './contexts/StudentGroupContext'
 import { parseJoinInviteInput } from './lib/joinInvite'
-import ParentDashboard from './pages/parent/Dashboard'
-import ParentAssignments from './pages/parent/Assignments'
-import AssignmentAnalytics from './pages/instructor/AssignmentAnalytics'
-import OrgDashboard from './pages/org/Dashboard'
-import OrgParticipants from './pages/org/Participants'
-import OrgTeams, { OrgTeamDetail } from './pages/org/Teams'
-import OrgGroups from './pages/org/Groups'
-import OrgTrainers from './pages/org/Trainers'
-import OrgExams from './pages/org/Exams'
-import { OrgQuestionBank, OrgTests, OrgTemplates, OrgMaterials } from './pages/org/Content'
-import OrgAnalytics from './pages/org/Analytics'
-import {
-  OrgMembers,
-  OrgRoles,
-  OrgProfile,
-  OrgBranding,
-  OrgIntegrations,
-  OrgNotifications,
-  OrgAudit,
-  OrgSettings,
-} from './pages/org/Admin'
+const ParentDashboard = lazy(() => import('./pages/parent/Dashboard'))
+const ParentAssignments = lazy(() => import('./pages/parent/Assignments'))
+const AssignmentAnalytics = lazy(() => import('./pages/instructor/AssignmentAnalytics'))
+const OrgDashboard = lazy(() => import('./pages/org/Dashboard'))
+const OrgParticipants = lazy(() => import('./pages/org/Participants'))
+const OrgTeams = lazy(() => import('./pages/org/Teams'))
+const OrgTeamDetail = lazy(() => import('./pages/org/Teams').then((module) => ({ default: module.OrgTeamDetail })))
+const OrgGroups = lazy(() => import('./pages/org/Groups'))
+const OrgTrainers = lazy(() => import('./pages/org/Trainers'))
+const OrgExams = lazy(() => import('./pages/org/Exams'))
+const OrgQuestionBank = lazy(() => import('./pages/org/Content').then((module) => ({ default: module.OrgQuestionBank })))
+const OrgTests = lazy(() => import('./pages/org/Content').then((module) => ({ default: module.OrgTests })))
+const OrgTemplates = lazy(() => import('./pages/org/Content').then((module) => ({ default: module.OrgTemplates })))
+const OrgMaterials = lazy(() => import('./pages/org/Content').then((module) => ({ default: module.OrgMaterials })))
+const OrgAnalytics = lazy(() => import('./pages/org/Analytics'))
+const OrgMembers = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgMembers })))
+const OrgRoles = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgRoles })))
+const OrgProfile = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgProfile })))
+const OrgBranding = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgBranding })))
+const OrgIntegrations = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgIntegrations })))
+const OrgNotifications = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgNotifications })))
+const OrgAudit = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgAudit })))
+const OrgSettings = lazy(() => import('./pages/org/Admin').then((module) => ({ default: module.OrgSettings })))
+const RouteFallback = () => (
+  <div className="min-h-[40vh] grid place-items-center p-6 text-sm text-gray-400" role="status">
+    Yüklənir…
+  </div>
+)
+
 const Placeholder = ({ title }) => (
   <div className="p-4 sm:p-6 min-w-0">
     <h1 className="font-display font-bold text-xl sm:text-2xl text-white break-words">{title}</h1>
@@ -247,6 +255,7 @@ export default function App() {
       <ScrollToTop />
       <AnalyticsPageTracker />
       <PresenceHeartbeat />
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
       <Route path="/search" element={<InstructorMapSearch />} />
       <Route path="/universities" element={<UniversityProgramSearch />} />
@@ -485,6 +494,7 @@ export default function App() {
 
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
     </Routes>
+      </Suspense>
     </DigitalMentorProvider>
   )
 }

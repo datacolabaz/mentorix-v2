@@ -42,6 +42,10 @@
       "destination": "/api/share-html?kind=material&materialId=:materialId"
     },
     {
+      "source": "/teachers/:id",
+      "destination": "/api/share-html?kind=instructor&id=:id"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
