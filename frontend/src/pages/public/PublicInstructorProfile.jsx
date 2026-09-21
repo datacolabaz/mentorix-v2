@@ -176,6 +176,13 @@ export default function PublicInstructorProfile() {
     instructor?.experience_years != null && Number.isFinite(Number(instructor.experience_years))
       ? Number(instructor.experience_years)
       : null
+  const hourlyRate = instructor?.discover_hourly_rate != null ? instructor.discover_hourly_rate : null
+  const responseTimeHours = Number(instructor?.response_time_hours || instructor?.reply_time_hours || 0)
+  const availabilityLabel = instructor?.next_available_slot
+    ? `${t('marketplace.profile.nextSlot')} ${localizeNextSlotLabel(instructor.next_available_slot, locale)}`
+    : instructor?.is_online
+      ? t('marketplace.card.onlineNow')
+      : t('marketplace.profile.availabilityUnknown', { defaultValue: 'Availability üçün müraciət göndərin' })
 
   return (
     <div className="min-h-[100svh] bg-[#0b0b0b] text-white flex flex-col">
@@ -209,9 +216,10 @@ export default function PublicInstructorProfile() {
 
         {!loading && instructor ? (
           <article className="space-y-5 sm:space-y-6">
-            {/* Üst blok: şəkil, ad, fənn, qiymət */}
-            <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#1a1a1a] to-[#121212] p-6 sm:p-8">
-              <div className="flex flex-col items-center text-center gap-4 max-w-md mx-auto">
+            {/* İlk viewport: qərar üçün əsas məlumatlar və booking CTA-ları */}
+            <section className="rounded-2xl border border-primary/20 bg-gradient-to-b from-[#1a1a1a] to-[#121212] p-5 sm:p-8">
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)] items-center">
+                <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-4">
                 <InstructorAvatar
                   fullName={instructor.full_name}
                   avatarUrl={instructor.avatar_url}
@@ -223,7 +231,7 @@ export default function PublicInstructorProfile() {
                   lastActivityAt={instructor.last_activity_at}
                 />
                 <div className="w-full">
-                  <div className="flex flex-wrap justify-center gap-1.5 mb-2">
+                  <div className="flex flex-wrap justify-center lg:justify-start gap-1.5 mb-2">
                     {showTopBadge(instructor) ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-300">
                         {t('marketplace.profile.topTeacher')}
@@ -251,7 +259,7 @@ export default function PublicInstructorProfile() {
                   </p>
                   <p className="text-xs text-gray-500 mt-1">{instructorRoleLabel(instructor.map_profile_kind, locale)}</p>
                   {(ratingLine || studentLine) && (
-                    <div className="flex flex-wrap justify-center gap-2 mt-3">
+                    <div className="flex flex-wrap justify-center lg:justify-start gap-2 mt-3">
                       {ratingLine ? (
                         <span className="text-sm font-semibold text-amber-200 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10">
                           {ratingLine}
@@ -264,20 +272,39 @@ export default function PublicInstructorProfile() {
                       ) : null}
                     </div>
                   )}
-                  <div className="flex flex-wrap justify-center gap-2 mt-3">
+                  <div className="flex flex-wrap justify-center lg:justify-start gap-2 mt-3">
                     {experienceYears != null && experienceYears > 0 ? (
                       <span className="text-sm font-semibold text-sky-300/95 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10">
                         {t('marketplace.profile.experienceYears', { count: experienceYears })}
                       </span>
                     ) : null}
-                    {instructor.discover_hourly_rate != null ? (
+                    {hourlyRate != null ? (
                       <p className="text-emerald-400 font-bold text-lg">
-                        {t('marketplace.profile.ratePerHour', { rate: instructor.discover_hourly_rate })}
+                        {t('marketplace.profile.ratePerHour', { rate: hourlyRate })}
                       </p>
                     ) : null}
                   </div>
                 </div>
-                <div className="w-full max-w-sm pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                </div>
+                <div className="w-full rounded-2xl border border-white/10 bg-black/20 p-4 sm:p-5">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="rounded-xl bg-white/5 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">{t('marketplace.profile.priceLabel', { defaultValue: 'Qiymət' })}</p>
+                      <p className="mt-1 text-lg font-bold text-emerald-300">
+                        {hourlyRate != null ? t('marketplace.profile.ratePerHour', { rate: hourlyRate }) : t('marketplace.profile.priceOnRequest', { defaultValue: 'Müraciət əsasında' })}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white/5 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">{t('marketplace.profile.availabilityLabel', { defaultValue: 'Availability' })}</p>
+                      <p className="mt-1 text-sm font-semibold text-white leading-snug">{availabilityLabel}</p>
+                    </div>
+                  </div>
+                  {responseTimeHours > 0 ? (
+                    <p className="mb-3 text-xs text-gray-400">
+                      {t('marketplace.profile.responseTime', { defaultValue: 'Adətən {{hours}} saat ərzində cavab verir', hours: responseTimeHours })}
+                    </p>
+                  ) : null}
+                  <div className="grid grid-cols-1 gap-2">
                   <button
                     type="button"
                     onClick={onInquiry}
@@ -296,6 +323,7 @@ export default function PublicInstructorProfile() {
                   <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed px-1 sm:col-span-2">
                     {t('marketplace.profile.whatsappDisclaimer')}
                   </p>
+                  </div>
                 </div>
               </div>
             </section>

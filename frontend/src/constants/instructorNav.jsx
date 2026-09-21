@@ -39,6 +39,19 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   mentor_ethics_resources: { to: '/instructor/materials', labelKey: 'nav.mentor.ethics_resources', label: 'Resurslar və etika', icon: 'materials' },
 }
 
+/** Instructor workspace is organized around the next user action, not implementation modules. */
+const INSTRUCTOR_PRODUCT_GROUPS = [
+  { id: 'today', title: 'BU GÜN', itemKeys: ['dashboard', 'schedule', 'join_requests', 'live_history'] },
+  {
+    id: 'teaching',
+    title: 'TƏDRİS',
+    itemKeys: ['teaching_groups', 'students', 'tasks', 'exams', 'ai_generator', 'presentations', 'materials_library'],
+  },
+  { id: 'contact', title: 'ƏLAQƏ', itemKeys: ['inquiries', 'notifications'] },
+  { id: 'results', title: 'NƏTİCƏLƏR', itemKeys: ['attendance', 'certificates', 'analytics'] },
+  { id: 'business', title: 'BİZNES', itemKeys: ['payments', 'settings'] },
+]
+
 export function defaultMentorNavSections() {
   return [
     {
@@ -201,45 +214,22 @@ function itemFromKey(key) {
 }
 
 export function defaultInstructorNavSections() {
-  return [
-    {
-      id: 'management',
-      title: 'MANAGEMENT',
-      enabled: true,
-      itemKeys: [
-        'dashboard',
-        'teaching_groups',
-        'live_history',
-        'students',
-        'join_requests',
-        'inquiries',
-        'schedule',
-        'attendance',
-        'exams',
-        'certificates',
-        'tasks',
-        'ai_generator',
-      ],
-    },
-    {
-      id: 'materials',
-      title: 'MATERİALLAR',
-      enabled: true,
-      itemKeys: ['presentations', 'materials_library'],
-    },
-    {
-      id: 'analytics',
-      title: 'ANALYTICS',
-      enabled: true,
-      itemKeys: ['analytics', 'payments'],
-    },
-    {
-      id: 'system',
-      title: 'SYSTEM',
-      enabled: true,
-      itemKeys: ['notifications', 'settings'],
-    },
-  ]
+  return INSTRUCTOR_PRODUCT_GROUPS.map((group) => ({ ...group, enabled: true }))
+}
+
+function reframeInstructorSections(sourceSections) {
+  const available = new Set(
+    (sourceSections || []).flatMap((section) => [
+      ...(section.itemKeys || []),
+      ...(section.items || []).map((item) => item?.key).filter(Boolean),
+    ]),
+  )
+  const source = available.size ? available : new Set(Object.keys(INSTRUCTOR_NAV_ITEM_DEFS).filter((key) => !key.startsWith('mentor_')))
+  return INSTRUCTOR_PRODUCT_GROUPS.map((group) => ({
+    id: group.id,
+    title: group.title,
+    items: group.itemKeys.filter((key) => source.has(key)).map(itemFromKey).filter(Boolean),
+  })).filter((section) => section.items.length > 0)
 }
 
 export function buildMentorNavSections() {
@@ -258,59 +248,9 @@ export function buildMentorNavSections() {
 /** API `nav.sections` və ya admin payload `sections` → InstructorLayout NAV_SECTIONS */
 export function buildInstructorNavSections(navPayload) {
   const sections = Array.isArray(navPayload?.sections) ? navPayload.sections : defaultInstructorNavSections()
-
-  return ensurePresentationsItem(
-    ensureAiGeneratorItem(
-      dedupeNavSections(
-        sections
-          .filter((s) => s && s.enabled !== false)
-          .map((section) => {
-            const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
-            const items = keys
-              .filter((key) => key !== 'materials_upload')
-              .map(itemFromKey)
-              .filter(Boolean)
-            return {
-              id: section.id,
-              title: String(section.title || '').trim() || 'Bölmə',
-              items,
-            }
-          })
-          .filter((s) => s.items.length > 0),
-      ).filter((s) => s.items.length > 0),
-    ),
-  )
+  return reframeInstructorSections(sections)
 }
 
 export function buildInstructorNavSectionsFromClient(nav) {
-  if (!nav?.sections?.length) return buildInstructorNavSections({ sections: defaultInstructorNavSections() })
-
-  return ensurePresentationsItem(
-    ensureAiGeneratorItem(
-    dedupeNavSections(
-    nav.sections
-      .map((section) => ({
-        id: section.id,
-        title: String(section.title || '').trim() || 'Bölmə',
-        items: (section.items || [])
-          .filter((item) => item?.key !== 'materials_upload')
-          .map((item) => {
-            const def = INSTRUCTOR_NAV_ITEM_DEFS[item.key] || item
-            if (!def?.to) return null
-            return {
-              key: item.key,
-              to: def.to || item.to,
-              label: def.label || item.label,
-              labelKey: def.labelKey || item.labelKey,
-              end: def.end ?? item.end,
-              badgeKey: def.badgeKey ?? item.badgeKey,
-              icon: <NavIcon name={def.icon || item.icon} />,
-            }
-          })
-          .filter(Boolean),
-      }))
-      .filter((s) => s.items.length > 0),
-    ).filter((s) => s.items.length > 0),
-    ),
-  )
+  return reframeInstructorSections(nav?.sections?.length ? nav.sections : defaultInstructorNavSections())
 }

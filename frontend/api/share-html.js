@@ -2,7 +2,7 @@
  * Vercel serverless: inject Open Graph meta into index.html for shareable routes.
  * Rewritten from vercel.json for /sertifikatli-imtahanlar/:slug,
  * /sertifikatli-imtahanlar/:categorySlug/:examSlug, /exam/:examId,
- * /task/:taskId, and /library/material/:materialId.
+ * /task/:taskId, /library/material/:materialId, and /teachers/:id.
  *
  * Optional MENTORIX_API_ORIGIN (Railway backend origin, no /api suffix).
  * Falls back to https://api.edupanel.co when unset.
@@ -63,6 +63,17 @@ function injectPageMeta(html, meta, { keepImage = false } = {}) {
   out = replaceMeta(out, 'name', 'twitter:title', meta.title)
   out = replaceMeta(out, 'name', 'twitter:description', meta.description)
   out = replaceCanonical(out, meta.url)
+  if (meta.person) {
+    const schema = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: meta.person.name,
+      description: meta.person.description,
+      jobTitle: meta.person.jobTitle,
+      url: meta.url,
+    }).replace(/</g, '\\u003c')
+    out = out.replace('</head>', `<script type="application/ld+json">${schema}</script></head>`)
+  }
   return out
 }
 
@@ -78,6 +89,8 @@ async function fetchOgMeta(kind, params, base) {
     path = `/api/public/og/task/${encodeURIComponent(params.taskId)}`
   } else if (kind === 'material' && params.materialId) {
     path = `/api/public/og/material/${encodeURIComponent(params.materialId)}`
+  } else if (kind === 'instructor' && params.id) {
+    path = `/api/public/instructors/${encodeURIComponent(params.id)}`
   } else {
     return null
   }
@@ -88,6 +101,22 @@ async function fetchOgMeta(kind, params, base) {
   if (!r.ok) return null
   const d = await r.json()
   if (!d?.success) return null
+
+  if (kind === 'instructor') {
+    const instructor = d.instructor
+    if (!instructor) return null
+    const name = String(instructor.full_name || 'Müəllim').trim()
+    const subject = String(instructor.subject || instructor.teaching_subject || 'müəllim').trim()
+    const bio = String(instructor.discover_bio || instructor.bio || '').trim()
+    return {
+      title: `${name} — ${subject} | Mentorix`,
+      description: (bio || `${name} — ${subject}. Mentorix-də müəllim profili.`).slice(0, 160),
+      url: `${SITE_ORIGIN}/teachers/${encodeURIComponent(params.id)}`,
+      image: instructor.avatar_url,
+      og_type: 'profile',
+      person: { name, description: bio || `${name} — ${subject}`, jobTitle: subject },
+    }
+  }
 
   let url = d.url
   if (kind === 'category' || kind === 'certified-exam') {
@@ -148,6 +177,7 @@ export default async function handler(req, res) {
     const examId = String(req.query?.examId || '').trim()
     const taskId = String(req.query?.taskId || '').trim()
     const materialId = String(req.query?.materialId || '').trim()
+    const id = String(req.query?.id || '').trim()
 
     const categorySlug = String(req.query?.categorySlug || '').trim()
     const examSlug = String(req.query?.examSlug || '').trim()
@@ -156,7 +186,7 @@ export default async function handler(req, res) {
     const base = upstreamBase()
 
     try {
-      const meta = await fetchOgMeta(kind, { slug, examId, taskId, materialId, categorySlug, examSlug }, base)
+      const meta = await fetchOgMeta(kind, { slug, examId, taskId, materialId, categorySlug, examSlug, id }, base)
       if (meta) {
         const keepImage = kind === 'category' || kind === 'certified-exam'
         html = injectPageMeta(html, meta, { keepImage })
