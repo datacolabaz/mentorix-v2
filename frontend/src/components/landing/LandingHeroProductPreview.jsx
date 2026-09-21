@@ -16,27 +16,36 @@ function Chevron({ open }) {
   )
 }
 
-const DEFAULT_OPEN = new Set(['management'])
+const DEFAULT_OPEN = new Set(['today'])
 
-/** Landing nümunəsində göstərilən real müəllim menyusu — Sertifikatlar istisna. */
-const PREVIEW_SECTION_ORDER = ['management', 'analytics', 'system', 'materials']
+/** Landing nümunəsində göstərilən real müəllim menyusu — Sertifikatlar istis. */
+const PREVIEW_SECTION_ORDER = ['today', 'teaching', 'contact', 'results', 'business']
 const PREVIEW_ITEM_ORDER = {
-  management: [
+  today: [
     'dashboard',
+    'join_requests',
+    'schedule',
+    'live_history',
+  ],
+  teaching: [
     'teaching_groups',
     'students',
-    'join_requests',
-    'inquiries',
-    'schedule',
-    'attendance',
-    'exams',
     'tasks',
-    'live_history',
+    'exams',
     'ai_generator',
+    'presentations',
+    'materials_library',
   ],
-  analytics: ['analytics', 'payments'],
-  system: ['notifications', 'settings'],
-  materials: ['presentations', 'materials_library'],
+  contact: ['inquiries', 'notifications'],
+  results: [
+    'attendance',
+    'certificates',
+    'analytics',
+  ],
+  business: [
+    'payments',
+    'settings',
+  ],
 }
 
 function buildPreviewNavSections(t) {
