@@ -108,25 +108,26 @@ export default function TeacherMapListCard({
         </div>
       </button>
 
-      <button
-        type="button"
-        aria-label={isFavorite ? 'Favoritlərdən çıxar' : 'Favoritlərə əlavə et'}
-        aria-pressed={isFavorite}
-        disabled={favoriteBusy}
-        onClick={(event) => {
-          event.stopPropagation()
-          onToggleFavorite?.(p)
-        }}
-        className={`absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border text-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:cursor-wait disabled:opacity-60 ${
-          isFavorite
-            ? 'border-rose-200 bg-rose-50 text-rose-500'
-            : 'border-slate-200 bg-white text-slate-400 hover:border-rose-200 hover:text-rose-400'
-        }`}
-      >
-        {isFavorite ? '♥' : '♡'}
-      </button>
-
       <div className="grid grid-cols-2 gap-1.5 w-full sm:flex sm:flex-col sm:w-auto sm:shrink-0 sm:self-center sm:min-w-[7.5rem]">
+        <button
+          type="button"
+          aria-label={isFavorite ? 'Favoritlərdən çıxar' : 'Favoritlərə əlavə et'}
+          title={isFavorite ? 'Favoritlərdən çıxar' : 'Favoritlərə əlavə et'}
+          aria-pressed={isFavorite}
+          disabled={favoriteBusy}
+          onClick={(event) => {
+            event.stopPropagation()
+            onToggleFavorite?.(p)
+          }}
+          className={`col-span-2 inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg border text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:cursor-wait disabled:opacity-60 ${
+            isFavorite
+              ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500'
+          }`}
+        >
+          <span aria-hidden>{isFavorite ? '♥' : '♡'}</span>
+          {isFavorite ? 'Seçilmiş' : 'Favoritə əlavə et'}
+        </button>
         <button
           type="button"
           onClick={() => onInquiry?.(p)}
