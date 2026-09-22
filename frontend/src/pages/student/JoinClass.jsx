@@ -511,14 +511,6 @@ export default function JoinClass() {
                   </span>
                 </label>
               ) : null}
-              <Button
-                className="w-full justify-center"
-                loading={busy}
-                type="submit"
-                disabled={!canSubmitJoin}
-              >
-                Qoşul
-              </Button>
             </form>
           </Card>
         </div>

@@ -340,7 +340,7 @@ async function createJoinRequest({
        WHERE e.instructor_id = $1
          AND e.student_id = $2
          AND e.deleted_at IS NULL
-       ORDER BY e.created_at DESC NULLS LAST
+       ORDER BY e.enrolled_at DESC NULLS LAST
        LIMIT 1
        FOR UPDATE OF e`,
       [g.instructor_id, studentId],
