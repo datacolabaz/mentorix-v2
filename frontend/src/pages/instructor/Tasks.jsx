@@ -699,7 +699,7 @@ export default function InstructorTasks() {
                             </span>
                             {['submitted', 'late', 'reviewed', 'completed'].includes(r.status) ? (
                               <Button size="sm" variant="secondary" onClick={() => void openReview(r.student_assignment_id)}>
-                                {t('tasks.review')}
+                                {t('tasks.review.reviewButton', { defaultValue: t('tasks.review.title') })}
                               </Button>
                             ) : null}
                           </div>
