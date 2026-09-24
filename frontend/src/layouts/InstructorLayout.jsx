@@ -234,7 +234,7 @@ export default function InstructorLayout() {
   useEffect(() => {
     // Subject modal is only for missing discover categories (fənnlər).
     // Other gaps (map pin / formats) use the banner — do not re-ask for subjects.
-    if (!user?.id || !shouldShowDiscoverSubjectsModal(discoverProfileAlert)) {
+    if (!user?.id || isActiveMentorWorkspace || !shouldShowDiscoverSubjectsModal(discoverProfileAlert)) {
       setDiscoverModalOpen(false)
       return
     }
@@ -635,7 +635,7 @@ export default function InstructorLayout() {
             </div>
           ) : null}
 
-          {discoverProfileAlert ? (
+          {discoverProfileAlert && !isActiveMentorWorkspace ? (
             <div
               className={`mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full w-full ${
                 theme === 'dark'
