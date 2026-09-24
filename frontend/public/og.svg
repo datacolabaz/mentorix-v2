@@ -1,16 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="mentorix.io — onlayn imtahan və qiymətləndirmə">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f7f4ec"/>
-      <stop offset="1" stop-color="#e0f7ee"/>
+      <stop offset="0" stop-color="#08141c"/>
+      <stop offset="1" stop-color="#0d2b22"/>
     </linearGradient>
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect x="72" y="72" width="92" height="92" rx="22" fill="#08141c"/>
-  <path d="M91 137V99h17l10 18 10-18h17v38h-17v-21l-10 21-10-21v21H91Z" fill="#00d99b"/>
-  <text x="190" y="132" fill="#101827" font-family="Arial, sans-serif" font-size="54" font-weight="700">Mentorix</text>
-  <text x="76" y="292" fill="#111827" font-family="Arial, sans-serif" font-size="58" font-weight="700">Onlayn imtahan və</text>
-  <text x="76" y="360" fill="#111827" font-family="Arial, sans-serif" font-size="58" font-weight="700">qiymətləndirmə</text>
-  <text x="76" y="428" fill="#139f75" font-family="Arial, sans-serif" font-size="58" font-weight="700">daha sadə</text>
-  <text x="994" y="590" fill="#5c6b7f" font-family="Arial, sans-serif" font-size="20">mentorix.io</text>
+  <g transform="translate(255,45) scale(1.35)">
+    <g transform="translate(0,512) scale(0.1,-0.1)" fill="#10B981">
+      <path d="M1065 4101 c-70 -18 -134 -71 -171 -141 -18 -34 -19 -91 -22 -1393 -1 -921 1 -1371 8 -1397 27 -99 134 -180 239 -180 95 1 179 51 224 135 l22 40 5 1218 5 1218 490 -572 c270 -315 507 -590 528 -610 74 -73 200 -89 290 -35 31 17 189 195 552 619 l510 595 5 -1217 5 -1216 28 -47 c68 -116 204 -160 322 -104 60 28 97 66 124 126 20 45 21 58 21 1401 0 1474 3 1397 -55 1473 -14 18 -49 46 -77 62 l-53 29 -245 0 c-232 0 -247 -1 -285 -22 -55 -30 -79 -55 -549 -605 -230 -269 -421 -488 -425 -488 -4 0 -211 238 -460 529 -379 442 -462 534 -505 558 l-51 28 -225 2 c-124 1 -238 -2 -255 -6z"/>
+    </g>
+  </g>
+  <text x="600" y="575" text-anchor="middle" fill="#10B981" font-family="Arial, sans-serif" font-size="40" font-weight="600">mentorix.io</text>
+  <text x="600" y="605" text-anchor="middle" fill="#6B7280" font-family="Arial, sans-serif" font-size="18">onlayn imtahan və qiymətləndirmə</text>
 </svg>

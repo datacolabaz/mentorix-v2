@@ -8,7 +8,7 @@ function siteOrigin() {
 }
 
 const OG_CERT_IMAGE_PATH = '/og-certified.png?v=1';
-const OG_DEFAULT_IMAGE_PATH = '/og.png?v=7';
+const OG_DEFAULT_IMAGE_PATH = '/og.png?v=8';
 
 async function getCertifiedCategoryOg(req, res) {
   try {

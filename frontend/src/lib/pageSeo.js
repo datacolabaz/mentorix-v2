@@ -5,7 +5,7 @@ import {
 } from './mentorixPublicMarketing'
 import { SITE_ORIGIN, buildBreadcrumbSchema, buildPersonSchema, buildPricingProductSchema } from './mentorixSeoSchema'
 
-export const OG_IMAGE_PATH = '/og.png?v=7'
+export const OG_IMAGE_PATH = '/og.png?v=8'
 export const OG_CERTIFIED_IMAGE_PATH = '/og-certified.png?v=1'
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}${OG_IMAGE_PATH}`
 export const CERTIFIED_OG_IMAGE = `${SITE_ORIGIN}${OG_CERTIFIED_IMAGE_PATH}`
