@@ -260,7 +260,7 @@ const createExam = async (req, res) => {
           notify_enabled, notify_students, notify_before_hours, show_results, wrong_penalty_enabled,
           certificate_enabled, certificate_pass_pct, certificate_template_id,
           category_id, level, certificate_type, is_public, is_verified, slug, status)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,FALSE,'scheduled') RETURNING *`,
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,FALSE,$24,'scheduled') RETURNING *`,
         [
           req.user.id,
           title,
