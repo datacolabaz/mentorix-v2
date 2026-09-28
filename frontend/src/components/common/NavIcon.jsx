@@ -13,6 +13,12 @@ function IconBase({ children, className = '' }) {
 
 export default function NavIcon({ name, className = 'w-5 h-5' }) {
   switch (name) {
+    case 'home':
+      return (
+        <IconBase className={className}>
+          <path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </IconBase>
+      )
     case 'dashboard':
       return (
         <IconBase className={className}>

@@ -7,6 +7,8 @@ import LocaleThemeBar from '../LocaleThemeBar'
 import LanguageSwitcher from '../LanguageSwitcher'
 import { COMPACT_PUBLIC_NAV_MQ, isCompactPublicNav } from '../../lib/compactPublicNav'
 import useUiStore from '../../hooks/useUi'
+import useAuthStore from '../../hooks/useAuth'
+import { dashboardPathForUser } from '../../lib/postAuth'
 import { filterNavItemsByFlags, useFeatureFlags } from '../../lib/featureFlags'
 
 const NAV_LINK =
@@ -64,6 +66,7 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
   const compact = useCompactPublicNav()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const onHome = location.pathname === '/'
+  const user = useAuthStore((s) => s.user)
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
   const tone = isDark ? 'dark' : 'light'
@@ -98,7 +101,8 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
 
   const goLogin = () => {
     closeMobileNav()
-    if (onLogin) onLogin()
+    if (user) navigate(dashboardPathForUser(user))
+    else if (onLogin) onLogin()
     else navigate('/login')
   }
 
@@ -212,7 +216,11 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
             </div>
             <LocaleThemeBar tone={tone} />
             <button type="button" onClick={goLogin} className={loginBtn}>
-              {t('landing.nav.login')}
+              {user
+                ? user.role === 'admin'
+                  ? t('landing.nav.adminPanel', { defaultValue: 'Admin panel' })
+                  : t('landing.nav.myPanel', { defaultValue: 'Panelim' })
+                : t('landing.nav.login')}
             </button>
             <button
               type="button"
