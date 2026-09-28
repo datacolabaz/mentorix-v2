@@ -1,3 +1,5 @@
+import { normalizeApiBaseUrl } from './apiBase'
+
 export function groupLibraryShareUrl(groupId) {
   if (!groupId) return ''
   if (typeof window === 'undefined') return `/library/${groupId}`
@@ -39,7 +41,7 @@ export function materialPublicFileUrl(shareToken) {
   if (!shareToken) return ''
   const path = `/public/material-preview/${encodeURIComponent(shareToken)}/file`
   if (typeof window === 'undefined') return `/api${path}`
-  const base = String(import.meta.env?.VITE_API_URL || '/api').replace(/\/+$/, '')
+  const base = normalizeApiBaseUrl(import.meta.env?.VITE_API_URL)
   if (base.startsWith('http')) return `${base}${path}`
-  return `${window.location.origin}${base.startsWith('/') ? base : `/${base}`}${path}`
+  return `${window.location.origin}${base}${path}`
 }
