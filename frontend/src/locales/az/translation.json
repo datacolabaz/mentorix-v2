@@ -177,6 +177,7 @@
       "notifications": "Bildirişlər",
       "marketingLogin": "Landing məzmunu",
       "instructorNav": "Müəllim menyusu",
+      "featureFlags": "Platforma funksiyaları",
       "categories": "Axtarış kateqoriyaları",
       "settings": "Tənzimləmələr"
     },
@@ -4295,5 +4296,11 @@
       "status": "Status",
       "date": "Tarix"
     }
+  },
+  "featureFlags": {
+    "disabledTitle": "Bu funksiya hazırda aktiv deyil",
+    "disabledText": "Mentorix imtahan və hazırlıq idarəetməsinə fokuslanır. Bu bölmə müvəqqəti olaraq bağlıdır, məlumatlarınız qorunur.",
+    "backToDashboard": "Panelə qayıt",
+    "backToHome": "Ana səhifəyə qayıt"
   }
 }

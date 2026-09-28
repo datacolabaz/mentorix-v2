@@ -56,6 +56,7 @@ import Modal from '../../components/common/Modal'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import { DISCOVER_SUBJECT_INPUT_ID, scheduleScrollToId } from '../../lib/scrollIntoAppView'
+import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
 function billingPaymentTitleLocalized(p, t) {
   if (p?.product_type === 'sms') return t('settings.billingTitle.sms', { count: p.sms_quantity || 0 })
@@ -149,6 +150,7 @@ export default function InstructorSettings() {
   const toast = useToast()
   const { user, updateUser } = useAuthStore()
   const { theme } = useUiStore()
+  const marketplaceOn = useFeatureFlag(FEATURE_FLAGS.MARKETPLACE)
   const [loading, setLoading] = useState(true)
   const [planBusy, setPlanBusy] = useState(false)
   const [planErr, setPlanErr] = useState(null)
@@ -781,12 +783,14 @@ export default function InstructorSettings() {
           >
             Zoom
           </a>
-          <a
-            href="#discover-profile"
-            className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
-          >
-            {t('settings.jumpDiscover')}
-          </a>
+          {marketplaceOn ? (
+            <a
+              href="#discover-profile"
+              className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
+            >
+              {t('settings.jumpDiscover')}
+            </a>
+          ) : null}
           <a
             href="#settings-avatar"
             className="text-xs font-semibold rounded-lg border border-white/15 text-token-textMuted px-3 py-1.5 hover:bg-white/5"
@@ -1436,157 +1440,159 @@ export default function InstructorSettings() {
         </Button>
       </Card>
 
-      <Card className={settingsCardCls}>
-        <h2 className={cardTitleCls}>{t('settings.mapTitle')}</h2>
-        <p className={cardTextCls}>
-          {t('settings.mapDesc')}
-        </p>
+      {marketplaceOn ? (
+        <Card className={settingsCardCls}>
+          <h2 className={cardTitleCls}>{t('settings.mapTitle')}</h2>
+          <p className={cardTextCls}>
+            {t('settings.mapDesc')}
+          </p>
 
-        <label
-          className={[
-            'flex items-start gap-3 cursor-pointer rounded-xl border p-3 transition-colors',
-            mapVisible ? 'border-primary/40 bg-primary/5' : 'border-white/10 bg-white/[0.02]',
-            theme === 'dark' ? 'text-gray-200' : 'text-token-textMain',
-          ].join(' ')}
-        >
-          <input
-            type="checkbox"
-            checked={mapVisible}
-            onChange={(e) => {
-              setMapVisible(e.target.checked)
-              setMapJustSaved(false)
-            }}
-            className="accent-indigo-500 rounded mt-0.5"
-          />
-          <span className="text-sm leading-snug">
-            <span className="font-semibold text-white block">{t('settings.mapVisibleTitle')}</span>
-            <span className="text-xs text-token-textMuted">
-              {mapVisible ? t('settings.mapVisibleOn') : t('settings.mapVisibleOff')}
-            </span>
-          </span>
-        </label>
-
-        {hasMapRegion ? (
-          <div
+          <label
             className={[
-              'rounded-xl border px-4 py-3 space-y-1',
-              mapVisible ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/25 bg-amber-500/5',
+              'flex items-start gap-3 cursor-pointer rounded-xl border p-3 transition-colors',
+              mapVisible ? 'border-primary/40 bg-primary/5' : 'border-white/10 bg-white/[0.02]',
+              theme === 'dark' ? 'text-gray-200' : 'text-token-textMain',
             ].join(' ')}
           >
-            <p className="text-sm font-semibold text-white">📍 {locationLabel}</p>
-            {mapVisible ? (
-              <p className="text-xs text-emerald-400/90">{t('settings.regionOk')}</p>
-            ) : (
-              <p className="text-xs text-amber-400/90">{t('settings.regionHidden')}</p>
-            )}
-            {mapDirty ? (
-              <p className="text-xs text-amber-300 font-medium pt-1">{t('settings.unsaved')}</p>
-            ) : mapJustSaved ? (
-              <p className="text-xs text-emerald-400 font-medium pt-1">{t('settings.savedOk')}</p>
-            ) : null}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-xs text-token-textMuted">
-            {t('settings.noRegion')}
-          </div>
-        )}
-
-        <DiscoverSubjectPicker
-          inputId={DISCOVER_SUBJECT_INPUT_ID}
-          categoryIds={mapCategoryIds}
-          pickedCats={mapPickedCats}
-          inp={inp}
-          theme={theme}
-          sectionTitleCls={[
-            'text-[11px] font-bold uppercase tracking-wider mb-2.5',
-            theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
-          ].join(' ')}
-          onAdd={(cat) => {
-            if (mapCategoryIds.includes(cat.id)) return
-            if (mapCategoryIds.length >= mapCatLimit) {
-              toast(t('settings.discover.toastMaxSubjects', { max: mapCatLimit }), 'error')
-              return
-            }
-            setMapCategoryIds((ids) => [...ids, cat.id])
-            setMapPickedCats((list) => [...list, cat])
-            setMapJustSaved(false)
-          }}
-          onRemove={(id) => {
-            setMapCategoryIds((ids) => ids.filter((x) => x !== id))
-            setMapPickedCats((list) => list.filter((x) => x.id !== id))
-            setMapJustSaved(false)
-          }}
-        />
-
-        <RegionProfileFields
-          region={mapRegion}
-          bakuDistrict={mapBakuDistrict}
-          inputClassName={inp}
-          labelClassName={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}
-          onChange={({ region, bakuDistrict }) => {
-            setMapRegion(region || '')
-            setMapBakuDistrict(bakuDistrict || '')
-            if (!isBakuRegion(region || '')) setNearestMetro('')
-            setMapJustSaved(false)
-          }}
-        />
-
-        {isBakuRegion(mapRegion) ? (
-          <div>
-            <label className={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
-              {t('settings.metroTitle')}
-            </label>
-            <select
-              className={inp}
-              value={nearestMetro}
+            <input
+              type="checkbox"
+              checked={mapVisible}
               onChange={(e) => {
-                const slug = e.target.value
-                setNearestMetro(slug)
-                const st = bakuMetroBySlug(slug)
-                if (st) {
-                  setMapLat(String(st.lat))
-                  setMapLng(String(st.lng))
-                  if (st.district) setMapBakuDistrict(st.district)
-                } else {
-                  setMapLat('')
-                  setMapLng('')
-                }
+                setMapVisible(e.target.checked)
                 setMapJustSaved(false)
               }}
-            >
-              <option value="">{t('settings.metroPlaceholder')}</option>
-              {BAKU_METRO_STATIONS.map((st) => (
-                <option key={st.slug} value={st.slug}>
-                  {st.name_az}
-                </option>
-              ))}
-            </select>
-            <p className={['text-xs mt-1.5 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
-              {t('settings.metroHint')}
-            </p>
-          </div>
-        ) : null}
+              className="accent-indigo-500 rounded mt-0.5"
+            />
+            <span className="text-sm leading-snug">
+              <span className="font-semibold text-white block">{t('settings.mapVisibleTitle')}</span>
+              <span className="text-xs text-token-textMuted">
+                {mapVisible ? t('settings.mapVisibleOn') : t('settings.mapVisibleOff')}
+              </span>
+            </span>
+          </label>
 
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="flex-1 justify-center">
-            {mapDirty ? t('settings.saveChanges') : t('settings.saveMap')}
-          </Button>
-          {hasMapRegion && mapVisible ? (
-            <Link
-              to="/search"
-              className="flex-1 inline-flex items-center justify-center text-sm font-semibold rounded-xl border border-primary/40 text-primary hover:bg-primary/10 px-4 py-2.5"
+          {hasMapRegion ? (
+            <div
+              className={[
+                'rounded-xl border px-4 py-3 space-y-1',
+                mapVisible ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/25 bg-amber-500/5',
+              ].join(' ')}
             >
-              {t('settings.previewSearch')}
+              <p className="text-sm font-semibold text-white">📍 {locationLabel}</p>
+              {mapVisible ? (
+                <p className="text-xs text-emerald-400/90">{t('settings.regionOk')}</p>
+              ) : (
+                <p className="text-xs text-amber-400/90">{t('settings.regionHidden')}</p>
+              )}
+              {mapDirty ? (
+                <p className="text-xs text-amber-300 font-medium pt-1">{t('settings.unsaved')}</p>
+              ) : mapJustSaved ? (
+                <p className="text-xs text-emerald-400 font-medium pt-1">{t('settings.savedOk')}</p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-xs text-token-textMuted">
+              {t('settings.noRegion')}
+            </div>
+          )}
+
+          <DiscoverSubjectPicker
+            inputId={DISCOVER_SUBJECT_INPUT_ID}
+            categoryIds={mapCategoryIds}
+            pickedCats={mapPickedCats}
+            inp={inp}
+            theme={theme}
+            sectionTitleCls={[
+              'text-[11px] font-bold uppercase tracking-wider mb-2.5',
+              theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted',
+            ].join(' ')}
+            onAdd={(cat) => {
+              if (mapCategoryIds.includes(cat.id)) return
+              if (mapCategoryIds.length >= mapCatLimit) {
+                toast(t('settings.discover.toastMaxSubjects', { max: mapCatLimit }), 'error')
+                return
+              }
+              setMapCategoryIds((ids) => [...ids, cat.id])
+              setMapPickedCats((list) => [...list, cat])
+              setMapJustSaved(false)
+            }}
+            onRemove={(id) => {
+              setMapCategoryIds((ids) => ids.filter((x) => x !== id))
+              setMapPickedCats((list) => list.filter((x) => x.id !== id))
+              setMapJustSaved(false)
+            }}
+          />
+
+          <RegionProfileFields
+            region={mapRegion}
+            bakuDistrict={mapBakuDistrict}
+            inputClassName={inp}
+            labelClassName={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}
+            onChange={({ region, bakuDistrict }) => {
+              setMapRegion(region || '')
+              setMapBakuDistrict(bakuDistrict || '')
+              if (!isBakuRegion(region || '')) setNearestMetro('')
+              setMapJustSaved(false)
+            }}
+          />
+
+          {isBakuRegion(mapRegion) ? (
+            <div>
+              <label className={['text-xs block mb-1.5', theme === 'dark' ? 'text-gray-400' : 'text-token-textMuted'].join(' ')}>
+                {t('settings.metroTitle')}
+              </label>
+              <select
+                className={inp}
+                value={nearestMetro}
+                onChange={(e) => {
+                  const slug = e.target.value
+                  setNearestMetro(slug)
+                  const st = bakuMetroBySlug(slug)
+                  if (st) {
+                    setMapLat(String(st.lat))
+                    setMapLng(String(st.lng))
+                    if (st.district) setMapBakuDistrict(st.district)
+                  } else {
+                    setMapLat('')
+                    setMapLng('')
+                  }
+                  setMapJustSaved(false)
+                }}
+              >
+                <option value="">{t('settings.metroPlaceholder')}</option>
+                {BAKU_METRO_STATIONS.map((st) => (
+                  <option key={st.slug} value={st.slug}>
+                    {st.name_az}
+                  </option>
+                ))}
+              </select>
+              <p className={['text-xs mt-1.5 leading-relaxed', theme === 'dark' ? 'text-gray-500' : 'text-token-textMuted'].join(' ')}>
+                {t('settings.metroHint')}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button type="button" loading={savingMap} onClick={() => void saveMapProfile()} className="flex-1 justify-center">
+              {mapDirty ? t('settings.saveChanges') : t('settings.saveMap')}
+            </Button>
+            {hasMapRegion && mapVisible ? (
+              <Link
+                to="/search"
+                className="flex-1 inline-flex items-center justify-center text-sm font-semibold rounded-xl border border-primary/40 text-primary hover:bg-primary/10 px-4 py-2.5"
+              >
+                {t('settings.previewSearch')}
+              </Link>
+            ) : null}
+          </div>
+
+          {mapJustSaved && mapVisible && hasMapRegion ? (
+            <Link to="/search" className="block text-center text-sm font-semibold text-primary hover:underline py-1">
+              {t('settings.viewLiveSearch')}
             </Link>
           ) : null}
-        </div>
-
-        {mapJustSaved && mapVisible && hasMapRegion ? (
-          <Link to="/search" className="block text-center text-sm font-semibold text-primary hover:underline py-1">
-            {t('settings.viewLiveSearch')}
-          </Link>
-        ) : null}
-      </Card>
+        </Card>
+      ) : null}
 
       <Modal
         open={Boolean(limitChoice?.open)}

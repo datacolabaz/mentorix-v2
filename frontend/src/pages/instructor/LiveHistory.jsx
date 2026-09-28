@@ -11,6 +11,7 @@ import GoogleMeetAccountWarning from '../../components/live/GoogleMeetAccountWar
 import { useToast } from '../../components/common/Toast'
 import { bakuDateTimeLocalToIso, fmtAzBakuField } from '../../lib/azDatetime'
 import { liveGuestJoinUrl } from '../../lib/absolutePublicUrl'
+import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
 function fmtDuration(minutes, t) {
   const m = Number(minutes) || 0
@@ -210,6 +211,8 @@ export default function InstructorLiveHistory() {
       setBulkDeleting(false)
     }
   }
+
+  const liveRoomOn = useFeatureFlag(FEATURE_FLAGS.LIVE_ROOM)
 
   const startOpenLesson = async ({ provider, title, scheduledAtLocal } = {}) => {
     if (starting) return
@@ -542,7 +545,7 @@ export default function InstructorLiveHistory() {
                   ) : !canEnterLive(s) ? (
                     <span className="text-[10px] text-token-textMuted/80 px-1">{t('live.noRecording')}</span>
                   ) : null}
-                  {canEnterLive(s) && (!s.provider || s.provider === 'mentorix_live') ? (
+                  {liveRoomOn && canEnterLive(s) && (!s.provider || s.provider === 'mentorix_live') ? (
                     <Button
                       size="sm"
                       variant="secondary"

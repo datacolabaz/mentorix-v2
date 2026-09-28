@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { sign, signOTP, signSession } = require('../utils/jwt');
+const { isFeatureEnabled } = require('../services/featureFlagService');
+const { sendFeatureDisabled } = require('../middleware/requireFeature');
+const { FEATURE_FLAGS } = require('../constants/featureFlags');
 
 /**
  * Sessiya tokeni: tələbələr üçün uzunmüddətli (90 gün) — linklə qoşulan qonaq
@@ -1283,6 +1286,9 @@ const switchWorkspace = async (req, res) => {
     const target = String(req.body?.target || req.body?.role || req.body?.persona || '').trim().toLowerCase();
     if (!target) {
       return res.status(400).json({ success: false, message: 'Hədəf kabinet təyin olunmayıb' });
+    }
+    if (target === 'mentor' && !(await isFeatureEnabled(FEATURE_FLAGS.MENTOR_SERVICES))) {
+      return sendFeatureDisabled(res, FEATURE_FLAGS.MENTOR_SERVICES);
     }
 
     let targetRole = null;

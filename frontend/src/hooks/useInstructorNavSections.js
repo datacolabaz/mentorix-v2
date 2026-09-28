@@ -9,6 +9,7 @@ import {
 } from '../constants/instructorNav'
 import useAuthStore from './useAuth'
 import { localizeInstructorNavSections } from '../lib/localizeNav'
+import { FEATURE_FLAGS, filterNavSectionsByFlags, useFeatureFlags } from '../lib/featureFlags'
 
 const NAV_REFRESH_EVENT = 'mx:instructor-nav-updated'
 
@@ -42,7 +43,10 @@ export function useInstructorNavSections() {
       return ''
     }
   })
-  const isMentor = String(user?.persona || '').toLowerCase() === 'mentor' || activeWorkspace === 'mentor'
+  const { flags } = useFeatureFlags()
+  const isMentor =
+    flags[FEATURE_FLAGS.MENTOR_SERVICES] === true &&
+    (String(user?.persona || '').toLowerCase() === 'mentor' || activeWorkspace === 'mentor')
 
   useEffect(() => {
     const persona = String(user?.persona || '').toLowerCase()
@@ -71,8 +75,8 @@ export function useInstructorNavSections() {
   const [loading, setLoading] = useState(true)
 
   const sections = useMemo(
-    () => localizeInstructorNavSections(rawSections, t),
-    [rawSections, t, i18n.language],
+    () => filterNavSectionsByFlags(localizeInstructorNavSections(rawSections, t), flags),
+    [rawSections, t, i18n.language, flags],
   )
 
   const refresh = useCallback(async () => {

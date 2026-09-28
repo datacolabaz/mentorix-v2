@@ -53,8 +53,24 @@ const { getPublicSitemapXml } = require('../controllers/publicSitemapController'
 const { postPublicWaitlist } = require('../controllers/waitlistController');
 const { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg, getTaskOg, getMaterialOg } = require('../controllers/publicOgController');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
+const { requireFeature } = require('../middleware/requireFeature');
+const { FEATURE_FLAGS } = require('../constants/featureFlags');
+const { getFeatureFlagSnapshot } = require('../services/featureFlagService');
+
+const marketplaceOn = requireFeature(FEATURE_FLAGS.MARKETPLACE);
+const liveRoomOn = requireFeature(FEATURE_FLAGS.LIVE_ROOM);
 
 const router = express.Router();
+
+router.get('/feature-flags', async (_req, res) => {
+  try {
+    const flags = await getFeatureFlagSnapshot();
+    res.set('Cache-Control', 'public, max-age=30');
+    res.json({ success: true, flags });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message || 'Xəta' });
+  }
+});
 
 router.get('/join/:code', getPublicJoin);
 router.get('/exam-invite/:examId', getPublicExamInvite);
@@ -69,12 +85,13 @@ router.get('/material-preview/:token', getPublicMaterialPreview);
 router.get('/material-preview/:token/file', servePublicMaterialPreviewFile);
 router.get('/live-recording/:shareToken/info', getPublicRecordingInfo);
 router.get('/live-recording/:shareToken', getPublicRecording);
-router.get('/live-guest/:token', getPublicLiveGuestInvite);
-router.post('/live-guest/:token/join', publicGuestJoinRateLimit, postPublicLiveGuestJoin);
-router.get('/live-guest/:token/admission/:admissionId', getPublicGuestAdmission);
+router.get('/live-guest/:token', liveRoomOn, getPublicLiveGuestInvite);
+router.post('/live-guest/:token/join', liveRoomOn, publicGuestJoinRateLimit, postPublicLiveGuestJoin);
+router.get('/live-guest/:token/admission/:admissionId', liveRoomOn, getPublicGuestAdmission);
 router.post('/live-guest/:token/leave', postPublicLiveGuestLeave);
 router.post(
   '/live-guest/:token/chat-attachments',
+  liveRoomOn,
   publicGuestJoinRateLimit,
   (req, res, next) => {
     uploadLiveChatAttachment.single('file')(req, res, (err) => {
@@ -84,8 +101,8 @@ router.post(
   },
   postGuestChatAttachment,
 );
-router.get('/live-guest/:token/chat-messages', getGuestChatHistory);
-router.post('/live-guest/:token/chat-messages', publicGuestJoinRateLimit, postGuestChatMessage);
+router.get('/live-guest/:token/chat-messages', liveRoomOn, getGuestChatHistory);
+router.post('/live-guest/:token/chat-messages', liveRoomOn, publicGuestJoinRateLimit, postGuestChatMessage);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
@@ -108,17 +125,17 @@ router.get('/certified-exams/me/skill-progress', authenticate, getUserSkillProgr
 router.get('/sitemap.xml', getPublicSitemapXml);
 router.get('/marketing/login', getPublicLoginMarketing);
 router.get('/instructor-nav', getPublicInstructorNav);
-router.get('/instructors-map', getInstructorsInMapView);
+router.get('/instructors-map', marketplaceOn, getInstructorsInMapView);
 router.get('/instructors/:id', getPublicInstructorProfile);
 router.get('/instructors/:id/messaging', authenticate, getInstructorMessagingLink);
-router.get('/instructor-discovery', getInstructorDiscovery);
+router.get('/instructor-discovery', marketplaceOn, getInstructorDiscovery);
 router.get('/categories', getCategoriesTree);
 router.get('/categories/popular', getPopularCategories);
 router.get('/categories/search', getCategoriesSearch);
 router.get('/categories/:slug', getCategoryBySlugHandler);
 router.get('/service-areas', getServiceAreas);
-router.post('/inquiries', postPublicInquiry);
-router.post('/marketplace/ai-search', postMarketplaceAiSearch);
+router.post('/inquiries', marketplaceOn, postPublicInquiry);
+router.post('/marketplace/ai-search', marketplaceOn, postMarketplaceAiSearch);
 router.get('/subscription-plans', async (_req, res) => {
   try {
     const list = await getActivePlansList();

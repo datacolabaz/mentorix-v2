@@ -176,6 +176,7 @@
       "notifications": "Notifications",
       "marketingLogin": "Landing content",
       "instructorNav": "Teacher menu",
+      "featureFlags": "Platform features",
       "categories": "Search categories",
       "settings": "Settings",
       "partners": "Partner program"
@@ -4274,5 +4275,11 @@
       "status": "Status",
       "date": "Date"
     }
+  },
+  "featureFlags": {
+    "disabledTitle": "This feature is not available right now",
+    "disabledText": "Mentorix is focusing on exams and preparation management. This section is temporarily closed; your data is kept.",
+    "backToDashboard": "Back to dashboard",
+    "backToHome": "Back to home"
   }
 }

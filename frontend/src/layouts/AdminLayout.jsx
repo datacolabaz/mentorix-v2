@@ -35,6 +35,7 @@ const NAV_SECTION_DEFS = [
       { to: '/admin/notifications', key: 'notifications', labelKey: 'nav.admin.notifications', label: 'Bildirişlər', icon: 'notifications' },
       { to: '/admin/marketing/login', key: 'marketingLogin', labelKey: 'nav.admin.marketingLogin', label: 'Landing məzmunu', icon: 'analytics' },
       { to: '/admin/instructor-nav', key: 'instructorNav', labelKey: 'nav.admin.instructorNav', label: 'Müəllim menyusu', icon: 'settings' },
+      { to: '/admin/feature-flags', key: 'featureFlags', labelKey: 'nav.admin.featureFlags', label: 'Platforma funksiyaları', icon: 'settings' },
       { to: '/admin/categories', key: 'categories', labelKey: 'nav.admin.categories', label: 'Axtarış kateqoriyaları', icon: 'courses' },
       { to: '/admin/certified-exams', key: 'certifiedExams', labelKey: 'nav.admin.certifiedExams', label: 'Sertifikat verifikasiyası', icon: 'courses' },
       { to: '/admin/settings', key: 'settings', labelKey: 'nav.admin.settings', label: 'Tənzimləmələr', icon: 'settings' },

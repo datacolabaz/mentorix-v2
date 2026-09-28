@@ -21,6 +21,7 @@ import { liveGuestJoinUrl } from '../../lib/absolutePublicUrl'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
+import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
 function formatIncomeAzn(n) {
   const v = Number(n)
@@ -57,6 +58,7 @@ export default function InstructorTeachingGroups() {
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const liveRoomOn = useFeatureFlag(FEATURE_FLAGS.LIVE_ROOM)
   const [liveNotifyModal, setLiveNotifyModal] = useState(null)
   const [liveModalStep, setLiveModalStep] = useState('choose')
   const [liveNotifySms, setLiveNotifySms] = useState(false)
@@ -551,7 +553,11 @@ export default function InstructorTeachingGroups() {
                                     'col-span-2 sm:col-span-1 font-semibold text-red-400',
                                     busy[`live-${g.id}`] ? 'opacity-60' : '',
                                   ].join(' ')}
-                                  onClick={() => requestStartLiveClass(g, s.name)}
+                                  onClick={() =>
+                                    liveRoomOn
+                                      ? requestStartLiveClass(g, s.name)
+                                      : navigate('/instructor/live/history')
+                                  }
                                 >
                                   {busy[`live-${g.id}`] ? t('teachingGroups.liveStarting') : t('teachingGroups.liveClass')}
                                 </button>

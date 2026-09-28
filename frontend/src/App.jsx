@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
 import { MentorWorkspaceProvider, useIsMentorWorkspace } from './hooks/useMentorWorkspace.jsx'
+import FeatureRoute from './components/common/FeatureRoute'
+import { FEATURE_FLAGS } from './lib/featureFlags'
 
 const AuthPage = lazy(() => import('./pages/auth/AuthPage'))
 const Landing = lazy(() => import('./pages/auth/Landing'))
@@ -53,6 +55,7 @@ const AdminNotifications = lazy(() => import('./pages/admin/Notifications'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 const AdminMarketingLogin = lazy(() => import('./pages/admin/MarketingLogin'))
 const AdminInstructorNav = lazy(() => import('./pages/admin/InstructorNav'))
+const AdminFeatureFlags = lazy(() => import('./pages/admin/FeatureFlags'))
 const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'))
 const AdminUniversityPrograms = lazy(() => import('./pages/admin/AdminUniversityPrograms'))
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'))
@@ -257,12 +260,12 @@ export default function App() {
       <PresenceHeartbeat />
       <Suspense fallback={<RouteFallback />}>
       <Routes>
-      <Route path="/search" element={<InstructorMapSearch />} />
-      <Route path="/universities" element={<UniversityProgramSearch />} />
-      <Route path="/mentorship" element={<MentorshipLanding />} />
-      <Route path="/mentorship/goals" element={<MentorshipGoals />} />
-      <Route path="/mentorship/safety" element={<MentorshipSafety />} />
-      <Route path="/account/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+      <Route path="/search" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><InstructorMapSearch /></FeatureRoute>} />
+      <Route path="/universities" element={<FeatureRoute flag={FEATURE_FLAGS.UNIVERSITY_SEARCH}><UniversityProgramSearch /></FeatureRoute>} />
+      <Route path="/mentorship" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipLanding /></FeatureRoute>} />
+      <Route path="/mentorship/goals" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipGoals /></FeatureRoute>} />
+      <Route path="/mentorship/safety" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipSafety /></FeatureRoute>} />
+      <Route path="/account/favorites" element={<ProtectedRoute><FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><Favorites /></FeatureRoute></ProtectedRoute>} />
       {PUBLIC_SEO_LANDINGS.map((l) => (
         <Route key={l.path} path={l.path} element={<PublicSeoLanding />} />
       ))}
@@ -342,7 +345,7 @@ export default function App() {
       <Route path="/library/material/:materialId" element={<MaterialInvite />} />
       <Route path="/m/:shareToken" element={<MaterialPublicPreview />} />
       <Route path="/lr/:shareToken" element={<LiveRecordingShare />} />
-      <Route path="/live/join/:token" element={<LiveGuestJoin />} />
+      <Route path="/live/join/:token" element={<FeatureRoute flag={FEATURE_FLAGS.LIVE_ROOM}><LiveGuestJoin /></FeatureRoute>} />
       <Route path="/c/:token" element={<CertificateVerify />} />
       <Route path="/sertifikatli-imtahanlar" element={<CertifiedExamsCatalog />} />
       <Route path="/sertifikatli-imtahanlar/:categorySlug/:examSlug" element={<CertifiedExamDetailPage />} />
@@ -351,7 +354,9 @@ export default function App() {
         path="/live/:roomCode"
         element={
           <ProtectedRoute roles={['instructor', 'student']}>
-            <MentorixLive />
+            <FeatureRoute flag={FEATURE_FLAGS.LIVE_ROOM}>
+              <MentorixLive />
+            </FeatureRoute>
           </ProtectedRoute>
         }
       />
@@ -379,6 +384,7 @@ export default function App() {
         <Route path="settings" element={<AdminSettings />} />
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
         <Route path="instructor-nav" element={<AdminInstructorNav />} />
+        <Route path="feature-flags" element={<AdminFeatureFlags />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="university-programs" element={<AdminUniversityPrograms />} />
         <Route path="analytics" element={<AdminAnalytics />} />
@@ -396,7 +402,7 @@ export default function App() {
         <Route path="direct-chat" element={<DirectChatPage role="instructor" />} />
         <Route path="assignment-chat" element={<AssignmentChatPage role="instructor" />} />
         <Route path="join-requests" element={<InstructorJoinRequests />} />
-        <Route path="inquiries" element={<MentorOrInstructorPage mentor={MentorRequests} instructor={StudentInquiries} />} />
+        <Route path="inquiries" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><MentorOrInstructorPage mentor={MentorRequests} instructor={StudentInquiries} /></FeatureRoute>} />
         <Route path="schedule" element={<MentorOrInstructorPage mentor={MentorSessions} instructor={InstructorSchedule} />} />
         <Route path="exams" element={<InstructorExams />} />
         <Route path="certificates" element={<InstructorCertificates />} />
@@ -408,8 +414,8 @@ export default function App() {
         <Route path="presentations" element={<InstructorPresentations />} />
         <Route path="presentations/:id" element={<InstructorPresentationViewer />} />
         <Route path="live/history" element={<InstructorLiveHistory />} />
-        <Route path="roadmap" element={<MentorGoals />} />
-        <Route path="university-programs" element={<InstructorUniversityPrograms />} />
+        <Route path="roadmap" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorGoals /></FeatureRoute>} />
+        <Route path="university-programs" element={<FeatureRoute flag={FEATURE_FLAGS.UNIVERSITY_SEARCH}><InstructorUniversityPrograms /></FeatureRoute>} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
         <Route path="assignments" element={<InstructorTasks />} />
@@ -426,7 +432,7 @@ export default function App() {
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
-        <Route path="mentorship" element={<MentorshipDashboard />} />
+        <Route path="mentorship" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipDashboard /></FeatureRoute>} />
         <Route path="groups" element={<StudentMyGroups />} />
         <Route path="join" element={<StudentJoinRedirect />} />
         <Route path="schedule" element={<StudentSchedule />} />
@@ -437,7 +443,7 @@ export default function App() {
         <Route path="certificates" element={<StudentCertificates />} />
         <Route path="assignments" element={<StudentTasks />} />
         <Route path="materials" element={<StudentMaterials />} />
-        <Route path="universities" element={<UniversityProgramSearch embedded />} />
+        <Route path="universities" element={<FeatureRoute flag={FEATURE_FLAGS.UNIVERSITY_SEARCH}><UniversityProgramSearch embedded /></FeatureRoute>} />
         <Route path="tasks" element={<Navigate to="/student/assignments" replace />} />
         <Route path="payments" element={<StudentPayments />} />
         {/* backward-compatible alias */}

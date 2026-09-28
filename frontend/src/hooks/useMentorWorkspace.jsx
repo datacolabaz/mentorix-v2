@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import api from '../lib/api'
 import useAuthStore from './useAuth'
+import { FEATURE_FLAGS, useFeatureFlag } from '../lib/featureFlags'
 
 const MentorWorkspaceContext = createContext(null)
 
@@ -28,6 +29,8 @@ export function useIsMentorWorkspace() {
     }
   }, [user])
 
+  const mentorEnabled = useFeatureFlag(FEATURE_FLAGS.MENTOR_SERVICES)
+  if (!mentorEnabled) return false
   return String(user?.persona || '').toLowerCase() === 'mentor' || workspace === 'mentor'
 }
 

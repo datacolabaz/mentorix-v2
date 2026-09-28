@@ -32,6 +32,11 @@ const {
   rejectCertifiedExam,
 } = require('../controllers/adminCertifiedExamController');
 const { getAdminWaitlistDemand } = require('../controllers/waitlistController');
+const {
+  getAdminFeatureFlags,
+  patchAdminFeatureFlag,
+  getAdminFeatureFlagAudit,
+} = require('../controllers/adminFeatureFlagController');
 const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../utils/db');
 const { grantCourseRoleToUser } = require('../services/userRolesService');
@@ -69,6 +74,9 @@ router.delete('/students/:id', authenticate, authorize('admin'), deleteStudent);
 router.get('/classes', authenticate, authorize('admin'), getClasses);
 router.get('/marketing/login', authenticate, authorize('admin'), getAdminLoginMarketing);
 router.put('/marketing/login', authenticate, authorize('admin'), putAdminLoginMarketing);
+router.get('/feature-flags', authenticate, authorize('admin'), getAdminFeatureFlags);
+router.get('/feature-flags/audit', authenticate, authorize('admin'), getAdminFeatureFlagAudit);
+router.patch('/feature-flags/:key', authenticate, authorize('admin'), patchAdminFeatureFlag);
 router.get('/instructor-nav', authenticate, authorize('admin'), getAdminInstructorNav);
 router.put('/instructor-nav', authenticate, authorize('admin'), putAdminInstructorNav);
 router.get('/platform/contact', authenticate, authorize('admin'), getAdminPlatformContact);

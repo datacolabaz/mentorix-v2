@@ -29,6 +29,11 @@ const {
 } = require('../controllers/liveAdmissionController');
 const { uploadLiveChatAttachment } = require('../services/liveChatAttachmentStorage');
 const { verify } = require('../utils/jwt');
+const { requireFeature } = require('../middleware/requireFeature');
+const { FEATURE_FLAGS } = require('../constants/featureFlags');
+
+/** Daxili LiveKit otağına aid endpoint-lər. Zoom/Meet dərsləri (join_url) bundan asılı deyil. */
+const liveRoomOn = requireFeature(FEATURE_FLAGS.LIVE_ROOM);
 const {
   getState: getLivePresentationState,
   putState: putLivePresentationState,
@@ -72,9 +77,10 @@ function liveChatDownloadAuth(req, res, next) {
   return optionalAuthenticate(req, res, next);
 }
 
-router.get('/chat-attachments/:filename', liveChatDownloadAuth, serveLiveChatAttachment);
+router.get('/chat-attachments/:filename', liveRoomOn, liveChatDownloadAuth, serveLiveChatAttachment);
 router.post(
   '/rooms/:roomCode/chat-attachments',
+  liveRoomOn,
   authenticate,
   authorize('instructor', 'student'),
   liveChatUpload,
@@ -82,6 +88,7 @@ router.post(
 );
 router.post(
   '/:roomCode/chat-attachments',
+  liveRoomOn,
   authenticate,
   authorize('instructor', 'student'),
   liveChatUpload,
@@ -89,41 +96,45 @@ router.post(
 );
 router.get(
   '/rooms/:roomCode/chat-messages',
+  liveRoomOn,
   authenticate,
   authorize('instructor', 'student'),
   getAuthedChatHistory,
 );
 router.get(
   '/:roomCode/chat-messages',
+  liveRoomOn,
   authenticate,
   authorize('instructor', 'student'),
   getAuthedChatHistory,
 );
 router.post(
   '/rooms/:roomCode/chat-messages',
+  liveRoomOn,
   authenticate,
   authorize('instructor', 'student'),
   postAuthedChatMessage,
 );
 router.post(
   '/:roomCode/chat-messages',
+  liveRoomOn,
   authenticate,
   authorize('instructor', 'student'),
   postAuthedChatMessage,
 );
 
-router.get('/:roomCode/presentation/file', authenticateLiveFile, serveOpenFile);
-router.get('/rooms/:roomCode/presentation/file', authenticateLiveFile, serveOpenFile);
-router.get('/:roomCode/presentation', authenticate, authorize('instructor', 'student'), getLivePresentationState);
-router.get('/rooms/:roomCode/presentation', authenticate, authorize('instructor', 'student'), getLivePresentationState);
-router.put('/:roomCode/presentation', authenticate, authorize('instructor'), putLivePresentationState);
-router.put('/rooms/:roomCode/presentation', authenticate, authorize('instructor'), putLivePresentationState);
-router.post('/:roomCode/polls', authenticate, authorize('instructor'), postPoll);
-router.post('/rooms/:roomCode/polls', authenticate, authorize('instructor'), postPoll);
-router.post('/:roomCode/polls/:pollId/respond', authenticate, authorize('instructor', 'student'), postPollRespond);
-router.post('/rooms/:roomCode/polls/:pollId/respond', authenticate, authorize('instructor', 'student'), postPollRespond);
-router.post('/:roomCode/polls/:pollId/close', authenticate, authorize('instructor'), postPollClose);
-router.post('/rooms/:roomCode/polls/:pollId/close', authenticate, authorize('instructor'), postPollClose);
+router.get('/:roomCode/presentation/file', liveRoomOn, authenticateLiveFile, serveOpenFile);
+router.get('/rooms/:roomCode/presentation/file', liveRoomOn, authenticateLiveFile, serveOpenFile);
+router.get('/:roomCode/presentation', liveRoomOn, authenticate, authorize('instructor', 'student'), getLivePresentationState);
+router.get('/rooms/:roomCode/presentation', liveRoomOn, authenticate, authorize('instructor', 'student'), getLivePresentationState);
+router.put('/:roomCode/presentation', liveRoomOn, authenticate, authorize('instructor'), putLivePresentationState);
+router.put('/rooms/:roomCode/presentation', liveRoomOn, authenticate, authorize('instructor'), putLivePresentationState);
+router.post('/:roomCode/polls', liveRoomOn, authenticate, authorize('instructor'), postPoll);
+router.post('/rooms/:roomCode/polls', liveRoomOn, authenticate, authorize('instructor'), postPoll);
+router.post('/:roomCode/polls/:pollId/respond', liveRoomOn, authenticate, authorize('instructor', 'student'), postPollRespond);
+router.post('/rooms/:roomCode/polls/:pollId/respond', liveRoomOn, authenticate, authorize('instructor', 'student'), postPollRespond);
+router.post('/:roomCode/polls/:pollId/close', liveRoomOn, authenticate, authorize('instructor'), postPollClose);
+router.post('/rooms/:roomCode/polls/:pollId/close', liveRoomOn, authenticate, authorize('instructor'), postPollClose);
 
 router.get('/history', authenticate, authorize('instructor'), getHistory);
 router.delete('/history/:roomCode', authenticate, authorize('instructor'), deleteRoom);
@@ -132,6 +143,7 @@ router.get('/recording-file/:filename', authenticate, authorize('instructor', 's
 
 router.post(
   '/rooms/:roomCode/guest-invite',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   enforceActiveSubscription,
@@ -139,6 +151,7 @@ router.post(
 );
 router.delete(
   '/rooms/:roomCode/guest-invite',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   enforceActiveSubscription,
@@ -146,6 +159,7 @@ router.delete(
 );
 router.get(
   '/rooms/:roomCode/guest-invite',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   getGuestInvite,
@@ -167,23 +181,26 @@ router.post(
   postCreateRoom,
 );
 
-router.get('/rooms/:roomCode/token', authenticate, authorize('instructor', 'student'), getToken);
-router.get('/rooms/:roomCode/admissions', authenticate, authorize('instructor'), listAdmissions);
-router.get('/rooms/:roomCode/admission', authenticate, authorize('instructor', 'student'), getMyAdmission);
+router.get('/rooms/:roomCode/token', liveRoomOn, authenticate, authorize('instructor', 'student'), getToken);
+router.get('/rooms/:roomCode/admissions', liveRoomOn, authenticate, authorize('instructor'), listAdmissions);
+router.get('/rooms/:roomCode/admission', liveRoomOn, authenticate, authorize('instructor', 'student'), getMyAdmission);
 router.post(
   '/rooms/:roomCode/admissions/:admissionId/approve',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   approveAdmission,
 );
 router.post(
   '/rooms/:roomCode/admissions/:admissionId/deny',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   denyAdmission,
 );
 router.post(
   '/rooms/:roomCode/participants/:identity/media',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   postParticipantMedia,
@@ -201,6 +218,7 @@ router.post(
 
 router.post(
   '/rooms/:roomCode/recording',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   (req, res, next) => {
@@ -212,23 +230,26 @@ router.post(
   postRecording,
 );
 
-router.get('/:roomCode/token', authenticate, authorize('instructor', 'student'), getToken);
-router.get('/:roomCode/admissions', authenticate, authorize('instructor'), listAdmissions);
-router.get('/:roomCode/admission', authenticate, authorize('instructor', 'student'), getMyAdmission);
+router.get('/:roomCode/token', liveRoomOn, authenticate, authorize('instructor', 'student'), getToken);
+router.get('/:roomCode/admissions', liveRoomOn, authenticate, authorize('instructor'), listAdmissions);
+router.get('/:roomCode/admission', liveRoomOn, authenticate, authorize('instructor', 'student'), getMyAdmission);
 router.post(
   '/:roomCode/admissions/:admissionId/approve',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   approveAdmission,
 );
 router.post(
   '/:roomCode/admissions/:admissionId/deny',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   denyAdmission,
 );
 router.post(
   '/:roomCode/participants/:identity/media',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   postParticipantMedia,
@@ -246,6 +267,7 @@ router.post(
 
 router.post(
   '/:roomCode/recording',
+  liveRoomOn,
   authenticate,
   authorize('instructor'),
   (req, res, next) => {

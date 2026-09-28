@@ -1,6 +1,8 @@
 const registry = require('../providers/liveLesson/registry');
 const { createLiveRoom } = require('./liveRoomService');
 const db = require('../utils/db');
+const { isFeatureEnabled } = require('./featureFlagService');
+const { FEATURE_FLAGS, FEATURE_DISABLED_MESSAGE } = require('../constants/featureFlags');
 
 /**
  * Create a live lesson via the selected provider.
@@ -22,6 +24,14 @@ async function createLiveLesson(
 ) {
   const provider = registry.get(providerRaw);
   const providerId = provider.id;
+
+  if (providerId === 'mentorix_live' && !(await isFeatureEnabled(FEATURE_FLAGS.LIVE_ROOM))) {
+    const err = new Error(FEATURE_DISABLED_MESSAGE);
+    err.status = 404;
+    err.code = 'FEATURE_DISABLED';
+    err.provider = providerId;
+    throw err;
+  }
 
   if (providerId !== 'mentorix_live') {
     const connected = await provider.isConnected(instructorId);
