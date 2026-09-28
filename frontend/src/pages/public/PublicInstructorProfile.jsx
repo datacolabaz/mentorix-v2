@@ -19,6 +19,7 @@ import { localizeInstructorWrittenText } from '../../lib/instructorWrittenTextI1
 import { mapsDirectionsUrls } from '../../lib/mapsDirections'
 import { bakuMetroBySlug } from '@shared/bakuMetroStations.mjs'
 import { resolveUiLocale } from '../../lib/uiLocale'
+import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
 function ProfileSection({ title, children, className = '' }) {
   return (
@@ -49,6 +50,7 @@ function expertiseTags(instructor) {
 export default function PublicInstructorProfile() {
   const { id } = useParams()
   const { t, i18n } = useTranslation()
+  const marketplaceOn = useFeatureFlag(FEATURE_FLAGS.MARKETPLACE)
   const locale = resolveUiLocale(i18n.language)
   const { user, token } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
@@ -189,9 +191,11 @@ export default function PublicInstructorProfile() {
       <header className="shrink-0 border-b border-white/10 bg-[#0f0f0f]/95 sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <Brand className="h-7 w-auto" />
-          <Link to="/search" className="text-sm font-semibold text-primary hover:underline shrink-0">
-            {t('marketplace.profile.backToSearch')}
-          </Link>
+          {marketplaceOn ? (
+            <Link to="/search" className="text-sm font-semibold text-primary hover:underline shrink-0">
+              {t('marketplace.profile.backToSearch')}
+            </Link>
+          ) : null}
         </div>
       </header>
 
@@ -208,9 +212,11 @@ export default function PublicInstructorProfile() {
         {!loading && error ? (
           <div className="rounded-2xl border border-white/10 bg-[#121212] p-8 text-center max-w-lg mx-auto">
             <p className="text-white font-semibold">{error}</p>
-            <Link to="/search" className="inline-block mt-4 text-sm text-primary font-semibold hover:underline">
-              {t('marketplace.profile.backToMap')}
-            </Link>
+            {marketplaceOn ? (
+              <Link to="/search" className="inline-block mt-4 text-sm text-primary font-semibold hover:underline">
+                {t('marketplace.profile.backToMap')}
+              </Link>
+            ) : null}
           </div>
         ) : null}
 

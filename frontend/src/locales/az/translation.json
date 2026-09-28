@@ -104,6 +104,7 @@
       "inquiries": "Axtarış müraciətləri",
       "schedule": "Cədvəlim",
       "attendance": "Davamiyyət",
+      "engagement": "Aktivlik",
       "exams": "İmtahanlar",
       "certificates": "Sertifikatlar",
       "tasks": "Tapşırıqlar",
@@ -177,6 +178,7 @@
       "notifications": "Bildirişlər",
       "marketingLogin": "Landing məzmunu",
       "instructorNav": "Müəllim menyusu",
+      "featureFlags": "Platforma funksiyaları",
       "categories": "Axtarış kateqoriyaları",
       "settings": "Tənzimləmələr"
     },
@@ -214,6 +216,7 @@
     "createAccount": "Hesab yaradın",
     "loginToAccount": "Hesabınıza daxil olun",
     "backHome": "← Ana səhifəyə qayıt",
+    "googleOnly": {"title": "Mentorix-ə xoş gəlmisiniz", "subtitle": "İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.", "cta": "Google ilə davam et", "legalPrefix": "Davam etməklə", "terms": "İstifadə Şərtləri", "and": "və", "privacy": "Məxfilik Siyasəti", "legalSuffix": "ilə razılaşırsınız."},
     "adminPanel": "Admin panel",
     "phoneOrEmail": "Telefon və ya email",
     "password": "Şifrə",
@@ -292,6 +295,7 @@
   },
   "onboarding": {
     "title": "Mentorix-dən necə istifadə edəcəksiniz?",
+    "intent": {"title": "Mentorix-də nə etmək istəyirsiniz?", "subtitle": "Bu seçimi sonra dəyişə bilərsiniz. Eyni Google hesabı ilə həm tələbə, həm müəllim ola bilərsiniz.", "student": {"title": "İmtahan və tapşırıqlarda iştirak etmək", "desc": "Tələbə kimi davam et"}, "teacher": {"title": "İmtahan və material yaratmaq", "desc": "Müəllim / Təlimçi kimi davam et"}},
     "subtitle": "Sizə uyğun təcrübəni hazırlamaq üçün istifadə məqsədinizi seçin.",
     "forAccount": "{{email}} hesabı üçün",
     "continue": "Davam et",
@@ -4294,6 +4298,37 @@
       "amount": "Məbləğ",
       "status": "Status",
       "date": "Tarix"
+    }
+  },
+  "featureFlags": {
+    "disabledTitle": "Bu funksiya hazırda aktiv deyil",
+    "disabledText": "Mentorix imtahan və hazırlıq idarəetməsinə fokuslanır. Bu bölmə müvəqqəti olaraq bağlıdır, məlumatlarınız qorunur.",
+    "backToDashboard": "Panelə qayıt",
+    "backToHome": "Ana səhifəyə qayıt"
+  },
+  "examResultModes": {
+    "label": "Nəticələrin göstərilmə qaydası",
+    "legacyNotice": "Köhnə qayda: tələbə öz cavablarını və düzgün/səhv statusunu görür, düzgün cavab gizlidir. Yeni qayda seçə bilərsiniz.",
+    "releaseAt": "Nəticələrin açılma vaxtı (boş qalsa, imtahanın bitmə vaxtı)",
+    "immediate_full_review": {
+      "title": "Dərhal tam nəticə",
+      "hint": "Bal, tələbənin cavabı və düzgün cavab imtahan bitən kimi görünür."
+    },
+    "after_exam_window": {
+      "title": "İmtahan müddəti bitəndən sonra",
+      "hint": "Nəticə hamı üçün eyni vaxtda açılır: bitmə vaxtında və ya seçdiyiniz tarixdə."
+    },
+    "after_manual_grading": {
+      "title": "Yoxlamadan sonra",
+      "hint": "Açıq sualları yoxlayıb təsdiqləyəndən sonra nəticə görünür."
+    },
+    "score_only": {
+      "title": "Yalnız bal",
+      "hint": "Ümumi bal və statistika görünür, suallar və düzgün cavablar gizli qalır."
+    },
+    "wrong_answers_only": {
+      "title": "Yalnız səhv cavablar",
+      "hint": "Tələbə yalnız səhv etdiyi və boş buraxdığı sualları, düzgün cavabla birlikdə görür."
     }
   }
 }

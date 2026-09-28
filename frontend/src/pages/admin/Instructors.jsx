@@ -26,7 +26,7 @@ export default function AdminInstructors() {
   const [verifyBusy, setVerifyBusy] = useState({})
   const [searchBusy, setSearchBusy] = useState({})
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", subject: "", billing_type: "8_lessons" })
-  const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "", subject: "", new_password: "" })
+  const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "", subject: "" })
   const [planBusy, setPlanBusy] = useState({})
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -78,7 +78,6 @@ export default function AdminInstructors() {
       phone: i.phone || "",
       subject: i.subject || "",
       region: i.region || BAKU,
-      new_password: "",
     })
     setEditModal(true)
   }
@@ -91,9 +90,8 @@ export default function AdminInstructors() {
         subject: editForm.subject,
         email: editForm.email,
       }
-      if (editForm.new_password?.trim()) body.new_password = editForm.new_password.trim()
       await api.patch("/admin/instructors/" + selected.id + "/profile", body)
-      toast(editForm.new_password?.trim() ? "Email/şifrə yeniləndi — müəllim indi email ilə girə bilər" : "Məlumatlar yeniləndi")
+      toast("Məlumatlar yeniləndi. Müəllim bu email-in Google hesabı ilə daxil olacaq.")
       setEditModal(false)
       load()
     } catch (err) { toast(err.message || "Xeta", "error") }
@@ -376,18 +374,7 @@ export default function AdminInstructors() {
             </p>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Yeni şifrə (istəyə görə)</label>
-            <input
-              type="password"
-              placeholder="ən azı 8 simvol"
-              autoComplete="new-password"
-              className={inputClass}
-              value={editForm.new_password}
-              onChange={(e) => setEditForm((p) => ({ ...p, new_password: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Telefon (OTP giriş — istəyə görə)</label>
+            <label className="block text-xs font-semibold text-token-textMuted uppercase tracking-wider mb-2">Əlaqə telefonu (istəyə görə)</label>
             <input placeholder="+994501234567" className={inputClass}
               value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
           </div>

@@ -7,6 +7,7 @@ import LocaleThemeBar from '../LocaleThemeBar'
 import LanguageSwitcher from '../LanguageSwitcher'
 import { COMPACT_PUBLIC_NAV_MQ, isCompactPublicNav } from '../../lib/compactPublicNav'
 import useUiStore from '../../hooks/useUi'
+import { filterNavItemsByFlags, useFeatureFlags } from '../../lib/featureFlags'
 
 const NAV_LINK =
   'mx-landing-nav-link text-gray-300 hover:text-white px-2 py-1.5 rounded-lg text-xs lg:text-sm font-semibold whitespace-nowrap'
@@ -58,6 +59,8 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
+  const { flags: featureFlags } = useFeatureFlags()
+  const links = filterNavItemsByFlags(LINKS, featureFlags)
   const compact = useCompactPublicNav()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const onHome = location.pathname === '/'
@@ -146,7 +149,7 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
                 </p>
                 <LanguageSwitcher tone={tone} size="comfortable" className="mb-3" />
                 <div className="space-y-1">
-                  {LINKS.map((item) => (
+                  {links.map((item) => (
                     <Link
                       key={item.to}
                       to={item.to}
@@ -201,7 +204,7 @@ export default function PublicMarketingNav({ onLogin, onStart }) {
 
           <div className="flex items-center gap-1.5 lg:gap-2 shrink-0 min-w-0">
             <div className="hidden lg:flex items-center gap-0.5 lg:gap-1">
-              {LINKS.map((item) => (
+              {links.map((item) => (
                 <Link key={item.to} to={item.to} className={linkClass(location.pathname, item.to, isDark)}>
                   {t(item.labelKey)}
                 </Link>

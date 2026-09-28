@@ -15,6 +15,49 @@ const { parseCatalogFields } = require('../lib/examCatalogFields');
 const { generateUniqueExamSlug } = require('../lib/examSlug');
 const { instructorHasCertificateFeature } = require('../services/certificateService');
 const { displayGroupLabel } = require('../lib/participantGroupLabels');
+const {
+  normalizeResultMode,
+  showResultsForMode,
+  resolveStudentResultView,
+  applyStudentResultView,
+  applyStudentListRowView,
+  isResultDelayed,
+} = require('../services/examResultVisibility');
+const { isFeatureEnabled } = require('../services/featureFlagService');
+const { FEATURE_FLAGS } = require('../constants/featureFlags');
+
+async function resultModesEnabled() {
+  return isFeatureEnabled(FEATURE_FLAGS.EXAM_RESULT_MODES).catch(() => true);
+}
+
+async function studentResultViewFor(exam, gradingPending) {
+  return resolveStudentResultView(exam, { gradingPending, modesEnabled: await resultModesEnabled() });
+}
+
+/**
+ * Müəllim formasından gələn nəticə rejimi sahələri.
+ * { error } və ya { provided, mode, releaseProvided, releaseAt }.
+ */
+function parseResultVisibilityBody(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const provided = Object.prototype.hasOwnProperty.call(b, 'result_visibility_mode');
+  let mode = null;
+  if (provided && b.result_visibility_mode != null && b.result_visibility_mode !== '') {
+    mode = normalizeResultMode(b.result_visibility_mode);
+    if (!mode) return { error: 'Nəticə rejimi düzgün deyil' };
+  }
+  const releaseProvided = Object.prototype.hasOwnProperty.call(b, 'results_release_at');
+  let releaseAt = null;
+  if (releaseProvided && b.results_release_at != null && b.results_release_at !== '') {
+    releaseAt = normalizeExamStartTime(b.results_release_at);
+    if (!releaseAt) return { error: 'Nəticələrin açılma vaxtı düzgün deyil' };
+  }
+  return { provided, mode, releaseProvided, releaseAt };
+}
+
+function afterWindowNeedsDate(mode, releaseAt, availableUntil) {
+  return mode === 'after_exam_window' && !releaseAt && !availableUntil;
+}
 
 /** JWT / DB UUID format fərqi olanda exam_assignments uyğunlaşması */
 const normStudentHex = (id) =>
@@ -247,6 +290,16 @@ const createExam = async (req, res) => {
     const fromNorm = normalizeExamStartTime(available_from || start_time);
     const untilNorm = normalizeExamStartTime(available_until);
     const notifyOn = notify_students === true || notify_students === 'true' || notify_enabled === true;
+
+    const visibility = parseResultVisibilityBody(req.body);
+    if (visibility.error) return res.status(400).json({ success: false, message: visibility.error });
+    const resultMode = visibility.mode || (show_results === false ? null : 'immediate_full_review');
+    if (afterWindowNeedsDate(resultMode, visibility.releaseAt, untilNorm)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bu rejim üçün imtahanın bitmə vaxtını və ya nəticələrin açılma vaxtını təyin edin',
+      });
+    }
     const notifyHours =
       notify_before_hours != null && notify_before_hours !== ''
         ? Number(notify_before_hours)
@@ -259,8 +312,9 @@ const createExam = async (req, res) => {
           available_from, available_until, allow_finish_after_until,
           notify_enabled, notify_students, notify_before_hours, show_results, wrong_penalty_enabled,
           certificate_enabled, certificate_pass_pct, certificate_template_id,
-          category_id, level, certificate_type, is_public, is_verified, slug, status)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,FALSE,$24,'scheduled') RETURNING *`,
+          category_id, level, certificate_type, is_public, is_verified, slug, status,
+          result_visibility_mode, results_release_at)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,FALSE,$24,'scheduled',$25,$26) RETURNING *`,
         [
           req.user.id,
           title,
@@ -276,7 +330,7 @@ const createExam = async (req, res) => {
           notifyOn,
           notifyOn,
           notifyHours,
-          show_results !== false,
+          resultMode ? showResultsForMode(resultMode) : false,
           wrongPenaltyOn,
           certificateEnabled,
           certificatePassPct,
@@ -286,6 +340,8 @@ const createExam = async (req, res) => {
           catalogCertType,
           isPublic,
           examSlug,
+          resultMode,
+          visibility.releaseAt,
         ]
       );
 
@@ -641,6 +697,64 @@ const instructorStudentExamProgress = async (req, res) => {
 // Telebe ucun imtahanlar
 const { resolveEnrollmentScope } = require('../services/studentEnrollmentsService');
 
+/** Siyahıda açılmamış nəticələrin balını gizlədir; manual yoxlama rejimi üçün yoxlama vəziyyəti oxunur. */
+/** Reytinq cədvəli yalnız tələbənin öz nəticəsi açılandan sonra göstərilir. */
+async function studentLeaderboardView(examId, sidHex) {
+  const { rows: [exam] } = await db.query(
+    'SELECT id, show_results, result_visibility_mode, results_release_at, available_until FROM exams WHERE id = $1',
+    [examId],
+  );
+  if (!exam) return { released: true };
+  const [view] = await applyResultVisibilityToStudentList([{ ...exam, submitted_at: new Date() }], sidHex);
+  return view.result_visibility;
+}
+
+async function applyResultVisibilityToStudentList(rows, sidHex) {
+  const modesEnabled = await resultModesEnabled();
+  const now = new Date();
+  const pendingByExam = new Map();
+  const manualExamIds = modesEnabled
+    ? rows
+        .filter((r) => r.submitted_at && normalizeResultMode(r.result_visibility_mode) === 'after_manual_grading')
+        .map((r) => r.id)
+    : [];
+  if (manualExamIds.length) {
+    const { hasUnconfirmedOpenGrading } = require('../services/openExamGradingService');
+    const [{ rows: qs }, { rows: results }] = await Promise.all([
+      db.query('SELECT * FROM exam_questions WHERE exam_id = ANY($1::uuid[])', [manualExamIds]),
+      db.query(
+        `SELECT DISTINCT ON (exam_id) exam_id, answers, grading
+         FROM exam_results
+         WHERE exam_id = ANY($1::uuid[])
+           AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+           AND submitted_at IS NOT NULL
+         ORDER BY exam_id, submitted_at DESC`,
+        [manualExamIds, sidHex],
+      ),
+    ]);
+    const parse = (v) => {
+      if (v && typeof v === 'object') return v;
+      try {
+        return JSON.parse(v || '{}') || {};
+      } catch {
+        return {};
+      }
+    };
+    for (const r of results) {
+      const questions = qs.filter((q) => String(q.exam_id) === String(r.exam_id));
+      pendingByExam.set(String(r.exam_id), hasUnconfirmedOpenGrading(questions, parse(r.answers), parse(r.grading)));
+    }
+  }
+  return rows.map((row) => {
+    const view = resolveStudentResultView(row, {
+      gradingPending: pendingByExam.get(String(row.id)) === true,
+      now,
+      modesEnabled,
+    });
+    return applyStudentListRowView(row, view);
+  });
+}
+
 const studentExams = async (req, res) => {
   try {
     const sidHex = normStudentHex(req.user.id);
@@ -736,7 +850,8 @@ const studentExams = async (req, res) => {
        ORDER BY COALESCE(e.available_from, e.start_time) DESC NULLS LAST`,
       [sidHex, instructorFilter]
     );
-    res.json({ success: true, exams: rows, enrollment_id: scope?.enrollment_id || null });
+    const exams = await applyResultVisibilityToStudentList(rows, sidHex);
+    res.json({ success: true, exams, enrollment_id: scope?.enrollment_id || null });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -896,8 +1011,9 @@ const getStudentExamReview = async (req, res) => {
     const { hasUnconfirmedOpenGrading } = require('../services/openExamGradingService');
     const gradingPending = hasUnconfirmedOpenGrading(questions, answers, grading);
 
+    const view = await studentResultViewFor(exam, gradingPending);
     const breakdown = buildExamResultBreakdown(questions, answers, {
-      showCorrectAnswers: exam.show_results !== false,
+      showCorrectAnswers: view.show_correct_answers,
       grading,
       studentView: true,
     });
@@ -906,28 +1022,35 @@ const getStudentExamReview = async (req, res) => {
 
     let certificate = null;
     let certificateMeta = null;
-    try {
-      const { getOrIssueCertificateForStudentExam } = require('../services/certificateService');
-      const certOutcome = await getOrIssueCertificateForStudentExam(req.user.id, examId);
-      certificate = certOutcome.certificate;
-      certificateMeta = certOutcome.eligibility;
-    } catch (certErr) {
-      console.error('review certificate', certErr.message);
+    if (view.released) {
+      try {
+        const { getOrIssueCertificateForStudentExam } = require('../services/certificateService');
+        const certOutcome = await getOrIssueCertificateForStudentExam(req.user.id, examId);
+        certificate = certOutcome.certificate;
+        certificateMeta = certOutcome.eligibility;
+      } catch (certErr) {
+        console.error('review certificate', certErr.message);
+      }
     }
 
     res.json({
       success: true,
       exam,
-      score: result.score,
-      grading_pending: gradingPending,
-      score_display: gradingPending ? 'pending' : result.score,
-      submitted_at: result.submitted_at,
-      breakdown,
-      type_summary: typeSummary,
-      /** Modalda breakdown.student_answer boş qalsa, birbaşa təqdim olunmuş cavab obyekti ilə doldurmaq üçün */
-      answers,
-      certificate,
-      certificate_meta: certificateMeta,
+      ...applyStudentResultView(
+        {
+          score: result.score,
+          grading_pending: gradingPending,
+          score_display: gradingPending ? 'pending' : result.score,
+          submitted_at: result.submitted_at,
+          breakdown,
+          type_summary: typeSummary,
+          /** Modalda breakdown.student_answer boş qalsa, birbaşa təqdim olunmuş cavab obyekti ilə doldurmaq üçün */
+          answers,
+          certificate,
+          certificate_meta: certificateMeta,
+        },
+        view,
+      ),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1162,9 +1285,10 @@ const submitExam = async (req, res) => {
       [exam_id]
     );
     const { rows: [exam] } = await db.query(
-      `SELECT id, is_deleted, duration_minutes,
+      `SELECT id, is_deleted, duration_minutes, available_until,
               COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled,
-              COALESCE(show_results, TRUE) AS show_results
+              COALESCE(show_results, TRUE) AS show_results,
+              result_visibility_mode, results_release_at
        FROM exams WHERE id = $1`,
       [exam_id]
     );
@@ -1176,8 +1300,10 @@ const submitExam = async (req, res) => {
     const grading = buildAutoGradingMap(questions, answers);
     const score = calculateScore(questions, answers, { wrongPenaltyEnabled: wrongPen, grading });
     const typeSummary = buildExamTypeSummary(questions, answers, { wrongPenaltyEnabled: wrongPen, grading });
+    const { hasUnconfirmedOpenGrading: hasPendingOpenGrading } = require('../services/openExamGradingService');
+    const view = await studentResultViewFor(exam, hasPendingOpenGrading(questions, answers, grading));
     const breakdown = buildExamResultBreakdown(questions, answers, {
-      showCorrectAnswers: exam.show_results !== false,
+      showCorrectAnswers: view.show_correct_answers,
       grading,
       studentView: true,
     });
@@ -1288,22 +1414,29 @@ const submitExam = async (req, res) => {
       console.error('addStudentToExamParticipantGroup', e.message);
     }
 
-    setImmediate(() => {
-      notifyParentExamResultAfterSubmit(exam_id, student_id, score).catch((e) =>
-        console.error('notifyParentExamResultAfterSubmit', e.message)
-      );
-    });
+    if (!isResultDelayed(view)) {
+      setImmediate(() => {
+        notifyParentExamResultAfterSubmit(exam_id, student_id, score).catch((e) =>
+          console.error('notifyParentExamResultAfterSubmit', e.message)
+        );
+      });
+    }
 
     res.json({
       success: true,
-      score,
-      grading_pending: gradingPending,
-      score_display: gradingPending ? 'pending' : score,
-      breakdown,
-      type_summary: typeSummary,
-      answers,
-      certificate,
-      certificate_meta: certificateMeta,
+      ...applyStudentResultView(
+        {
+          score,
+          grading_pending: gradingPending,
+          score_display: gradingPending ? 'pending' : score,
+          breakdown,
+          type_summary: typeSummary,
+          answers,
+          certificate,
+          certificate_meta: certificateMeta,
+        },
+        view,
+      ),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1378,6 +1511,10 @@ const getResults = async (req, res) => {
         [examId, sidHex]
       );
       if (!assigned.length) return res.status(403).json({ success: false, message: 'İcazə yoxdur' });
+      const leaderboardView = await studentLeaderboardView(examId, sidHex);
+      if (!leaderboardView.released) {
+        return res.json({ success: true, results: [], grade: null, result_visibility: leaderboardView });
+      }
       const { rows } = await db.query(
         `WITH emax AS (
            SELECT COALESCE(SUM(eq.points::numeric), 0) AS max_pts FROM exam_questions eq WHERE eq.exam_id = $1
@@ -1888,6 +2025,23 @@ const patchExam = async (req, res) => {
 
     const certWasEnabled = before.certificate_enabled === true;
 
+    const visibility = parseResultVisibilityBody(req.body);
+    if (visibility.error) return res.status(400).json({ success: false, message: visibility.error });
+    const finalResultMode = visibility.provided
+      ? visibility.mode
+      : normalizeResultMode(before.result_visibility_mode);
+    const finalReleaseAt = visibility.releaseProvided ? visibility.releaseAt : before.results_release_at || null;
+    const untilCandidate =
+      available_until != null && available_until !== ''
+        ? normalizeExamStartTime(available_until) || before.available_until
+        : before.available_until;
+    if (afterWindowNeedsDate(finalResultMode, finalReleaseAt, untilCandidate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bu rejim üçün imtahanın bitmə vaxtını və ya nəticələrin açılma vaxtını təyin edin',
+      });
+    }
+
     let updatedExam = null;
     let assignmentSummary = null;
 
@@ -2054,6 +2208,24 @@ const patchExam = async (req, res) => {
         const err = new Error('Imtahan tapilmadi');
         err.code = 'EXAM_NOT_FOUND';
         throw err;
+      }
+
+      if (visibility.provided || visibility.releaseProvided) {
+        const { rows: visRows } = await client.query(
+          `UPDATE exams SET
+             result_visibility_mode = $1,
+             results_release_at = $2::timestamptz,
+             show_results = $3::boolean
+           WHERE id = $4
+           RETURNING *`,
+          [
+            finalResultMode,
+            finalReleaseAt,
+            finalResultMode ? showResultsForMode(finalResultMode) : updatedExam.show_results,
+            examId,
+          ],
+        );
+        updatedExam = visRows[0] || updatedExam;
       }
 
       if (questionsProvided) {

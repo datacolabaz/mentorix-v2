@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import api, { AUTH_REQUEST_TIMEOUT_MS } from '../lib/api'
+import api from '../lib/api'
 import { trackLogout } from '../lib/analytics'
 import { consumeReturnAfterLogin } from '../lib/inviteReturn'
 
@@ -44,60 +44,6 @@ const useAuthStore = create((set) => ({
       }
     }
   },
-
-  login: async (identifier, password) => {
-    const data = await api.post('/auth/login', { identifier, password })
-    if (!data?.token || !data?.user) {
-      throw new Error(data?.message || 'Server cavabı etibarsızdır')
-    }
-    localStorage.setItem('mx_token', data.token)
-    localStorage.setItem('mx_user', JSON.stringify(data.user))
-    clearDiscoverReminderOnAuth(data.user)
-    set({ user: data.user, token: data.token })
-    return data.user
-  },
-
-  signupWithEmail: async (body) => {
-    let ref
-    let session_key
-    try {
-      const { readStoredPartnerRef, readPartnerSessionKey } = await import('../pages/PartnerReferralLanding')
-      ref = body?.ref || body?.partner_ref || readStoredPartnerRef()
-      session_key = body?.session_key || readPartnerSessionKey()
-    } catch {
-      ref = body?.ref || body?.partner_ref
-    }
-    return api.post(
-      '/auth/signup',
-      { ...body, ref: ref || undefined, session_key: session_key || undefined },
-      { timeout: AUTH_REQUEST_TIMEOUT_MS },
-    )
-  },
-
-  loginWithEmail: async ({ email, password, role } = {}) => {
-    const body = { email, password }
-    if (role) body.role = role
-    const data = await api.post('/auth/login/email', body, { timeout: AUTH_REQUEST_TIMEOUT_MS })
-    if (!data?.token || !data?.user) {
-      const err = new Error(data?.message || 'Server cavabı etibarsızdır')
-      err.code = data?.code
-      throw err
-    }
-    localStorage.setItem('mx_token', data.token)
-    localStorage.setItem('mx_user', JSON.stringify(data.user))
-    clearDiscoverReminderOnAuth(data.user)
-    set({ user: data.user, token: data.token })
-    return data.user
-  },
-
-  verifyEmailCode: async ({ email, code }) => api.post('/auth/verify-email', { email, code }),
-
-  resendVerificationEmail: async (email) =>
-    api.post('/auth/resend-verification', { email }, { timeout: AUTH_REQUEST_TIMEOUT_MS }),
-
-  requestPasswordReset: async (email) => api.post('/auth/password/forgot', { email }),
-
-  resetPasswordWithToken: async ({ token, new_password }) => api.post('/auth/password/reset', { token, new_password }),
 
   setSession: (token, user) => {
     if (!token || !user) return

@@ -10,10 +10,8 @@ import { useToast } from '../../components/common/Toast'
 import { postAuthNavigate } from '../../lib/postAuth'
 import { isInviteResumePath, peekReturnAfterLogin } from '../../lib/inviteReturn'
 import {
-  pickerPersonaIds,
   PERSONA_UI,
   PERSONAS,
-  resolveUserPersona,
   userNeedsOnboarding,
 } from '../../constants/personas'
 
@@ -282,6 +280,23 @@ function PersonaDetailsForm({ persona, profile, setProfile, t }) {
   )
 }
 
+/** Google ilə ilk girişdən sonra yalnız niyyət soruşulur; seçim sonra dəyişdirilə bilər. */
+const INTENT_OPTIONS = [PERSONAS.STUDENT, PERSONAS.TEACHER]
+const INTENT_COPY = {
+  [PERSONAS.STUDENT]: {
+    titleKey: 'onboarding.intent.student.title',
+    title: 'İmtahan və tapşırıqlarda iştirak etmək',
+    descKey: 'onboarding.intent.student.desc',
+    desc: 'Tələbə kimi davam et',
+  },
+  [PERSONAS.TEACHER]: {
+    titleKey: 'onboarding.intent.teacher.title',
+    title: 'İmtahan və material yaratmaq',
+    descKey: 'onboarding.intent.teacher.desc',
+    desc: 'Müəllim / Təlimçi kimi davam et',
+  },
+}
+
 export default function PersonaOnboarding() {
   const { t } = useTranslation()
   const toast = useToast()
@@ -296,7 +311,7 @@ export default function PersonaOnboarding() {
 
   const selectedUi = picked ? PERSONA_UI[picked] : null
   const canFinish = useMemo(() => profileComplete(picked, profile), [picked, profile])
-  const pickerIds = useMemo(() => pickerPersonaIds(resolveUserPersona(user)), [user])
+  const pickerIds = INTENT_OPTIONS
 
   if (!token) {
     return (
@@ -373,12 +388,7 @@ export default function PersonaOnboarding() {
       toast(msg, 'error')
       return
     }
-    // Partner needs no profile form — go straight to referral cabinet.
-    if (picked === PERSONAS.PARTNER || profileComplete(picked, emptyProfile())) {
-      await finishSession({ persona: picked, profile: {} })
-      return
-    }
-    setStep('details')
+    await finishSession({ persona: picked, profile: {} })
   }
 
   const togglePersona = (id) => {
@@ -399,7 +409,7 @@ export default function PersonaOnboarding() {
             onClick={() => logout()}
             className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap"
           >
-            ← {t('auth.backHome')}
+            {t('auth.backHome')}
           </Link>
         </div>
       </header>
@@ -413,9 +423,13 @@ export default function PersonaOnboarding() {
             <>
               <div className="text-center max-w-xl mx-auto">
                 <h1 className="text-slate-900 font-display font-bold text-2xl sm:text-[1.75rem] leading-tight">
-                  {t('onboarding.title')}
+                  {t('onboarding.intent.title', { defaultValue: 'Mentorix-də nə etmək istəyirsiniz?' })}
                 </h1>
-                <p className="mt-2.5 text-sm text-slate-600 leading-relaxed">{t('onboarding.subtitle')}</p>
+                <p className="mt-2.5 text-sm text-slate-600 leading-relaxed">
+                  {t('onboarding.intent.subtitle', {
+                    defaultValue: 'Bu seçimi sonra dəyişə bilərsiniz. Eyni Google hesabı ilə həm tələbə, həm müəllim ola bilərsiniz.',
+                  })}
+                </p>
                 {user?.email ? (
                   <p className="mt-2 text-xs font-medium text-slate-400">
                     {t('onboarding.forAccount', { email: user.email })}
@@ -426,6 +440,7 @@ export default function PersonaOnboarding() {
               <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {pickerIds.map((id) => {
                   const meta = PERSONA_UI[id]
+                  const copy = INTENT_COPY[id]
                   const selected = picked === id
                   return (
                     <button
@@ -460,9 +475,11 @@ export default function PersonaOnboarding() {
                         </span>
                         <div className="min-w-0">
                           <div className={`font-semibold text-base ${selected ? 'text-emerald-950' : 'text-slate-900'}`}>
-                            {t(meta.titleKey)}
+                            {t(copy.titleKey, { defaultValue: copy.title })}
                           </div>
-                          <div className="text-xs text-slate-600 mt-1.5 leading-relaxed">{t(meta.descKey)}</div>
+                          <div className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                            {t(copy.descKey, { defaultValue: copy.desc })}
+                          </div>
                         </div>
                       </div>
                     </button>

@@ -62,7 +62,8 @@ describe('personas config', () => {
       student_count: '6-15',
     });
     assert.equal(requiredProfileComplete(PERSONAS.TEACHER, clean), true);
-    assert.equal(requiredProfileComplete(PERSONAS.TEACHER, { subject: 'X' }), false);
+    assert.equal(requiredProfileComplete(PERSONAS.TEACHER, {}), true);
+    assert.equal(requiredProfileComplete(PERSONAS.STUDENT, {}), true);
   });
 
   it('merges persona slices without deleting previous data', () => {

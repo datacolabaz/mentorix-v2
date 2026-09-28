@@ -9,6 +9,7 @@ import { sidebarNavClass } from '../lib/sidebarNavClass'
 import { FIXED_MOBILE_TOP_BAR } from '../lib/stickyTopBar'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
+import { filterNavItemsByFlags, useFeatureFlags } from '../lib/featureFlags'
 import { StudentGroupProvider, useStudentGroups } from '../contexts/StudentGroupContext'
 import { useStudentAlerts } from '../hooks/useStudentAlerts'
 import { isInviteResumePath, peekReturnAfterLogin } from '../lib/inviteReturn'
@@ -87,17 +88,18 @@ function StudentLayoutInner() {
     ? t('layout.partnerRole', { defaultValue: 'Partner' })
     : t('layout.studentRole', { defaultValue: 'İştirakçı' })
 
+  const { flags: featureFlags } = useFeatureFlags()
   const navGroups = useMemo(
     () =>
       NAV_GROUP_DEFS.map((g) => ({
         label: t(g.labelKey, { defaultValue: g.label }),
-        items: g.items.map((item) => ({
+        items: filterNavItemsByFlags(g.items, featureFlags).map((item) => ({
           ...item,
           label: t(item.labelKey, { defaultValue: item.label }),
           icon: <NavIcon name={item.icon} />,
         })),
       })),
-    [t, i18n.language],
+    [t, i18n.language, featureFlags],
   )
   const { activeEnrollmentId } = useStudentGroups()
   const { tasksBadge, notifBadge } = useStudentAlerts({ enrollmentId: activeEnrollmentId })

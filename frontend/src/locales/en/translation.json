@@ -104,6 +104,7 @@
       "inquiries": "Search inquiries",
       "schedule": "My schedule",
       "attendance": "Attendance",
+      "engagement": "Engagement",
       "exams": "Exams",
       "certificates": "Certificates",
       "tasks": "Assignments",
@@ -176,6 +177,7 @@
       "notifications": "Notifications",
       "marketingLogin": "Landing content",
       "instructorNav": "Teacher menu",
+      "featureFlags": "Platform features",
       "categories": "Search categories",
       "settings": "Settings",
       "partners": "Partner program"
@@ -214,6 +216,7 @@
     "createAccount": "Create an account",
     "loginToAccount": "Sign in to your account",
     "backHome": "← Back to home",
+    "googleOnly": {"title": "Welcome to Mentorix", "subtitle": "Manage your exams, materials and results in one place.", "cta": "Continue with Google", "legalPrefix": "By continuing you agree to the", "terms": "Terms of Use", "and": "and", "privacy": "Privacy Policy", "legalSuffix": "."},
     "adminPanel": "Admin panel",
     "phoneOrEmail": "Phone or email",
     "password": "Password",
@@ -292,6 +295,7 @@
   },
   "onboarding": {
     "title": "How will you use Mentorix?",
+    "intent": {"title": "What would you like to do on Mentorix?", "subtitle": "You can change this later. One Google account can be both a student and a teacher.", "student": {"title": "Take exams and assignments", "desc": "Continue as a student"}, "teacher": {"title": "Create exams and materials", "desc": "Continue as a teacher / trainer"}},
     "subtitle": "Choose your use case so we can prepare the right experience.",
     "forAccount": "For {{email}}",
     "continue": "Continue",
@@ -4273,6 +4277,37 @@
       "amount": "Amount",
       "status": "Status",
       "date": "Date"
+    }
+  },
+  "featureFlags": {
+    "disabledTitle": "This feature is not available right now",
+    "disabledText": "Mentorix is focusing on exams and preparation management. This section is temporarily closed; your data is kept.",
+    "backToDashboard": "Back to dashboard",
+    "backToHome": "Back to home"
+  },
+  "examResultModes": {
+    "label": "Result visibility",
+    "legacyNotice": "Legacy rule: students see their answers and right/wrong status, the correct answer stays hidden. You can pick a new rule.",
+    "releaseAt": "Result release time (empty = exam end time)",
+    "immediate_full_review": {
+      "title": "Full result right away",
+      "hint": "Score, the student's answer and the correct answer appear as soon as the exam ends."
+    },
+    "after_exam_window": {
+      "title": "After the exam window closes",
+      "hint": "Results open for everyone at once: at the end time or on the date you choose."
+    },
+    "after_manual_grading": {
+      "title": "After grading",
+      "hint": "Results appear once you review and confirm open questions."
+    },
+    "score_only": {
+      "title": "Score only",
+      "hint": "Total score and statistics are shown; questions and correct answers stay hidden."
+    },
+    "wrong_answers_only": {
+      "title": "Wrong answers only",
+      "hint": "Students see only the questions they got wrong or skipped, with the correct answer."
     }
   }
 }

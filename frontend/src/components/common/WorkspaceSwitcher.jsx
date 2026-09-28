@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import { useToast } from './Toast'
+import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
 export default function WorkspaceSwitcher({ className = '' }) {
   const { t } = useTranslation()
@@ -13,6 +14,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
 
+  const mentorServicesOn = useFeatureFlag(FEATURE_FLAGS.MENTOR_SERVICES)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const menuRef = useRef(null)
@@ -33,7 +35,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
 
   const currentRole = String(user.role || '').toLowerCase()
   const currentPersona = String(user.persona || '').toLowerCase()
-  const isMentor = currentPersona === 'mentor'
+  const isMentor = mentorServicesOn && currentPersona === 'mentor'
   const isTeacher = currentRole === 'instructor' && !isMentor
   const isStudent = currentRole === 'student' || currentRole === 'mentee'
 
@@ -165,36 +167,38 @@ export default function WorkspaceSwitcher({ className = '' }) {
             </button>
 
             {/* Mentor */}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleSwitch('mentor', '/instructor')}
-              className={[
-                'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
-                isMentor
-                  ? isDark
-                    ? 'bg-primary/15 text-primary'
-                    : 'bg-primary/10 text-slate-900'
-                  : isDark
-                    ? 'hover:bg-white/5 text-gray-300'
-                    : 'hover:bg-slate-50 text-slate-700',
-              ].join(' ')}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">🧭</span>
-                <div>
-                  <div className="font-bold leading-none">{t('workspace.mentor', { defaultValue: 'Mentor kabineti' })}</div>
-                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">Mentor dashboard</div>
+            {mentorServicesOn ? (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleSwitch('mentor', '/instructor')}
+                className={[
+                  'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
+                  isMentor
+                    ? isDark
+                      ? 'bg-primary/15 text-primary'
+                      : 'bg-primary/10 text-slate-900'
+                    : isDark
+                      ? 'hover:bg-white/5 text-gray-300'
+                      : 'hover:bg-slate-50 text-slate-700',
+                ].join(' ')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🧭</span>
+                  <div>
+                    <div className="font-bold leading-none">{t('workspace.mentor', { defaultValue: 'Mentor kabineti' })}</div>
+                    <div className="text-[10px] text-slate-400 font-normal mt-0.5">Mentor dashboard</div>
+                  </div>
                 </div>
-              </div>
-              {isMentor ? (
-                <span className="text-xs font-bold text-primary">✓</span>
-              ) : (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-slate-900 dark:text-primary font-semibold">
-                  Aktivləşdir
-                </span>
-              )}
-            </button>
+                {isMentor ? (
+                  <span className="text-xs font-bold text-primary">✓</span>
+                ) : (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-slate-900 dark:text-primary font-semibold">
+                    Aktivləşdir
+                  </span>
+                )}
+              </button>
+            ) : null}
 
             {/* Partner */}
             <Link

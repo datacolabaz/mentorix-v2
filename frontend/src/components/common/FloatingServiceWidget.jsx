@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { filterNavItemsByFlags, useFeatureFlags } from '../../lib/featureFlags'
 
-const SERVICES = [
+const ALL_SERVICES = [
   {
     tag: '⚡ MÜƏLLİMLƏR ÜÇÜN',
     title: '1 Dəqiqəyə AI İmtahanı',
@@ -48,6 +49,11 @@ export default function FloatingServiceWidget() {
   const [index, setIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [isOpen, setIsOpen] = useState(true)
+  const { flags } = useFeatureFlags()
+  const SERVICES = filterNavItemsByFlags(
+    ALL_SERVICES.map((item) => ({ ...item, to: item.linkTo })),
+    flags,
+  )
 
   useEffect(() => {
     if (isPaused || !isOpen) return undefined
@@ -55,11 +61,11 @@ export default function FloatingServiceWidget() {
       setIndex((prev) => (prev + 1) % SERVICES.length)
     }, 3500)
     return () => clearInterval(interval)
-  }, [isPaused, isOpen])
+  }, [isPaused, isOpen, SERVICES.length])
 
   if (!isOpen) return null
 
-  const current = SERVICES[index]
+  const current = SERVICES[index % SERVICES.length]
 
   return (
     <div

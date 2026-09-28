@@ -21,6 +21,7 @@ const INSTRUCTOR_NAV_ITEM_DEFS = {
   presentations: { to: '/instructor/presentations', label: 'Təqdimatlar', icon: 'presentations' },
   materials_library: { to: '/instructor/materials', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', label: 'Analitika', icon: 'analytics' },
+  engagement: { to: '/instructor/engagement', label: 'Aktivlik', icon: 'progress' },
   payments: { to: '/instructor/payments', label: 'Ödənişlər', icon: 'payments' },
   notifications: { to: '/instructor/notifications', label: 'Bildirişlər', icon: 'notifications' },
   settings: { to: '/instructor/settings', label: 'Tənzimləmələr', icon: 'settings' },
@@ -115,7 +116,7 @@ function defaultInstructorNavPayload() {
         id: 'analytics',
         title: 'ANALYTICS',
         enabled: true,
-        itemKeys: ['analytics', 'payments'],
+        itemKeys: ['analytics', 'engagement', 'payments'],
       },
       {
         id: 'system',

@@ -31,6 +31,7 @@ import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import FloatingServiceWidget from '../../components/common/FloatingServiceWidget'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
+import { FEATURE_FLAGS, useFeatureFlags } from '../../lib/featureFlags'
 
 function scrollToId(id) {
   const el = document.getElementById(id)
@@ -86,7 +87,10 @@ export default function Landing() {
   const faq = useLandingFaq(marketing, t, i18n)
   const ctaBand = useLandingCtaBand(marketing, t, i18n)
 
-  const showMarketplace = isMarketingSectionVisible(marketing.marketplace)
+  const { flags: featureFlags } = useFeatureFlags()
+  const marketplaceOn = featureFlags[FEATURE_FLAGS.MARKETPLACE] === true
+  const mentorOn = featureFlags[FEATURE_FLAGS.MENTOR_SERVICES] === true
+  const showMarketplace = marketplaceOn && isMarketingSectionVisible(marketing.marketplace)
 
   const goRegister = (surface) => {
     trackEvent('mx_landing_cta_primary', { surface, event_type: 'register_click' })
@@ -237,12 +241,14 @@ export default function Landing() {
               >
                 Müəllimlər üçün: Pulsuz Sınaq Yarat
               </button>
-              <Link
-                to="/mentorship"
-                className="flex-1 inline-flex justify-center items-center text-center rounded-xl border border-slate-300 bg-white px-4 py-3.5 min-h-[50px] text-sm font-semibold text-slate-800 hover:bg-slate-50 shadow-sm transition-all"
-              >
-                Tələbələr üçün: Mentor və ya Müəllim Tap
-              </Link>
+              {mentorOn ? (
+                <Link
+                  to="/mentorship"
+                  className="flex-1 inline-flex justify-center items-center text-center rounded-xl border border-slate-300 bg-white px-4 py-3.5 min-h-[50px] text-sm font-semibold text-slate-800 hover:bg-slate-50 shadow-sm transition-all"
+                >
+                  Tələbələr üçün: Mentor və ya Müəllim Tap
+                </Link>
+              ) : null}
             </div>
             <p className="text-xs text-slate-500">
               Kredit kartı tələb olunmur • Qeydiyyat 30 saniyə alır
@@ -308,7 +314,7 @@ export default function Landing() {
             <p className="text-sm sm:text-base text-slate-600">Müəllim, tələbə və mentorlar üçün ayrı-ayrı tətbiqlər axtarmağa ehtiyac yoxdur.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+          <div className={`grid grid-cols-1 gap-5 sm:gap-6 ${mentorOn ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
             {/* Blok A: Müəllimlər və Repetitorlar */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
@@ -357,10 +363,12 @@ export default function Landing() {
                     <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Asan Sınaq Girişi:</strong> Qeydiyyat tələb olunmadan link və QR ilə qoşulma.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Repetitor Axtarışı:</strong> Rayonunuza və fənninizə uyğun müəllim tapın.</span>
-                  </li>
+                  {marketplaceOn ? (
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-600 font-bold">✓</span>
+                      <span><strong>Repetitor Axtarışı:</strong> Rayonunuza və fənninizə uyğun müəllim tapın.</span>
+                    </li>
+                  ) : null}
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-600 font-bold">✓</span>
                     <span><strong>Şəxsi Kabinet:</strong> Nəticələrinizi və inkişaf qrafikinizi pulsuz izləyin.</span>
@@ -368,53 +376,55 @@ export default function Landing() {
                 </ul>
               </div>
               <Link
-                to="/search"
+                to={marketplaceOn ? '/search' : '/imtahanlar'}
                 className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold bg-primary hover:brightness-95 text-[#041018] transition-all"
               >
-                Müəllim və ya Repetitor tap →
+                {marketplaceOn ? 'Müəllim və ya Repetitor tap →' : 'İmtahanlara bax →'}
               </Link>
             </div>
 
             {/* Blok C: Mentorluq Platforması */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">
-                  🚀
+            {mentorOn ? (
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">
+                    🚀
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">MENTORLUQ</span>
+                    <h3 className="text-lg font-bold text-slate-900 mt-0.5">Hədəflərinizə çatmaq üçün peşəkar mentorlardan 1-ə-1 rəhbərlik alın</h3>
+                  </div>
+                  <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-600 font-bold">✓</span>
+                      <span><strong>Geniş Mentor Şəbəkəsi:</strong> İT, Karyera, Dizayn və Biznes üzrə görüşlər.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-600 font-bold">✓</span>
+                      <span><strong>Fərdi Yol Xəritəsi:</strong> Hədəfə çatmaq üçün addım-addım plan və tapşırıqlar.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-600 font-bold">✓</span>
+                      <span><strong>Tək Hesab Rahatlığı:</strong> İstər mentor olun, istərsə də mentee.</span>
+                    </li>
+                  </ul>
                 </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">MENTORLUQ</span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Hədəflərinizə çatmaq üçün peşəkar mentorlardan 1-ə-1 rəhbərlik alın</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/mentorship"
+                    className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold bg-primary hover:brightness-95 text-[#041018] text-center transition-colors"
+                  >
+                    Mentor Tap
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-center transition-colors"
+                  >
+                    Mentor Ol
+                  </Link>
                 </div>
-                <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600">
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Geniş Mentor Şəbəkəsi:</strong> İT, Karyera, Dizayn və Biznes üzrə görüşlər.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Fərdi Yol Xəritəsi:</strong> Hədəfə çatmaq üçün addım-addım plan və tapşırıqlar.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Tək Hesab Rahatlığı:</strong> İstər mentor olun, istərsə də mentee.</span>
-                  </li>
-                </ul>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  to="/mentorship"
-                  className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold bg-primary hover:brightness-95 text-[#041018] text-center transition-colors"
-                >
-                  Mentor Tap
-                </Link>
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-center transition-colors"
-                >
-                  Mentor Ol
-                </Link>
-              </div>
-            </div>
+            ) : null}
           </div>
         </section>
 
@@ -583,12 +593,14 @@ export default function Landing() {
             >
               Pulsuz Başla
             </button>
-            <Link
-              to="/mentorship"
-              className="inline-flex justify-center items-center rounded-xl border border-slate-300 bg-white px-5 py-4 min-h-[50px] text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-all"
-            >
-              Mentor tap
-            </Link>
+            {mentorOn ? (
+              <Link
+                to="/mentorship"
+                className="inline-flex justify-center items-center rounded-xl border border-slate-300 bg-white px-5 py-4 min-h-[50px] text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-all"
+              >
+                Mentor tap
+              </Link>
+            ) : null}
           </div>
         </section>
 

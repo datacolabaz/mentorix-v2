@@ -7,6 +7,9 @@ const fs = require('fs');
 const path = require('path');
 
 const errorHandler = require('./middleware/errorHandler');
+const { requireFeature } = require('./middleware/requireFeature');
+const { FEATURE_FLAGS } = require('./constants/featureFlags');
+const { isFeatureEnabled } = require('./services/featureFlagService');
 const { processExamNotificationJobs } = require('./services/examService');
 const { recomputeAllInstructorsUsage } = require('./services/resourceUsageService');
 const { extendMonthlyAttendanceSlots } = require('./jobs/monthlyAttendanceSlots');
@@ -82,9 +85,10 @@ app.use('/api/course', require('./routes/course'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/materials', require('./routes/materials'));
+app.use('/api/engagement', require('./routes/engagement'));
 app.use('/api/presentations', require('./routes/presentations'));
-app.use('/api/programs', require('./routes/programs'));
-app.use('/api/applications', require('./routes/applications'));
+app.use('/api/programs', requireFeature(FEATURE_FLAGS.UNIVERSITY_SEARCH), require('./routes/programs'));
+app.use('/api/applications', requireFeature(FEATURE_FLAGS.UNIVERSITY_SEARCH), require('./routes/applications'));
 app.use('/api/live', require('./routes/live'));
 app.use('/api/live-lessons', require('./routes/liveLessons'));
 app.use('/api/teacher-connections', require('./routes/teacherConnections'));
@@ -92,7 +96,7 @@ app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/generation', require('./routes/generation'));
 app.use('/api/partner', require('./routes/partner'));
 app.use('/api/mentor', require('./routes/mentor'));
-app.use('/api/favorites', require('./routes/favorites'));
+app.use('/api/favorites', requireFeature(FEATURE_FLAGS.MARKETPLACE), require('./routes/favorites'));
 
 app.get('/ZOOM_verify_0f26929a49814d8caf522cd2103f8a36.html', (req, res) =>
   res.type('text/plain').send('ZOOM_verify_0f26929a49814d8caf522cd2103f8a36')
@@ -202,7 +206,8 @@ cron.schedule('30 3 * * *', () => {
 });
 
 // University program AI scraper: weekly Sunday 04:00
-cron.schedule('0 4 * * 0', () => {
+cron.schedule('0 4 * * 0', async () => {
+  if (!(await isFeatureEnabled(FEATURE_FLAGS.UNIVERSITY_SEARCH).catch(() => false))) return;
   runUniversityProgramScraper().catch((e) => console.error('university program scraper cron', e.message));
 });
 

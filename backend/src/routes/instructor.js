@@ -38,10 +38,15 @@ const {
   getMyContributions,
 } = require('../controllers/universityProgramMentorController');
 const { getInstructorNavSections } = require('../controllers/instructorNavController');
+const { requireFeature } = require('../middleware/requireFeature');
+const { FEATURE_FLAGS } = require('../constants/featureFlags');
+
+const marketplaceOn = requireFeature(FEATURE_FLAGS.MARKETPLACE);
+const universityOn = requireFeature(FEATURE_FLAGS.UNIVERSITY_SEARCH);
 
 router.get('/nav-sections', authenticate, authorize('instructor'), getInstructorNavSections);
 router.get('/teaching', authenticate, authorize('instructor'), getTeaching);
-router.get('/marketplace-opportunity', authenticate, authorize('instructor'), getMarketplaceOpportunity);
+router.get('/marketplace-opportunity', marketplaceOn, authenticate, authorize('instructor'), getMarketplaceOpportunity);
 router.post('/avatar', authenticate, authorize('instructor'), postInstructorAvatar);
 router.delete('/avatar', authenticate, authorize('instructor'), deleteInstructorAvatar);
 router.get('/join-requests', authenticate, authorize('instructor'), listJoinRequests);
@@ -64,8 +69,8 @@ router.get('/professional-details', authenticate, authorize('instructor'), getPr
 router.patch('/professional-details', authenticate, authorize('instructor'), patchProfessionalDetails);
 router.get('/discover-profile', authenticate, authorize('instructor'), getDiscoverProfile);
 router.patch('/discover-profile', authenticate, authorize('instructor'), patchDiscoverProfile);
-router.get('/inquiries', authenticate, authorize('instructor'), listInstructorInquiries);
-router.post('/inquiries/:id/reveal-contact', authenticate, authorize('instructor'), revealInquiryContact);
+router.get('/inquiries', marketplaceOn, authenticate, authorize('instructor'), listInstructorInquiries);
+router.post('/inquiries/:id/reveal-contact', marketplaceOn, authenticate, authorize('instructor'), revealInquiryContact);
 router.post(
   '/teaching/subjects',
   authenticate,
@@ -110,7 +115,7 @@ router.post(
   postPromoteParticipant,
 );
 
-router.post('/university-programs', authenticate, authorize('instructor'), postContribution);
-router.get('/university-programs/mine', authenticate, authorize('instructor'), getMyContributions);
+router.post('/university-programs', universityOn, authenticate, authorize('instructor'), postContribution);
+router.get('/university-programs/mine', universityOn, authenticate, authorize('instructor'), getMyContributions);
 
 module.exports = router;

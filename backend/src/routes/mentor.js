@@ -4,6 +4,8 @@ const { getOnboarding, patchOnboarding, postAsk } = require('../controllers/ment
 const workspace = require('../controllers/mentorWorkspaceController');
 const sessionAi = require('../controllers/mentorSessionAiController');
 const { generationRateLimit } = require('../middleware/generationRateLimit');
+const { requireFeature } = require('../middleware/requireFeature');
+const { FEATURE_FLAGS } = require('../constants/featureFlags');
 
 const router = express.Router();
 
@@ -13,6 +15,9 @@ router.use(authorize('instructor', 'student', 'admin'));
 router.get('/onboarding', getOnboarding);
 router.patch('/onboarding', patchOnboarding);
 router.post('/ask', postAsk);
+
+// AI köməkçi (onboarding/ask) hər zaman açıqdır; aşağıdakılar mentor xidmətləridir.
+router.use(requireFeature(FEATURE_FLAGS.MENTOR_SERVICES));
 router.get('/mentee-workspace', authorize('student'), workspace.getMenteeWorkspace);
 router.post('/feedback-requests/:id/respond', authorize('student'), workspace.respondToFeedback);
 const instructorOnly = authorize('instructor');

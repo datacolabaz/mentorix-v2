@@ -19,11 +19,11 @@ import { isSmsMonthlyLimitReached, isStorageLimitReached } from '../lib/subscrip
 import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import { useToast } from '../components/common/Toast'
-import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 import { buildMentorNavSections } from '../constants/instructorNav'
+import { FEATURE_FLAGS, filterNavSectionsByFlags, useFeatureFlags } from '../lib/featureFlags'
 import InstructorAvatar from '../components/common/InstructorAvatar'
 import {
   localizeDiscoverProfileAlert,
@@ -95,7 +95,11 @@ export default function InstructorLayout() {
     '/instructor/analytics',
     '/instructor/materials',
   ].includes(location.pathname)
+  const { flags: featureFlags } = useFeatureFlags()
+  const mentorServicesOn = featureFlags[FEATURE_FLAGS.MENTOR_SERVICES] === true
+  const marketplaceOn = featureFlags[FEATURE_FLAGS.MARKETPLACE] === true
   const isActiveMentorWorkspace = (() => {
+    if (!mentorServicesOn) return false
     if (String(user?.persona || '').toLowerCase() === 'mentor') return true
     try {
       const workspace = String(localStorage.getItem('mx_active_workspace') || '').toLowerCase()
@@ -105,7 +109,9 @@ export default function InstructorLayout() {
     }
     return isMentorRoute
   })()
-  const renderedNavSections = isActiveMentorWorkspace ? buildMentorNavSections() : navSections
+  const renderedNavSections = isActiveMentorWorkspace
+    ? filterNavSectionsByFlags(buildMentorNavSections(), featureFlags)
+    : navSections
 
   const isMentorPersona = isActiveMentorWorkspace
   const instructorRoleLabel = isPartnerPersona(user)
@@ -234,7 +240,7 @@ export default function InstructorLayout() {
   useEffect(() => {
     // Subject modal is only for missing discover categories (fənnlər).
     // Other gaps (map pin / formats) use the banner — do not re-ask for subjects.
-    if (!user?.id || isActiveMentorWorkspace || !shouldShowDiscoverSubjectsModal(discoverProfileAlert)) {
+    if (!user?.id || !marketplaceOn || isActiveMentorWorkspace || !shouldShowDiscoverSubjectsModal(discoverProfileAlert)) {
       setDiscoverModalOpen(false)
       return
     }
@@ -244,7 +250,7 @@ export default function InstructorLayout() {
       /* ignore */
     }
     setDiscoverModalOpen(true)
-  }, [user?.id, discoverProfileAlert])
+  }, [user?.id, discoverProfileAlert, marketplaceOn])
 
   const closeDiscoverModal = (rememberSession = true) => {
     setDiscoverModalOpen(false)
@@ -343,7 +349,6 @@ export default function InstructorLayout() {
 
   return (
     <>
-      <PhoneVerificationGate />
       <div
         className={`theme-${theme} flex flex-col min-h-screen lg:h-screen w-full min-w-0 bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
       >
@@ -635,7 +640,7 @@ export default function InstructorLayout() {
             </div>
           ) : null}
 
-          {discoverProfileAlert && !isActiveMentorWorkspace ? (
+          {discoverProfileAlert && marketplaceOn && !isActiveMentorWorkspace ? (
             <div
               className={`mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full w-full ${
                 theme === 'dark'

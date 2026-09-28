@@ -346,6 +346,25 @@ function ExamTypeSummaryPanel({ summary, gradingPending = false }) {
   )
 }
 
+/** Nəticə rejiminə görə tələbəyə izah; null = xüsusi qeyd yoxdur. */
+function resultVisibilityNotice(rv) {
+  if (!rv) return null
+  if (rv.released === false) {
+    if (rv.reason === 'exam_window' && rv.release_at) {
+      return `Nəticə ${formatAzDateTime(new Date(rv.release_at))} tarixində açılacaq.`
+    }
+    if (rv.reason === 'manual_grading') return 'Nəticə müəllim yoxladıqdan sonra açılacaq.'
+    return 'Nəticə hələ açılmayıb.'
+  }
+  if (rv.mode === 'score_only') return 'Müəllim bu imtahan üçün yalnız ümumi balı göstərir.'
+  if (rv.only_wrong) return 'Yalnız səhv etdiyiniz və boş buraxdığınız suallar göstərilir.'
+  return null
+}
+
+function isResultHidden(rv) {
+  return rv?.released === false
+}
+
 function formatScoreBal(v, { pending = false } = {}) {
   if (pending || v === 'pending') return 'Yekun nəticə gözlənilir'
   const n = Number(v)
@@ -514,6 +533,7 @@ export default function StudentExams() {
   const [result, setResult] = useState(null)
   const [resultGradingPending, setResultGradingPending] = useState(false)
   const [resultBreakdown, setResultBreakdown] = useState(null)
+  const [resultVisibility, setResultVisibility] = useState(null)
   const [resultTypeSummary, setResultTypeSummary] = useState(null)
   const [issuedCertificate, setIssuedCertificate] = useState(null)
   const [certificateMeta, setCertificateMeta] = useState(null)
@@ -669,6 +689,7 @@ export default function StudentExams() {
         lastListReviewKeyRef.current = key
         setLatestResultExamId(latest.id)
         setResult(d.score ?? null)
+        setResultVisibility(d.result_visibility || null)
         setResultGradingPending(Boolean(d.grading_pending))
         const br = Array.isArray(d.breakdown) ? d.breakdown : []
         setResultBreakdown(mergeReviewBreakdownWithAnswers(br, d.answers))
@@ -729,6 +750,7 @@ export default function StudentExams() {
         exam_id: d?.exam?.id || exam?.id || null,
         type_summary: d.type_summary || null,
         score: d.score,
+        result_visibility: d.result_visibility || null,
         grading_pending: Boolean(d.grading_pending),
         submitted_at: d.submitted_at,
         certificate: d.certificate || null,
@@ -760,6 +782,7 @@ export default function StudentExams() {
         error: null,
         grade: d.grade || null,
         results: Array.isArray(d.results) ? d.results : [],
+        notice: isResultHidden(d.result_visibility) ? resultVisibilityNotice(d.result_visibility) : null,
       })
     } catch (err) {
       setLeaderModal({
@@ -952,6 +975,7 @@ export default function StudentExams() {
         answers: answersRef.current,
       })
       setResult(data?.score ?? null)
+      setResultVisibility(data?.result_visibility || null)
       setResultGradingPending(Boolean(data?.grading_pending))
       const br = Array.isArray(data?.breakdown) ? data.breakdown : []
       setResultBreakdown(mergeReviewBreakdownWithAnswers(br, data.answers))
@@ -963,9 +987,11 @@ export default function StudentExams() {
       setPersonalEndTime(null)
       setFocusMode(false)
       toast(
-        data?.grading_pending
-          ? '✓ İmtahan tamamlandı! Açıq suallar qiymətləndirilir — yekun bal tezliklə.'
-          : `✓ İmtahan tamamlandı! Bal: ${formatScoreBal(data?.score)}`,
+        isResultHidden(data?.result_visibility)
+          ? `✓ İmtahan təqdim olundu. ${resultVisibilityNotice(data.result_visibility)}`
+          : data?.grading_pending
+            ? '✓ İmtahan tamamlandı! Açıq suallar qiymətləndirilir — yekun bal tezliklə.'
+            : `✓ İmtahan tamamlandı! Bal: ${formatScoreBal(data?.score)}`,
       )
       loadExams(true)
     } catch (err) {
@@ -1279,6 +1305,14 @@ export default function StudentExams() {
         </Card>
       )}
 
+      {result === null && isResultHidden(resultVisibility) && (
+        <Card hover className="p-6 mb-6 text-center border-amber-500/40">
+          <div className="text-5xl mb-3" aria-hidden="true">⏳</div>
+          <div className="font-display font-bold text-xl text-token-textMain">İmtahan təqdim olundu</div>
+          <p className="text-token-textMuted mt-2">{resultVisibilityNotice(resultVisibility)}</p>
+        </Card>
+      )}
+
       {result !== null && (
         <Card hover className="p-6 mb-6 text-center border-blue-500/40">
           <div className="text-5xl mb-3">
@@ -1290,6 +1324,9 @@ export default function StudentExams() {
           <div className="text-token-textMuted mt-2">
             {resultGradingPending ? 'Açıq suallar qiymətləndirilir' : 'Son imtahan nəticəniz'}
           </div>
+          {resultVisibilityNotice(resultVisibility) ? (
+            <p className="text-xs text-token-textMuted mt-2">{resultVisibilityNotice(resultVisibility)}</p>
+          ) : null}
           {!resultGradingPending && certificateMeta?.score_pct != null && !issuedCertificate?.certificate_no ? (
             <p className="text-sm text-gray-400 mt-1">
               ({Math.round(Number(certificateMeta.score_pct))}%)
@@ -1309,8 +1346,14 @@ export default function StudentExams() {
 
       {resultBreakdown?.length > 0 && (
         <Card hover className="p-6 mb-6 border-indigo-500/30">
-          <h2 className="font-display font-bold text-lg text-token-textMain mb-1">Suallar üzrə nəticə</h2>
-          <p className="text-xs text-token-textMuted mb-4">Yazdığınız cavabların xülasəsi.</p>
+          <h2 className="font-display font-bold text-lg text-token-textMain mb-1">
+            {resultVisibility?.only_wrong ? 'Səhv etdiyiniz suallar' : 'Suallar üzrə nəticə'}
+          </h2>
+          <p className="text-xs text-token-textMuted mb-4">
+            {resultVisibility?.only_wrong
+              ? 'Səhv və boş buraxdığınız suallar düzgün cavabla birlikdə.'
+              : 'Yazdığınız cavabların xülasəsi.'}
+          </p>
           <ExamBreakdownList rows={resultBreakdown} />
         </Card>
       )}
@@ -1375,7 +1418,9 @@ export default function StudentExams() {
                   {isDone && (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
-                      ✓ Tamamlandı — {formatScoreBal(exam?.score)}
+                      {isResultHidden(exam?.result_visibility)
+                        ? `✓ Təqdim olundu — ${resultVisibilityNotice(exam.result_visibility)}`
+                        : `✓ Tamamlandı — ${formatScoreBal(exam?.score)}`}
                       </div>
                       {exam.rank_in_group ? (
                         <div className="px-3 py-1 bg-indigo-500/15 text-indigo-200 border border-indigo-400/25 rounded-lg text-xs font-bold inline-block">
@@ -1617,8 +1662,13 @@ export default function StudentExams() {
           <>
             <div className="text-center mb-6">
               <div className="font-display font-extrabold text-3xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                {formatScoreBal(reviewModal.score, { pending: reviewModal.grading_pending })}
+                {isResultHidden(reviewModal.result_visibility)
+                  ? '⏳'
+                  : formatScoreBal(reviewModal.score, { pending: reviewModal.grading_pending })}
               </div>
+              {resultVisibilityNotice(reviewModal.result_visibility) ? (
+                <p className="text-sm text-token-textMuted mt-2">{resultVisibilityNotice(reviewModal.result_visibility)}</p>
+              ) : null}
               {reviewModal.grading_pending ? (
                 <p className="text-xs text-amber-300 mt-2">
                   Açıq suallar qiymətləndirilir — yekun bal müəllim təsdiqlədikdən sonra görünəcək.
@@ -1684,7 +1734,7 @@ export default function StudentExams() {
               </p>
             </div>
             {leaderModal.results.length === 0 ? (
-              <p className="text-sm text-gray-500">Nəticə yoxdur.</p>
+              <p className="text-sm text-gray-500">{leaderModal.notice || 'Nəticə yoxdur.'}</p>
             ) : (
               <div className="space-y-2 max-h-[min(65vh,520px)] overflow-y-auto pr-1">
                 {leaderModal.results.map((r) => {
