@@ -14,6 +14,9 @@
   "functions": {
     "api/share-html.js": {
       "includeFiles": "dist/index.html"
+    },
+    "api/og.js": {
+      "includeFiles": "node_modules/@fontsource/inter/files/inter-latin*-normal.woff"
     }
   },
   "rewrites": [
@@ -23,27 +26,95 @@
     },
     {
       "source": "/sertifikatli-imtahanlar/:categorySlug/:examSlug",
-      "destination": "/api/share-html?kind=certified-exam&categorySlug=:categorySlug&examSlug=:examSlug"
+      "destination": "/api/share-html?path=/sertifikatli-imtahanlar/:categorySlug/:examSlug"
     },
     {
-      "source": "/sertifikatli-imtahanlar/:slug",
-      "destination": "/api/share-html?kind=category&slug=:slug"
+      "source": "/sertifikatli-imtahanlar/:categorySlug",
+      "destination": "/api/share-html?path=/sertifikatli-imtahanlar/:categorySlug"
     },
     {
       "source": "/exam/:examId",
-      "destination": "/api/share-html?kind=exam&examId=:examId"
+      "destination": "/api/share-html?path=/exam/:examId"
     },
     {
       "source": "/task/:taskId",
-      "destination": "/api/share-html?kind=task&taskId=:taskId"
+      "destination": "/api/share-html?path=/task/:taskId"
     },
     {
       "source": "/library/material/:materialId",
-      "destination": "/api/share-html?kind=material&materialId=:materialId"
+      "destination": "/api/share-html?path=/library/material/:materialId"
+    },
+    {
+      "source": "/library/:groupId",
+      "destination": "/api/share-html?path=/library/:groupId"
+    },
+    {
+      "source": "/m/:shareToken",
+      "destination": "/api/share-html?path=/m/:shareToken"
+    },
+    {
+      "source": "/lr/:shareToken",
+      "destination": "/api/share-html?path=/lr/:shareToken"
+    },
+    {
+      "source": "/live/join/:token",
+      "destination": "/api/share-html?path=/live/join/:token"
+    },
+    {
+      "source": "/join/:code",
+      "destination": "/api/share-html?path=/join/:code"
     },
     {
       "source": "/teachers/:id",
-      "destination": "/api/share-html?kind=instructor&id=:id"
+      "destination": "/api/share-html?path=/teachers/:id"
+    },
+    {
+      "source": "/c/:token",
+      "destination": "/api/share-html?path=/c/:token"
+    },
+    {
+      "source": "/",
+      "destination": "/api/share-html?path=/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|Slackbot|Slack-ImgProxy|Discordbot|TelegramBot|SkypeUriPreview|Applebot|Googlebot|bingbot|Pinterest|redditbot|Viber|vkShare|Iframely|Embedly).*"
+        }
+      ]
+    },
+    {
+      "source": "/sertifikatli-imtahanlar",
+      "destination": "/api/share-html?path=/sertifikatli-imtahanlar",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|Slackbot|Slack-ImgProxy|Discordbot|TelegramBot|SkypeUriPreview|Applebot|Googlebot|bingbot|Pinterest|redditbot|Viber|vkShare|Iframely|Embedly).*"
+        }
+      ]
+    },
+    {
+      "source": "/student/:rest*",
+      "destination": "/api/share-html?path=/student",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|Slackbot|Slack-ImgProxy|Discordbot|TelegramBot|SkypeUriPreview|Applebot|Googlebot|bingbot|Pinterest|redditbot|Viber|vkShare|Iframely|Embedly).*"
+        }
+      ]
+    },
+    {
+      "source": "/parent/:rest*",
+      "destination": "/api/share-html?path=/parent",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|LinkedInBot|Slackbot|Slack-ImgProxy|Discordbot|TelegramBot|SkypeUriPreview|Applebot|Googlebot|bingbot|Pinterest|redditbot|Viber|vkShare|Iframely|Embedly).*"
+        }
+      ]
     },
     {
       "source": "/((?!api/).*)",

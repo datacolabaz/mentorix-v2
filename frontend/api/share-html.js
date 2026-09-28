@@ -1,141 +1,26 @@
 /**
- * Vercel serverless: inject Open Graph meta into index.html for shareable routes.
- * Rewritten from vercel.json for /sertifikatli-imtahanlar/:slug,
- * /sertifikatli-imtahanlar/:categorySlug/:examSlug, /exam/:examId,
- * /task/:taskId, /library/material/:materialId, and /teachers/:id.
+ * Vercel serverless: returns index.html with server-rendered Open Graph / Twitter meta
+ * for allowlisted share URLs, so WhatsApp, Telegram, Facebook, LinkedIn, Slack,
+ * Discord and iMessage crawlers get a branded card without running JavaScript.
  *
- * Optional MENTORIX_API_ORIGIN (Railway backend origin, no /api suffix).
- * Falls back to https://api.edupanel.co when unset.
+ * vercel.json rewrites share routes to /api/share-html?path=/<original path>.
+ * Content comes from the backend (MENTORIX_API_ORIGIN, default https://api.edupanel.co).
  */
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import {
+  canonicalOrigin,
+  fetchSharePreview,
+  injectShareMeta,
+  ogImageUrl,
+  requestOrigin,
+  sharePathFromQuery,
+} from './_lib/sharePreview.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const SITE_ORIGIN = 'https://mentorix.io'
-/** Production Railway API — fallback when MENTORIX_API_ORIGIN is unset on Vercel */
-const DEFAULT_API_ORIGIN = 'https://api.edupanel.co'
 
-function upstreamBase() {
-  const fromEnv = (process.env.MENTORIX_API_ORIGIN || '').trim().replace(/\/+$/, '')
-  return fromEnv || DEFAULT_API_ORIGIN
-}
-
-function escapeHtml(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/"/g, '&quot;')
-}
-
-function replaceMeta(html, attr, key, content) {
-  const safe = escapeHtml(content)
-  const re = new RegExp(`<meta ${attr}="${key}" content="[^"]*"\\s*/>`, 'i')
-  if (re.test(html)) return html.replace(re, `<meta ${attr}="${key}" content="${safe}" />`)
-  return html
-}
-
-function replaceTitle(html, title) {
-  const safe = escapeHtml(title)
-  return html.replace(/<title>[^<]*<\/title>/i, `<title>${safe}</title>`)
-}
-
-function replaceCanonical(html, href) {
-  const safe = escapeHtml(href)
-  const re = /<link rel="canonical" href="[^"]*"\s*\/>/i
-  if (re.test(html)) return html.replace(re, `<link rel="canonical" href="${safe}" />`)
-  return html
-}
-
-function injectPageMeta(html, meta, { keepImage = false } = {}) {
-  if (!meta?.title) return html
-  let out = html
-  out = replaceTitle(out, meta.title)
-  out = replaceMeta(out, 'name', 'description', meta.description)
-  out = replaceMeta(out, 'property', 'og:title', meta.title)
-  out = replaceMeta(out, 'property', 'og:description', meta.description)
-  out = replaceMeta(out, 'property', 'og:url', meta.url)
-  if (!keepImage && meta.image) {
-    out = replaceMeta(out, 'property', 'og:image', meta.image)
-    out = replaceMeta(out, 'name', 'twitter:image', meta.image)
-  }
-  out = replaceMeta(out, 'property', 'og:type', meta.og_type || 'website')
-  out = replaceMeta(out, 'name', 'twitter:title', meta.title)
-  out = replaceMeta(out, 'name', 'twitter:description', meta.description)
-  out = replaceCanonical(out, meta.url)
-  if (meta.person) {
-    const schema = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: meta.person.name,
-      description: meta.person.description,
-      jobTitle: meta.person.jobTitle,
-      url: meta.url,
-    }).replace(/</g, '\\u003c')
-    out = out.replace('</head>', `<script type="application/ld+json">${schema}</script></head>`)
-  }
-  return out
-}
-
-async function fetchOgMeta(kind, params, base) {
-  let path = ''
-  if (kind === 'category' && params.slug) {
-    path = `/api/public/og/certified-category/${encodeURIComponent(params.slug)}`
-  } else if (kind === 'certified-exam' && params.categorySlug && params.examSlug) {
-    path = `/api/public/og/certified-exam/${encodeURIComponent(params.categorySlug)}/${encodeURIComponent(params.examSlug)}`
-  } else if (kind === 'exam' && params.examId) {
-    path = `/api/public/og/exam/${encodeURIComponent(params.examId)}`
-  } else if (kind === 'task' && params.taskId) {
-    path = `/api/public/og/task/${encodeURIComponent(params.taskId)}`
-  } else if (kind === 'material' && params.materialId) {
-    path = `/api/public/og/material/${encodeURIComponent(params.materialId)}`
-  } else if (kind === 'instructor' && params.id) {
-    path = `/api/public/instructors/${encodeURIComponent(params.id)}`
-  } else {
-    return null
-  }
-
-  const r = await fetch(`${base}${path}`, {
-    headers: { 'Accept-Language': 'az' },
-  })
-  if (!r.ok) return null
-  const d = await r.json()
-  if (!d?.success) return null
-
-  if (kind === 'instructor') {
-    const instructor = d.instructor
-    if (!instructor) return null
-    const name = String(instructor.full_name || 'Müəllim').trim()
-    const subject = String(instructor.subject || instructor.teaching_subject || 'müəllim').trim()
-    const bio = String(instructor.discover_bio || instructor.bio || '').trim()
-    return {
-      title: `${name} — ${subject} | Mentorix`,
-      description: (bio || `${name} — ${subject}. Mentorix-də müəllim profili.`).slice(0, 160),
-      url: `${SITE_ORIGIN}/teachers/${encodeURIComponent(params.id)}`,
-      image: instructor.avatar_url,
-      og_type: 'profile',
-      person: { name, description: bio || `${name} — ${subject}`, jobTitle: subject },
-    }
-  }
-
-  let url = d.url
-  if (kind === 'category' || kind === 'certified-exam') {
-    const canonicalPath = String(d.canonical_path || '').trim()
-    if (canonicalPath) {
-      url = `${SITE_ORIGIN}${canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`}`
-    }
-  }
-
-  return {
-    title: d.title,
-    description: d.description,
-    url,
-    image: d.image,
-    og_type: d.og_type || 'website',
-  }
-}
-
-async function readIndexHtml() {
+async function readIndexHtml(req) {
   const candidates = [
     join(process.cwd(), 'dist', 'index.html'),
     join(process.cwd(), 'index.html'),
@@ -151,7 +36,7 @@ async function readIndexHtml() {
   }
 
   const fetchBases = [
-    SITE_ORIGIN,
+    requestOrigin(req),
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   ].filter(Boolean)
 
@@ -172,46 +57,18 @@ async function readIndexHtml() {
 
 export default async function handler(req, res) {
   try {
-    const kind = String(req.query?.kind || '').trim()
-    const slug = String(req.query?.slug || '').trim()
-    const examId = String(req.query?.examId || '').trim()
-    const taskId = String(req.query?.taskId || '').trim()
-    const materialId = String(req.query?.materialId || '').trim()
-    const id = String(req.query?.id || '').trim()
-
-    const categorySlug = String(req.query?.categorySlug || '').trim()
-    const examSlug = String(req.query?.examSlug || '').trim()
-
-    let html = await readIndexHtml()
-    const base = upstreamBase()
-
-    try {
-      const meta = await fetchOgMeta(kind, { slug, examId, taskId, materialId, categorySlug, examSlug, id }, base)
-      if (meta) {
-        const keepImage = kind === 'category' || kind === 'certified-exam'
-        html = injectPageMeta(html, meta, { keepImage })
-      }
-    } catch {
-      /* fallback to default index.html meta */
-    }
+    const path = sharePathFromQuery(req.query)
+    let html = await readIndexHtml(req)
+    const preview = await fetchSharePreview(path)
+    html = injectShareMeta(html, preview, {
+      canonicalBase: canonicalOrigin(req),
+      imageUrl: ogImageUrl(requestOrigin(req), preview, path),
+    })
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=600')
     return res.status(200).send(html)
   } catch (err) {
-    try {
-      const r = await fetch(`${SITE_ORIGIN}/index.html`, {
-        headers: { Accept: 'text/html' },
-        signal: AbortSignal.timeout(8000),
-      })
-      if (r.ok) {
-        res.setHeader('Content-Type', 'text/html; charset=utf-8')
-        res.setHeader('Cache-Control', 'public, s-maxage=60')
-        return res.status(200).send(await r.text())
-      }
-    } catch {
-      /* final fallback failed */
-    }
     return res.status(500).send(err?.message || 'share-html error')
   }
 }
