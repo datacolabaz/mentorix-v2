@@ -1,3 +1,5 @@
+import { formatNamedDate, formatNumericDate } from './azMonths.js'
+
 /**
  * Engagement UI mətnləri və status təyinatları.
  * Rəng heç vaxt tək siqnal deyil: hər statusun ikonu və mətni var.
@@ -87,7 +89,7 @@ export function relativeTime(iso, now = new Date()) {
   const diffD = Math.round(diffH / 24)
   if (diffD === 1) return 'dünən'
   if (diffD < 7) return `${diffD} gün əvvəl`
-  return d.toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return formatNumericDate(d)
 }
 
 /** Son 24 saatdakı fəaliyyət «yeni» sayılır (mavi). */
@@ -97,11 +99,15 @@ export function isRecent(iso, now = new Date()) {
   return !Number.isNaN(d.getTime()) && now - d < 24 * 3600 * 1000
 }
 
-export function formatDue(value) {
+/** «28 sentyabr» (cari il) və ya «28 sentyabr 2027». Intl ay adlarına güvənmirik (bəzi mühitlərdə «M09» çıxır). */
+export function formatDue(value, now = new Date()) {
   if (!value) return null
-  const d = new Date(String(value).length <= 10 ? `${value}T00:00:00` : value)
+  const raw = String(value)
+  const d = new Date(raw.length <= 10 ? `${raw}T12:00:00Z` : raw)
   if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long' })
+  const text = formatNamedDate(d, 'az')
+  const year = ` ${now.getFullYear()}`
+  return text.endsWith(year) ? text.slice(0, -year.length) : text
 }
 
 export function progressTone(pct) {
