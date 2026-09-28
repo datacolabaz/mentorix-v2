@@ -48,7 +48,7 @@ export default function MaterialPublicPreview() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Mentorix · Material</p>
-            <h1 className="font-display font-bold text-lg truncate">{material?.title || 'Material'}</h1>
+            <h1 className="font-display font-bold text-lg truncate text-white">{material?.title || 'Material'}</h1>
             {material?.instructor_name ? (
               <p className="text-xs text-gray-500 mt-0.5">{material.instructor_name}</p>
             ) : null}
