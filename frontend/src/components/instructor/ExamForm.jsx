@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
 import { localDatetimeInputToUtcIso } from '../../lib/examDatetime'
+import ResultVisibilityField from './ResultVisibilityField'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
 import LibraryMaterialPickerModal, { libraryMaterialAsExamFile } from './LibraryMaterialPickerModal'
@@ -70,6 +71,8 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
     allow_finish_after_until: true,
     notify_students: false,
     show_results: true,
+    result_visibility_mode: 'immediate_full_review',
+    results_release_at: '',
     /** Yalnız qapalı sual üçün -0.25 cərimə (imtahan səviyyəsi) */
     wrong_penalty_enabled: true,
     student_ids: [],
@@ -194,6 +197,11 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
         student_ids: meta.student_ids,
         notify_students: meta.notify_students,
         show_results: meta.show_results,
+        result_visibility_mode: meta.result_visibility_mode,
+        results_release_at:
+          meta.result_visibility_mode === 'after_exam_window' && meta.results_release_at
+            ? localDatetimeInputToUtcIso(meta.results_release_at)
+            : null,
         wrong_penalty_enabled: meta.wrong_penalty_enabled !== false,
         allow_finish_after_until: meta.allow_finish_after_until,
         pdf_url: exam_files[0]?.url || null,
@@ -440,12 +448,12 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
                 onChange={e => setMeta(p => ({ ...p, notify_students: e.target.checked }))}
                 className="w-4 h-4 accent-blue-500" />
             </div>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Neticeni telebeye goster</p>
-              <input type="checkbox" checked={meta.show_results}
-                onChange={e => setMeta(p => ({ ...p, show_results: e.target.checked }))}
-                className="w-4 h-4 accent-blue-500" />
-            </div>
+            <ResultVisibilityField
+              idPrefix="create-exam"
+              inputClassName={inp}
+              value={meta}
+              onChange={(patch) => setMeta((p) => ({ ...p, ...patch }))}
+            />
             <div className="flex items-start justify-between gap-3 border-t border-[color:var(--border-subtle)] pt-2">
               <div>
                 <p className="text-sm font-semibold">Səhv düzü aparsın (0.25 cərimə)</p>

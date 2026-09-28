@@ -4302,5 +4302,30 @@
     "disabledText": "Mentorix imtahan və hazırlıq idarəetməsinə fokuslanır. Bu bölmə müvəqqəti olaraq bağlıdır, məlumatlarınız qorunur.",
     "backToDashboard": "Panelə qayıt",
     "backToHome": "Ana səhifəyə qayıt"
+  },
+  "examResultModes": {
+    "label": "Nəticələrin göstərilmə qaydası",
+    "legacyNotice": "Köhnə qayda: tələbə öz cavablarını və düzgün/səhv statusunu görür, düzgün cavab gizlidir. Yeni qayda seçə bilərsiniz.",
+    "releaseAt": "Nəticələrin açılma vaxtı (boş qalsa, imtahanın bitmə vaxtı)",
+    "immediate_full_review": {
+      "title": "Dərhal tam nəticə",
+      "hint": "Bal, tələbənin cavabı və düzgün cavab imtahan bitən kimi görünür."
+    },
+    "after_exam_window": {
+      "title": "İmtahan müddəti bitəndən sonra",
+      "hint": "Nəticə hamı üçün eyni vaxtda açılır: bitmə vaxtında və ya seçdiyiniz tarixdə."
+    },
+    "after_manual_grading": {
+      "title": "Yoxlamadan sonra",
+      "hint": "Açıq sualları yoxlayıb təsdiqləyəndən sonra nəticə görünür."
+    },
+    "score_only": {
+      "title": "Yalnız bal",
+      "hint": "Ümumi bal və statistika görünür, suallar və düzgün cavablar gizli qalır."
+    },
+    "wrong_answers_only": {
+      "title": "Yalnız səhv cavablar",
+      "hint": "Tələbə yalnız səhv etdiyi və boş buraxdığı sualları, düzgün cavabla birlikdə görür."
+    }
   }
 }

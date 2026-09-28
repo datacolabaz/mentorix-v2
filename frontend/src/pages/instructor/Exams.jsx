@@ -12,6 +12,7 @@ import CertificateExamFields from '../../components/instructor/CertificateExamFi
 import ListSkeleton from '../../components/common/ListSkeleton'
 import { useToast } from '../../components/common/Toast'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
+import ResultVisibilityField from '../../components/instructor/ResultVisibilityField'
 import useUiStore from '../../hooks/useUi'
 import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBillingStatus'
 import { copyStudentExamLink, studentExamShareUrl } from '../../lib/examShare'
@@ -277,6 +278,8 @@ export default function InstructorExams() {
       certificate_type: exam.certificate_type || 'professional',
       available_from: utcInstantToDatetimeLocalValue(exam.available_from || exam.start_time),
       available_until: utcInstantToDatetimeLocalValue(exam.available_until),
+      result_visibility_mode: exam.result_visibility_mode || null,
+      results_release_at: utcInstantToDatetimeLocalValue(exam.results_release_at),
       // keep for legacy UI pieces
       start_time: utcInstantToDatetimeLocalValue(exam.available_from || exam.start_time),
     })
@@ -362,6 +365,11 @@ export default function InstructorExams() {
         duration_minutes: editExam.duration_minutes,
         notify_students: editExam.notify_students,
         show_results: editExam.show_results,
+        result_visibility_mode: editExam.result_visibility_mode || null,
+        results_release_at:
+          editExam.result_visibility_mode === 'after_exam_window' && editExam.results_release_at
+            ? localDatetimeInputToUtcIso(editExam.results_release_at)
+            : null,
         wrong_penalty_enabled: editExam.wrong_penalty_enabled !== false,
         pdf_url: exam_files[0]?.url || null,
         exam_files,
@@ -924,12 +932,12 @@ export default function InstructorExams() {
                   onChange={e => setEditExam(p => ({ ...p, notify_students: e.target.checked }))}
                   className="w-4 h-4 accent-blue-500" />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">{t('exams.form.showResults')}</span>
-                <input type="checkbox" checked={editExam.show_results || false}
-                  onChange={e => setEditExam(p => ({ ...p, show_results: e.target.checked }))}
-                  className="w-4 h-4 accent-blue-500" />
-              </div>
+              <ResultVisibilityField
+                idPrefix="edit-exam"
+                inputClassName={inp}
+                value={editExam}
+                onChange={(patch) => setEditExam((p) => ({ ...p, ...patch }))}
+              />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <span className="text-sm font-semibold">{t('exams.form.wrongPenalty')}</span>
