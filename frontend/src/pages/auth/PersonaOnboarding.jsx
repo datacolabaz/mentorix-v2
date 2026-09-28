@@ -409,7 +409,7 @@ export default function PersonaOnboarding() {
             onClick={() => logout()}
             className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap"
           >
-            ← {t('auth.backHome')}
+            {t('auth.backHome')}
           </Link>
         </div>
       </header>

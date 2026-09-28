@@ -131,16 +131,20 @@ export default function AdminFeatureFlags() {
                   <p className="text-xs text-token-textMuted mt-1">{copy.hint || flag.description}</p>
                   <p className="text-[11px] text-token-textMuted/80 mt-1 font-mono break-all">{flag.key}</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant={flag.enabled ? 'secondary' : 'primary'}
-                  disabled={locked}
-                  title={locked ? 'Bu funksiya hələ hazır deyil' : undefined}
-                  onClick={() => setPending({ key: flag.key, next: !flag.enabled })}
-                  className="shrink-0"
-                >
-                  {flag.enabled ? 'Söndür' : 'Aktiv et'}
-                </Button>
+                {locked ? (
+                  <span className="shrink-0 text-xs font-semibold text-token-textMuted px-3 py-1.5 rounded-lg border border-[color:var(--border-subtle)]">
+                    Hazır deyil
+                  </span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant={flag.enabled ? 'secondary' : 'primary'}
+                    onClick={() => setPending({ key: flag.key, next: !flag.enabled })}
+                    className="shrink-0"
+                  >
+                    {flag.enabled ? 'Söndür' : 'Aktiv et'}
+                  </Button>
+                )}
               </div>
             )
           })
