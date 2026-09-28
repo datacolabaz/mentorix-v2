@@ -76,6 +76,8 @@ const MentorOffers = lazy(() => import('./pages/instructor/mentor/MentorOffers')
 const MentorOutcomes = lazy(() => import('./pages/instructor/mentor/MentorOutcomes'))
 const MentorResources = lazy(() => import('./pages/instructor/mentor/MentorResources'))
 const InstructorStudents = lazy(() => import('./pages/instructor/Students'))
+const InstructorEngagement = lazy(() => import('./pages/instructor/Engagement'))
+const InstructorEngagementDetail = lazy(() => import('./pages/instructor/EngagementDetail'))
 const InstructorSchedule = lazy(() => import('./pages/instructor/Schedule'))
 const InstructorExams = lazy(() => import('./pages/instructor/Exams'))
 const InstructorAttendance = lazy(() => import('./pages/instructor/Attendance'))
@@ -407,6 +409,8 @@ export default function App() {
         <Route path="exams" element={<InstructorExams />} />
         <Route path="certificates" element={<InstructorCertificates />} />
         <Route path="attendance" element={<InstructorAttendance />} />
+        <Route path="engagement" element={<InstructorEngagement />} />
+        <Route path="engagement/:type/:id" element={<InstructorEngagementDetail />} />
         <Route path="analytics" element={<MentorOrInstructorPage mentor={MentorOutcomes} instructor={InstructorAnalytics} />} />
         <Route path="tasks" element={<MentorOrInstructorPage mentor={MentorNotes} instructor={InstructorTasks} />} />
         <Route path="ai-generator" element={<InstructorAIQuestionGenerator />} />

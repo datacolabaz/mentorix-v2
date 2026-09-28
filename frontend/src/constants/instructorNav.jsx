@@ -23,6 +23,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   presentations: { to: '/instructor/presentations', labelKey: 'nav.instructor.presentations', label: 'Təqdimatlar', icon: 'presentations' },
   materials_library: { to: '/instructor/materials', labelKey: 'nav.instructor.materials_library', label: 'Kitabxana', icon: 'materials' },
   analytics: { to: '/instructor/analytics', labelKey: 'nav.instructor.analytics', label: 'Analitika', icon: 'analytics' },
+  engagement: { to: '/instructor/engagement', labelKey: 'nav.instructor.engagement', label: 'Aktivlik', icon: 'progress' },
   payments: { to: '/instructor/payments', labelKey: 'nav.instructor.payments', label: 'Ödənişlər', icon: 'payments' },
   notifications: { to: '/instructor/notifications', labelKey: 'nav.instructor.notifications', label: 'Bildirişlər', icon: 'notifications' },
   settings: { to: '/instructor/settings', labelKey: 'nav.instructor.settings', label: 'Tənzimləmələr', icon: 'settings' },
@@ -39,6 +40,9 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   mentor_ethics_resources: { to: '/instructor/materials', labelKey: 'nav.mentor.ethics_resources', label: 'Resurslar və etika', icon: 'materials' },
 }
 
+/** Server menyu konfiqurasiyasında hələ olmasa da göstərilən yeni bəndlər. */
+const ALWAYS_AVAILABLE_KEYS = ['engagement']
+
 /** Instructor workspace is organized around the next user action, not implementation modules. */
 const INSTRUCTOR_PRODUCT_GROUPS = [
   { id: 'today', title: 'BU GÜN', itemKeys: ['dashboard', 'schedule', 'join_requests', 'live_history'] },
@@ -48,7 +52,7 @@ const INSTRUCTOR_PRODUCT_GROUPS = [
     itemKeys: ['teaching_groups', 'students', 'tasks', 'exams', 'ai_generator', 'presentations', 'materials_library'],
   },
   { id: 'contact', title: 'ƏLAQƏ', itemKeys: ['inquiries', 'notifications'] },
-  { id: 'results', title: 'NƏTİCƏLƏR', itemKeys: ['attendance', 'certificates', 'analytics'] },
+  { id: 'results', title: 'NƏTİCƏLƏR', itemKeys: ['engagement', 'attendance', 'certificates', 'analytics'] },
   { id: 'business', title: 'BİZNES', itemKeys: ['payments', 'settings'] },
 ]
 
@@ -225,6 +229,7 @@ function reframeInstructorSections(sourceSections) {
     ]),
   )
   const source = available.size ? available : new Set(Object.keys(INSTRUCTOR_NAV_ITEM_DEFS).filter((key) => !key.startsWith('mentor_')))
+  for (const key of ALWAYS_AVAILABLE_KEYS) source.add(key)
   return INSTRUCTOR_PRODUCT_GROUPS.map((group) => ({
     id: group.id,
     title: group.title,

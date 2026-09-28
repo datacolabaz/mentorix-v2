@@ -7,6 +7,10 @@ import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import { materialFileDownloadUrl, materialFileKind, materialFileOpenUrl } from '../../lib/materialFileUrl'
 import { formatMaterialsBytes } from '../../lib/materialsPlanLimits'
 import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
+import MaterialViewerModal from '../../components/student/MaterialViewerModal'
+import { clientMaterialKind, trackMaterialEvent } from '../../lib/materialTracking'
+
+const IN_APP_KINDS = new Set(['pdf', 'image', 'video'])
 
 function fileEmoji(material) {
   const kind = materialFileKind(material.file_type, material.file_url)
@@ -23,6 +27,7 @@ export default function StudentMaterials() {
   const activeDisplay = studentEnrollmentDisplay(activeEnrollment)
   const [loading, setLoading] = useState(true)
   const [materials, setMaterials] = useState([])
+  const [viewer, setViewer] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -96,16 +101,28 @@ export default function StudentMaterials() {
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      <a
-                        href={materialFileOpenUrl(m.file_url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-center text-xs font-semibold py-2 rounded-lg border border-violet-500/30 text-violet-300 hover:bg-violet-500/10"
-                      >
-                        Bax
-                      </a>
+                      {IN_APP_KINDS.has(clientMaterialKind(m.file_type, m.file_url)) ? (
+                        <button
+                          type="button"
+                          onClick={() => setViewer(m)}
+                          className="text-center text-xs font-semibold py-2 rounded-lg border border-violet-500/30 text-violet-300 hover:bg-violet-500/10"
+                        >
+                          Bax
+                        </button>
+                      ) : (
+                        <a
+                          href={materialFileOpenUrl(m.file_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackMaterialEvent(m.id, 'material_opened')}
+                          className="text-center text-xs font-semibold py-2 rounded-lg border border-violet-500/30 text-violet-300 hover:bg-violet-500/10"
+                        >
+                          Bax
+                        </a>
+                      )}
                       <a
                         href={materialFileDownloadUrl(m.file_url)}
+                        onClick={() => trackMaterialEvent(m.id, 'material_downloaded')}
                         className="text-center text-xs font-semibold py-2 rounded-lg border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
                       >
                         Yüklə
@@ -118,6 +135,7 @@ export default function StudentMaterials() {
           ))}
         </div>
       )}
+      {viewer ? <MaterialViewerModal material={viewer} onClose={() => setViewer(null)} /> : null}
     </div>
   )
 }
