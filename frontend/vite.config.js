@@ -1,12 +1,21 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { applyBrandTokens, resolveBrand } from './src/config/brand.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-export default defineConfig({
-  plugins: [react()],
+function brandHtmlPlugin(mode) {
+  const brand = resolveBrand({ ...process.env, ...loadEnv(mode, __dirname, '') })
+  return {
+    name: 'brand-html-tokens',
+    transformIndexHtml: (html) => applyBrandTokens(html, brand),
+  }
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), brandHtmlPlugin(mode)],
   resolve: {
     alias: {
       '@shared': path.resolve(__dirname, '../shared'),
@@ -25,4 +34,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

@@ -11,14 +11,16 @@ const {
   formatAzDay,
   materialTypeLabel,
 } = require('./sharePreviewRules');
+const { DEFAULT_BRAND, getBrand } = require('../config/brand');
 
-const ORIGIN = 'https://sualix.co';
+const ORIGIN = 'https://resulio.example';
+const BRAND = { ...DEFAULT_BRAND, name: 'Resulio' };
 const NOW = new Date('2026-09-28T12:00:00Z');
 const EXAM_ID = '7f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
 
 function preview(path, data) {
   const m = matchSharePath(path);
-  return buildSharePreview({ kind: m.kind, path: m.path, data, siteOrigin: ORIGIN, now: NOW });
+  return buildSharePreview({ kind: m.kind, path: m.path, data, siteOrigin: ORIGIN, now: NOW, brand: BRAND });
 }
 
 test('routes are matched from the allowlist with specific patterns first', () => {
@@ -59,7 +61,7 @@ test('exam invite shows subject, question count, duration and a future start', (
   assert.deepEqual(p.card.lines, ['Riyaziyyat', '20 sual · 30 dəqiqə']);
   assert.equal(p.card.footnote, 'Başlama: 29 sentyabr, 19:00');
   assert.equal(p.url, `${ORIGIN}/exam/${EXAM_ID}`);
-  assert.equal(p.site_name, 'Sualix');
+  assert.equal(p.site_name, 'Resulio');
 });
 
 test('past exam start is not advertised', () => {
@@ -70,7 +72,7 @@ test('past exam start is not advertised', () => {
 test('missing entity yields a generic card for that kind', () => {
   const p = preview(`/exam/${EXAM_ID}`, null);
   assert.equal(p.card.eyebrow, 'İmtahana dəvət');
-  assert.equal(p.title, 'İmtahana dəvət — Sualix');
+  assert.equal(p.title, 'İmtahana dəvət — Resulio');
 });
 
 test('result and certificate previews never contain personal data', () => {
@@ -85,7 +87,7 @@ test('result and certificate previews never contain personal data', () => {
     }
   }
   const r = preview('/student/exams', leaky);
-  assert.equal(r.title, 'Sualix nəticəsi');
+  assert.equal(r.title, 'Resulio nəticəsi');
   assert.equal(r.description, 'Nəticənizi təhlükəsiz şəkildə görüntüləmək üçün linki açın.');
 });
 
@@ -102,8 +104,8 @@ test('group invite hides the teacher unless the profile is public', () => {
 
 test('teacher, task, material and live templates', () => {
   const t = preview(`/teachers/${EXAM_ID}`, { name: 'Günel Əliyeva', subjects: 'Kimya', headline: '8 il təcrübə' });
-  assert.equal(t.title, 'Günel Əliyeva — Sualix müəllim profili');
-  assert.equal(t.description, 'Kimya üzrə dərslər, imtahanlar və materiallar');
+  assert.equal(t.title, 'Günel Əliyeva — Resulio müəllim profili');
+  assert.equal(t.description, 'Kimya üzrə imtahanlar, materiallar və tapşırıqlar');
   assert.equal(t.og_type, 'profile');
 
   const task = preview(`/task/${EXAM_ID}`, { title: 'Esse yaz', dueDay: '2026-10-05' });
@@ -144,4 +146,30 @@ test('version changes when card content changes', () => {
   const b = preview(`/task/${EXAM_ID}`, { title: 'B' });
   assert.notEqual(a.version, b.version);
   assert.equal(a.version, preview(`/task/${EXAM_ID}`, { title: 'A' }).version);
+});
+
+test('brand name defaults to Mentorix and is switched only through env', () => {
+  const saved = process.env.BRAND_NAME;
+  delete process.env.BRAND_NAME;
+  assert.equal(getBrand().name, 'Mentorix');
+  const home = buildSharePreview({ kind: 'home', path: '/', data: null, siteOrigin: ORIGIN, now: NOW });
+  assert.equal(home.site_name, 'Mentorix');
+  assert.equal(home.title, 'Mentorix — İmtahan, qiymətləndirmə və nəticə analizi');
+  assert.equal(home.description, 'Müəllim və təlimçilər üçün imtahan, qiymətləndirmə və nəticə analizi platforması.');
+  process.env.BRAND_NAME = 'Resulio';
+  const renamed = buildSharePreview({ kind: 'home', path: '/', data: null, siteOrigin: ORIGIN, now: NOW });
+  assert.equal(renamed.site_name, 'Resulio');
+  assert.notEqual(renamed.version, home.version, 'rename must bust image cache');
+  if (saved == null) delete process.env.BRAND_NAME;
+  else process.env.BRAND_NAME = saved;
+});
+
+test('preview copy avoids question-bank and marketplace positioning', () => {
+  const kinds = ['home', 'exam', 'task', 'material', 'live', 'group', 'teacher', 'certified', 'certificate', 'result'];
+  for (const kind of kinds) {
+    const text = JSON.stringify(buildSharePreview({ kind, path: '/', data: null, siteOrigin: ORIGIN, now: NOW, brand: BRAND })).toLowerCase();
+    for (const banned of ['sual bank', 'quiz', 'viktorina', 'sual-cavab', 'mentor', 'universitet', 'marketplace']) {
+      assert.ok(!text.includes(banned), `${kind} contains "${banned}"`);
+    }
+  }
 });

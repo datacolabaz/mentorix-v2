@@ -4,38 +4,46 @@
  * GET /api/public/share-preview?path=..., which strips private data.
  */
 
-export const BRAND = Object.freeze({ name: 'Sualix', tagline: 'İmtahan • Tapşırıq • Nəticə' })
+import { resolveBrand } from '../../src/config/brand.js'
 
 export const OG_IMAGE_WIDTH = 1200
 export const OG_IMAGE_HEIGHT = 630
 
 const DEFAULT_API_ORIGIN = 'https://api.edupanel.co'
+export const FALLBACK_VERSION = 'fallback'
 
-export const FALLBACK_PREVIEW = Object.freeze({
-  success: true,
-  kind: 'home',
-  site_name: BRAND.name,
-  title: `${BRAND.name} — İmtahan, tapşırıq və nəticə platforması`,
-  description:
-    'Müəllimlər üçün imtahan, tapşırıq və material idarəetməsi. Tələbələr üçün daha aydın nəticə və inkişaf.',
-  canonical_path: '/',
-  image_alt: `${BRAND.name} — İmtahan, tapşırıq və nəticə platforması`,
-  card: {
-    eyebrow: 'İmtahan, tapşırıq və nəticə platforması',
-    title: 'Müəllim üçün idarəetmə, tələbə üçün aydın nəticə',
-    lines: ['İmtahan · Tapşırıq · Material · Nəticə'],
-    footnote: '',
-  },
-  version: 'fallback',
-  og_type: 'website',
-})
+export function currentBrand() {
+  return resolveBrand(process.env)
+}
+
+export function fallbackPreview(brand = currentBrand()) {
+  const title = `${brand.name} — İmtahan, qiymətləndirmə və nəticə analizi`
+  return {
+    success: true,
+    kind: 'home',
+    site_name: brand.name,
+    brand: { name: brand.name, tagline: brand.previewTagline },
+    title,
+    description: brand.description,
+    canonical_path: '/',
+    image_alt: title,
+    card: {
+      eyebrow: 'Qiymətləndirmə və nəticə analizi',
+      title: brand.tagline,
+      lines: [brand.description],
+      footnote: '',
+    },
+    version: FALLBACK_VERSION,
+    og_type: 'website',
+  }
+}
 
 export function apiOrigin() {
   const fromEnv = String(process.env.MENTORIX_API_ORIGIN || '').trim().replace(/\/+$/, '')
   return fromEnv || DEFAULT_API_ORIGIN
 }
 
-/** Canonical site for og:url. Set PUBLIC_SITE_ORIGIN=https://sualix.co once the domain is live. */
+/** Canonical site for og:url. Set PUBLIC_SITE_ORIGIN to the new domain once it is live. */
 export function canonicalOrigin(req) {
   const fromEnv = String(process.env.PUBLIC_SITE_ORIGIN || '').trim().replace(/\/+$/, '')
   return fromEnv || requestOrigin(req)
@@ -63,12 +71,12 @@ export async function fetchSharePreview(path, { timeoutMs = 4000 } = {}) {
       headers: { Accept: 'application/json', 'Accept-Language': 'az' },
       signal: AbortSignal.timeout(timeoutMs),
     })
-    if (!r.ok) return FALLBACK_PREVIEW
+    if (!r.ok) return fallbackPreview()
     const d = await r.json()
-    if (!d?.success || !d.card) return FALLBACK_PREVIEW
+    if (!d?.success || !d.card) return fallbackPreview()
     return d
   } catch {
-    return FALLBACK_PREVIEW
+    return fallbackPreview()
   }
 }
 
@@ -100,7 +108,7 @@ export function injectShareMeta(html, preview, { canonicalBase, imageUrl }) {
     `<title>${escapeHtml(preview.title)}</title>`,
     `<meta name="description" content="${escapeHtml(preview.description)}" />`,
     `<link rel="canonical" href="${escapeHtml(url)}" />`,
-    `<meta property="og:site_name" content="${escapeHtml(BRAND.name)}" />`,
+    `<meta property="og:site_name" content="${escapeHtml(preview.site_name || currentBrand().name)}" />`,
     `<meta property="og:type" content="${escapeHtml(preview.og_type || 'website')}" />`,
     `<meta property="og:locale" content="az_AZ" />`,
     `<meta property="og:url" content="${escapeHtml(url)}" />`,

@@ -1,19 +1,20 @@
 /**
  * Vercel serverless: 1200×630 PNG preview card.
  *   GET /api/og?path=/exam/<id>&v=<version>
- * The left third is a fixed Sualix brand zone; the right side shows the
+ * The left third is a fixed brand zone (name from BRAND_NAME); the right side shows the
  * privacy-safe card from the backend. Text is never taken from the query string,
- * only the allowlisted path, so the endpoint cannot be used to render arbitrary copy.
+ * only the allowlisted path, so the endpoint cannot be used to render arbitrary branded copy.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { ImageResponse } from '@vercel/og'
 import {
-  BRAND,
-  FALLBACK_PREVIEW,
+  FALLBACK_VERSION,
   OG_IMAGE_HEIGHT,
   OG_IMAGE_WIDTH,
   canonicalOrigin,
+  currentBrand,
+  fallbackPreview,
   fetchSharePreview,
   sharePathFromQuery,
 } from './_lib/sharePreview.js'
@@ -74,7 +75,7 @@ function logoMark(size) {
   }
 }
 
-function brandZone(domain) {
+function brandZone(brand, domain) {
   return h(
     'div',
     {
@@ -91,9 +92,9 @@ function brandZone(domain) {
       h('div', { display: 'flex', flexDirection: 'column' }, [
         h('div', { display: 'flex', alignItems: 'center' }, [
           logoMark(64),
-          h('div', { display: 'flex', marginLeft: 18, fontSize: 60, fontWeight: 800, color: COLORS.text, letterSpacing: -1.5 }, BRAND.name),
+          h('div', { display: 'flex', marginLeft: 18, fontSize: 60, fontWeight: 800, color: COLORS.text, letterSpacing: -1.5 }, brand.name),
         ]),
-        h('div', { display: 'flex', marginTop: 28, fontSize: 21, fontWeight: 600, color: COLORS.muted, whiteSpace: 'nowrap' }, BRAND.tagline),
+        h('div', { display: 'flex', marginTop: 28, fontSize: 21, fontWeight: 600, color: COLORS.muted, whiteSpace: 'nowrap' }, brand.tagline),
       ]),
       h('div', { display: 'flex', fontSize: 22, fontWeight: 600, color: COLORS.accent }, domain || ''),
     ],
@@ -173,7 +174,12 @@ function contentZone(card) {
 }
 
 export function renderCardTree(preview, domain) {
-  const card = preview?.card || FALLBACK_PREVIEW.card
+  const fallback = fallbackPreview()
+  const card = preview?.card || fallback.card
+  const brand = {
+    name: preview?.brand?.name || fallback.brand.name,
+    tagline: preview?.brand?.tagline || fallback.brand.tagline,
+  }
   return h(
     'div',
     {
@@ -183,7 +189,7 @@ export function renderCardTree(preview, domain) {
       backgroundColor: COLORS.bg,
       fontFamily: 'Inter, InterExt',
     },
-    [brandZone(domain), contentZone(card)],
+    [brandZone(brand, domain), contentZone(card)],
   )
 }
 
@@ -200,7 +206,7 @@ function displayDomain(req) {
   try {
     return new URL(canonicalOrigin(req)).host.replace(/^www\./, '')
   } catch {
-    return 'sualix.co'
+    return currentBrand().domain
   }
 }
 
@@ -211,16 +217,16 @@ export default async function handler(req, res) {
   let stable = false
   try {
     const preview = await fetchSharePreview(path)
-    stable = preview.version !== FALLBACK_PREVIEW.version
+    stable = preview.version !== FALLBACK_VERSION
     png = await renderOgPng(preview, domain)
   } catch (err) {
     console.error('[og] render failed', err?.message)
     try {
-      png = await renderOgPng(FALLBACK_PREVIEW, domain)
+      png = await renderOgPng(fallbackPreview(), domain)
     } catch {
       res.setHeader('Cache-Control', 'public, max-age=60')
       res.statusCode = 302
-      res.setHeader('Location', '/og-sualix.png')
+      res.setHeader('Location', '/og-default.png')
       return res.end()
     }
   }

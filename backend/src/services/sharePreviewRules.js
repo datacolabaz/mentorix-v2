@@ -1,11 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-
-const BRAND = Object.freeze({
-  name: 'Sualix',
-  tagline: 'İmtahan • Tapşırıq • Nəticə',
-});
+const { getBrand } = require('../config/brand');
 
 /** Bump when the card layout or copy rules change so crawlers refetch images. */
 const TEMPLATE_VERSION = 1;
@@ -170,16 +166,13 @@ function joinDot(parts) {
   return parts.map(cleanText).filter(Boolean).join(' · ');
 }
 
-const HOME_TITLE = `${BRAND.name} — İmtahan, tapşırıq və nəticə platforması`;
-const HOME_DESCRIPTION =
-  'Müəllimlər üçün imtahan, tapşırıq və material idarəetməsi. Tələbələr üçün daha aydın nəticə və inkişaf.';
-
 /**
  * Builds preview copy for a kind. `data` is null when the entity is missing,
  * private or expired; the result is then a generic card for that kind.
  * Only fields explicitly read here can ever reach the preview.
  */
-function buildPreviewCopy(kind, data, { now = new Date() } = {}) {
+function buildPreviewCopy(kind, data, { now = new Date(), brand = getBrand() } = {}) {
+  const BRAND = brand;
   switch (kind) {
     case 'exam': {
       if (!data?.title) {
@@ -292,7 +285,7 @@ function buildPreviewCopy(kind, data, { now = new Date() } = {}) {
       if (!data?.name) {
         return {
           title: `${BRAND.name} müəllim profili`,
-          description: 'Müəllimin dərsləri, imtahanları və materialları.',
+          description: 'Müəllimin imtahanları, materialları və tapşırıqları.',
           card: { eyebrow: 'Müəllim profili', title: 'Müəllim profili', lines: [] },
         };
       }
@@ -300,8 +293,8 @@ function buildPreviewCopy(kind, data, { now = new Date() } = {}) {
       return {
         title: `${clampText(data.name, 60)} — ${BRAND.name} müəllim profili`,
         description: subjects
-          ? `${subjects} üzrə dərslər, imtahanlar və materiallar`
-          : 'Dərslər, imtahanlar və materiallar',
+          ? `${subjects} üzrə imtahanlar, materiallar və tapşırıqlar`
+          : 'İmtahanlar, materiallar və tapşırıqlar',
         card: {
           eyebrow: 'Müəllim profili',
           title: clampText(data.name, 60),
@@ -347,28 +340,29 @@ function buildPreviewCopy(kind, data, { now = new Date() } = {}) {
     case 'home':
     default:
       return {
-        title: HOME_TITLE,
-        description: HOME_DESCRIPTION,
+        title: `${BRAND.name} — İmtahan, qiymətləndirmə və nəticə analizi`,
+        description: BRAND.description,
         card: {
-          eyebrow: 'İmtahan, tapşırıq və nəticə platforması',
-          title: 'Müəllim üçün idarəetmə, tələbə üçün aydın nəticə',
-          lines: ['İmtahan · Tapşırıq · Material · Nəticə'],
+          eyebrow: 'Qiymətləndirmə və nəticə analizi',
+          title: BRAND.tagline,
+          lines: [BRAND.description],
         },
       };
   }
 }
 
-function previewVersion(kind, card) {
+function previewVersion(kind, card, brand = getBrand()) {
   return crypto
     .createHash('sha1')
-    .update(JSON.stringify({ v: TEMPLATE_VERSION, kind, card }))
+    .update(JSON.stringify({ v: TEMPLATE_VERSION, kind, card, brand: [brand.name, brand.previewTagline] }))
     .digest('hex')
     .slice(0, 12);
 }
 
 /** Full payload consumed by the HTML injector and the image generator. */
-function buildSharePreview({ kind, path, data, siteOrigin, now = new Date() }) {
-  const copy = buildPreviewCopy(kind, data, { now });
+function buildSharePreview({ kind, path, data, siteOrigin, now = new Date(), brand = getBrand() }) {
+  const BRAND = brand;
+  const copy = buildPreviewCopy(kind, data, { now, brand });
   const card = {
     eyebrow: copy.card.eyebrow,
     title: copy.card.title,
@@ -381,20 +375,19 @@ function buildSharePreview({ kind, path, data, siteOrigin, now = new Date() }) {
     success: true,
     kind,
     site_name: BRAND.name,
-    brand: BRAND,
+    brand: { name: BRAND.name, tagline: BRAND.previewTagline },
     title: clampText(copy.title, 95),
     description: clampText(copy.description, 160),
     url: `${origin}${canonicalPath}`,
     canonical_path: canonicalPath,
     image_alt: clampText(`${BRAND.name} — ${card.eyebrow}: ${card.title}`, 120),
     card,
-    version: previewVersion(kind, card),
+    version: previewVersion(kind, card, brand),
     og_type: kind === 'teacher' ? 'profile' : 'website',
   };
 }
 
 module.exports = {
-  BRAND,
   TEMPLATE_VERSION,
   SHARE_ROUTES,
   PREVIEW_KINDS,

@@ -1,13 +1,15 @@
 # Sosial paylaşım və WhatsApp link preview sistemi
 
-Paylaşılan hər public Sualix linki WhatsApp, Telegram, Facebook, LinkedIn, Discord, Slack,
-iMessage və s. platformalarda brendli, dinamik preview kartı ilə görünür. Preview kartı
-1200×630 PNG şəkildir: sol hissə sabit Sualix brend zonası, sağ hissə linkin məlumatıdır.
+Brend adı konfiqurasiyadan gəlir (`BRAND_NAME`, default **Mentorix**). Nümunələrdə `{Brand}` yazılıb.
 
-WhatsApp kartın öz yerləşimini (mətn, şəkil ölçüsü) özü idarə edir. "Sualix solda"
+Paylaşılan hər public link WhatsApp, Telegram, Facebook, LinkedIn, Discord, Slack,
+iMessage və s. platformalarda brendli, dinamik preview kartı ilə görünür. Preview kartı
+1200×630 PNG şəkildir: sol hissə sabit brend zonası (ad `BRAND_NAME`-dən gəlir, default Mentorix), sağ hissə linkin məlumatıdır.
+
+WhatsApp kartın öz yerləşimini (mətn, şəkil ölçüsü) özü idarə edir. "Brend solda"
 qaydası **şəklin içində** tətbiq olunur. Bəzi WhatsApp versiyaları kiçik kvadrat thumbnail
 göstərir və şəklin mərkəzini kəsir. Bu halda əsasən sağ hissədəki başlıq görünür, amma
-`og:site_name` və `og:title` yenə də Sualix brendini daşıyır.
+`og:site_name` və `og:title` yenə də brend adını daşıyır.
 
 ## 1. Memarlıq
 
@@ -35,30 +37,30 @@ Crawler (WhatsApp/…) ──► Vercel rewrite (vercel.json)
 | HTML meta | `frontend/api/share-html.js` | bütün köhnə meta tag-ları silib vahid blok yazır |
 | Şəkil | `frontend/api/og.js` | 1200×630 PNG, 25–60 KB |
 | Ümumi köməkçilər | `frontend/api/_lib/sharePreview.js` | fetch, fallback, meta injeksiyası |
-| Statik fallback | `frontend/public/og-sualix.png` | JS/backend işləməsə ana səhifə şəkli |
+| Statik fallback | `frontend/public/og-default.png` | JS/backend işləməsə ana səhifə şəkli |
 
 Meta tag-lar **ilkin HTML cavabında** gəlir. Crawler JavaScript icra etməsə də preview işləyir.
 
 ### Şəkil URL-i niyə yalnız `path` qəbul edir
 
 `/api/og` mətni query string-dən götürmür, yalnız allowlist-dəki path-i qəbul edir və məlumatı
-backend-dən özü oxuyur. Beləliklə, heç kim Sualix brendi ilə istədiyi mətni yazıb saxta
+backend-dən özü oxuyur. Beləliklə, heç kim bizim brendimizlə istədiyi mətni yazıb saxta
 kart yarada bilməz.
 
 ## 2. Marşrut qaydaları (allowlist)
 
 | Link | Tip | `og:title` | `og:description` | Kartın sağ hissəsi |
 |---|---|---|---|---|
-| `/` | home | Sualix — İmtahan, tapşırıq və nəticə platforması | Müəllimlər üçün imtahan, tapşırıq və material idarəetməsi… | Ümumi brend kartı |
+| `/` | home | {Brand} — İmtahan, qiymətləndirmə və nəticə analizi | Müəllim və təlimçilər üçün imtahan, qiymətləndirmə və nəticə analizi platforması. | Tagline + təsvir |
 | `/exam/:id` | exam | İmtahana dəvət — {examTitle} | {fənn} · {N} sual · {M} dəqiqə | İmtahana dəvət, ad, fənn, sual/vaxt, gələcək başlama tarixi |
 | `/task/:id` | task | Yeni tapşırıq — {title} | Son tarix: {tarix} | Yeni tapşırıq, ad, son tarix |
 | `/library/material/:id`, `/m/:token` | material | Yeni material — {title} | {PDF/Video/…} · {fənn} | Yeni tədris materialı, ad, tip |
 | `/live/join/:token`, `/lr/:token` | live | Canlı dərs — {title} | {tarix} · {saat} | Canlı dərs / Canlı dərs yazısı |
-| `/join/:code`, `/library/:groupId` | group | Sualix qrupuna dəvət | {qrup} qrupuna qoşulun | Qrupa dəvət, qrup adı, fənn, public müəllim adı |
-| `/teachers/:id` | teacher | {ad} — Sualix müəllim profili | {fənlər} üzrə dərslər, imtahanlar və materiallar | Ad, fənlər, təcrübə və ya bio-nun ilk cümləsi |
+| `/join/:code`, `/library/:groupId` | group | {Brand} qrupuna dəvət | {qrup} qrupuna qoşulun | Qrupa dəvət, qrup adı, fənn, public müəllim adı |
+| `/teachers/:id` | teacher | {ad} — {Brand} müəllim profili | {fənlər} üzrə imtahanlar, materiallar və tapşırıqlar | Ad, fənlər, təcrübə və ya bio-nun ilk cümləsi |
 | `/sertifikatli-imtahanlar/…` | certified | {ad} — Sertifikatlı imtahan | QR kodu ilə doğrulanan sertifikat · Keçid balı | Sertifikatlı imtahan |
-| `/c/:token` | certificate | Sualix sertifikatı | Sertifikatı doğrulamaq üçün linki açın. | Generic |
-| `/student/*`, `/parent/*` | result | Sualix nəticəsi | Nəticənizi təhlükəsiz şəkildə görüntüləmək üçün linki açın. | Generic |
+| `/c/:token` | certificate | {Brand} sertifikatı | Sertifikatı doğrulamaq üçün linki açın. | Generic |
+| `/student/*`, `/parent/*` | result | {Brand} nəticəsi | Nəticənizi təhlükəsiz şəkildə görüntüləmək üçün linki açın. | Generic |
 
 Qeydlər:
 - Allowlist-də olmayan bütün path-lər ana səhifə kartını alır.
@@ -87,28 +89,28 @@ Testlər: `backend/src/services/sharePreviewRules.test.js`. Test sızma yoxlamas
 
 - Kətan: 1200×630 (1.91:1), PNG, adətən 25–60 KB.
 - Fon: tünd göy `#0B1733`. Brend zonası: `#081028`, eni 420 px, sağında nazik ayırıcı xətt.
-- Sol hissə: ◉ loqo işarəsi, "Sualix" (Inter 800, 60 px), "İmtahan • Tapşırıq • Nəticə" və aşağıda domen.
+- Sol hissə: ◉ loqo işarəsi, brend adı (Inter 800, 60 px), `BRAND_PREVIEW_TAGLINE` (default "İmtahan • Nəticə • Analitika") və aşağıda domen.
 - Sağ hissə:
   - yaşıl etiket (`eyebrow`);
   - başlıq, uzunluğa görə 60→40 px, maksimum 3 sətir və "…";
   - 2 əlavə sətir, hər biri maksimum 2 sətir;
   - aşağıda vaxt kimi vacib məlumat (footnote).
 - Şrift: Inter latin + latin-ext (`@fontsource/inter`). Latin-ext ayrıca `InterExt` adı ilə yüklənir ki, ə, ğ, ş, ç, ö, ü, ı, İ bütün qalınlıqlarda düzgün çıxsın.
-- Fallback: render alınmasa əvvəlcə generic kart, o da alınmasa `/og-sualix.png`.
+- Fallback: render alınmasa əvvəlcə generic kart, o da alınmasa `/og-default.png` (`npm run og:default` ilə yenidən yaradılır).
 
 ## 5. Keş və versiyalama
 
-- `v` = `sha1(TEMPLATE_VERSION + kind + card)`. Başlıq, tarix və ya dizayn dəyişəndə URL dəyişir və crawler yeni şəkli çəkir.
+- `v` = `sha1(TEMPLATE_VERSION + kind + card + brand)`. Brend adı dəyişəndə də bütün şəkillər yenilənir. Başlıq, tarix və ya dizayn dəyişəndə URL dəyişir və crawler yeni şəkli çəkir.
 - Versiyalı şəkillər: `s-maxage=31536000, immutable`. Fallback şəkillər: 5 dəqiqə.
 - HTML: `s-maxage=300`, yəni dəyişiklik ən gec 5 dəqiqəyə görünür.
 - Dizayn dəyişəndə `sharePreviewRules.js` içində `TEMPLATE_VERSION` artırılır.
 - WhatsApp preview-u öz tərəfində keşləyir. Artıq göndərilmiş mesajdakı kart yenilənmir, yeni göndərilən mesajda yeni kart görünür.
 
-## 6. Domen: mentorix.io → sualix.co
+## 6. Domen: mentorix.io → yeni domen
 
-1. Vercel → Project → Settings → Domains bölməsində `sualix.co` domenini əlavə edin və DNS-i qurun.
-2. `mentorix.io` üçün **Redirect to → sualix.co (308)** seçin. Vercel path və query-ni saxlayır, yəni `/exam/123?x=1` → `https://sualix.co/exam/123?x=1`.
-3. Vercel env: `PUBLIC_SITE_ORIGIN=https://sualix.co`. Railway env: `PUBLIC_SITE_ORIGIN=https://sualix.co`.
+1. Vercel → Project → Settings → Domains bölməsində yeni domeni əlavə edin və DNS-i qurun.
+2. `mentorix.io` üçün **Redirect to → yeni domen (308)** seçin. Vercel path və query-ni saxlayır, yəni `/exam/123?x=1` → `https://<yeni-domen>/exam/123?x=1`.
+3. Vercel və Railway env: `PUBLIC_SITE_ORIGIN=https://<yeni-domen>`, `BRAND_NAME`, `BRAND_DOMAIN`. Sonra `BRAND_NAME=... npm run og:default` ilə statik şəkli yeniləyin.
 4. Yenidən deploy edin.
 
 Domen qoşulana qədər `PUBLIC_SITE_ORIGIN` boş qalmalıdır. O zaman `og:url` sorğunun gəldiyi host-u (`mentorix.io`) göstərir, şəkil URL-i isə həmişə sorğunun gəldiyi host-dan qurulur. Beləliklə, preview heç vaxt işləməyən domenə işarə etmir.
@@ -128,15 +130,15 @@ Domen qoşulana qədər `PUBLIC_SITE_ORIGIN` boş qalmalıdır. O zaman `og:url`
 | Şəkilsiz / tapılmayan entity | `/exam/<olmayan-uuid>` → generic "İmtahana dəvət" kartı |
 | Uzun başlıq | 120+ simvollu imtahan adı → 3 sətir + "…" |
 | Azərbaycan hərfləri | ə ğ ş ç ö ü ı İ, qalın və adi şriftdə |
-| Nəticə privacy | `/student/exams/...` crawler UA ilə → yalnız "Sualix nəticəsi" |
-| Köhnə linklər | domen keçidindən sonra `curl -I https://mentorix.io/exam/<id>` → 308 sualix.co |
+| Nəticə privacy | `/student/exams/...` crawler UA ilə → yalnız "{Brand} nəticəsi" |
+| Köhnə linklər | domen keçidindən sonra `curl -I https://mentorix.io/exam/<id>` → 308 yeni domen |
 | Keş yenilənməsi | imtahan adını dəyişin, 5 dəqiqə gözləyin → `v=` dəyişməlidir |
 
 ## 8. Nümunə metadata
 
 ```text
-/                     Sualix — İmtahan, tapşırıq və nəticə platforması
-                      Müəllimlər üçün imtahan, tapşırıq və material idarəetməsi. Tələbələr üçün daha aydın nəticə və inkişaf.
+/                     Mentorix — İmtahan, qiymətləndirmə və nəticə analizi
+                      Müəllim və təlimçilər üçün imtahan, qiymətləndirmə və nəticə analizi platforması.
 /exam/<id>            İmtahana dəvət — Riyaziyyat — Faizlər
                       Riyaziyyat · 20 sual · 30 dəqiqə          (kartda: Başlama: 29 sentyabr, 19:00)
 /task/<id>            Yeni tapşırıq — Esse yaz
@@ -145,10 +147,10 @@ Domen qoşulana qədər `PUBLIC_SITE_ORIGIN` boş qalmalıdır. O zaman `og:url`
                       PDF · Cəbr
 /live/join/<token>    Canlı dərs — Həndəsə
                       29 sentyabr · 19:00
-/join/<code>          Sualix qrupuna dəvət
+/join/<code>          Mentorix qrupuna dəvət
                       11-ci sinif qrupuna qoşulun
-/teachers/<id>        Günel Əliyeva — Sualix müəllim profili
-                      Kimya üzrə dərslər, imtahanlar və materiallar
-/student/...          Sualix nəticəsi
+/teachers/<id>        Günel Əliyeva — Mentorix müəllim profili
+                      Kimya üzrə imtahanlar, materiallar və tapşırıqlar
+/student/...          Mentorix nəticəsi
                       Nəticənizi təhlükəsiz şəkildə görüntüləmək üçün linki açın.
 ```

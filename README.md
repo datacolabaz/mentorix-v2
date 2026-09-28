@@ -49,7 +49,8 @@ npm run dev
 ### Frontend
 - `VITE_API_URL` — Backend API URL
 - `VITE_GOOGLE_CLIENT_ID` — backend-dəki `GOOGLE_CLIENT_ID` ilə eyni
-- `PUBLIC_SITE_ORIGIN` (Vercel və Railway) — paylaşım preview-larında kanonik domen, məs. `https://sualix.co`. Domen qoşulana qədər boş saxlayın
+- `PUBLIC_SITE_ORIGIN` (Vercel və Railway) — paylaşım preview-larında kanonik domen. Yeni domen qoşulana qədər boş saxlayın
+- `BRAND_NAME`, `BRAND_DOMAIN`, `BRAND_TAGLINE`, `BRAND_DESCRIPTION`, `BRAND_PREVIEW_TAGLINE`, `SUPPORT_EMAIL` (Vercel və Railway; frontend build üçün `VITE_` prefiksi də işləyir) — ictimai brend. Default: Mentorix. Bax `docs/rebrand/`
 
 ## Platforma funksiyaları (feature flag)
 
@@ -67,5 +68,5 @@ Söndürülmüş modul menyudan, CTA-lardan və API-dən gizlədilir; məlumat s
 
 Billing-in workspace modelinə köçürülməsi üçün audit və yalnız oxuyan dry-run skriptləri: `docs/billing-workspace-migration.md`.
 
-WhatsApp/Telegram/Facebook link preview sistemi (server-side Open Graph, 1200×630 Sualix kartları, privacy qaydaları, test planı): `docs/social-link-previews.md`.
+WhatsApp/Telegram/Facebook link preview sistemi (server-side Open Graph, 1200×630 brend kartları, privacy qaydaları, test planı): `docs/social-link-previews.md`.
 <!-- deploy: task-file-ui -->
