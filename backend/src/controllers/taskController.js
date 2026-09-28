@@ -1,5 +1,6 @@
 const path = require('path');
 const db = require('../utils/db');
+const { trackStudentAssignmentEvent } = require('../services/engagementService');
 const { SQL_WHERE_TEACHING_GROUP_ONLY } = require('../services/systemGroupGuards');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 const {
@@ -417,6 +418,7 @@ const getMyAssignment = async (req, res) => {
       display_status: normalizeStatus(rows[0]),
       ai_metadata: sanitizeAiMetadataForStudent(rows[0].ai_metadata),
     };
+    trackStudentAssignmentEvent(id, 'assignment_opened');
     res.json({ success: true, assignment });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -453,6 +455,7 @@ const saveMyAssignmentDraft = async (req, res) => {
        RETURNING id AS assignment_id, status, submitted_at, answer_text, attachment_urls`,
       [answer_text, attachment_urls, id, studentId],
     );
+    trackStudentAssignmentEvent(id, 'assignment_started');
     res.json({ success: true, assignment: rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -527,6 +530,7 @@ const submitMyAssignment = async (req, res) => {
       console.error('addStudentToAssignmentParticipantGroup', e.message);
     }
 
+    trackStudentAssignmentEvent(id, 'assignment_submitted');
     res.json({ success: true, assignment: rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -743,6 +747,7 @@ const reviewInstructorAssignment = async (req, res) => {
       );
     }
 
+    trackStudentAssignmentEvent(id, 'assignment_graded');
     res.json({ success: true, review: rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
