@@ -185,6 +185,15 @@ export default function AdminLayout() {
         </div>
 
         <nav className="flex-1 px-5 py-4 space-y-2 overflow-y-auto min-h-0 overscroll-contain">
+          <NavLink
+            to="/"
+            end
+            onClick={() => setNavOpen(false)}
+            className={() => sidebarNavClass(false, theme)}
+          >
+            <span className="shrink-0"><NavIcon name="home" /></span>
+            <span className="truncate">{t('nav.admin.home', { defaultValue: 'Ana səhifə' })}</span>
+          </NavLink>
           {navSections.map((section) => (
             <div key={section.title} className="space-y-2">
               <div className="px-1 pt-2">

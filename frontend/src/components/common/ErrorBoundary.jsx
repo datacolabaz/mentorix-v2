@@ -1,4 +1,5 @@
 import React from 'react'
+import { isChunkLoadError, reloadOnceForChunkError } from '../../lib/chunkReload'
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,6 +15,7 @@ export default class ErrorBoundary extends React.Component {
     // Keep console output for debugging in mobile WebView
     // eslint-disable-next-line no-console
     console.error('[ErrorBoundary]', error, info)
+    if (isChunkLoadError(error) && reloadOnceForChunkError()) return
     this.setState({ info })
   }
 

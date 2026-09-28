@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { ToastProvider } from './components/common/Toast'
 import ErrorBoundary from './components/common/ErrorBoundary'
+import { installChunkReloadHandler } from './lib/chunkReload'
 import './index.css'
 import './styles/livekit-override.css'
 import 'leaflet/dist/leaflet.css'
@@ -28,6 +29,8 @@ try {
   }
   ensureViewport()
 } catch {}
+
+installChunkReloadHandler()
 
 const queryClient = new QueryClient({
   defaultOptions: {
