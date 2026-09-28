@@ -4,6 +4,8 @@ const { sign, signOTP, signSession } = require('../utils/jwt');
 const { isFeatureEnabled } = require('../services/featureFlagService');
 const { sendFeatureDisabled } = require('../middleware/requireFeature');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');
+const { logAuthEvent } = require('../services/authEventService');
+const { signAccountLinkToken, verifyAccountLinkToken, maskEmail } = require('../lib/googleOnlyAuth');
 
 /**
  * Sessiya tokeni: tələbələr üçün uzunmüddətli (90 gün) — linklə qoşulan qonaq
@@ -105,19 +107,6 @@ function normalizeEmailInput(email) {
   const e = String(email || '').trim().toLowerCase();
   if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
   return e;
-}
-
-async function attachTypedPasswordToGoogleUser(userId, rawPassword) {
-  const pass = normalizePasswordInput(rawPassword);
-  if (pass.length < 8 || !userId) return;
-  const { rows } = await db.query(
-    `SELECT password_hash, google_sub, auth_provider FROM users WHERE id = $1 LIMIT 1`,
-    [userId],
-  );
-  const row = rows[0];
-  if (!row || hasUserChosenPassword(row)) return;
-  const hash = await bcrypt.hash(pass, 12);
-  await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hash, userId]);
 }
 
 const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
@@ -1352,6 +1341,7 @@ const switchWorkspace = async (req, res) => {
     const userOut = await enrichUserForClient(fresh, targetRole);
     logAuthLogin(req, fresh, targetRole);
 
+    logAuthEvent(req, { event: 'account_switch', userId: me.id, metadata: { target } });
     return res.json({
       success: true,
       token,
@@ -1980,22 +1970,14 @@ async function insertOrRecoverGoogleUser({ fullName, email, googleSub, passwordH
       const existing = await findUserByGoogleSub(db, googleSub);
       if (existing) return existing;
     }
-    if (isUsersEmailUniqueViolation(err) && email) {
-      const existing = await findUserByEmail(db, email);
-      if (existing) return existing;
-    }
-    // Fallback: try both identity keys even if constraint name is obscure.
     const bySub = await findUserByGoogleSub(db, googleSub);
     if (bySub) return bySub;
-    if (email) {
-      const byEmail = await findUserByEmail(db, email);
-      if (byEmail) return byEmail;
-    }
+    // Eyni email ilə hesab: avtomatik birləşdirmə yoxdur, istifadəçi təsdiq ekranından keçməlidir.
     const friendly = new Error(
-      'Bu Google hesabı ilə artıq qeydiyyat mövcuddur. Daxil olun.',
+      'Bu email ilə artıq hesab var. Yenidən «Google ilə davam et» düyməsini basıb hesabı bağlamağı təsdiqləyin.',
     );
     friendly.statusCode = 409;
-    friendly.code = 'ACCOUNT_ALREADY_EXISTS';
+    friendly.code = 'ACCOUNT_LINK_REQUIRED';
     throw friendly;
   }
 }
@@ -2074,7 +2056,8 @@ async function verifyGoogleIdTokenOrThrow(credential) {
     err.statusCode = 401;
     throw err;
   }
-  return { sub, email: email || null, name: name || null, email_verified, raw: payload };
+  const picture = payload.picture ? String(payload.picture).slice(0, 500) : null;
+  return { sub, email: email || null, name: name || null, email_verified, picture, raw: payload };
 }
 
 const googleLogin = async (req, res) => {
@@ -2085,23 +2068,9 @@ const googleLogin = async (req, res) => {
 
     let user = await findUserByGoogleSub(db, g.sub);
 
-    // Prefer auto-login for existing Google identity (even if client sent signup intent).
-
     if (!user && g.email) {
-      user = await findUserByEmail(db, g.email);
-      if (user) {
-        if (!g.email_verified) {
-          const err = new Error('Google email təsdiqlənməyib');
-          err.statusCode = 409;
-          throw err;
-        }
-        if (user.google_sub && String(user.google_sub).trim() !== '' && String(user.google_sub) !== String(g.sub)) {
-          const err = new Error('Bu email artıq başqa Google hesabına bağlıdır');
-          err.statusCode = 409;
-          throw err;
-        }
-        user = await reactivateAndLinkGoogleUser(user, g);
-      }
+      const offer = await legacyAccountLinkOffer(req, g);
+      if (offer) return res.status(offer.status).json(offer.body);
     } else if (user) {
       user = await reactivateAndLinkGoogleUser(user, g);
     }
@@ -2119,79 +2088,199 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    await attachTypedPasswordToGoogleUser(user.id, req.body?.password);
+    return finishGoogleSession(req, res, user, g, expectedRole);
+  } catch (err) {
+    logAuthEvent(req, { event: 'login_failed', metadata: { stage: 'google_login', message: err?.message } });
+    return sendGoogleAuthError(res, err);
+  }
+};
 
-    if (isAdminRole(user)) {
-      await respondAdminSession(req, res, user);
-      return;
-    }
+/** Mövcud identity üçün sessiya: Google profil atributlarını yeniləyir, girişi jurnala yazır. */
+async function finishGoogleSession(req, res, user, g, expectedRole) {
+  await updateGoogleProfileAttributes(user.id, g);
+  logAuthEvent(req, { event: 'google_sign_in', userId: user.id, googleSub: g.sub, email: g.email });
 
-    if (rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id))) {
-      if (!guardEmailVerifiedBeforeToken(res, user)) return;
-      const token = sign({ id: user.id, role: null });
-      const userOut = attachPersonaFields(
-        {
-          id: user.id,
-          full_name: user.full_name,
-          email: user.email,
-          role: null,
-          phone: user.phone,
-        },
-        { ...user, onboarding_completed: false },
-      );
-      return res.json({
-        success: true,
-        needs_role: true,
-        needs_onboarding: true,
-        token,
-        user: userOut,
-      });
-    }
+  if (isAdminRole(user)) {
+    await respondAdminSession(req, res, user);
+    return;
+  }
 
-    let sessionRole = user.role;
-    if (expectedRole && LOGIN_ROLES.has(expectedRole)) {
-      const eligible = await getLoginEligibleRoles(user.id);
-      if (eligible.includes(expectedRole)) {
-        sessionRole = expectedRole;
-        await ensureLoginRoleGranted(user.id, expectedRole);
-      } else if (user.role !== expectedRole) {
-        return res.status(409).json(googleRoleMismatchResponse(user.role, expectedRole));
-      }
-    }
-
+  if (rowNeedsOnboarding(user) || (await userNeedsOnboarding(user.id))) {
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
-
-    await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
-
-    const token = signRoleSession({ id: user.id, role: sessionRole });
-    logAuthLogin(req, user, sessionRole);
-    const sessionUser = {
-      ...user,
-      role: sessionRole,
-      google_sub: user.google_sub || g.sub,
-      auth_provider: user.auth_provider || 'google',
-    };
-    const payload = attachPhoneVerificationFlags(
-      await enrichUserForClient(
-        {
-          ...buildAuthUserPayload(sessionUser),
-          persona: user.persona,
-          persona_profile: user.persona_profile,
-          onboarding_completed: user.onboarding_completed,
-        },
-        sessionRole,
-      ),
+    const token = sign({ id: user.id, role: null });
+    const userOut = attachPersonaFields(
+      {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: null,
+        phone: user.phone,
+      },
+      { ...user, onboarding_completed: false },
     );
     return res.json({
       success: true,
+      needs_role: true,
+      needs_onboarding: true,
       token,
-      user: payload,
-      needs_phone_verification: Boolean(payload.needs_phone_verification),
-      needs_instructor_phone: Boolean(payload.needs_instructor_phone),
+      user: userOut,
     });
+  }
+
+  let sessionRole = user.role;
+  if (expectedRole && LOGIN_ROLES.has(expectedRole)) {
+    const eligible = await getLoginEligibleRoles(user.id);
+    if (eligible.includes(expectedRole)) {
+      sessionRole = expectedRole;
+      await ensureLoginRoleGranted(user.id, expectedRole);
+    } else if (user.role !== expectedRole) {
+      return res.status(409).json(googleRoleMismatchResponse(user.role, expectedRole));
+    }
+  }
+
+  if (!guardEmailVerifiedBeforeToken(res, user)) return;
+
+  await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
+
+  const token = signRoleSession({ id: user.id, role: sessionRole });
+  logAuthLogin(req, user, sessionRole);
+  const sessionUser = {
+    ...user,
+    role: sessionRole,
+    google_sub: user.google_sub || g.sub,
+    auth_provider: user.auth_provider || 'google',
+  };
+  const payload = attachPhoneVerificationFlags(
+    await enrichUserForClient(
+      {
+        ...buildAuthUserPayload(sessionUser),
+        persona: user.persona,
+        persona_profile: user.persona_profile,
+        onboarding_completed: user.onboarding_completed,
+      },
+      sessionRole,
+    ),
+  );
+  return res.json({
+    success: true,
+    token,
+    user: payload,
+    needs_phone_verification: false,
+    needs_instructor_phone: false,
+  });
+}
+
+async function updateGoogleProfileAttributes(userId, g) {
+  await db
+    .query(
+      `UPDATE users
+       SET google_email_verified = $2,
+           google_picture_url = COALESCE($3, google_picture_url),
+           last_google_login_at = NOW()
+       WHERE id = $1`,
+      [userId, Boolean(g.email_verified), g.picture || null],
+    )
+    .catch((e) => console.error('[google] profile attrs', e.message));
+}
+
+/**
+ * Google `sub` tapılmadı, amma eyni email ilə köhnə hesab var: avtomatik birləşdirmə YOXDUR.
+ * İstifadəçiyə açıq təsdiq üçün qısa ömürlü link token qaytarılır.
+ * @returns {null | { status, body }}
+ */
+async function legacyAccountLinkOffer(req, g) {
+  const existing = await findUserByEmail(db, g.email);
+  if (!existing || existing.deleted_at) return null;
+  if (existing.google_sub && String(existing.google_sub).trim() !== '') {
+    logAuthEvent(req, { event: 'login_failed', userId: existing.id, googleSub: g.sub, email: g.email, metadata: { reason: 'email_bound_to_other_google' } });
+    return { status: 409, body: { success: false, code: 'EMAIL_BOUND_TO_OTHER_GOOGLE', message: 'Bu email artıq başqa Google hesabına bağlıdır' } };
+  }
+  if (!g.email_verified) {
+    logAuthEvent(req, { event: 'login_failed', userId: existing.id, googleSub: g.sub, email: g.email, metadata: { reason: 'google_email_not_verified' } });
+    return { status: 409, body: { success: false, code: 'GOOGLE_EMAIL_NOT_VERIFIED', message: 'Google email təsdiqlənməyib' } };
+  }
+  logAuthEvent(req, { event: 'account_link_offered', userId: existing.id, googleSub: g.sub, email: g.email });
+  return {
+    status: 200,
+    body: {
+      success: true,
+      needs_account_link: true,
+      link_token: signAccountLinkToken({
+        googleSub: g.sub,
+        email: g.email,
+        name: g.name,
+        picture: g.picture,
+        emailVerified: g.email_verified,
+        targetUserId: existing.id,
+      }),
+      account: {
+        full_name: existing.full_name || null,
+        email_masked: maskEmail(existing.email),
+        role: existing.role || null,
+        created_at: existing.created_at || null,
+      },
+    },
+  };
+}
+
+/** Köhnə hesabı Google identity-yə açıq təsdiqlə bağlayır; yeni user yaradılmır. */
+const googleLinkConfirm = async (req, res) => {
+  try {
+    const p = verifyAccountLinkToken(req.body?.link_token);
+    if (!p) {
+      return res.status(400).json({ success: false, code: 'LINK_TOKEN_INVALID', message: 'Təsdiq linkinin vaxtı bitib. Yenidən «Google ilə davam et» düyməsini basın.' });
+    }
+    const { rows } = await db.query(
+      `SELECT id, email, google_sub, deleted_at FROM users WHERE id = $1 LIMIT 1`,
+      [p.target],
+    );
+    const target = rows[0];
+    if (!target || target.deleted_at) {
+      return res.status(404).json({ success: false, message: 'Hesab tapılmadı' });
+    }
+    if (String(target.email || '').toLowerCase() !== String(p.email || '').toLowerCase()) {
+      logAuthEvent(req, { event: 'login_failed', userId: target.id, googleSub: p.sub, email: p.email, metadata: { reason: 'link_email_changed' } });
+      return res.status(409).json({ success: false, message: 'Hesabın email ünvanı dəyişib. Yenidən cəhd edin.' });
+    }
+    if (target.google_sub && String(target.google_sub).trim() !== '' && String(target.google_sub) !== String(p.sub)) {
+      return res.status(409).json({ success: false, code: 'EMAIL_BOUND_TO_OTHER_GOOGLE', message: 'Bu hesab artıq başqa Google hesabına bağlıdır' });
+    }
+    const owner = await findUserByGoogleSub(db, p.sub);
+    if (owner && String(owner.id) !== String(target.id)) {
+      return res.status(409).json({ success: false, code: 'GOOGLE_ALREADY_LINKED', message: 'Bu Google hesabı artıq başqa hesaba bağlıdır' });
+    }
+
+    await db.query(
+      `UPDATE users
+       SET google_sub = $2,
+           auth_provider = 'google',
+           google_linked_at = COALESCE(google_linked_at, NOW()),
+           google_email_verified = $3,
+           google_picture_url = COALESCE($4, google_picture_url),
+           is_verified = TRUE,
+           is_active = TRUE,
+           account_status = 'active'
+       WHERE id = $1 AND (google_sub IS NULL OR TRIM(google_sub) = '' OR google_sub = $2)`,
+      [target.id, p.sub, Boolean(p.ev), p.picture || null],
+    );
+    logAuthEvent(req, { event: 'account_linked', userId: target.id, googleSub: p.sub, email: p.email });
+
+    const user = await findUserByGoogleSub(db, p.sub);
+    if (!user) return res.status(500).json({ success: false, message: 'Hesab bağlanmadı' });
+    return finishGoogleSession(req, res, user, { sub: p.sub, email: p.email, name: p.name, picture: p.picture, email_verified: p.ev }, '');
   } catch (err) {
+    logAuthEvent(req, { event: 'login_failed', metadata: { stage: 'google_link_confirm', message: err?.message } });
     return sendGoogleAuthError(res, err);
   }
+};
+
+const googleLinkDecline = async (req, res) => {
+  const p = verifyAccountLinkToken(req.body?.link_token);
+  if (p) logAuthEvent(req, { event: 'account_link_declined', userId: p.target, googleSub: p.sub, email: p.email });
+  return res.json({
+    success: true,
+    message: 'Hesab bağlanmadı. Bu email artıq mövcud hesaba aiddir; kömək üçün dəstəklə əlaqə saxlayın.',
+  });
 };
 
 /**
@@ -2386,33 +2475,14 @@ const googleComplete = async (req, res) => {
     const { credential } = req.body;
     const g = await verifyGoogleIdTokenOrThrow(credential);
     const requestedRole = String(req.body?.role || '').trim().toLowerCase();
-    const typedPassword = normalizePasswordInput(req.body?.password);
 
     let user = await findUserByGoogleSub(db, g.sub);
 
     if (!user && g.email) {
-      user = await findUserByEmail(db, g.email);
-      if (user) {
-        if (!g.email_verified) {
-          return res.status(409).json({ success: false, message: 'Google email təsdiqlənməyib' });
-        }
-        if (
-          requestedRole &&
-          LOGIN_ROLES.has(requestedRole) &&
-          user.role &&
-          user.role !== requestedRole &&
-          !rowNeedsOnboarding(user)
-        ) {
-          const eligible = await getLoginEligibleRoles(user.id);
-          if (!eligible.includes(requestedRole)) {
-            return res.status(409).json(googleRoleMismatchResponse(user.role, requestedRole));
-          }
-        }
-        if (user.google_sub && String(user.google_sub).trim() !== '' && String(user.google_sub) !== String(g.sub)) {
-          return res.status(409).json({ success: false, message: 'Bu email artıq başqa Google hesabına bağlıdır' });
-        }
-      }
+      const offer = await legacyAccountLinkOffer(req, g);
+      if (offer) return res.status(offer.status).json(offer.body);
     }
+    const isNewIdentity = !user;
 
     // Existing identity → continue as login / link (never INSERT duplicate),
     // unless soft-deleted — reactivate returns null and we create a live row.
@@ -2435,10 +2505,8 @@ const googleComplete = async (req, res) => {
 
     if (!user) {
       const fullName = g.name || (g.email ? g.email.split('@')[0] : 'User');
-      const passwordHash =
-        typedPassword.length >= 8
-          ? await bcrypt.hash(typedPassword, 12)
-          : await bcrypt.hash(`google_oauth:${g.sub}:${Date.now()}:${Math.random()}`, 10);
+      // Google-only: parol yoxdur, sütun NOT NULL olduğu üçün təsadüfi hash saxlanılır.
+      const passwordHash = await bcrypt.hash(`google_oauth:${g.sub}:${Date.now()}:${Math.random()}`, 10);
       user = await insertOrRecoverGoogleUser({
         fullName,
         email: g.email,
@@ -2473,9 +2541,15 @@ const googleComplete = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Google hesabı yaradıla bilmədi' });
     }
 
-    if (user?.id) await attachTypedPasswordToGoogleUser(user.id, typedPassword);
-
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
+
+    await updateGoogleProfileAttributes(user.id, g);
+    logAuthEvent(req, {
+      event: isNewIdentity ? 'google_sign_up' : 'google_sign_in',
+      userId: user.id,
+      googleSub: g.sub,
+      email: g.email,
+    });
 
     if (isAdminRole(user)) {
       await respondAdminSession(req, res, user);
@@ -2509,6 +2583,7 @@ const googleComplete = async (req, res) => {
       needs_instructor_phone: false,
     });
   } catch (err) {
+    logAuthEvent(req, { event: 'login_failed', metadata: { stage: 'google_complete', message: err?.message } });
     return sendGoogleAuthError(res, err);
   }
 };
@@ -2538,6 +2613,8 @@ module.exports = {
   googleComplete,
   googleLinkSendOtp,
   googleLinkVerify,
+  googleLinkConfirm,
+  googleLinkDecline,
   sendMyPhoneVerifyOtp,
   verifyMyPhoneVerifyOtp,
 };

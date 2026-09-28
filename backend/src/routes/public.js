@@ -56,6 +56,7 @@ const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/requireFeature');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');
 const { getFeatureFlagSnapshot } = require('../services/featureFlagService');
+const { googleOnlyGate } = require('../lib/googleOnlyAuth');
 
 const marketplaceOn = requireFeature(FEATURE_FLAGS.MARKETPLACE);
 const liveRoomOn = requireFeature(FEATURE_FLAGS.LIVE_ROOM);
@@ -74,13 +75,13 @@ router.get('/feature-flags', async (_req, res) => {
 
 router.get('/join/:code', getPublicJoin);
 router.get('/exam-invite/:examId', getPublicExamInvite);
-router.post('/exam-invite/:examId/join', postPublicExamGuestJoin);
+router.post('/exam-invite/:examId/join', googleOnlyGate('exam_guest_join', { allowLegacy: false }), postPublicExamGuestJoin);
 router.get('/task-invite/:taskId', getPublicTaskInvite);
-router.post('/task-invite/:taskId/join', postPublicTaskGuestJoin);
+router.post('/task-invite/:taskId/join', googleOnlyGate('task_guest_join', { allowLegacy: false }), postPublicTaskGuestJoin);
 router.get('/library-invite/:groupId', getPublicLibraryInvite);
-router.post('/library-invite/:groupId/join', postPublicLibraryGuestJoin);
+router.post('/library-invite/:groupId/join', googleOnlyGate('library_guest_join', { allowLegacy: false }), postPublicLibraryGuestJoin);
 router.get('/material-invite/:materialId', getPublicMaterialInvite);
-router.post('/material-invite/:materialId/join', postPublicMaterialGuestJoin);
+router.post('/material-invite/:materialId/join', googleOnlyGate('material_guest_join', { allowLegacy: false }), postPublicMaterialGuestJoin);
 router.get('/material-preview/:token', getPublicMaterialPreview);
 router.get('/material-preview/:token/file', servePublicMaterialPreviewFile);
 router.get('/live-recording/:shareToken/info', getPublicRecordingInfo);
