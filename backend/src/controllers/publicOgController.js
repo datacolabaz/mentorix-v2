@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const { resolveCatalogLang, localizedField } = require('../lib/catalogI18n');
 const { getTaskForStudentRequest } = require('../services/taskAccessRequestService');
 const { getMaterialForInvite } = require('../services/guestAccessService');
+const { resolveSharePreview } = require('../services/sharePreviewService');
 
 function siteOrigin() {
   return String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.io').replace(/\/+$/, '');
@@ -182,4 +183,15 @@ async function getMaterialOg(req, res) {
   }
 }
 
-module.exports = { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg, getTaskOg, getMaterialOg };
+/** GET /api/public/share-preview?path=/exam/:id — privacy-safe preview for allowlisted share URLs. */
+async function getSharePreview(req, res) {
+  try {
+    const preview = await resolveSharePreview(req.query.path);
+    res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
+    res.json(preview);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Preview hazırlanmadı' });
+  }
+}
+
+module.exports = { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg, getTaskOg, getMaterialOg, getSharePreview };

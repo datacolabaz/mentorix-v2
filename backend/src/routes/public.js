@@ -51,7 +51,14 @@ const {
 } = require('../controllers/publicCertifiedExamsController');
 const { getPublicSitemapXml } = require('../controllers/publicSitemapController');
 const { postPublicWaitlist } = require('../controllers/waitlistController');
-const { getCertifiedCategoryOg, getExamOg, getCertifiedExamOg, getTaskOg, getMaterialOg } = require('../controllers/publicOgController');
+const {
+  getCertifiedCategoryOg,
+  getExamOg,
+  getCertifiedExamOg,
+  getTaskOg,
+  getMaterialOg,
+  getSharePreview,
+} = require('../controllers/publicOgController');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/requireFeature');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');
@@ -108,6 +115,7 @@ router.post('/live-guest/:token/chat-messages', liveRoomOn, publicGuestJoinRateL
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
 router.get('/contact', getPublicContact);
+router.get('/share-preview', getSharePreview);
 router.get('/og/certified-category/:slug', getCertifiedCategoryOg);
 router.get('/og/certified-exam/:categorySlug/:examSlug', getCertifiedExamOg);
 router.get('/og/exam/:examId', getExamOg);
