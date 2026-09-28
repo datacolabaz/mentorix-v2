@@ -216,6 +216,7 @@
     "createAccount": "Create an account",
     "loginToAccount": "Sign in to your account",
     "backHome": "← Back to home",
+    "googleOnly": {"title": "Welcome to Mentorix", "subtitle": "Manage your exams, materials and results in one place.", "cta": "Continue with Google", "legalPrefix": "By continuing you agree to the", "terms": "Terms of Use", "and": "and", "privacy": "Privacy Policy", "legalSuffix": "."},
     "adminPanel": "Admin panel",
     "phoneOrEmail": "Phone or email",
     "password": "Password",
@@ -294,6 +295,7 @@
   },
   "onboarding": {
     "title": "How will you use Mentorix?",
+    "intent": {"title": "What would you like to do on Mentorix?", "subtitle": "You can change this later. One Google account can be both a student and a teacher.", "student": {"title": "Take exams and assignments", "desc": "Continue as a student"}, "teacher": {"title": "Create exams and materials", "desc": "Continue as a teacher / trainer"}},
     "subtitle": "Choose your use case so we can prepare the right experience.",
     "forAccount": "For {{email}}",
     "continue": "Continue",

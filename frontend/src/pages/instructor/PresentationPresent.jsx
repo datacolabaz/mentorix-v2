@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
-import PhoneVerificationGate from '../../components/auth/PhoneVerificationGate'
 import { useToast } from '../../components/common/Toast'
 import { presentationFileOpenUrl } from '../../lib/presentationFileUrl'
 import usePdfDocument from '../../hooks/usePdfDocument'
@@ -84,7 +83,6 @@ export default function InstructorPresentationPresent() {
 
   return (
     <div ref={rootRef} className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
-      <PhoneVerificationGate />
       <div className="flex-1 min-h-0 px-3 sm:px-6 pt-4 pb-20">
         {pdfError ? (
           <div className="h-full flex items-center justify-center text-sm text-red-300/90">

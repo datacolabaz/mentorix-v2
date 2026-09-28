@@ -158,14 +158,15 @@ function sanitizePersonaProfile(persona, raw) {
 function requiredProfileComplete(persona, profile) {
   const p = profile && typeof profile === 'object' ? profile : {};
   switch (String(persona || '').trim()) {
+    // Google-only onboarding yalnız niyyəti soruşur; təfərrüatlar sonra profildən doldurulur.
     case PERSONAS.TEACHER:
-      return Boolean(p.subject && p.teaching_format && p.student_count);
+      return true;
     case PERSONAS.MENTOR:
       return true;
     case PERSONAS.EDUCATION_CENTER:
       return Boolean(p.center_name && p.teacher_count && p.student_count && p.exam_purpose);
     case PERSONAS.STUDENT:
-      return Boolean(p.education_level && p.subject_interest);
+      return true;
     case PERSONAS.PARENT:
       return Boolean(p.child_count);
     case PERSONAS.HR_COMPANY:

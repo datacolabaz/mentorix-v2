@@ -3,13 +3,11 @@ import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from
 import useAuthStore from './hooks/useAuth'
 import { MentorWorkspaceProvider, useIsMentorWorkspace } from './hooks/useMentorWorkspace.jsx'
 import FeatureRoute from './components/common/FeatureRoute'
+import AccountLinkHost from './components/auth/AccountLinkHost'
 import { FEATURE_FLAGS } from './lib/featureFlags'
 
 const AuthPage = lazy(() => import('./pages/auth/AuthPage'))
 const Landing = lazy(() => import('./pages/auth/Landing'))
-const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'))
-const VerifyPhone = lazy(() => import('./pages/auth/VerifyPhone'))
-const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
 const PersonaOnboarding = lazy(() => import('./pages/auth/PersonaOnboarding'))
 const GenericAppHome = lazy(() => import('./pages/app/Home'))
 import {
@@ -260,6 +258,7 @@ export default function App() {
       <ScrollToTop />
       <AnalyticsPageTracker />
       <PresenceHeartbeat />
+      <AccountLinkHost />
       <Suspense fallback={<RouteFallback />}>
       <Routes>
       <Route path="/search" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><InstructorMapSearch /></FeatureRoute>} />
@@ -296,16 +295,10 @@ export default function App() {
         element={user ? <ResumeAfterAuth /> : <AuthPage />}
       />
       <Route path="/signup" element={<Navigate to="/register" replace />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route
-        path="/verify-phone"
-        element={
-          <ProtectedRoute>
-            <VerifyPhone />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Google-only: email/telefon təsdiqi və parol bərpası yoxdur */}
+      <Route path="/verify-email" element={<Navigate to="/login" replace />} />
+      <Route path="/verify-phone" element={<Navigate to="/app" replace />} />
+      <Route path="/reset-password" element={<Navigate to="/login" replace />} />
       <Route
         path="/onboarding"
         element={

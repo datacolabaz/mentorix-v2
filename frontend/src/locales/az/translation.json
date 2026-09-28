@@ -216,6 +216,7 @@
     "createAccount": "Hesab yaradın",
     "loginToAccount": "Hesabınıza daxil olun",
     "backHome": "← Ana səhifəyə qayıt",
+    "googleOnly": {"title": "Mentorix-ə xoş gəlmisiniz", "subtitle": "İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.", "cta": "Google ilə davam et", "legalPrefix": "Davam etməklə", "terms": "İstifadə Şərtləri", "and": "və", "privacy": "Məxfilik Siyasəti", "legalSuffix": "ilə razılaşırsınız."},
     "adminPanel": "Admin panel",
     "phoneOrEmail": "Telefon və ya email",
     "password": "Şifrə",
@@ -294,6 +295,7 @@
   },
   "onboarding": {
     "title": "Mentorix-dən necə istifadə edəcəksiniz?",
+    "intent": {"title": "Mentorix-də nə etmək istəyirsiniz?", "subtitle": "Bu seçimi sonra dəyişə bilərsiniz. Eyni Google hesabı ilə həm tələbə, həm müəllim ola bilərsiniz.", "student": {"title": "İmtahan və tapşırıqlarda iştirak etmək", "desc": "Tələbə kimi davam et"}, "teacher": {"title": "İmtahan və material yaratmaq", "desc": "Müəllim / Təlimçi kimi davam et"}},
     "subtitle": "Sizə uyğun təcrübəni hazırlamaq üçün istifadə məqsədinizi seçin.",
     "forAccount": "{{email}} hesabı üçün",
     "continue": "Davam et",

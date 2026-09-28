@@ -1,38 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import useAuthStore from '../../hooks/useAuth'
-import Button from '../../components/common/Button'
-import { useToast } from '../../components/common/Toast'
-import InstructorEmailAuth from '../../components/auth/InstructorEmailAuth'
 import Brand from '../../components/common/Brand'
 import LocaleThemeBar from '../../components/LocaleThemeBar'
+import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import { setPageSeo } from '../../lib/pageSeo'
-import { postAuthNavigate, rememberReturnAfterLogin } from '../../lib/postAuth'
+import { rememberReturnAfterLogin } from '../../lib/postAuth'
 import useUiStore from '../../hooks/useUi'
 import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
 
-/** Tam səhifə giriş / qeydiyyat (/login, /register) */
+/**
+ * Giriş və qeydiyyat (/login, /register): yalnız «Google ilə davam et».
+ * Telefon, SMS kod, parol və email/parol formu yoxdur.
+ */
 export default function AuthPage() {
   const { t } = useTranslation()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const isAdmin = searchParams.get('admin') === 'true'
-  const tabParam = searchParams.get('tab')
   const nextParam = searchParams.get('next')
-  const initialTab = useMemo(
-    () => (location.pathname === '/register' || tabParam === 'signup' ? 'signup' : 'login'),
-    [location.pathname, tabParam],
-  )
-
-  const [authTab, setAuthTab] = useState(initialTab)
+  const isRegister = location.pathname === '/register' || searchParams.get('tab') === 'signup'
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
   const tone = isDark ? 'dark' : 'light'
-
-  useEffect(() => {
-    setAuthTab(initialTab)
-  }, [initialTab])
 
   useEffect(() => {
     const next = String(nextParam || '').trim()
@@ -41,63 +30,24 @@ export default function AuthPage() {
     }
   }, [nextParam])
 
-  const [adminIdentifier, setAdminIdentifier] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const { login } = useAuthStore()
-  const navigate = useNavigate()
-  const toast = useToast()
-
-  const goDashboard = (roleOrUser) => {
-    const u =
-      roleOrUser && typeof roleOrUser === 'object'
-        ? roleOrUser
-        : useAuthStore.getState().user || { role: roleOrUser }
-    postAuthNavigate(u, navigate, nextParam)
-  }
-
-  const handleEmailLogin = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const user = await login(adminIdentifier, password)
-      goDashboard(user)
-    } catch (err) {
-      toast(err.message || t('auth.loginError'), 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    const isRegister = location.pathname === '/register' || tabParam === 'signup'
     setPageSeo({
-      title: isAdmin ? 'Mentorix — admin girişi' : isRegister ? 'Mentorix — qeydiyyat' : 'Mentorix — giriş',
-      description: isAdmin
-        ? 'Mentorix admin panelinə daxil olun.'
-        : isRegister
-          ? 'Mentorix-də pulsuz hesab yaradın.'
-          : 'Mentorix hesabınıza daxil olun.',
-      canonicalPath: isAdmin ? '/login?admin=true' : isRegister ? '/register' : '/login',
-      breadcrumbs: isAdmin
-        ? [
-            { name: 'Mentorix', path: '/' },
-            { name: 'Admin girişi', path: '/login' },
-          ]
-        : [
-            { name: 'Mentorix', path: '/' },
-            { name: isRegister ? 'Qeydiyyat' : 'Giriş', path: isRegister ? '/register' : '/login' },
-          ],
+      title: isRegister ? 'Mentorix — qeydiyyat' : 'Mentorix — giriş',
+      description: 'İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.',
+      canonicalPath: isRegister ? '/register' : '/login',
+      breadcrumbs: [
+        { name: 'Mentorix', path: '/' },
+        { name: isRegister ? 'Qeydiyyat' : 'Giriş', path: isRegister ? '/register' : '/login' },
+      ],
     })
-  }, [isAdmin, location.pathname, tabParam])
+  }, [isRegister])
 
-  const authGreeting = authTab === 'signup' ? t('auth.createAccount') : t('auth.welcome')
+  const muted = isDark ? 'text-gray-400' : 'text-slate-500'
+  const linkCls = isDark ? 'text-primary hover:underline' : 'text-emerald-700 hover:underline font-medium'
 
   return (
     <div
       className={[
-        // Keep overflow off the sticky header ancestor so AuthPage top bar sticks while scrolling.
         'login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col',
         isDark ? 'theme-dark' : 'theme-light',
       ].join(' ')}
@@ -123,128 +73,48 @@ export default function AuthPage() {
         </div>
       </header>
       <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
-      <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
-        <div
-          className={[
-            'mx-login-card rounded-2xl border p-5 sm:p-6',
-            isDark ? 'border-white/20 bg-surface-2' : 'border-slate-200 bg-white shadow-sm',
-          ].join(' ')}
-        >
-          {!isAdmin ? (
-            <div className="mb-3 text-center space-y-2">
+        <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
+          <div
+            className={[
+              'mx-login-card rounded-2xl border p-6 sm:p-7',
+              isDark ? 'border-white/20 bg-surface-2' : 'border-slate-200 bg-white shadow-sm',
+            ].join(' ')}
+          >
+            <div className="text-center space-y-3">
               <div className="flex justify-center">
-                <Brand size="login" tone={tone === 'dark' ? 'dark' : 'light'} />
+                <Brand size="login" tone={tone} />
               </div>
               <div className="h-0.5 w-10 mx-auto rounded-full bg-primary" aria-hidden />
-              <h1 className={['text-sm font-semibold', isDark ? 'text-gray-200' : 'text-slate-800'].join(' ')}>
-                {authGreeting}
+              <h1 className={['text-lg font-bold', isDark ? 'text-white' : 'text-slate-900'].join(' ')}>
+                {t('auth.googleOnly.title', { defaultValue: 'Mentorix-ə xoş gəlmisiniz' })}
               </h1>
+              <p className={['text-sm leading-relaxed', muted].join(' ')}>
+                {t('auth.googleOnly.subtitle', {
+                  defaultValue: 'İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.',
+                })}
+              </p>
             </div>
-          ) : (
-            <div className="text-center mb-6 sm:mb-8">
-              <div className="flex justify-center pt-1 pb-2 bg-transparent">
-                <Brand size="login" tone={tone === 'dark' ? 'dark' : 'light'} />
-              </div>
-              <div className="h-0.5 w-10 mx-auto rounded-full bg-primary mb-3" aria-hidden />
-              <div className={['text-sm', isDark ? 'text-gray-400' : 'text-slate-500'].join(' ')}>
-                {t('auth.loginToAccount')}
-              </div>
-            </div>
-          )}
 
-          {isAdmin ? (
-            <form onSubmit={handleEmailLogin} className="space-y-4" autoComplete="on">
-              <div
-                className={[
-                  'text-center text-xs py-2 px-3 rounded-xl mb-4 border',
-                  isDark
-                    ? 'text-red-400 bg-red-500/10 border-red-500/20'
-                    : 'text-red-700 bg-red-50 border-red-200',
-                ].join(' ')}
-              >
-                {t('auth.adminPanel')}
-              </div>
-              <div>
-                <label
-                  className={[
-                    'block text-xs font-semibold uppercase tracking-wider mb-2',
-                    isDark ? 'text-gray-400' : 'text-slate-500',
-                  ].join(' ')}
-                  htmlFor="admin-username"
-                >
-                  {t('auth.phoneOrEmail')}
-                </label>
-                <input
-                  id="admin-username"
-                  name="username"
-                  className={[
-                    'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
-                    isDark
-                      ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
-                      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
-                  ].join(' ')}
-                  type="text"
-                  inputMode="email"
-                  autoComplete="username"
-                  placeholder={t('auth.phoneOrEmail')}
-                  value={adminIdentifier}
-                  onChange={(e) => setAdminIdentifier(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  className={[
-                    'block text-xs font-semibold uppercase tracking-wider mb-2',
-                    isDark ? 'text-gray-400' : 'text-slate-500',
-                  ].join(' ')}
-                  htmlFor="admin-password"
-                >
-                  {t('auth.password')}
-                </label>
-                <input
-                  id="admin-password"
-                  name="password"
-                  className={[
-                    'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
-                    isDark
-                      ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
-                      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
-                  ].join(' ')}
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                {t('auth.login')}
-              </Button>
-            </form>
-          ) : (
-            <InstructorEmailAuth
-              key={initialTab}
-              initialTab={initialTab}
-              onSuccess={(u) => goDashboard(u)}
-              onTabChange={setAuthTab}
+            <PublicGoogleSignIn
+              className="mt-6"
+              label={t('auth.googleOnly.cta', { defaultValue: 'Google ilə davam et' })}
+              context={isRegister ? 'signup' : 'signin'}
             />
-          )}
 
-          {!isAdmin ? (
-            <p className={['mt-5 pt-4 border-t text-center text-sm', isDark ? 'border-white/10 text-gray-400' : 'border-slate-100 text-slate-500'].join(' ')}>
-              <Link
-                to="/partner"
-                className={isDark ? 'text-primary hover:underline' : 'text-emerald-700 hover:underline font-medium'}
-              >
-                {t('partner.public.nav', { defaultValue: 'Partner proqramı' })}
-              </Link>
+            <p className={['mt-5 text-center text-xs leading-relaxed', muted].join(' ')}>
+              {t('auth.googleOnly.legalPrefix', { defaultValue: 'Davam etməklə' })}{' '}
+              <Link to="/terms" className={linkCls}>
+                {t('auth.googleOnly.terms', { defaultValue: 'İstifadə Şərtləri' })}
+              </Link>{' '}
+              {t('auth.googleOnly.and', { defaultValue: 'və' })}{' '}
+              <Link to="/privacy" className={linkCls}>
+                {t('auth.googleOnly.privacy', { defaultValue: 'Məxfilik Siyasəti' })}
+              </Link>{' '}
+              {t('auth.googleOnly.legalSuffix', { defaultValue: 'ilə razılaşırsınız.' })}
             </p>
-          ) : null}
+          </div>
         </div>
-      </div>
       </main>
     </div>
   )
 }
-

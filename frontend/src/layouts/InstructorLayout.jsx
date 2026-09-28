@@ -19,7 +19,6 @@ import { isSmsMonthlyLimitReached, isStorageLimitReached } from '../lib/subscrip
 import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import { useToast } from '../components/common/Toast'
-import PhoneVerificationGate from '../components/auth/PhoneVerificationGate'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
@@ -350,7 +349,6 @@ export default function InstructorLayout() {
 
   return (
     <>
-      <PhoneVerificationGate />
       <div
         className={`theme-${theme} flex flex-col min-h-screen lg:h-screen w-full min-w-0 bg-token-surfaceMain text-token-textMain overflow-x-hidden lg:overflow-hidden`}
       >
