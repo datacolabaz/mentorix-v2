@@ -43,7 +43,26 @@ npm run dev
 - `INSTRUCTOR_COMPLETE_PROFILE_FROM` — optional override for incomplete-instructor reminders (falls back to `VERIFY_EMAIL_FROM` / `EMAIL_FROM`)
 - `SMS_LOGIN` — sendsms.az login
 - `SMS_PASSWORD` — sendsms.az password
+- `GOOGLE_CLIENT_ID` — Google OAuth client ID. Giriş və qeydiyyat yalnız Google ilə işləyir
+- `LEGACY_PASSWORD_LOGIN_ENABLED` — yalnız keçid dövrü üçün `true`; köhnə parol/OTP girişini müvəqqəti açır (default: bağlı)
 
 ### Frontend
 - `VITE_API_URL` — Backend API URL
+- `VITE_GOOGLE_CLIENT_ID` — backend-dəki `GOOGLE_CLIENT_ID` ilə eyni
+
+## Platforma funksiyaları (feature flag)
+
+Admin panelində **Platforma funksiyaları** (`/admin/feature-flags`) bölməsindən idarə olunur, hər dəyişiklik audit log-a yazılır.
+Söndürülmüş modul menyudan, CTA-lardan və API-dən gizlədilir; məlumat silinmir.
+
+| Açar | Default |
+|---|---|
+| `feature.university_search.enabled` | söndürülüb |
+| `feature.marketplace.enabled` | söndürülüb |
+| `feature.mentor_services.enabled` | söndürülüb |
+| `feature.live_room.enabled` | söndürülüb (Zoom/Google Meet dərsləri açıqdır) |
+| `feature.exam_result_modes.enabled` | aktiv |
+| `feature.proctoring.enabled` | söndürülüb (hazır deyil) |
+
+Billing-in workspace modelinə köçürülməsi üçün audit və yalnız oxuyan dry-run skriptləri: `docs/billing-workspace-migration.md`.
 <!-- deploy: task-file-ui -->
