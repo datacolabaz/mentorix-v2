@@ -1,13 +1,13 @@
 const db = require('../utils/db');
 const { sendAssignmentNewEmail } = require('./studentNotificationEmailService');
 
-function bakuTodayYmd() {
+function bakuTodayYmd(at = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Baku',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date());
+  }).format(at);
 }
 
 function parseYmd(v) {
@@ -23,6 +23,18 @@ function isPastDueYmd(dueYmd) {
   return due < bakuTodayYmd();
 }
 
+/**
+ * Təslimin gecikməsi: ilk təslim vaxtına görə (düzəlişə qaytarılıb yenidən göndərilən iş gecikmiş sayılmır,
+ * əgər ilk təslim vaxtında olubsa). İlk təslim yoxdursa — indiki vaxta görə.
+ */
+function isSubmissionLate(dueYmd, firstSubmittedAt = null) {
+  const due = parseYmd(dueYmd);
+  if (!due) return false;
+  const first = firstSubmittedAt ? new Date(firstSubmittedAt) : null;
+  const at = first && !Number.isNaN(first.getTime()) ? first : new Date();
+  return due < bakuTodayYmd(at);
+}
+
 function isDueWithinHours(dueYmd, hours) {
   const due = parseYmd(dueYmd);
   if (!due) return false;
@@ -35,7 +47,7 @@ function isDueWithinHours(dueYmd, hours) {
 function normalizeStatus(row) {
   const st = String(row?.status || 'pending').toLowerCase();
   if (st === 'reviewed' || st === 'late_rejected') return st;
-  if (st === 'late') return st;
+  if (st === 'late' || st === 'returned') return st;
   if (st === 'submitted' || row?.submitted_at) {
     if (row?.reviewed_at) return 'reviewed';
     return 'submitted';
@@ -117,6 +129,7 @@ module.exports = {
   bakuTodayYmd,
   parseYmd,
   isPastDueYmd,
+  isSubmissionLate,
   isDueWithinHours,
   normalizeStatus,
   notifyStudent,

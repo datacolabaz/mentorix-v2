@@ -37,10 +37,75 @@ test('text lesson needs longer reading time than a PDF', () => {
   assert.equal(interpretMaterialEvent('text', { event_type: 'material_viewed', active_seconds: 25 }).viewed, true);
 });
 
-test('download counts as viewed for documents', () => {
+test('client download event is ignored: a download is not a view (counted server-side only)', () => {
   const r = interpretMaterialEvent('document', { event_type: 'material_downloaded' });
-  assert.equal(r.viewed, true);
-  assert.equal(r.downloaded, true);
+  assert.equal(r.ignored, true);
+  assert.equal(r.viewed, false);
+  assert.equal(r.completed, false);
+  assert.equal(r.counts_as_view, false);
+});
+
+test('a qualifying document view and a video start count as one view each', () => {
+  assert.equal(interpretMaterialEvent('pdf', { event_type: 'material_viewed', active_seconds: 12 }).counts_as_view, true);
+  assert.equal(interpretMaterialEvent('pdf', { event_type: 'material_viewed', active_seconds: 1 }).counts_as_view, false);
+  assert.equal(interpretMaterialEvent('pdf', { event_type: 'material_opened' }).counts_as_view, false);
+  assert.equal(interpretMaterialEvent('video', { event_type: 'video_started' }).counts_as_view, true);
+  assert.equal(interpretMaterialEvent('video', { event_type: 'video_progressed', progress_pct: 50 }).counts_as_view, false);
+});
+
+test('material: unique viewers vs total views, unique downloaders vs total downloads', () => {
+  const students = [
+    { student_id: 'a', ...materialStudentStatus({ first_viewed_at: NOW, view_count: 3, download_count: 2, first_downloaded_at: NOW }) },
+    { student_id: 'b', ...materialStudentStatus({ first_viewed_at: NOW, view_count: 1 }) },
+    { student_id: 'c', ...materialStudentStatus({ download_count: 4, first_downloaded_at: NOW }) },
+    { student_id: 'd', ...materialStudentStatus(null) },
+  ];
+  const s = summarizeMaterial(students);
+  assert.equal(s.viewed, 2, 'unique viewers');
+  assert.equal(s.total_views, 4, 'total views');
+  assert.equal(s.unique_downloaders, 2);
+  assert.equal(s.total_downloads, 6);
+  assert.equal(s.not_viewed, 2);
+  const onlyDownloaded = students.find((x) => x.student_id === 'c');
+  assert.equal(onlyDownloaded.viewed, false, 'download does not make the student a viewer');
+  assert.equal(onlyDownloaded.progress_status, 'downloaded');
+  assert.equal(MATERIAL_FILTERS.downloaded(onlyDownloaded), true);
+  assert.equal(MATERIAL_FILTERS.not_downloaded(students[1]), true);
+});
+
+test('material and assignment dashboard aggregates equal counts over detail rows', () => {
+  const mats = [
+    materialStudentStatus({ first_viewed_at: NOW, completed_at: NOW, view_count: 2 }),
+    materialStudentStatus({ first_opened_at: NOW, download_count: 1 }),
+    materialStudentStatus({ download_count: 3 }),
+    materialStudentStatus(null, { dueAt: '2026-09-01T00:00:00Z', now: NOW }),
+  ];
+  const m = summarizeMaterial(mats);
+  assert.equal(m.viewed, mats.filter(MATERIAL_FILTERS.viewed).length);
+  assert.equal(m.not_viewed, mats.filter(MATERIAL_FILTERS.not_viewed).length);
+  assert.equal(m.completed, mats.filter(MATERIAL_FILTERS.completed).length);
+  assert.equal(m.unique_downloaders, mats.filter(MATERIAL_FILTERS.downloaded).length);
+  assert.equal(m.total_downloads, mats.reduce((a, s) => a + s.download_count, 0));
+  assert.equal(m.total_views, mats.reduce((a, s) => a + s.view_count, 0));
+
+  const asg = [
+    assignmentStudentStatus({ status: 'reviewed', submitted_at: NOW, reviewed_at: NOW }, null, { now: NOW }),
+    assignmentStudentStatus({ status: 'submitted', submitted_at: NOW }, null, { now: NOW }),
+    assignmentStudentStatus({ status: 'returned', returned_at: NOW, first_submitted_at: NOW }, null, { now: NOW }),
+    assignmentStudentStatus({ status: 'pending' }, null, { dueDate: '2026-09-01', now: NOW }),
+    assignmentStudentStatus({ status: 'pending' }, null, { now: NOW }),
+  ];
+  const a = summarizeAssignment(asg);
+  for (const f of ['submitted', 'not_submitted', 'graded', 'waiting_grading', 'overdue', 'not_opened', 'returned', 'late']) {
+    const key = f === 'late' ? 'late_submitted' : f;
+    assert.equal(a[key], asg.filter(ASSIGNMENT_FILTERS[f]).length, f);
+  }
+  assert.equal(a.assigned, asg.length);
+});
+
+test('legacy viewed row without view_count still counts as one view', () => {
+  const st = materialStudentStatus({ first_viewed_at: NOW });
+  assert.equal(st.view_count, 1);
 });
 
 test('video: started ≠ completed; completed needs 80%', () => {
@@ -151,6 +216,43 @@ test('assignment summary counts', () => {
     { assigned: s.assigned, submitted: s.submitted, graded: s.graded, waiting: s.waiting_grading, not_submitted: s.not_submitted, overdue: s.overdue, not_opened: s.not_opened, pct: s.completion_pct },
     { assigned: 4, submitted: 2, graded: 1, waiting: 1, not_submitted: 2, overdue: 1, not_opened: 1, pct: 50 },
   );
+});
+
+test('assignment returned for revision: not graded, not submitted, not overdue; filters work', () => {
+  const late = new Date('2026-09-30T12:00:00Z');
+  const returned = assignmentStudentStatus(
+    { status: 'returned', returned_at: NOW, first_submitted_at: '2026-09-27T10:00:00Z', submission_count: 1 },
+    null,
+    { dueDate: '2026-09-28', now: late },
+  );
+  assert.equal(returned.status, 'returned');
+  assert.equal(returned.progress_status, 'returned_for_revision');
+  assert.equal(returned.graded, false);
+  assert.equal(returned.submitted, false);
+  assert.equal(returned.overdue, false);
+  assert.equal(returned.is_late, false, 'first submission was on time');
+  assert.equal(ASSIGNMENT_FILTERS.returned(returned), true);
+  const s = summarizeAssignment([returned]);
+  assert.equal(s.returned, 1);
+  assert.equal(s.submitted, 0);
+});
+
+test('assignment late submission keeps the late flag on resubmission', () => {
+  const late = new Date('2026-09-30T12:00:00Z');
+  const resub = assignmentStudentStatus(
+    { status: 'submitted', submitted_at: late, first_submitted_at: '2026-09-29T09:00:00Z', submission_count: 2 },
+    null,
+    { dueDate: '2026-09-28', now: late },
+  );
+  assert.equal(resub.progress_status, 'late_submitted');
+  assert.equal(resub.submission_count, 2);
+  assert.equal(ASSIGNMENT_FILTERS.late(resub), true);
+  const onTime = assignmentStudentStatus(
+    { status: 'submitted', submitted_at: late, first_submitted_at: '2026-09-27T09:00:00Z', submission_count: 2 },
+    null,
+    { dueDate: '2026-09-28', now: late },
+  );
+  assert.equal(onTime.progress_status, 'submitted', 'on-time first submission, resubmitted after return');
 });
 
 test('filters and reminder eligibility', () => {

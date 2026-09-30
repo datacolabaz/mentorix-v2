@@ -57,18 +57,37 @@ function clampSeconds(v) {
 
 /**
  * Müştəridən gələn hadisəni server qaydasına görə şərh edir.
- * @returns {null | { event_type, opened, viewed, completed, downloaded, progress_pct, active_seconds }}
+ * Yükləmə müştəridən sayılmır: fayl yükləməsini yalnız server (serveMaterialFile) qeydə alır
+ * və yükləmə «baxıb/tamamlayıb» demək deyil. Köhnə müştərilərin material_downloaded hadisəsi ignored qaytarır.
+ * counts_as_view — ümumi baxış sayına (view_count) +1 yazan mənalı baxış.
+ * @returns {null | { event_type, opened, viewed, completed, downloaded, counts_as_view, ignored?, progress_pct, active_seconds }}
  */
 function interpretMaterialEvent(kind, { event_type, active_seconds, progress_pct } = {}) {
   if (!MATERIAL_EVENTS.includes(event_type)) return null;
   const secs = clampSeconds(active_seconds);
   const pct = clampPct(progress_pct);
-  const base = { event_type, opened: true, viewed: false, completed: false, downloaded: false, progress_pct: pct, active_seconds: secs };
+  const base = {
+    event_type,
+    opened: true,
+    viewed: false,
+    completed: false,
+    downloaded: false,
+    counts_as_view: false,
+    progress_pct: pct,
+    active_seconds: secs,
+  };
+
+  if (kind === 'link') {
+    if (event_type.startsWith('video_')) return null;
+    const isOpen = event_type === 'material_downloaded' ? 'material_opened' : event_type;
+    return { ...base, event_type: isOpen, viewed: true, completed: true, counts_as_view: true };
+  }
+
+  if (event_type === 'material_downloaded') return { ...base, opened: false, ignored: true };
 
   if (kind === 'video') {
-    if (event_type === 'material_downloaded') return { ...base, downloaded: true, viewed: true };
     if (event_type === 'material_opened' || event_type === 'material_viewed') return { ...base, event_type: 'material_opened' };
-    if (event_type === 'video_started') return { ...base, viewed: true };
+    if (event_type === 'video_started') return { ...base, viewed: true, counts_as_view: true };
     const reached = pct != null && pct >= VIDEO_COMPLETE_PCT;
     if (event_type === 'video_completed' || event_type === 'video_progressed') {
       return reached
@@ -80,15 +99,9 @@ function interpretMaterialEvent(kind, { event_type, active_seconds, progress_pct
 
   if (event_type.startsWith('video_')) return null;
 
-  if (kind === 'link') {
-    return { ...base, event_type: event_type === 'material_downloaded' ? 'material_opened' : event_type, viewed: true, completed: true };
-  }
-  if (event_type === 'material_downloaded') {
-    return { ...base, downloaded: true, viewed: true, completed: true };
-  }
   if (event_type === 'material_viewed') {
     const min = MIN_VIEW_SECONDS[kind] ?? MIN_VIEW_SECONDS.file;
-    if (secs >= min) return { ...base, viewed: true, completed: true };
+    if (secs >= min) return { ...base, viewed: true, completed: true, counts_as_view: true };
     return { ...base, event_type: 'material_opened' };
   }
   return base;
@@ -112,17 +125,30 @@ function assignmentDueEnd(dueDate) {
 /**
  * Material üzrə tələbə statusu.
  * completed | in_progress (video başlanıb, bitməyib) | opened | not_opened; overdue = son tarix keçib və baxılmayıb.
+ * progress_status spesifikasiya adlarıdır: completed | in_progress | viewed | downloaded | not_viewed.
+ * Sənəd üçün mənalı baxış elə «tamamlayıb» sayılır (212 qaydası), ona görə viewed ayrıca yalnız hesabatda görünür.
  */
 function materialStudentStatus(row, { dueAt = null, now = new Date() } = {}) {
   const completed = Boolean(row?.completed_at);
   const viewed = Boolean(row?.first_viewed_at) || completed;
+  const downloadCount = Math.max(0, Number(row?.download_count) || 0);
+  const downloaded = downloadCount > 0 || Boolean(row?.first_downloaded_at);
   const opened = Boolean(row?.first_opened_at) || viewed;
   const status = completed ? 'completed' : viewed ? 'in_progress' : opened ? 'opened' : 'not_opened';
+  const progressStatus = completed ? 'completed' : viewed ? 'in_progress' : downloaded ? 'downloaded' : 'not_viewed';
+  const viewCount = Math.max(Number(row?.view_count) || 0, viewed ? 1 : 0);
   return {
     status,
+    progress_status: progressStatus,
     viewed,
     completed,
     opened,
+    downloaded,
+    view_count: viewCount,
+    download_count: downloadCount,
+    last_viewed_at: row?.last_viewed_at || (viewed ? row?.first_viewed_at || null : null),
+    first_downloaded_at: row?.first_downloaded_at || null,
+    last_downloaded_at: row?.last_downloaded_at || null,
     overdue: !viewed && isPast(dueAt, now),
     last_activity_at: row?.last_activity_at || null,
   };
@@ -130,33 +156,56 @@ function materialStudentStatus(row, { dueAt = null, now = new Date() } = {}) {
 
 /**
  * Tapşırıq üzrə tələbə statusu (student_assignments + assignment_status).
- * graded | submitted (qiymət gözləyir) | overdue | started | opened | not_opened
+ * graded | submitted (qiymət gözləyir) | returned (yenidən işləməyə qaytarılıb) | overdue | started | opened | not_opened
+ * progress_status spesifikasiya adlarıdır (activityStatusRules.ASSIGNMENT_PROGRESS_STATUSES).
+ * Qaytarılmış iş son tarixdən sonra da «vaxtı keçib» sayılmır: onu müəllim özü qaytarıb.
  */
 function assignmentStudentStatus(sa, st, { dueDate = null, now = new Date() } = {}) {
   const saStatus = String(sa?.status || '').toLowerCase();
-  const graded = saStatus === 'reviewed' || Boolean(sa?.reviewed_at && sa?.submitted_at);
-  const submitted = !graded && Boolean(sa?.submitted_at) && saStatus !== 'late_rejected';
+  const returned = saStatus === 'returned';
+  const graded = !returned && (saStatus === 'reviewed' || Boolean(sa?.reviewed_at && sa?.submitted_at));
+  const submitted = !returned && !graded && Boolean(sa?.submitted_at) && saStatus !== 'late_rejected';
   const done = graded || submitted;
   const dueEnd = assignmentDueEnd(dueDate);
-  const overdue = !done && isPast(dueEnd, now);
+  const overdue = !done && !returned && isPast(dueEnd, now);
   const started = Boolean(st?.started_at);
   const opened = started || Boolean(st?.first_opened_at) || Boolean(sa?.seen_at);
+  const firstSubmitted = sa?.first_submitted_at || sa?.submitted_at || null;
+  const isLate =
+    (done || returned) &&
+    (saStatus === 'late' || Boolean(firstSubmitted && dueEnd && new Date(firstSubmitted) > dueEnd));
   let status = 'not_opened';
   if (graded) status = 'graded';
   else if (submitted) status = 'submitted';
+  else if (returned) status = 'returned';
   else if (overdue) status = 'overdue';
   else if (started) status = 'started';
   else if (opened) status = 'opened';
-  const times = [st?.last_activity_at, sa?.reviewed_at, sa?.submitted_at, sa?.seen_at].filter(Boolean).map((t) => new Date(t));
+  const progressStatus = {
+    graded: 'graded',
+    submitted: isLate ? 'late_submitted' : 'submitted',
+    returned: 'returned_for_revision',
+    overdue: 'overdue',
+    started: 'in_progress',
+    opened: 'viewed',
+    not_opened: 'not_opened',
+  }[status];
+  const times = [st?.last_activity_at, sa?.reviewed_at, sa?.submitted_at, sa?.returned_at, sa?.seen_at]
+    .filter(Boolean)
+    .map((t) => new Date(t));
   const last = times.length ? new Date(Math.max(...times.map((d) => d.getTime()))) : null;
   return {
     status,
+    progress_status: progressStatus,
     graded,
     submitted: done,
     waiting_grading: submitted,
+    returned,
+    is_late: isLate,
     overdue,
-    opened: opened || done,
+    opened: opened || done || returned,
     started,
+    submission_count: Math.max(Number(sa?.submission_count) || 0, done ? 1 : 0),
     score: sa?.score ?? null,
     last_activity_at: last ? last.toISOString() : null,
   };
@@ -170,6 +219,14 @@ function byRecent(a, b) {
   return new Date(b.last_activity_at || 0) - new Date(a.last_activity_at || 0);
 }
 
+function latestIso(values) {
+  return values.filter(Boolean).map((v) => new Date(v).toISOString()).sort().pop() || null;
+}
+
+/**
+ * Unikal baxan = viewed olan sətirlər (tələbə başına bir sətir, təkrar açılış artırmır).
+ * Ümumi baxış = view_count cəmi. Unikal yükləyən = download_count > 0. Ümumi yükləmə = download_count cəmi.
+ */
 function summarizeMaterial(students) {
   const list = Array.isArray(students) ? students : [];
   const viewedList = list.filter((s) => s.viewed).sort(byRecent);
@@ -178,11 +235,17 @@ function summarizeMaterial(students) {
   return {
     assigned: list.length,
     viewed: viewedList.length,
+    not_viewed: list.length - viewedList.length,
     completed,
     opened_not_viewed: list.filter((s) => s.opened && !s.viewed).length,
     not_opened: list.filter((s) => !s.opened).length,
     overdue: list.filter((s) => s.overdue).length,
     completion_pct: pct(completed, list.length),
+    total_views: list.reduce((sum, s) => sum + (Number(s.view_count) || 0), 0),
+    unique_downloaders: list.filter((s) => s.downloaded).length,
+    total_downloads: list.reduce((sum, s) => sum + (Number(s.download_count) || 0), 0),
+    last_viewed_at: latestIso(list.map((s) => s.last_viewed_at)),
+    last_downloaded_at: latestIso(list.map((s) => s.last_downloaded_at)),
     recent_viewers: viewedList.slice(0, 4).map((s) => ({ student_id: s.student_id, full_name: s.full_name })),
     more_viewers: Math.max(0, viewedList.length - 4),
     last_activity_at: lastActivity,
@@ -196,9 +259,14 @@ function summarizeAssignment(students) {
   const lastActivity = list.map((s) => s.last_activity_at).filter(Boolean).sort().pop() || null;
   return {
     assigned: list.length,
+    opened: list.filter((s) => s.opened).length,
+    started: list.filter((s) => s.started || s.submitted).length,
     submitted,
+    late_submitted: list.filter((s) => s.submitted && s.is_late).length,
     graded: count('graded'),
     waiting_grading: count('submitted'),
+    pending_review: count('submitted'),
+    returned: count('returned'),
     not_submitted: list.length - submitted,
     overdue: count('overdue'),
     not_opened: count('not_opened'),
@@ -212,6 +280,8 @@ const MATERIAL_FILTERS = Object.freeze({
   not_viewed: (s) => !s.viewed,
   completed: (s) => s.completed,
   overdue: (s) => s.overdue,
+  downloaded: (s) => s.downloaded,
+  not_downloaded: (s) => !s.downloaded,
 });
 const ASSIGNMENT_FILTERS = Object.freeze({
   submitted: (s) => s.submitted,
@@ -220,6 +290,8 @@ const ASSIGNMENT_FILTERS = Object.freeze({
   waiting_grading: (s) => s.waiting_grading,
   overdue: (s) => s.overdue,
   not_opened: (s) => s.status === 'not_opened',
+  returned: (s) => s.returned,
+  late: (s) => s.is_late,
 });
 
 /** Xatırlatma kimə gedə bilər: material — baxmayanlar; tapşırıq — təqdim etməyənlər. */

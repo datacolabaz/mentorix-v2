@@ -11,6 +11,8 @@ const {
   reminderEligible,
   assignmentDueEnd,
 } = require('./engagementRules');
+const { logActivityEvent } = require('./activityProgressService');
+const { examStudentState, summarizeExam, EXAM_FILTERS, EXAM_INACTIVE_AFTER_MINUTES } = require('./activityStatusRules');
 
 /** Eyni tələbəyə eyni material/tapşırıq üçün bu müddətdə ikinci xatırlatma getmir. */
 const REMINDER_COOLDOWN_HOURS = 6;
@@ -70,7 +72,8 @@ const MATERIAL_ROSTER_SQL = `
   )
   SELECT r.material_id, r.student_id, u.full_name, ig.name AS group_name,
          ma.first_opened_at, ma.first_viewed_at, ma.completed_at, ma.last_activity_at,
-         ma.max_progress_pct, ma.open_count, ma.download_count, ma.total_active_seconds
+         ma.max_progress_pct, ma.open_count, ma.download_count, ma.total_active_seconds,
+         ma.last_viewed_at, ma.view_count, ma.first_downloaded_at, ma.last_downloaded_at
   FROM roster r
   JOIN users u ON u.id = r.student_id AND COALESCE(u.is_active, TRUE) = TRUE AND u.deleted_at IS NULL
   LEFT JOIN instructor_groups ig ON ig.id = r.group_id
@@ -80,6 +83,7 @@ const MATERIAL_ROSTER_SQL = `
 async function loadMaterials(instructorId, materialIds = null) {
   const { rows } = await db.query(
     `SELECT cm.id, cm.title, cm.file_type, cm.file_url, cm.due_at, cm.created_at,
+            cm.instructor_id AS uploader_id, up.full_name AS uploader_name,
             COALESCE(
               (SELECT array_agg(DISTINCT ig.name) FROM course_material_groups cmg
                  JOIN instructor_groups ig ON ig.id = cmg.group_id WHERE cmg.material_id = cm.id),
@@ -87,6 +91,7 @@ async function loadMaterials(instructorId, materialIds = null) {
             ) AS group_names
      FROM course_materials cm
      LEFT JOIN instructor_groups ig0 ON ig0.id = cm.group_id
+     LEFT JOIN users up ON up.id = cm.instructor_id
      WHERE cm.instructor_id = $1 AND ($2::uuid[] IS NULL OR cm.id = ANY($2::uuid[]))
      ORDER BY cm.created_at DESC`,
     [instructorId, materialIds],
@@ -117,6 +122,8 @@ function materialCard(material, students) {
     group_names: material.group_names || [],
     due_at: material.due_at || null,
     created_at: material.created_at,
+    /** Faylı əlavə edən (müəllim): onun baxış/yükləməsi statistikaya düşmür. */
+    uploaded_by: material.uploader_id ? { id: material.uploader_id, full_name: material.uploader_name || null } : null,
     ...summarizeMaterial(students),
   };
 }
@@ -155,7 +162,8 @@ async function assignmentStudents(assignmentIds, assignmentsById, now) {
   if (!assignmentIds.length) return [];
   const { rows } = await db.query(
     `SELECT sa.id AS student_assignment_id, sa.assignment_id, sa.student_id, sa.status, sa.submitted_at,
-            sa.reviewed_at, sa.seen_at, sa.score, u.full_name,
+            sa.reviewed_at, sa.seen_at, sa.score, sa.returned_at, sa.first_submitted_at, sa.submission_count,
+            u.full_name,
             st.first_opened_at, st.started_at, st.last_activity_at
      FROM student_assignments sa
      JOIN users u ON u.id = sa.student_id AND COALESCE(u.is_active, TRUE) = TRUE AND u.deleted_at IS NULL
@@ -170,6 +178,8 @@ async function assignmentStudents(assignmentIds, assignmentsById, now) {
     full_name: r.full_name,
     submitted_at: r.submitted_at || null,
     reviewed_at: r.reviewed_at || null,
+    returned_at: r.returned_at || null,
+    first_submitted_at: r.first_submitted_at || null,
     ...assignmentStudentStatus(r, r, { dueDate: assignmentsById.get(String(r.assignment_id))?.due_date, now }),
   }));
 }
@@ -197,7 +207,7 @@ async function getAssignmentSummaries(instructorId, { assignmentIds = null, now 
   );
 }
 
-const ASSIGNMENT_STATUS_ORDER = ['graded', 'submitted', 'started', 'opened', 'overdue', 'not_opened'];
+const ASSIGNMENT_STATUS_ORDER = ['graded', 'submitted', 'returned', 'started', 'opened', 'overdue', 'not_opened'];
 
 async function getAssignmentDetail(instructorId, assignmentId, { filter = null, now = new Date() } = {}) {
   const [assignment] = await loadAssignments(instructorId, [assignmentId]);
@@ -210,6 +220,119 @@ async function getAssignmentDetail(instructorId, assignmentId, { filter = null, 
   );
   const fn = filter ? ASSIGNMENT_FILTERS[filter] : null;
   return { assignment: assignmentCard(assignment, students, now), students: fn ? students.filter(fn) : students };
+}
+
+/**
+ * İmtahan → tələbələr: təyin olunanlar + (ləğv edilməmiş) cəhdi olanlar.
+ * Aqreqat sətir (exam_student_progress) + son cəhd; aqreqat hələ yoxdursa cəhddən ehtiyat hesablanır.
+ * $1 = instructor_id, $2 = exam id-ləri (NULL = hamısı)
+ */
+const EXAM_ROSTER_SQL = `
+  WITH ex AS (
+    SELECT e.id FROM exams e
+    WHERE e.instructor_id = $1 AND COALESCE(e.is_deleted, FALSE) = FALSE
+      AND ($2::uuid[] IS NULL OR e.id = ANY($2::uuid[]))
+  ),
+  roster AS (
+    SELECT ea.exam_id, ea.student_id FROM exam_assignments ea JOIN ex ON ex.id = ea.exam_id
+    UNION
+    SELECT er.exam_id, er.student_id FROM exam_results er JOIN ex ON ex.id = er.exam_id
+    WHERE COALESCE(er.status, '') <> 'voided'
+  )
+  SELECT r.exam_id, r.student_id, u.full_name,
+         p.status, p.viewed_at, p.started_at, p.completed_at, p.expired_at, p.result_released_at,
+         p.latest_activity_at, p.answered_question_count, p.total_question_count, p.attempt_count,
+         lr.id AS result_id, lr.status AS result_status, lr.started_at AS result_started_at,
+         lr.submitted_at AS result_submitted_at, lr.score
+  FROM roster r
+  JOIN users u ON u.id = r.student_id AND COALESCE(u.is_active, TRUE) = TRUE AND u.deleted_at IS NULL
+  LEFT JOIN exam_student_progress p ON p.exam_id = r.exam_id AND p.student_id = r.student_id
+  LEFT JOIN LATERAL (
+    SELECT er.id, er.status, er.started_at, er.submitted_at, er.score
+    FROM exam_results er
+    WHERE er.exam_id = r.exam_id AND er.student_id = r.student_id AND COALESCE(er.status, '') <> 'voided'
+    ORDER BY (er.submitted_at IS NOT NULL) DESC, er.submitted_at DESC NULLS LAST, er.started_at DESC NULLS LAST
+    LIMIT 1
+  ) lr ON TRUE
+`;
+
+async function loadExams(instructorId, examIds = null) {
+  const { rows } = await db.query(
+    `SELECT e.id, e.title, e.subject, e.duration_minutes, e.available_from, e.available_until, e.start_time,
+            e.result_visibility_mode, e.created_at,
+            (SELECT COUNT(*)::int FROM exam_questions q WHERE q.exam_id = e.id) AS question_count,
+            (SELECT COALESCE(SUM(q.points::numeric), 0) FROM exam_questions q WHERE q.exam_id = e.id) AS max_points
+     FROM exams e
+     WHERE e.instructor_id = $1 AND COALESCE(e.is_deleted, FALSE) = FALSE
+       AND ($2::uuid[] IS NULL OR e.id = ANY($2::uuid[]))
+     ORDER BY COALESCE(e.available_from, e.start_time, e.created_at) DESC NULLS LAST`,
+    [instructorId, examIds],
+  );
+  return rows;
+}
+
+function examStudentRows(exam, rosterRows, now) {
+  return rosterRows
+    .filter((r) => String(r.exam_id) === String(exam.id))
+    .map((r) => ({
+      student_id: r.student_id,
+      full_name: r.full_name,
+      result_id: r.result_id || null,
+      submitted_at: r.result_submitted_at || null,
+      ...examStudentState(r, { now, inactiveAfterMinutes: EXAM_INACTIVE_AFTER_MINUTES }),
+    }));
+}
+
+function examCard(exam, students) {
+  const summary = summarizeExam(students);
+  const maxPoints = Number(exam.max_points) || 0;
+  return {
+    id: exam.id,
+    title: exam.title,
+    subject: exam.subject || null,
+    duration_minutes: exam.duration_minutes ?? null,
+    available_from: exam.available_from || exam.start_time || null,
+    available_until: exam.available_until || null,
+    question_count: exam.question_count || 0,
+    max_points: maxPoints,
+    created_at: exam.created_at,
+    ...summary,
+    average_pct:
+      summary.average_score != null && maxPoints > 0
+        ? Math.round(Math.min(100, Math.max(0, (summary.average_score / maxPoints) * 100)))
+        : null,
+  };
+}
+
+async function getExamSummaries(instructorId, { examIds = null, now = new Date() } = {}) {
+  const exams = await loadExams(instructorId, examIds);
+  if (!exams.length) return [];
+  const { rows } = await db.query(EXAM_ROSTER_SQL, [instructorId, exams.map((e) => e.id)]);
+  return exams.map((e) => examCard(e, examStudentRows(e, rows, now)));
+}
+
+const EXAM_STATUS_ORDER = [
+  'pending_manual_grading',
+  'completed',
+  'expired_auto_submitted',
+  'in_progress',
+  'inactive',
+  'expired_no_answers',
+  'viewed',
+  'not_started',
+];
+
+async function getExamDetail(instructorId, examId, { filter = null, now = new Date() } = {}) {
+  const [exam] = await loadExams(instructorId, [examId]);
+  if (!exam) throw httpError(404, 'İmtahan tapılmadı');
+  const { rows } = await db.query(EXAM_ROSTER_SQL, [instructorId, [examId]]);
+  const students = examStudentRows(exam, rows, now).sort(
+    (a, b) =>
+      EXAM_STATUS_ORDER.indexOf(a.status) - EXAM_STATUS_ORDER.indexOf(b.status) ||
+      String(a.full_name).localeCompare(String(b.full_name), 'az'),
+  );
+  const fn = filter ? EXAM_FILTERS[filter] : null;
+  return { exam: examCard(exam, students), students: fn ? students.filter(fn) : students };
 }
 
 async function logActivity(client, { studentId, instructorId, entityType, entityId, eventType, metadata = {} }) {
@@ -232,6 +355,8 @@ async function recordMaterialEvent(studentId, materialId, payload = {}) {
 
   const interpreted = interpretMaterialEvent(materialKind(material.file_type, material.file_url), payload);
   if (!interpreted) throw httpError(400, 'Naməlum hadisə');
+  /** Fayl yükləməsi yalnız serverdə (icazəli yükləmə endpoint-i) sayılır; köhnə klient hadisəsi nəzərə alınmır. */
+  if (interpreted.ignored) return { duplicate: false, ignored: true, event_type: interpreted.event_type };
   const clientEventId = payload.client_event_id ? String(payload.client_event_id).slice(0, 80) : null;
 
   return db.transaction(async (client) => {
@@ -248,10 +373,11 @@ async function recordMaterialEvent(studentId, materialId, payload = {}) {
     const { rows } = await client.query(
       `INSERT INTO material_assignments AS ma (
          material_id, student_id, first_opened_at, first_viewed_at, completed_at, last_activity_at,
-         max_progress_pct, total_active_seconds, open_count, download_count
+         max_progress_pct, total_active_seconds, open_count, download_count, view_count, last_viewed_at, updated_at
        ) VALUES ($1, $2, NOW(),
          CASE WHEN $3 THEN NOW() END, CASE WHEN $4 THEN NOW() END, NOW(),
-         COALESCE($5, 0), $6, CASE WHEN $7 THEN 1 ELSE 0 END, CASE WHEN $8 THEN 1 ELSE 0 END)
+         COALESCE($5, 0), $6, CASE WHEN $7 THEN 1 ELSE 0 END, 0,
+         CASE WHEN $8 THEN 1 ELSE 0 END, CASE WHEN $8 THEN NOW() END, NOW())
        ON CONFLICT (material_id, student_id) DO UPDATE SET
          first_opened_at = COALESCE(ma.first_opened_at, NOW()),
          first_viewed_at = COALESCE(ma.first_viewed_at, CASE WHEN $3 THEN NOW() END),
@@ -260,8 +386,11 @@ async function recordMaterialEvent(studentId, materialId, payload = {}) {
          max_progress_pct = GREATEST(ma.max_progress_pct, COALESCE($5, 0)),
          total_active_seconds = LEAST(ma.total_active_seconds + $6, 2000000000),
          open_count = ma.open_count + CASE WHEN $7 THEN 1 ELSE 0 END,
-         download_count = ma.download_count + CASE WHEN $8 THEN 1 ELSE 0 END
-       RETURNING first_opened_at, first_viewed_at, completed_at, last_activity_at, max_progress_pct`,
+         view_count = ma.view_count + CASE WHEN $8 THEN 1 ELSE 0 END,
+         last_viewed_at = CASE WHEN $8 THEN NOW() ELSE ma.last_viewed_at END,
+         updated_at = NOW()
+       RETURNING first_opened_at, first_viewed_at, completed_at, last_activity_at, max_progress_pct,
+                 view_count, last_viewed_at, download_count, first_downloaded_at, last_downloaded_at`,
       [
         materialId,
         studentId,
@@ -270,61 +399,31 @@ async function recordMaterialEvent(studentId, materialId, payload = {}) {
         interpreted.progress_pct,
         interpreted.active_seconds,
         isOpenEvent,
-        interpreted.downloaded,
+        interpreted.counts_as_view,
       ],
     );
-    await logActivity(client, {
+    await logActivityEvent(client, {
       studentId,
       instructorId: material.instructor_id,
       entityType: 'material',
       entityId: materialId,
       eventType: interpreted.event_type,
       metadata: { progress_pct: interpreted.progress_pct, active_seconds: interpreted.active_seconds },
+      groupId: material.group_id || null,
+      source: 'client',
     });
     return { duplicate: false, event_type: interpreted.event_type, state: materialStudentStatus(rows[0]) };
   });
 }
 
-/** Tapşırıq hadisəsi: :id = student_assignments.id. Açılma/başlama assignment_status-a, hamısı jurnala. */
+/**
+ * Tapşırıq hadisəsi: :id = student_assignments.id. Keçid qaydaları bir yerdədir (activityProgressService):
+ * assignment_status (aqreqat) sinxronu + jurnal bir tranzaksiyada.
+ */
 async function recordStudentAssignmentEvent(studentAssignmentId, eventType, { metadata = {} } = {}) {
-  const { rows } = await db.query(
-    `SELECT sa.assignment_id, sa.student_id, a.instructor_id
-     FROM student_assignments sa JOIN assignments a ON a.id = sa.assignment_id
-     WHERE sa.id = $1`,
-    [studentAssignmentId],
-  );
-  const row = rows[0];
-  if (!row) return false;
-  await db.transaction(async (client) => {
-    if (eventType === 'assignment_opened' || eventType === 'assignment_started') {
-      const started = eventType === 'assignment_started';
-      await client.query(
-        `INSERT INTO assignment_status AS s (assignment_id, student_id, first_opened_at, started_at, last_activity_at)
-         VALUES ($1, $2, NOW(), CASE WHEN $3 THEN NOW() END, NOW())
-         ON CONFLICT (assignment_id, student_id) DO UPDATE SET
-           first_opened_at = COALESCE(s.first_opened_at, NOW()),
-           started_at = COALESCE(s.started_at, CASE WHEN $3 THEN NOW() END),
-           last_activity_at = NOW()`,
-        [row.assignment_id, row.student_id, started],
-      );
-    } else {
-      await client.query(
-        `INSERT INTO assignment_status AS s (assignment_id, student_id, first_opened_at, last_activity_at)
-         VALUES ($1, $2, NOW(), NOW())
-         ON CONFLICT (assignment_id, student_id) DO UPDATE SET last_activity_at = NOW()`,
-        [row.assignment_id, row.student_id],
-      );
-    }
-    await logActivity(client, {
-      studentId: row.student_id,
-      instructorId: row.instructor_id,
-      entityType: 'assignment',
-      entityId: row.assignment_id,
-      eventType,
-      metadata,
-    });
-  });
-  return true;
+  const { recordAssignmentActivity } = require('./activityProgressService');
+  const state = await recordAssignmentActivity(studentAssignmentId, eventType, { metadata });
+  return Boolean(state);
 }
 
 /** Controller-lərdən çağırılır: cavabı gecikdirmir, xəta əsas axını pozmur. */
@@ -425,6 +524,9 @@ module.exports = {
   getMaterialDetail,
   getAssignmentSummaries,
   getAssignmentDetail,
+  getExamSummaries,
+  getExamDetail,
+  EXAM_ROSTER_SQL,
   recordMaterialEvent,
   recordStudentAssignmentEvent,
   trackStudentAssignmentEvent,
