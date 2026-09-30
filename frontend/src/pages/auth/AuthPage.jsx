@@ -1,27 +1,54 @@
-import { useEffect } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import api from '../../lib/api'
+import useAuthStore from '../../hooks/useAuth'
 import Brand from '../../components/common/Brand'
+import Button from '../../components/common/Button'
+import { useToast } from '../../components/common/Toast'
 import LocaleThemeBar from '../../components/LocaleThemeBar'
 import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import { setPageSeo } from '../../lib/pageSeo'
-import { rememberReturnAfterLogin } from '../../lib/postAuth'
+import { postAuthNavigate, rememberReturnAfterLogin } from '../../lib/postAuth'
 import useUiStore from '../../hooks/useUi'
 import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
 
 /**
- * Giriş və qeydiyyat (/login, /register): yalnız «Google ilə davam et».
- * Telefon, SMS kod, parol və email/parol formu yoxdur.
+ * Giriş və qeydiyyat (/login, /register): istifadəçilər üçün yalnız «Google ilə davam et».
+ * Admin (?admin=true və ya next=/admin...) üçün telefon/email + şifrə formu da göstərilir.
  */
 export default function AuthPage() {
   const { t } = useTranslation()
   const location = useLocation()
+  const navigate = useNavigate()
+  const toast = useToast()
   const [searchParams] = useSearchParams()
   const nextParam = searchParams.get('next')
   const isRegister = location.pathname === '/register' || searchParams.get('tab') === 'signup'
+  const isAdmin =
+    searchParams.get('admin') === 'true' || /^\/admin(\/|\?|$)/.test(String(nextParam || '').trim())
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
   const tone = isDark ? 'dark' : 'light'
+
+  const [adminIdentifier, setAdminIdentifier] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const data = await api.post('/auth/login', { identifier: adminIdentifier, password })
+      if (!data?.token || !data?.user) throw new Error(data?.message || 'Server cavabı etibarsızdır')
+      useAuthStore.getState().setSession(data.token, data.user)
+      postAuthNavigate(data.user, navigate, nextParam)
+    } catch (err) {
+      toast(err.message || t('auth.loginError'), 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     const next = String(nextParam || '').trim()
@@ -94,6 +121,70 @@ export default function AuthPage() {
                 })}
               </p>
             </div>
+
+            {isAdmin ? (
+              <form onSubmit={handleAdminLogin} className="mt-6 space-y-4" autoComplete="on">
+                <div
+                  className={[
+                    'text-center text-xs py-2 px-3 rounded-xl border',
+                    isDark ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-red-700 bg-red-50 border-red-200',
+                  ].join(' ')}
+                >
+                  {t('auth.adminPanel')}
+                </div>
+                <div>
+                  <label
+                    className={['block text-xs font-semibold uppercase tracking-wider mb-2', muted].join(' ')}
+                    htmlFor="admin-username"
+                  >
+                    {t('auth.phoneOrEmail')}
+                  </label>
+                  <input
+                    id="admin-username"
+                    name="username"
+                    className={[
+                      'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
+                      isDark
+                        ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
+                        : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+                    ].join(' ')}
+                    type="text"
+                    inputMode="email"
+                    autoComplete="username"
+                    placeholder={t('auth.phoneOrEmail')}
+                    value={adminIdentifier}
+                    onChange={(e) => setAdminIdentifier(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    className={['block text-xs font-semibold uppercase tracking-wider mb-2', muted].join(' ')}
+                    htmlFor="admin-password"
+                  >
+                    {t('auth.password')}
+                  </label>
+                  <input
+                    id="admin-password"
+                    name="password"
+                    className={[
+                      'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
+                      isDark
+                        ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
+                        : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+                    ].join(' ')}
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" loading={loading} className="w-full justify-center py-3">
+                  {t('auth.login')}
+                </Button>
+              </form>
+            ) : null}
 
             <PublicGoogleSignIn
               className="mt-6"

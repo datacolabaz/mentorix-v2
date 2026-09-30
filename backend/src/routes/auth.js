@@ -29,7 +29,8 @@ const {
 const { authenticate, authorize } = require('../middleware/auth');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
 
-router.post('/login', googleOnlyGate('login'), login);
+// Admin-only password login (controller rejects non-admin roles); not behind googleOnlyGate so admins can't be locked out.
+router.post('/login', login);
 router.post('/google/login', googleLogin);
 router.post('/google/complete', googleComplete);
 router.post('/google/link/confirm', googleLinkConfirm);
