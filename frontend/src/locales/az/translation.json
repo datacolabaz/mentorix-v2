@@ -218,6 +218,8 @@
     "backHome": "← Ana səhifəyə qayıt",
     "googleOnly": {"title": "Mentorix-ə xoş gəlmisiniz", "subtitle": "İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.", "cta": "Google ilə davam et", "legalPrefix": "Davam etməklə", "terms": "İstifadə Şərtləri", "and": "və", "privacy": "Məxfilik Siyasəti", "legalSuffix": "ilə razılaşırsınız."},
     "adminPanel": "Admin panel",
+    "adminPasswordNotice": "Şifrə ilə giriş yalnız idarəçi hesabları üçündür. Digər istifadəçilər «Google ilə davam et» düyməsindən istifadə etsin.",
+    "invalidPhoneOrEmail": "Düzgün email ünvanı və ya telefon nömrəsi daxil edin.",
     "phoneOrEmail": "Telefon və ya email",
     "password": "Şifrə",
     "login": "Daxil ol",

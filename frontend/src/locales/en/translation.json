@@ -218,6 +218,8 @@
     "backHome": "← Back to home",
     "googleOnly": {"title": "Welcome to Mentorix", "subtitle": "Manage your exams, materials and results in one place.", "cta": "Continue with Google", "legalPrefix": "By continuing you agree to the", "terms": "Terms of Use", "and": "and", "privacy": "Privacy Policy", "legalSuffix": "."},
     "adminPanel": "Admin panel",
+    "adminPasswordNotice": "Password sign-in is for administrator accounts only. Everyone else, please use «Continue with Google».",
+    "invalidPhoneOrEmail": "Enter a valid email address or phone number.",
     "phoneOrEmail": "Phone or email",
     "password": "Password",
     "login": "Sign in",
