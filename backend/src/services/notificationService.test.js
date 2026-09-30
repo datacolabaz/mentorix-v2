@@ -109,32 +109,103 @@ test('preferences are checked BEFORE the row/email intent is written', async () 
   assert.equal(insertCall().params[13], 'skipped');
 });
 
-test('never writes to notification_queue in Phase A (SMTP worker cannot send)', async () => {
+test('email off by default → the outbox insert is gated off ($17 = false)', async () => {
   reset();
   seedUsers();
-  process.env.EMAIL_ENABLED = 'true';
-  await createNotification(baseInput());
   delete process.env.EMAIL_ENABLED;
-  assert.equal(state.calls.some((c) => /notification_queue/.test(c.sql)), false);
+  const out = await createNotification(baseInput());
+  const ins = insertCall();
+  assert.equal(ins.params[16], false);
+  assert.equal(out.emailStatus, 'suppressed');
 });
 
-test('EMAIL_ENABLED=true only produces dry_run status with a safe log (no address, no body)', async () => {
+test('EMAIL_ENABLED=true → queued in the same statement; outbox row holds ids/template/locale only', async () => {
   reset();
   seedUsers();
   process.env.EMAIL_ENABLED = 'true';
   const logs = [];
   const orig = console.log;
   console.log = (...a) => logs.push(a.join(' '));
+  let out;
   try {
-    const out = await createNotification(baseInput());
-    assert.equal(out.emailStatus, 'dry_run');
+    out = await createNotification(baseInput());
   } finally {
     console.log = orig;
     delete process.env.EMAIL_ENABLED;
   }
-  assert.equal(logs.length, 1);
-  assert.match(logs[0], /\[notify-email:dry_run\] template=assignment_submitted/);
-  assert.doesNotMatch(logs[0], /Aysel|Faiz|@/);
+  assert.equal(out.emailStatus, 'queued');
+  const ins = insertCall();
+  assert.match(ins.sql, /WITH ins AS \(\s*INSERT INTO notifications/);
+  assert.match(ins.sql, /INSERT INTO notification_queue/);
+  assert.match(ins.sql, /'email:notification:' \|\| ins\.id::text/, 'unique key per notification → no duplicate outbox rows');
+  assert.match(ins.sql, /ON CONFLICT \(unique_key\) DO NOTHING/);
+  assert.match(ins.sql, /FROM ins\s+WHERE \$17::boolean/, 'deduped notification (no ins row) enqueues nothing');
+  assert.equal(ins.params[13], 'queued');
+  assert.equal(ins.params[15], 'az');
+  assert.equal(ins.params[16], true);
+  const outboxPart = ins.sql.slice(ins.sql.indexOf('INSERT INTO notification_queue'));
+  assert.doesNotMatch(outboxPart, /\$2\b|\$3\b/, 'title/body are not copied into the outbox');
+  assert.equal(logs.length, 0, 'nothing is sent or logged at create time');
+});
+
+test('duplicate event with email on → no notification and no outbox row', async () => {
+  reset();
+  seedUsers();
+  state.insertReturns = 'none';
+  process.env.EMAIL_ENABLED = 'true';
+  try {
+    const out = await createNotification(baseInput());
+    assert.equal(out.deduped, true);
+    assert.equal(out.emailQueued, undefined);
+  } finally {
+    delete process.env.EMAIL_ENABLED;
+  }
+});
+
+test('preference email off → outbox gated off even when email is globally on', async () => {
+  reset();
+  seedUsers();
+  state.prefs = [{ category: 'assignment', channel: 'email', event_type: null, enabled: false, frequency: 'off' }];
+  process.env.EMAIL_ENABLED = 'true';
+  try {
+    const out = await createNotification(baseInput());
+    assert.equal(out.emailStatus, 'skipped');
+    assert.equal(insertCall().params[16], false);
+  } finally {
+    delete process.env.EMAIL_ENABLED;
+  }
+});
+
+test('heartbeat / autosave / view events never produce an email intent', async () => {
+  for (const eventType of ['heartbeat', 'exam_autosaved', 'page_view', 'exam_question_answered', 'material_opened']) {
+    reset();
+    seedUsers();
+    process.env.EMAIL_ENABLED = 'true';
+    try {
+      await createNotification({ ...baseInput(), category: 'assessment', eventType, dedupeKey: `${eventType}:1` });
+    } finally {
+      delete process.env.EMAIL_ENABLED;
+    }
+    const ins = insertCall();
+    assert.ok(ins, `${eventType} still gets its in-app row`);
+    assert.equal(ins.params[13], null, `${eventType} has no email status`);
+    assert.equal(ins.params[16], false, `${eventType} is never enqueued`);
+  }
+});
+
+test('security email is mandatory: queued even when the user turned email off', async () => {
+  reset();
+  seedUsers();
+  state.prefs = [{ category: 'security', channel: 'email', event_type: null, enabled: false, frequency: 'off' }];
+  process.env.EMAIL_ENABLED = 'true';
+  try {
+    const out = await createNotification({ recipientId: STUDENT, category: 'security', eventType: 'login_security_alert', title: 'New sign-in', email: true });
+    assert.equal(out.emailStatus, 'queued');
+    assert.equal(insertCall().params[16], true);
+    assert.equal(insertCall().params[15], 'en');
+  } finally {
+    delete process.env.EMAIL_ENABLED;
+  }
 });
 
 test('security notifications skip the preference lookup and cannot be silenced', async () => {
@@ -250,5 +321,8 @@ test('email gate helpers', () => {
   assert.equal(emailStatusFor({ eligible: false, reason: 'preference_off' }, {}), 'skipped');
   assert.equal(emailStatusFor({ eligible: true, frequency: 'weekly' }, {}), 'digest');
   assert.equal(emailStatusFor({ eligible: true, frequency: 'immediate' }, {}), 'suppressed');
-  assert.equal(emailStatusFor({ eligible: true, frequency: 'immediate' }, { EMAIL_ENABLED: '1' }), 'dry_run');
+  assert.equal(emailStatusFor({ eligible: true, frequency: 'immediate' }, { EMAIL_ENABLED: '1' }), 'queued');
+  assert.equal(notificationEmailMode({ EMAIL_ENABLED: 'true', EMAIL_DRY_RUN: 'false', EMAIL_ENVIRONMENT: 'production' }), 'live');
+  assert.equal(notificationEmailMode({ EMAIL_ENABLED: 'true', EMAIL_ENVIRONMENT: 'production' }), 'dry_run', 'EMAIL_DRY_RUN must be explicitly false');
+  assert.equal(notificationEmailMode({ EMAIL_ENABLED: 'true', EMAIL_DRY_RUN: 'false', EMAIL_ENVIRONMENT: 'staging' }), 'dry_run');
 });
