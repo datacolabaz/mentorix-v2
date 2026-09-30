@@ -4,7 +4,7 @@ const { trackStudentAssignmentEvent } = require('../services/engagementService')
 const { SQL_WHERE_TEACHING_GROUP_ONLY } = require('../services/systemGroupGuards');
 const { recomputeInstructorStorageUsageMb } = require('../services/resourceUsageService');
 const {
-  isPastDueYmd,
+  isSubmissionLate,
   normalizeStatus,
   notifyStudentsOfNewAssignment,
   resolveGroupStudentIds,
@@ -343,7 +343,7 @@ const markMyTaskDone = async (req, res) => {
     const studentId = req.user.id;
     const id = req.params.id;
     const { rows: cur } = await db.query(
-      `SELECT a.status, a.submitted_at, t.due_date
+      `SELECT a.status, a.submitted_at, a.first_submitted_at, t.due_date
        FROM student_assignments a
        JOIN assignments t ON t.id = a.assignment_id
        WHERE a.id = $1 AND a.student_id = $2`,
@@ -355,14 +355,19 @@ const markMyTaskDone = async (req, res) => {
     }
     if (cur[0].submitted_at) return res.json({ success: true, already: true });
 
-    const nextStatus = isPastDueYmd(cur[0].due_date) ? 'late' : 'submitted';
+    const nextStatus = isSubmissionLate(cur[0].due_date, cur[0].first_submitted_at) ? 'late' : 'submitted';
     const { rowCount } = await db.query(
       `UPDATE student_assignments
-       SET status = $3, done_at = NOW(), submitted_at = NOW()
-       WHERE id = $1 AND student_id = $2`,
+       SET status = $3, done_at = NOW(), submitted_at = NOW(),
+           first_submitted_at = COALESCE(first_submitted_at, NOW()),
+           submission_count = submission_count + 1
+       WHERE id = $1 AND student_id = $2 AND submitted_at IS NULL`,
       [id, studentId, nextStatus],
     );
-    if (rowCount > 0) return res.json({ success: true });
+    if (rowCount > 0) {
+      trackStudentAssignmentEvent(id, 'assignment_submitted');
+      return res.json({ success: true });
+    }
     return res.status(400).json({ success: false, message: 'Əməliyyat mümkün deyil' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -472,7 +477,7 @@ const submitMyAssignment = async (req, res) => {
       : null;
 
     const { rows: cur } = await db.query(
-      `SELECT a.status, a.submitted_at, a.late_decision, t.due_date
+      `SELECT a.status, a.submitted_at, a.first_submitted_at, a.late_decision, t.due_date
        FROM student_assignments a
        JOIN assignments t ON t.id = a.assignment_id
        WHERE a.id = $1 AND a.student_id = $2 LIMIT 1`,
@@ -484,18 +489,21 @@ const submitMyAssignment = async (req, res) => {
     }
     if (cur[0].submitted_at) return res.json({ success: true, already: true });
 
-    const nextStatus = isPastDueYmd(cur[0].due_date) ? 'late' : 'submitted';
+    const nextStatus = isSubmissionLate(cur[0].due_date, cur[0].first_submitted_at) ? 'late' : 'submitted';
     const { rows } = await db.query(
       `UPDATE student_assignments
        SET answer_text = COALESCE($1, answer_text),
            attachment_urls = COALESCE($2, attachment_urls),
            status = $5,
            done_at = COALESCE(done_at, NOW()),
-           submitted_at = NOW()
-       WHERE id = $3 AND student_id = $4
+           submitted_at = NOW(),
+           first_submitted_at = COALESCE(first_submitted_at, NOW()),
+           submission_count = submission_count + 1
+       WHERE id = $3 AND student_id = $4 AND submitted_at IS NULL
        RETURNING id AS assignment_id, status, submitted_at`,
       [answer_text, attachment_urls, id, studentId, nextStatus],
     );
+    if (!rows.length) return res.json({ success: true, already: true });
 
     const { notifyStudent } = require('../services/assignmentHomeworkService');
     const { rows: inst } = await db.query(
@@ -694,6 +702,13 @@ const reviewInstructorAssignment = async (req, res) => {
       [id, instructorId],
     );
     if (!cur[0]) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    if (cur[0].status === 'returned') {
+      return res.status(409).json({
+        success: false,
+        code: 'ASSIGNMENT_AWAITING_RESUBMISSION',
+        message: 'İş düzəlişə qaytarılıb. Tələbə yenidən təslim etdikdən sonra qiymətləndirin.',
+      });
+    }
 
     let nextStatus = cur[0].status;
     let lateDecision = cur[0].late_decision || null;
@@ -751,6 +766,24 @@ const reviewInstructorAssignment = async (req, res) => {
     res.json({ success: true, review: rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/** Müəllim: təslim edilmiş (və ya qiymətləndirilmiş) işi düzəlişə qaytarır; tələbə yenidən təslim edə bilir. */
+const returnInstructorAssignment = async (req, res) => {
+  try {
+    const { returnAssignmentForRevision } = require('../services/activityProgressService');
+    const feedback = req.body?.feedback != null ? String(req.body.feedback).trim().slice(0, 5000) : null;
+    const row = await returnAssignmentForRevision({
+      instructorId: req.user.id,
+      studentAssignmentId: req.params.id,
+      feedback: feedback || null,
+    });
+    res.json({ success: true, review: row });
+  } catch (err) {
+    res
+      .status(err.statusCode || 500)
+      .json({ success: false, code: err.code, message: err.statusCode ? err.message : 'Xəta baş verdi' });
   }
 };
 
@@ -1002,6 +1035,7 @@ module.exports = {
   getInstructorStudentAssignment,
   requestAiReviewSuggestion,
   reviewInstructorAssignment,
+  returnInstructorAssignment,
   getAssignmentAnalytics,
   listParentAssignments,
   listInstructorGroups,

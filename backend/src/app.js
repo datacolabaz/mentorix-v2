@@ -18,6 +18,7 @@ const { runPackReminders } = require('./jobs/packReminders');
 const { expireAbandonedBillingPayments, markPastDueSubscriptions } = require('./jobs/billingPaymentsReaper');
 const { runNotificationQueueOnce } = require('./jobs/notificationQueueWorker');
 const { runAssignmentNotifications } = require('./jobs/assignmentNotifications');
+const { runExamActivitySweep } = require('./jobs/examActivitySweep');
 const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
 const { runOrphanFilesReaper } = require('./jobs/orphanFilesReaper');
 const { runUniversityProgramScraper } = require('./jobs/universityProgramScraper');
@@ -159,6 +160,11 @@ boot().catch((e) => {
 
 cron.schedule('* * * * *', () => {
   processExamNotificationJobs().catch((e) => console.error('exam notification cron', e.message));
+});
+
+// Expired exam attempts (auto-submit / no answers) + due result releases: every minute
+cron.schedule('* * * * *', () => {
+  runExamActivitySweep().catch((e) => console.error('exam activity sweep cron', e.message));
 });
 
 cron.schedule('*/10 * * * *', () => {

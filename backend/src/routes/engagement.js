@@ -14,5 +14,7 @@ router.post('/materials/:id/reminders', ...teacher, c.postMaterialReminders);
 router.get('/assignments', ...teacher, c.listAssignmentEngagement);
 router.get('/assignments/:id', ...teacher, c.getAssignmentEngagement);
 router.post('/assignments/:id/reminders', ...teacher, c.postAssignmentReminders);
+router.get('/exams', ...teacher, c.listExamEngagement);
+router.get('/exams/:id', ...teacher, c.getExamEngagement);
 
 module.exports = router;

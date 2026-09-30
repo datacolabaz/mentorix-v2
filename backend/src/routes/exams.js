@@ -23,6 +23,8 @@ const {
   getStudentExamReview,
   getExamQuestions,
   submitExam,
+  autosaveExamAnswers,
+  markExamViewed,
   confirmOpenQuestionGrading,
   getResults,
   getExamGroups,
@@ -161,6 +163,8 @@ router.patch(
 );
 router.get('/:id/questions', authenticate, getExamQuestions);
 router.post('/submit', authenticate, authorize('student'), submitExam);
+router.post('/:id/autosave', authenticate, authorize('student'), autosaveExamAnswers);
+router.post('/:id/viewed', authenticate, authorize('student'), markExamViewed);
 router.get('/:id/results', authenticate, getResults);
 router.get('/:id/groups', authenticate, authorize('instructor', 'admin'), getExamGroups);
 router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), getExamTop10);

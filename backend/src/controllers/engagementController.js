@@ -3,20 +3,43 @@ const {
   getMaterialDetail,
   getAssignmentSummaries,
   getAssignmentDetail,
+  getExamSummaries,
+  getExamDetail,
   recordMaterialEvent,
   sendReminders,
   setMaterialDueAt,
 } = require('../services/engagementService');
 const { normalizeExamStartTime } = require('../utils/examTime');
+const { resolveActivityScope, UUID_RE } = require('../services/activityAccessPolicy');
+const { recordAdminAccess } = require('../services/adminAccessAudit');
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Admin başqa müəllimin məlumatına ?instructor_id= ilə baxa bilər; müəllim yalnız özününküyə. */
-function ownerId(req) {
-  if (req.user.role === 'admin' && UUID_RE.test(String(req.query.instructor_id || ''))) {
-    return String(req.query.instructor_id);
+/**
+ * Kimin məlumatına baxılır (activityAccessPolicy): müəllim — yalnız özününkü; admin — yalnız oxumaq,
+ * ?instructor_id= + ?reason= tələb olunur və hər baxış audit jurnalına yazılır (yazılmasa giriş yoxdur).
+ * Uğursuzluqda cavab göndərilir və null qaytarılır.
+ */
+async function scopeFor(req, res, { action, entityType = null, entityId = null, write = false } = {}) {
+  const scope = resolveActivityScope(req.user, {
+    instructorId: req.query.instructor_id,
+    reason: req.query.reason ?? req.get?.('x-admin-reason'),
+    write,
+  });
+  if (!scope.ok) {
+    res.status(scope.status).json({ success: false, code: scope.code, message: scope.message });
+    return null;
   }
-  return req.user.id;
+  if (scope.admin) {
+    await recordAdminAccess({
+      actorUserId: req.user.id,
+      action,
+      targetUserId: scope.admin.targetInstructorId,
+      entityType,
+      entityId,
+      reason: scope.admin.reason,
+      req,
+    });
+  }
+  return scope.ownerId;
 }
 
 function parseIds(raw) {
@@ -26,7 +49,7 @@ function parseIds(raw) {
 }
 
 function fail(res, err) {
-  res.status(err.statusCode || 500).json({ success: false, message: err.message || 'Xəta' });
+  res.status(err.statusCode || 500).json({ success: false, code: err.code, message: err.message || 'Xəta' });
 }
 
 function requireUuid(res, id) {
@@ -37,7 +60,9 @@ function requireUuid(res, id) {
 
 const listMaterialEngagement = async (req, res) => {
   try {
-    const materials = await getMaterialSummaries(ownerId(req), { materialIds: parseIds(req.query.ids) });
+    const owner = await scopeFor(req, res, { action: 'activity.materials.list', entityType: 'material' });
+    if (!owner) return;
+    const materials = await getMaterialSummaries(owner, { materialIds: parseIds(req.query.ids) });
     res.json({ success: true, materials });
   } catch (err) {
     fail(res, err);
@@ -47,7 +72,13 @@ const listMaterialEngagement = async (req, res) => {
 const getMaterialEngagement = async (req, res) => {
   try {
     if (!requireUuid(res, req.params.id)) return;
-    const data = await getMaterialDetail(ownerId(req), req.params.id, { filter: req.query.filter || null });
+    const owner = await scopeFor(req, res, {
+      action: 'activity.materials.detail',
+      entityType: 'material',
+      entityId: req.params.id,
+    });
+    if (!owner) return;
+    const data = await getMaterialDetail(owner, req.params.id, { filter: req.query.filter || null });
     res.json({ success: true, ...data });
   } catch (err) {
     fail(res, err);
@@ -56,7 +87,9 @@ const getMaterialEngagement = async (req, res) => {
 
 const listAssignmentEngagement = async (req, res) => {
   try {
-    const assignments = await getAssignmentSummaries(ownerId(req), { assignmentIds: parseIds(req.query.ids) });
+    const owner = await scopeFor(req, res, { action: 'activity.assignments.list', entityType: 'assignment' });
+    if (!owner) return;
+    const assignments = await getAssignmentSummaries(owner, { assignmentIds: parseIds(req.query.ids) });
     res.json({ success: true, assignments });
   } catch (err) {
     fail(res, err);
@@ -66,7 +99,40 @@ const listAssignmentEngagement = async (req, res) => {
 const getAssignmentEngagement = async (req, res) => {
   try {
     if (!requireUuid(res, req.params.id)) return;
-    const data = await getAssignmentDetail(ownerId(req), req.params.id, { filter: req.query.filter || null });
+    const owner = await scopeFor(req, res, {
+      action: 'activity.assignments.detail',
+      entityType: 'assignment',
+      entityId: req.params.id,
+    });
+    if (!owner) return;
+    const data = await getAssignmentDetail(owner, req.params.id, { filter: req.query.filter || null });
+    res.json({ success: true, ...data });
+  } catch (err) {
+    fail(res, err);
+  }
+};
+
+const listExamEngagement = async (req, res) => {
+  try {
+    const owner = await scopeFor(req, res, { action: 'activity.exams.list', entityType: 'exam' });
+    if (!owner) return;
+    const exams = await getExamSummaries(owner, { examIds: parseIds(req.query.ids) });
+    res.json({ success: true, exams });
+  } catch (err) {
+    fail(res, err);
+  }
+};
+
+const getExamEngagement = async (req, res) => {
+  try {
+    if (!requireUuid(res, req.params.id)) return;
+    const owner = await scopeFor(req, res, {
+      action: 'activity.exams.detail',
+      entityType: 'exam',
+      entityId: req.params.id,
+    });
+    if (!owner) return;
+    const data = await getExamDetail(owner, req.params.id, { filter: req.query.filter || null });
     res.json({ success: true, ...data });
   } catch (err) {
     fail(res, err);
@@ -76,9 +142,11 @@ const getAssignmentEngagement = async (req, res) => {
 const postReminders = (entityType) => async (req, res) => {
   try {
     if (!requireUuid(res, req.params.id)) return;
+    const owner = await scopeFor(req, res, { action: `activity.${entityType}.reminders`, write: true });
+    if (!owner) return;
     const raw = req.body?.student_ids;
     const studentIds = Array.isArray(raw) ? raw.map(String).filter((s) => UUID_RE.test(s)) : null;
-    const result = await sendReminders(ownerId(req), entityType, req.params.id, { studentIds });
+    const result = await sendReminders(owner, entityType, req.params.id, { studentIds });
     res.json({ success: true, ...result });
   } catch (err) {
     fail(res, err);
@@ -88,10 +156,12 @@ const postReminders = (entityType) => async (req, res) => {
 const patchMaterialDeadline = async (req, res) => {
   try {
     if (!requireUuid(res, req.params.id)) return;
+    const owner = await scopeFor(req, res, { action: 'activity.materials.deadline', write: true });
+    if (!owner) return;
     const raw = req.body?.due_at;
     const dueAt = raw == null || raw === '' ? null : normalizeExamStartTime(raw);
     if (raw && !dueAt) return res.status(400).json({ success: false, message: 'Tarix düzgün deyil' });
-    const row = await setMaterialDueAt(ownerId(req), req.params.id, dueAt);
+    const row = await setMaterialDueAt(owner, req.params.id, dueAt);
     res.json({ success: true, material: row });
   } catch (err) {
     fail(res, err);
@@ -110,10 +180,13 @@ const postMaterialEvent = async (req, res) => {
 };
 
 module.exports = {
+  scopeFor,
   listMaterialEngagement,
   getMaterialEngagement,
   listAssignmentEngagement,
   getAssignmentEngagement,
+  listExamEngagement,
+  getExamEngagement,
   postMaterialReminders: postReminders('material'),
   postAssignmentReminders: postReminders('assignment'),
   patchMaterialDeadline,
