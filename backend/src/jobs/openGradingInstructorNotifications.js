@@ -1,5 +1,4 @@
 const db = require('../utils/db');
-const { sendEmail, userEmail } = require('../services/emailService');
 const { createNotificationSafe } = require('../services/notificationService');
 
 function bakuTodayYmd() {
@@ -99,20 +98,6 @@ async function runOpenGradingInstructorNotifications() {
       email: true,
     });
     if (!created.created) continue;
-
-    try {
-      const to = await userEmail(item.instructor_id);
-      if (to) {
-        await sendEmail({
-          to,
-          subject: `Mentorix — ${title}`,
-          text: `${body}\n\nMentorix → İmtahanlar → Analytics bölməsindən cavabları təsdiqləyin.`,
-        });
-      }
-    } catch (e) {
-      console.error('openGradingInstructorNotify email', e.message);
-    }
-
     sent += 1;
   }
 

@@ -1,5 +1,4 @@
 const db = require('../utils/db');
-const { sendEmail, userEmail } = require('./emailService');
 const { canonicalStudentPhone } = require('../utils/studentPhone');
 const { assertStudentProfileComplete } = require('../controllers/studentProfileController');
 const { ensureLightInstructorEnrollment } = require('./lightEnrollmentService');
@@ -81,18 +80,6 @@ async function notifyInstructorTaskAccessRequest({ instructorId, studentId, stud
     dedupeKey: requestId ? `task_access_request:${requestId}` : null,
     email: true,
   });
-  try {
-    const to = await userEmail(instructorId);
-    if (to) {
-      await sendEmail({
-        to,
-        subject: `Mentorix — ${title}`,
-        text: `${body}\n\nMentorix → Sorğular bölməsindən təsdiqləyin.`,
-      });
-    }
-  } catch (e) {
-    console.error('task access request email', e.message);
-  }
 }
 
 async function createTaskAccessRequest(studentId, taskId) {

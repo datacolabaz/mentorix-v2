@@ -1,5 +1,4 @@
 const db = require('../utils/db');
-const { sendEmail, userEmail } = require('./emailService');
 const {
   canonicalStudentPhone,
   STUDENT_CONTACT_PHONE_SQL,
@@ -41,19 +40,6 @@ async function notifyInstructorExamAccessRequest({ instructorId, studentId, stud
     dedupeKey: requestId ? `exam_access_request:${requestId}` : null,
     email: true,
   });
-
-  try {
-    const to = await userEmail(instructorId);
-    if (to) {
-      await sendEmail({
-        to,
-        subject: `Mentorix — ${title}`,
-        text: `${body}\n\nMentorix → Sorğular və ya İmtahanlar bölməsindən təsdiqləyin.`,
-      });
-    }
-  } catch (e) {
-    console.error('exam access request email', e.message);
-  }
 }
 
 async function getExamForStudentRequest(examId) {

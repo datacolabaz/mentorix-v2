@@ -179,8 +179,8 @@ async function getStudentJoinStateForInvite(studentId, code) {
   };
 }
 
+/** In-app + (policy/preference-gated) email through notificationService only: one email per request. */
 async function notifyInstructorJoinRequest({ instructorId, studentId, studentName, groupId, groupName, requestId }) {
-  const { sendEmail, userEmail } = require('./emailService');
   const { createNotificationSafe } = require('./notificationService');
   const title = 'Yeni qoşulma sorğusu';
   const body = `${studentName} «${groupName}» qrupunuza qoşulmaq istəyir. Təsdiqləyin.`;
@@ -200,18 +200,6 @@ async function notifyInstructorJoinRequest({ instructorId, studentId, studentNam
     dedupeKey: requestId ? `join_request:${requestId}` : null,
     email: true,
   });
-  try {
-    const to = await userEmail(instructorId);
-    if (to) {
-      await sendEmail({
-        to,
-        subject: `Mentorix — ${title}`,
-        text: `${body}\n\nMentorix → Sorğular bölməsindən təsdiqləyin.`,
-      });
-    }
-  } catch (e) {
-    console.error('join request email', e.message);
-  }
 }
 
 async function createJoinRequest({
