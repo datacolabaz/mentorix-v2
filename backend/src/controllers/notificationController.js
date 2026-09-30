@@ -293,7 +293,7 @@ const markStudentNotificationRead = async (req, res) => {
   try {
     const id = req.params.id;
     const { rowCount } = await db.query(
-      `UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2`,
+      `UPDATE notifications SET is_read = TRUE, read_at = COALESCE(read_at, NOW()) WHERE id = $1 AND user_id = $2`,
       [id, req.user.id],
     );
     if (!rowCount) return res.status(404).json({ success: false, message: 'Tapılmadı' });
@@ -305,7 +305,7 @@ const markStudentNotificationRead = async (req, res) => {
 
 const markAllStudentNotificationsRead = async (req, res) => {
   try {
-    await db.query(`UPDATE notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE`, [
+    await db.query(`UPDATE notifications SET is_read = TRUE, read_at = COALESCE(read_at, NOW()) WHERE user_id = $1 AND is_read = FALSE`, [
       req.user.id,
     ]);
     res.json({ success: true });
