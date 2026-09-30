@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -20,6 +20,7 @@ import { NOTIFICATION_CATEGORIES } from '../../lib/notificationPresentation'
 
 const PAGE_SIZE = 20
 const CENTER_SOURCE = 'center'
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const selectClass =
   'min-h-[40px] rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 text-sm text-token-textMain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
@@ -38,6 +39,8 @@ export default function NotificationCenter() {
   const [notice, setNotice] = useState('')
   const [markingAll, setMarkingAll] = useState(false)
   const requestSeq = useRef(0)
+  const deepLinkHandled = useRef(false)
+  const [searchParams, setSearchParams] = useSearchParams()
   const categoryId = useId()
   const unreadId = useId()
   const { open, openingId } = useOpenNotification({ source: CENTER_SOURCE })
@@ -113,6 +116,18 @@ export default function NotificationCenter() {
     markLocalRead(n.id)
     if (status !== 'none') setNotice(t(`notificationCenter.open.${status}`, { defaultValue: t('notificationCenter.open.error') }))
   }
+
+  // Email CTA: /notifications?open=<id>. The server re-checks ownership and access to the target.
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId || deepLinkHandled.current) return
+    deepLinkHandled.current = true
+    const next = new URLSearchParams(searchParams)
+    next.delete('open')
+    setSearchParams(next, { replace: true })
+    if (UUID_RE.test(openId)) void handleOpen({ id: openId })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const handleMarkRead = async (n) => {
     try {
