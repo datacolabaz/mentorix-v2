@@ -127,8 +127,22 @@ test('admin without reason is rejected and nothing is read', async () => {
   });
   assert.equal(r.status, 400);
   assert.equal(r.body.code, 'ADMIN_REASON_REQUIRED');
+  assert.match(r.body.message, /səbəb/, 'human-readable message the UI can show');
+  assert.equal(r.body.reason_min_length, 5);
   assert.equal(serviceCalls.length, 0);
   assert.equal(auditCalls.length, 0);
+});
+
+test('admin without a target teacher gets a clear 400', async () => {
+  reset();
+  const r = await call(c.listExamEngagement, {
+    user: { id: ADMIN, role: 'admin' },
+    query: { reason: 'Support ticket #42' },
+  });
+  assert.equal(r.status, 400);
+  assert.equal(r.body.code, 'ADMIN_TARGET_REQUIRED');
+  assert.ok(r.body.message);
+  assert.equal(serviceCalls.length, 0);
 });
 
 test('admin with reason is audited before data is read', async () => {

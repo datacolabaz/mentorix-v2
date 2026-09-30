@@ -37,13 +37,28 @@ test('migration 217 CHECK list equals STORED_EVENT_TYPES and every spec event ma
   }
 });
 
-test('migrations 217-220 are additive and safe for boot-time runs', () => {
+test('Phase C migrations (217-220, 222) are additive, idempotent and have manual rollbacks', () => {
   const dir = path.join(__dirname, '../models/migrations');
-  const files = fs.readdirSync(dir).filter((f) => /^21[7-9]_|^220_/.test(f));
-  assert.equal(files.length, 4);
+  const files = fs.readdirSync(dir).filter((f) => /^(21[7-9]|220|222)_/.test(f));
+  assert.deepEqual(
+    files.map((f) => f.slice(0, 3)).sort(),
+    ['217', '218', '219', '220', '222'],
+  );
   assert.equal(files.some((f) => f.endsWith('.down.sql')), false, 'no .down.sql in migrations folder');
+  const rollbackDir = path.join(__dirname, '../../scripts/sql/rollback');
+  for (const f of files) {
+    assert.ok(fs.existsSync(path.join(rollbackDir, f)), `${f}: rollback lives in scripts/sql/rollback`);
+  }
+  assert.equal(
+    fs.existsSync(path.join(__dirname, '../../scripts/sql/proposed/222_admin_access_audit.sql')),
+    false,
+    '222 is a real migration now, not a proposal',
+  );
   for (const f of files) {
     const sql = fs.readFileSync(path.join(dir, f), 'utf8').replace(/--.*$/gm, '');
+    for (const create of sql.match(/CREATE\s+(UNIQUE\s+)?(TABLE|INDEX)\s+(?!IF NOT EXISTS)\S+/gi) || []) {
+      assert.fail(`${f}: CREATE without IF NOT EXISTS: ${create}`);
+    }
     assert.equal(/\bBEGIN\b|\bCOMMIT\b/i.test(sql), false, `${f}: no own transaction control`);
     assert.equal(/\bCONCURRENTLY\b/i.test(sql), false, `${f}: no CONCURRENTLY inside the runner transaction`);
     assert.equal(/\bDROP\s+TABLE\b|\bDROP\s+COLUMN\b|\bUPDATE\s+\w+\s+SET\b|\bDELETE\s+FROM\b/i.test(sql), false, `${f}: additive only`);
@@ -53,6 +68,26 @@ test('migrations 217-220 are additive and safe for boot-time runs', () => {
     for (const add of sql.match(/ADD\s+COLUMN\s+(?!IF NOT EXISTS)/gi) || []) {
       assert.fail(`${f}: ADD COLUMN without IF NOT EXISTS: ${add}`);
     }
+  }
+});
+
+test('optional CONCURRENTLY pre-build script matches the migration index definitions exactly', () => {
+  const norm = (s) => s.replace(/\s+/g, ' ').replace(/\s*;\s*$/, '').trim();
+  const indexStmts = (sql) =>
+    (sql.replace(/--.*$/gm, '').match(/CREATE\s+(?:UNIQUE\s+)?INDEX[\s\S]*?;/gi) || []).map(norm);
+  const migDir = path.join(__dirname, '../models/migrations');
+  const migrationIndexes = new Set(
+    fs.readdirSync(migDir)
+      .filter((f) => /^(21[7-9]|220)_/.test(f))
+      .flatMap((f) => indexStmts(fs.readFileSync(path.join(migDir, f), 'utf8'))),
+  );
+  const ops = fs.readFileSync(path.join(__dirname, '../../scripts/sql/ops/phase_c_prebuild_indexes_concurrently.sql'), 'utf8');
+  const opsIndexes = indexStmts(ops);
+  assert.ok(opsIndexes.length >= 2);
+  for (const stmt of opsIndexes) {
+    assert.match(stmt, /INDEX CONCURRENTLY IF NOT EXISTS/);
+    const asMigration = stmt.replace('INDEX CONCURRENTLY IF NOT EXISTS', 'INDEX IF NOT EXISTS');
+    assert.ok(migrationIndexes.has(asMigration), `same definition as the migration: ${asMigration}`);
   }
 });
 

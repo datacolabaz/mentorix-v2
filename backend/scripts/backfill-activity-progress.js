@@ -13,7 +13,7 @@
  * Nə edir (idempotent — təkrar işlətmək rəqəmləri şişirtmir):
  *  materials   material_assignments.view_count / last_viewed_at (material_view_events-dən),
  *              first/last_downloaded_at (köhnə klient yükləmə hadisələrindən; download_count toxunulmur).
- *              Yalnız yükləmə ilə «baxıb» sayılan sətirlər SAYILIR, dəyişdirilmir (D18 — qərar gözləyir).
+ *              Yalnız yükləmə ilə «baxıb» sayılan sətirlər SAYILIR, dəyişdirilmir (D18: yükləmə baxış sayılmır, köhnə sətirlər olduğu kimi qalır).
  *  assignments student_assignments.first_submitted_at / submission_count (təhvil verilmiş, boş olanlar);
  *              assignment_status.status və yeni sahələr (yalnız status hələ NULL olan sətirlər).
  *  exams       exam_student_progress (sətri olmayan tələbə × imtahan cütləri; ON CONFLICT DO NOTHING).
@@ -462,7 +462,7 @@ async function main() {
   const { Pool } = require('pg');
   const pool = new Pool({
     connectionString: url,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: /localhost|127\.0\.0\.1/i.test(url) ? false : { rejectUnauthorized: false },
     max: 1,
   });
   const client = await pool.connect();

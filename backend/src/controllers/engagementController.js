@@ -25,7 +25,7 @@ async function scopeFor(req, res, { action, entityType = null, entityId = null, 
     write,
   });
   if (!scope.ok) {
-    res.status(scope.status).json({ success: false, code: scope.code, message: scope.message });
+    res.status(scope.status).json({ success: false, code: scope.code, message: scope.message, ...(scope.details || {}) });
     return null;
   }
   if (scope.admin) {

@@ -3,8 +3,7 @@ const db = require('../utils/db');
 /**
  * Adminin həssas məlumata (tələbə fəaliyyəti) girişinin audit yazısı.
  * Fail-closed: audit yazılmadısa giriş verilmir (spec: «audit log required»).
- * Cədvəl admin_access_audit audit planında 222 nömrəli miqrasiyaya (phase D/E) aiddir;
- * layihə: backend/scripts/sql/proposed/222_admin_access_audit.sql. Cədvəl yoxdursa 503 qaytarılır.
+ * Cədvəl: migrasiya 222_admin_access_audit.sql. Yazmaq alınmasa (cədvəl yoxdur, DB xətası) 503 qaytarılır.
  */
 
 class AdminAuditUnavailableError extends Error {

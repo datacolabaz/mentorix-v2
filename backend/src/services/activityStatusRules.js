@@ -113,7 +113,7 @@ const EXPIRY_GRACE_SECONDS = 60;
 const AUTO_SUBMIT_EARLY_TOLERANCE_SECONDS = 10;
 /** Autosave şəxsi son andan sonra yalnız şəbəkə gecikməsi qədər qəbul olunur. */
 const AUTOSAVE_LATE_TOLERANCE_SECONDS = 10;
-/** Bu müddətdə heç bir fəaliyyət olmayan açıq cəhd «Fəaliyyətsizdir» sayılır (D10 — təsdiq gözləyir). */
+/** Bu müddətdə heç bir fəaliyyət olmayan açıq cəhd «Fəaliyyətsizdir» sayılır (D10: 10 dəqiqə, təsdiqlənib). */
 const EXAM_INACTIVE_AFTER_MINUTES = 10;
 
 const OPEN_EXAM_STATES = new Set(['not_started', 'viewed', 'in_progress']);

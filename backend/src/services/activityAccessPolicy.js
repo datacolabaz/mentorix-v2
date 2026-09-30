@@ -10,8 +10,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const ADMIN_REASON_MIN = 5;
 const ADMIN_REASON_MAX = 500;
 
-function deny(status, message, code) {
-  return { ok: false, status, message, code };
+function deny(status, message, code, details = null) {
+  return { ok: false, status, message, code, details };
 }
 
 function normalizeReason(raw) {
@@ -33,11 +33,16 @@ function resolveActivityScope(user, { instructorId = null, reason = null, write 
   if (write) return deny(403, 'Admin tələbə fəaliyyətini yalnız oxuya bilər', 'ADMIN_READ_ONLY');
   const target = String(instructorId || '').trim();
   if (!UUID_RE.test(target)) {
-    return deny(400, 'Müəllim seçilməyib (instructor_id)', 'ADMIN_TARGET_REQUIRED');
+    return deny(400, 'Müəllim seçilməyib: admin baxışı üçün instructor_id lazımdır', 'ADMIN_TARGET_REQUIRED');
   }
   const why = normalizeReason(reason);
   if (why.length < ADMIN_REASON_MIN) {
-    return deny(400, 'Tələbə fəaliyyətinə baxmaq üçün səbəb yazın (reason)', 'ADMIN_REASON_REQUIRED');
+    return deny(
+      400,
+      `Bu müəllimin tələbə fəaliyyətinə baxmaq üçün səbəb yazın (ən azı ${ADMIN_REASON_MIN} simvol). Səbəb audit jurnalına yazılır.`,
+      'ADMIN_REASON_REQUIRED',
+      { reason_min_length: ADMIN_REASON_MIN },
+    );
   }
   return { ok: true, ownerId: target, admin: { targetInstructorId: target, reason: why } };
 }

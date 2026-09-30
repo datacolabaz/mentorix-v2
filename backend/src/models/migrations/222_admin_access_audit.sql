@@ -1,7 +1,8 @@
--- PROPOSAL ONLY — not a migration. The audit plan reserves migration 222 (admin_access_audit) for phase D/E.
--- Phase C code (services/adminAccessAudit.js) already writes to this table and FAILS CLOSED:
--- until this table exists, admin access to teacher activity data via ?instructor_id= returns 503.
--- The owning phase should copy this file to src/models/migrations/222_admin_access_audit.sql.
+-- Admin həssas giriş auditi (audit planı §10.9, nömrə 222 bu slot üçün ayrılıb).
+-- Admin müəllimin tələbə fəaliyyətinə ?instructor_id= ilə baxanda səbəb tələb olunur və hər baxış bura yazılır.
+-- Yazmaq alınmasa giriş verilmir (services/adminAccessAudit.js, fail-closed).
+-- Yalnız yeni cədvəl və indekslər: mövcud cədvəllərə toxunmur, təkrar işlədilə bilər.
+-- Rollback: backend/scripts/sql/rollback/222_admin_access_audit.sql (əl ilə).
 
 CREATE TABLE IF NOT EXISTS admin_access_audit (
   id BIGSERIAL PRIMARY KEY,
@@ -15,5 +16,6 @@ CREATE TABLE IF NOT EXISTS admin_access_audit (
   user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
 CREATE INDEX IF NOT EXISTS idx_admin_access_audit_actor ON admin_access_audit (actor_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_admin_access_audit_target ON admin_access_audit (target_user_id, created_at DESC);
