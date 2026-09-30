@@ -497,9 +497,9 @@ const submitMyAssignment = async (req, res) => {
       [answer_text, attachment_urls, id, studentId, nextStatus],
     );
 
-    const { notifyStudent } = require('../services/assignmentHomeworkService');
+    const { createNotificationSafe } = require('../services/notificationService');
     const { rows: inst } = await db.query(
-      `SELECT t.instructor_id, t.title, u.full_name AS student_name
+      `SELECT t.id AS assignment_id, t.instructor_id, t.title, t.group_id, u.full_name AS student_name
        FROM student_assignments a
        JOIN assignments t ON t.id = a.assignment_id
        JOIN users u ON u.id = a.student_id
@@ -507,12 +507,22 @@ const submitMyAssignment = async (req, res) => {
       [id],
     );
     if (inst[0]) {
-      await notifyStudent(
-        inst[0].instructor_id,
-        'Tapşırıq təslim edildi',
-        `${inst[0].student_name} «${inst[0].title}» tapşırığını təslim etdi.`,
-        'assignment_submitted',
-      );
+      await createNotificationSafe({
+        recipientId: inst[0].instructor_id,
+        category: 'assignment',
+        eventType: 'assignment_submitted',
+        title: 'Tapşırıq təslim edildi',
+        body: `${inst[0].student_name} «${inst[0].title}» tapşırığını təslim etdi.`,
+        params: { studentName: inst[0].student_name, assignmentTitle: inst[0].title },
+        meta: { assignment_id: inst[0].assignment_id, late: nextStatus === 'late' },
+        relatedEntityType: 'student_assignment',
+        relatedEntityId: id,
+        actorUserId: studentId,
+        providerWorkspaceId: inst[0].instructor_id,
+        groupId: inst[0].group_id || null,
+        dedupeKey: `assignment_submitted:${id}`,
+        email: true,
+      });
     }
 
     try {

@@ -1,5 +1,15 @@
 const db = require('../utils/db');
 const { sendEmail, userEmail } = require('../services/emailService');
+const { createNotificationSafe } = require('../services/notificationService');
+
+function bakuTodayYmd() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Baku',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
 
 /**
  * Gündəlik batch: hər imtahan üçün bir dəfə müəllimə açıq sual təsdiq bildirişi.
@@ -72,19 +82,23 @@ async function runOpenGradingInstructorNotifications() {
     const n = item.student_count;
     const title = 'Açıq sual qiymətləndirməsi';
     const body = `${n} tələbənin cavabı təsdiqinizi gözləyir — «${item.exam_title}». Analytics → Nəticələrə bax.`;
-    const meta = JSON.stringify({
-      exam_id: item.exam_id,
-      pending_count: n,
-      kind: 'open_grading_pending',
-    });
 
-    await db
-      .query(
-        `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-         VALUES ($1, $2, $3, 'open_grading_pending', FALSE, $4::jsonb)`,
-        [item.instructor_id, title, body, meta],
-      )
-      .catch((e) => console.error('openGradingInstructorNotify insert', e.message));
+    const created = await createNotificationSafe({
+      recipientId: item.instructor_id,
+      category: 'grading',
+      eventType: 'open_grading_pending',
+      priority: 'HIGH',
+      title,
+      body,
+      params: { count: n, examTitle: item.exam_title },
+      meta: { exam_id: item.exam_id, pending_count: n, kind: 'open_grading_pending' },
+      relatedEntityType: 'exam',
+      relatedEntityId: item.exam_id,
+      providerWorkspaceId: item.instructor_id,
+      dedupeKey: `open_grading_pending:${item.exam_id}:${bakuTodayYmd()}`,
+      email: true,
+    });
+    if (!created.created) continue;
 
     try {
       const to = await userEmail(item.instructor_id);

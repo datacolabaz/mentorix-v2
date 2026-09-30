@@ -179,17 +179,27 @@ async function getStudentJoinStateForInvite(studentId, code) {
   };
 }
 
-async function notifyInstructorJoinRequest(instructorId, studentName, groupName) {
+async function notifyInstructorJoinRequest({ instructorId, studentId, studentName, groupId, groupName, requestId }) {
   const { sendEmail, userEmail } = require('./emailService');
+  const { createNotificationSafe } = require('./notificationService');
   const title = 'Yeni qoşulma sorğusu';
   const body = `${studentName} «${groupName}» qrupunuza qoşulmaq istəyir. Təsdiqləyin.`;
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read)
-       VALUES ($1, $2, $3, 'join_request', FALSE)`,
-      [instructorId, title, body],
-    )
-    .catch((e) => console.error('notifyInstructorJoinRequest', e.message));
+  await createNotificationSafe({
+    recipientId: instructorId,
+    category: 'group',
+    eventType: 'join_request',
+    priority: 'HIGH',
+    title,
+    body,
+    params: { studentName, groupName },
+    relatedEntityType: 'join_request',
+    relatedEntityId: requestId,
+    actorUserId: studentId,
+    providerWorkspaceId: instructorId,
+    groupId,
+    dedupeKey: requestId ? `join_request:${requestId}` : null,
+    email: true,
+  });
   try {
     const to = await userEmail(instructorId);
     if (to) {
@@ -481,7 +491,14 @@ async function createJoinRequest({
 
   if (result.idempotent) return result;
 
-  await notifyInstructorJoinRequest(g.instructor_id, fullName, g.group_name);
+  await notifyInstructorJoinRequest({
+    instructorId: g.instructor_id,
+    studentId,
+    studentName: fullName,
+    groupId: g.group_id,
+    groupName: g.group_name,
+    requestId: result.request_id,
+  });
 
   return {
     ...result,

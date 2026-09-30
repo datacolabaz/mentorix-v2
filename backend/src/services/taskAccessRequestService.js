@@ -61,16 +61,26 @@ async function getStudentTaskAccessStatus(studentId, taskId) {
   };
 }
 
-async function notifyInstructorTaskAccessRequest(instructorId, studentName, taskTitle, taskId) {
+async function notifyInstructorTaskAccessRequest({ instructorId, studentId, studentName, taskTitle, taskId, requestId }) {
+  const { createNotificationSafe } = require('./notificationService');
   const title = 'Tapşırıq giriş sorğusu';
   const body = `${studentName} «${taskTitle}» tapşırığına qoşulmaq istəyir. Təsdiqləyin.`;
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, 'task_access_request', FALSE, $4::jsonb)`,
-      [instructorId, title, body, JSON.stringify({ assignment_id: taskId, kind: 'task_access_request' })],
-    )
-    .catch((e) => console.error('notifyInstructorTaskAccessRequest', e.message));
+  await createNotificationSafe({
+    recipientId: instructorId,
+    category: 'assignment',
+    eventType: 'task_access_request',
+    priority: 'HIGH',
+    title,
+    body,
+    params: { studentName, assignmentTitle: taskTitle },
+    meta: { assignment_id: taskId, kind: 'task_access_request' },
+    relatedEntityType: 'task_access_request',
+    relatedEntityId: requestId,
+    actorUserId: studentId,
+    providerWorkspaceId: instructorId,
+    dedupeKey: requestId ? `task_access_request:${requestId}` : null,
+    email: true,
+  });
   try {
     const to = await userEmail(instructorId);
     if (to) {
@@ -149,7 +159,14 @@ async function createTaskAccessRequest(studentId, taskId) {
     });
     await trackInstructorStudentLink(task.instructor_id, studentId, { skipLimitCheck: true }, client);
   });
-  await notifyInstructorTaskAccessRequest(task.instructor_id, studentName, task.title, task.id);
+  await notifyInstructorTaskAccessRequest({
+    instructorId: task.instructor_id,
+    studentId,
+    studentName,
+    taskTitle: task.title,
+    taskId: task.id,
+    requestId: requestRow?.id,
+  });
 
   return {
     request_id: requestRow.id,
