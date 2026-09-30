@@ -43,6 +43,7 @@ import InstructorLayout from './layouts/InstructorLayout'
 import StudentLayout from './layouts/StudentLayout'
 import ParentLayout from './layouts/ParentLayout'
 import OrgLayout from './layouts/OrgLayout'
+import RoleLayout from './layouts/RoleLayout'
 
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'))
 const AdminInstructors = lazy(() => import('./pages/admin/Instructors'))
@@ -106,6 +107,8 @@ const AdminBilling = lazy(() => import('./pages/admin/AdminBilling'))
 const AdminPartners = lazy(() => import('./pages/admin/AdminPartners'))
 const AdminInventory = lazy(() => import('./pages/admin/AdminInventory'))
 const ParentNotifications = lazy(() => import('./pages/parent/Notifications'))
+const NotificationCenter = lazy(() => import('./pages/common/NotificationCenter'))
+const NotificationSettings = lazy(() => import('./pages/common/NotificationSettings'))
 const PartnerDashboard = lazy(() => import('./pages/partner/PartnerDashboard'))
 const PartnerProgramLanding = lazy(() => import('./pages/partner/PartnerProgramLanding'))
 const PartnerReferralLanding = lazy(() => import('./pages/PartnerReferralLanding'))
@@ -117,7 +120,6 @@ const StudentPayments = lazy(() => import('./pages/student/Payments'))
 const StudentSchedule = lazy(() => import('./pages/student/Schedule'))
 const StudentTasks = lazy(() => import('./pages/student/Tasks'))
 const StudentMaterials = lazy(() => import('./pages/student/Materials'))
-const StudentNotifications = lazy(() => import('./pages/student/Notifications'))
 const StudentJoinClass = lazy(() => import('./pages/student/JoinClass'))
 const StudentJoinRedirect = lazy(() => import('./pages/student/StudentJoinRedirect'))
 const StudentExamInvite = lazy(() => import('./pages/student/ExamInvite'))
@@ -445,7 +447,12 @@ export default function App() {
         <Route path="payments" element={<StudentPayments />} />
         {/* backward-compatible alias */}
         <Route path="payments/my" element={<Navigate to="/student/payments" replace />} />
-        <Route path="notifications" element={<StudentNotifications />} />
+        <Route path="notifications" element={<Navigate to="/notifications" replace />} />
+      </Route>
+
+      <Route element={<ProtectedRoute roles={['admin', 'instructor', 'student', 'parent', 'course']}><RoleLayout /></ProtectedRoute>}>
+        <Route path="/notifications" element={<NotificationCenter />} />
+        <Route path="/settings/notifications" element={<NotificationSettings />} />
       </Route>
 
       <Route path="/parent" element={<ProtectedRoute roles={['parent']}><ParentLayout /></ProtectedRoute>}>

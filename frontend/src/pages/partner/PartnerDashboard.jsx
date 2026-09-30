@@ -20,6 +20,7 @@ import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
+import NotificationBell from '../../components/notifications/NotificationBell'
 import { allowRolePanelVisit, secondaryPanelPathForUser } from '../../lib/postAuth'
 import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
 
@@ -109,6 +110,7 @@ function PartnerShell({ children }) {
             {t('partner.secondaryPanel', { defaultValue: 'Digər panel' })}
           </Link>
           <LocaleThemeBar tone={theme === 'dark' ? 'dark' : 'light'} />
+          <NotificationBell />
           <button
             type="button"
             onClick={() => {

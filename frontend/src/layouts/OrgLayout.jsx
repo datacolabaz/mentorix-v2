@@ -11,6 +11,7 @@ import { sidebarNavClass } from '../lib/sidebarNavClass'
 import { FIXED_MOBILE_TOP_BAR } from '../lib/stickyTopBar'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
+import NotificationBell from '../components/notifications/NotificationBell'
 import { filterOrgNav } from '../constants/orgNav'
 import { OrgWorkspaceProvider, useOrgWorkspace } from '../hooks/useOrgWorkspace'
 
@@ -105,7 +106,7 @@ function OrgSidebarChrome() {
         <div className="flex-1 flex justify-center min-w-0 overflow-visible">
           <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
         </div>
-        <div className="w-11 shrink-0" />
+        <NotificationBell />
       </header>
 
       {navOpen ? (
@@ -175,7 +176,7 @@ function OrgSidebarChrome() {
                         .toUpperCase()
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className={`text-[13px] font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                       {loading ? '…' : orgName}
                     </div>
@@ -183,12 +184,18 @@ function OrgSidebarChrome() {
                       {t('nav.org.orgBadge', { defaultValue: 'Təşkilat' })}
                     </div>
                   </div>
+                  <div className="hidden lg:block shrink-0">
+                    <NotificationBell />
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="mt-3 flex justify-center" title={orgName}>
-                <div className="w-9 h-9 rounded-lg overflow-hidden border border-emerald-500/25 bg-emerald-500/12 text-[11px] font-bold flex items-center justify-center text-emerald-100">
+              <div className="mt-3 flex flex-col items-center gap-2">
+                <div title={orgName} className="w-9 h-9 rounded-lg overflow-hidden border border-emerald-500/25 bg-emerald-500/12 text-[11px] font-bold flex items-center justify-center text-emerald-100">
                   {logoSrc ? <img src={logoSrc} alt="" className="w-full h-full object-cover" /> : orgName.slice(0, 1).toUpperCase()}
+                </div>
+                <div className="hidden lg:block">
+                  <NotificationBell />
                 </div>
               </div>
             )}

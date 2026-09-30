@@ -1846,6 +1846,121 @@
     "examApproveSmsLabel": "Also send SMS / WhatsApp",
     "examApproveSmsHint": "Only if the student has a phone on their profile. For students registered with Gmail, email is enough at first."
   },
+  "notificationCenter": {
+    "title": "Notifications",
+    "untitled": "Notification",
+    "unread": "Unread",
+    "loading": "Loading…",
+    "summaryUnread": "Unread: {{count}}",
+    "summaryAllRead": "You’re all caught up",
+    "bell": {
+      "label": "Notifications",
+      "labelUnread": "Notifications, {{count}} unread"
+    },
+    "actions": {
+      "markAllRead": "Mark all as read",
+      "markCategoryRead": "Mark category as read",
+      "markRead": "Mark as read",
+      "markReadNamed": "Mark “{{title}}” as read",
+      "viewAll": "View all notifications",
+      "settings": "Notification settings",
+      "retry": "Try again",
+      "loadMore": "Load more"
+    },
+    "filters": {
+      "category": "Category",
+      "allCategories": "All categories",
+      "unreadOnly": "Unread only"
+    },
+    "empty": {
+      "all": "No notifications yet",
+      "unread": "No unread notifications",
+      "category": "No notifications in this category",
+      "hint": "Updates about your groups, assignments and assessments will appear here."
+    },
+    "errors": {
+      "load": "Couldn’t load notifications.",
+      "markRead": "Couldn’t mark the notification as read.",
+      "markAll": "Couldn’t mark notifications as read."
+    },
+    "open": {
+      "forbidden": "You no longer have access to this item.",
+      "not_found": "This item is no longer available.",
+      "error": "Couldn’t open this notification. Please try again."
+    },
+    "priority": {
+      "high": "Important",
+      "critical": "Critical"
+    },
+    "categories": {
+      "security": "Security",
+      "assessment": "Assessments",
+      "assignment": "Assignments",
+      "material": "Materials",
+      "group": "Groups",
+      "grading": "Grading",
+      "partner": "Partner program",
+      "billing": "Billing",
+      "system": "System"
+    },
+    "categoryHelp": {
+      "assessment": "Assessment access requests, results and reminders",
+      "assignment": "New, submitted and overdue assignments",
+      "material": "New and updated learning materials",
+      "group": "Join requests and group changes",
+      "grading": "Answers waiting for review and published grades",
+      "partner": "Referral and payout updates",
+      "billing": "Payments, plans and limits",
+      "system": "Product news and account tips"
+    },
+    "frequency": {
+      "immediate": "Immediately",
+      "daily": "Daily digest",
+      "weekly": "Weekly digest",
+      "off": "Off"
+    },
+    "settings": {
+      "title": "Notification settings",
+      "subtitle": "Choose which updates you receive and how.",
+      "emailNotice": "Email notifications are still being set up. Your email choices are saved now and will apply once email delivery is enabled.",
+      "columns": {
+        "category": "Category",
+        "inApp": "In-app",
+        "email": "Email"
+      },
+      "lockedBadge": "Always on",
+      "lockedHelp": "Security alerts about your account can’t be turned off.",
+      "inAppFor": "In-app notifications: {{category}}",
+      "emailFor": "Email: {{category}}",
+      "save": "Save changes",
+      "saved": "Settings saved.",
+      "saveError": "Couldn’t save settings. Please try again.",
+      "loadError": "Couldn’t load your notification settings.",
+      "resetDefaults": "Reset to recommended"
+    },
+    "events": {
+      "join_request": {
+        "title": "New join request",
+        "body": "{{studentName}} wants to join your group “{{groupName}}”. Please review the request."
+      },
+      "exam_access_request": {
+        "title": "Assessment access request",
+        "body": "{{studentName}} wants to join the assessment “{{examTitle}}”. Please review the request."
+      },
+      "task_access_request": {
+        "title": "Assignment access request",
+        "body": "{{studentName}} wants to join the assignment “{{assignmentTitle}}”. Please review the request."
+      },
+      "assignment_submitted": {
+        "title": "Assignment submitted",
+        "body": "{{studentName}} submitted the assignment “{{assignmentTitle}}”."
+      },
+      "open_grading_pending": {
+        "title": "Open answers awaiting review",
+        "body": "{{count}} student answers are waiting for your confirmation — “{{examTitle}}”."
+      }
+    }
+  },
   "notifications": {
     "title": "Notifications",
     "subtitle": "SMS and storage limits",
