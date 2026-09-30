@@ -5,6 +5,7 @@ export const ASSIGNMENT_STATUS_AZ = {
   late: 'Gecikmiş',
   late_rejected: 'Gecikmə rədd',
   overdue: 'Vaxtı keçib',
+  returned: 'Düzəlişə qaytarılıb',
 }
 
 export function assignmentStatusLabel(status, displayStatus) {
@@ -24,7 +25,7 @@ export function assignmentStatusClass(status, displayStatus) {
   if (key === 'late_rejected') {
     return 'bg-red-500/15 border-red-500/30 text-red-700 [.theme-dark_&]:text-red-200 [.theme-dark_&]:border-red-400/35'
   }
-  if (key === 'overdue') {
+  if (key === 'overdue' || key === 'returned') {
     return 'bg-amber-500/15 border-amber-500/30 text-amber-800 [.theme-dark_&]:text-amber-100 [.theme-dark_&]:border-amber-400/35'
   }
   return 'bg-indigo-500/15 border-indigo-500/30 text-indigo-700 [.theme-dark_&]:text-indigo-200 [.theme-dark_&]:border-indigo-400/35'
@@ -33,7 +34,7 @@ export function assignmentStatusClass(status, displayStatus) {
 export function filterTasksByTab(tasks, tab) {
   const list = (Array.isArray(tasks) ? tasks : []).filter(Boolean)
   if (tab === 'active') {
-    return list.filter((t) => ['pending', 'overdue'].includes(t.display_status || t.status))
+    return list.filter((t) => ['pending', 'overdue', 'returned'].includes(t.display_status || t.status))
   }
   if (tab === 'completed') {
     return list.filter((t) => ['submitted', 'reviewed', 'late'].includes(t.display_status || t.status))

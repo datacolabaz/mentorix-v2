@@ -284,6 +284,15 @@ function mergeReviewBreakdownWithAnswers(breakdown, answers) {
 
 const SUMMARY_TYPE_KEYS = ['closed', 'multiple', 'matching', 'open']
 
+/** Server cəhdi artıq yekunlaşdırıb (vaxt bitib / avtomatik təqdim) — imtahan ekranı bağlanır. */
+const EXAM_FINALIZED_CODES = new Set([
+  'EXAM_EXPIRED_AUTO_SUBMITTED',
+  'EXAM_EXPIRED_NO_ANSWERS',
+  'EXAM_TIME_OVER',
+  'EXAM_ALREADY_FINALIZED',
+])
+const EXAM_AUTOSAVE_DEBOUNCE_MS = 2000
+
 /** Backend `buildExamTypeSummary` cavabı */
 function ExamTypeSummaryPanel({ summary, gradingPending = false }) {
   const bt = summary?.by_type
@@ -849,6 +858,7 @@ export default function StudentExams() {
       setFocusMode(true)
     } catch (err) {
       toast(err.message || 'İmtahan açılmadı', 'error')
+      if (EXAM_FINALIZED_CODES.has(err?.code)) loadExams(true)
     } finally {
       setStartExamLoading(false)
     }
@@ -945,9 +955,10 @@ export default function StudentExams() {
       !!(lateUntil && !Number.isNaN(lateUntil.getTime()) && now <= lateUntil)
     const inGlobalWindow = !!(start && until && now >= start && now <= until)
     const inExamWindow = !!(start && until && (inGlobalWindow || inLateWindow))
-    const hasOpenAttempt = !!(exam.started_at && !exam.submitted_at)
+    const expiredNoAnswers = !exam.submitted_at && exam.attempt_status === 'expired'
+    const hasOpenAttempt = !!(exam.started_at && !exam.submitted_at) && !expiredNoAnswers
     const showContinue = hasOpenAttempt && inExamWindow
-    const canStartFresh = !hasOpenAttempt && inExamWindow
+    const canStartFresh = !hasOpenAttempt && !expiredNoAnswers && inExamWindow
 
     if (exam.submitted_at) {
       void openPastReview(exam)
@@ -966,13 +977,16 @@ export default function StudentExams() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkExamId, exams, listLoading, activeExam, setSearchParams, toast])
 
-  const submitExam = useCallback(async () => {
+  /** opts.auto — taymer bitdi (düymədən çağırılanda opts klik hadisəsidir). */
+  const submitExam = useCallback(async (opts) => {
     const examId = activeExamIdRef.current
     if (!examId) return
+    const auto = opts?.auto === true
     try {
       const data = await api.post('/exams/submit', {
         exam_id: examId,
         answers: answersRef.current,
+        ...(auto ? { auto_submit: true } : {}),
       })
       setResult(data?.score ?? null)
       setResultVisibility(data?.result_visibility || null)
@@ -996,8 +1010,48 @@ export default function StudentExams() {
       loadExams(true)
     } catch (err) {
       toast(err.message || 'Xəta', 'error')
+      if (EXAM_FINALIZED_CODES.has(err?.code)) {
+        setActiveExam(null)
+        setPersonalEndTime(null)
+        setFocusMode(false)
+        loadExams(true)
+      }
     }
   }, [loadExams, setFocusMode, toast])
+
+  const submitExamOnExpire = useCallback(() => submitExam({ auto: true }), [submitExam])
+
+  /** Cavablar serverdə aralıq saxlanılır ki, vaxt bitəndə və ya bağlantı kəsiləndə itməsin. */
+  const lastAutosavedRef = useRef('')
+  useEffect(() => {
+    const examId = activeExam?.id
+    if (!examId) {
+      lastAutosavedRef.current = ''
+      return undefined
+    }
+    const json = JSON.stringify(answers || {})
+    if (!lastAutosavedRef.current) {
+      lastAutosavedRef.current = json
+      return undefined
+    }
+    if (json === lastAutosavedRef.current) return undefined
+    const timer = setTimeout(() => {
+      api
+        .post(`/exams/${encodeURIComponent(examId)}/autosave`, { answers: answersRef.current })
+        .then(() => {
+          lastAutosavedRef.current = json
+        })
+        .catch(() => {})
+    }, EXAM_AUTOSAVE_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [answers, activeExam?.id])
+
+  /** Başlama pəncərəsi açıldı — müəllim «baxıb, başlamayıb» görsün (bir dəfə sayılır). */
+  const startConfirmExamId = startConfirm?.exam?.id
+  useEffect(() => {
+    if (!startConfirmExamId) return
+    api.post(`/exams/${encodeURIComponent(startConfirmExamId)}/viewed`).catch(() => {})
+  }, [startConfirmExamId])
 
   useEffect(() => {
     return () => setFocusMode(false)
@@ -1040,7 +1094,7 @@ export default function StudentExams() {
               )}
             </div>
             <div className="flex flex-row items-center justify-between gap-3 w-full min-w-0 sm:w-auto lg:justify-end lg:gap-6 shrink-0 border-t border-indigo-500/15 pt-3 lg:border-t-0 lg:pt-0">
-              <Countdown endTime={endTime} onExpire={submitExam} />
+              <Countdown endTime={endTime} onExpire={submitExamOnExpire} />
               <div className="text-right shrink-0 pl-2">
                 <div className="text-xs sm:text-sm text-gray-400 whitespace-nowrap">
                   {Object.keys(answers).length}/{questions.length} cavablandı
@@ -1384,13 +1438,15 @@ export default function StudentExams() {
             )
           const inGlobalWindow = !!(start && until && now >= start && now <= until)
           const inExamWindow = !!(start && until && (inGlobalWindow || inLateWindow))
-          const hasOpenAttempt = !!(exam.started_at && !exam.submitted_at)
+          /** Vaxt cavabsız bitib: müəllim gec giriş verənə qədər yenidən başlamaq olmur */
+          const expiredNoAnswers = !exam.submitted_at && exam.attempt_status === 'expired'
+          const hasOpenAttempt = !!(exam.started_at && !exam.submitted_at) && !expiredNoAnswers
           const allowFinishAfterUntil = w.allowFinish
           /** Davam: aktiv pəncərədə və ya şəxsi vaxt qalıbsa (allow_finish sonrası da) */
           const showContinue =
             hasOpenAttempt &&
             (inExamWindow || (canResume && allowFinishAfterUntil && until && now > until))
-          const canStartFresh = !hasOpenAttempt && inExamWindow
+          const canStartFresh = !hasOpenAttempt && !expiredNoAnswers && inExamWindow
           const isDone = !!exam.submitted_at
 
           return (
@@ -1415,6 +1471,11 @@ export default function StudentExams() {
                     )}
                     <span>⏱ {exam.duration_minutes ?? '—'} dəq</span>
                   </div>
+                  {expiredNoAnswers && (
+                    <div className="mt-2 px-3 py-1 bg-amber-500/15 text-amber-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">
+                      Vaxt bitdi — cavab qeydə alınmayıb. Yenidən giriş üçün müəllimə müraciət edin.
+                    </div>
+                  )}
                   {isDone && (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold inline-block max-w-full break-words">

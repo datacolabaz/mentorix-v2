@@ -106,6 +106,7 @@ export default function InstructorTasks() {
   const [reviewScore, setReviewScore] = useState('')
   const [reviewFeedback, setReviewFeedback] = useState('')
   const [reviewSaving, setReviewSaving] = useState(false)
+  const [returnConfirmOpen, setReturnConfirmOpen] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiMeta, setAiMeta] = useState(null)
   const [groups, setGroups] = useState([])
@@ -494,6 +495,27 @@ export default function InstructorTasks() {
     toast(t('tasks.toasts.aiApplied'), 'success')
   }
 
+  const returnForRevision = async () => {
+    if (!review?.student_assignment_id) return
+    setReviewSaving(true)
+    try {
+      const d = await api.post(
+        '/tasks/instructor/review/' + encodeURIComponent(review.student_assignment_id) + '/return',
+        { feedback: reviewFeedback || null },
+      )
+      setReview((prev) => (prev ? { ...prev, ...(d.review || {}), submitted_at: null, score: null, reviewed_at: null } : prev))
+      setReviewScore('')
+      setReturnConfirmOpen(false)
+      toast(t('tasks.toasts.returnedForRevision'), 'success')
+      await load()
+      await loadAnalytics()
+    } catch (e) {
+      toast(e?.message || t('tasks.toasts.error'), 'error')
+    } finally {
+      setReviewSaving(false)
+    }
+  }
+
   const decideLate = async (decision) => {
     if (!review?.student_assignment_id) return
     setReviewSaving(true)
@@ -513,6 +535,16 @@ export default function InstructorTasks() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto">
+      <ConfirmDialog
+        open={returnConfirmOpen}
+        onClose={() => !reviewSaving && setReturnConfirmOpen(false)}
+        onConfirm={() => void returnForRevision()}
+        title={t('tasks.review.returnForRevision')}
+        message={t('tasks.review.returnConfirm')}
+        confirmLabel={t('tasks.review.returnForRevision')}
+        cancelLabel={t('common.cancel')}
+        loading={reviewSaving}
+      />
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onClose={() => !deletingId && setDeleteTarget(null)}
@@ -1134,9 +1166,20 @@ export default function InstructorTasks() {
                 onChange={(e) => setReviewFeedback(e.target.value)}
                 placeholder={t('tasks.review.feedbackPh')}
               />
-              <Button onClick={() => void saveReview()} loading={reviewSaving}>
-                {t('tasks.review.saveFeedback')}
-              </Button>
+              {review.status === 'returned' ? (
+                <p className="text-sm text-amber-300">{t('tasks.review.returnedAwaiting')}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => void saveReview()} loading={reviewSaving}>
+                    {t('tasks.review.saveFeedback')}
+                  </Button>
+                  {review.submitted_at && ['submitted', 'late', 'reviewed'].includes(review.status) ? (
+                    <Button variant="secondary" onClick={() => setReturnConfirmOpen(true)} disabled={reviewSaving}>
+                      {t('tasks.review.returnForRevision')}
+                    </Button>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <Button

@@ -2436,7 +2436,10 @@
       "scorePlaceholder": "Score",
       "scoreRange": "0–{{max}}",
       "feedbackPh": "Feedback (e.g. errors in the Loops section)",
-      "saveFeedback": "Save feedback"
+      "saveFeedback": "Save feedback",
+      "returnForRevision": "Return for revision",
+      "returnConfirm": "Return this work to the student for revision? The current score will be cleared and the student can resubmit. The feedback above will be shown to the student.",
+      "returnedAwaiting": "Returned for revision — waiting for the student to resubmit."
     },
     "defaultTitle": "Assignment",
     "defaultStudent": "Student",
@@ -2504,6 +2507,7 @@
       "reviewed": "Reviewed",
       "late": "Late",
       "late_rejected": "Late rejected",
+      "returned": "Returned for revision",
       "overdue": "Overdue",
       "completed": "Completed"
     },
@@ -2530,7 +2534,8 @@
       "aiSuggestFailed": "Could not get an AI suggestion. Please try again later or grade manually.",
       "aiApplied": "Suggestion copied into the form — review and save",
       "lateAccepted": "Late submission accepted",
-      "lateRejected": "Late submission rejected"
+      "lateRejected": "Late submission rejected",
+      "returnedForRevision": "Work returned for revision"
     }
   },
   "analytics": {

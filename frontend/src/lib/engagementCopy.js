@@ -43,6 +43,7 @@ export const MATERIAL_STATUS = {
 export const ASSIGNMENT_STATUS = {
   graded: { label: 'Qiymətləndirilib', icon: '✓', tone: 'green' },
   submitted: { label: 'Yoxlama gözləyir', icon: '⏳', tone: 'yellow' },
+  returned: { label: 'Düzəlişə qaytarılıb', icon: '↺', tone: 'yellow' },
   started: { label: 'Başlayıb, təqdim etməyib', icon: '✎', tone: 'yellow' },
   opened: { label: 'Açıb, təqdim etməyib', icon: '◐', tone: 'yellow' },
   overdue: { label: 'Vaxtı keçib', icon: '!', tone: 'red' },
@@ -66,6 +67,7 @@ export const ASSIGNMENT_FILTERS = [
   { id: 'not_submitted', label: 'Təqdim etməyib' },
   { id: 'waiting_grading', label: 'Yoxlama gözləyir' },
   { id: 'graded', label: 'Qiymətləndirilib' },
+  { id: 'returned', label: 'Düzəlişə qaytarılıb' },
   { id: 'overdue', label: 'Vaxtı keçib' },
   { id: 'not_opened', label: 'Açmayıb' },
 ]

@@ -2457,7 +2457,10 @@
       "scorePlaceholder": "Bal",
       "scoreRange": "0–{{max}}",
       "feedbackPh": "Rəy (məs: Loops hissəsində səhvlər var)",
-      "saveFeedback": "Rəyi saxla"
+      "saveFeedback": "Rəyi saxla",
+      "returnForRevision": "Düzəlişə qaytar",
+      "returnConfirm": "İş tələbəyə düzəliş üçün qaytarılsın? Qoyulmuş bal silinəcək, tələbə yenidən təslim edə biləcək. Yuxarıdakı rəy tələbəyə göstəriləcək.",
+      "returnedAwaiting": "İş düzəlişə qaytarılıb — tələbənin yenidən təslimi gözlənilir."
     },
     "defaultTitle": "Tapşırıq",
     "defaultStudent": "Tələbə",
@@ -2525,6 +2528,7 @@
       "reviewed": "Yoxlanılıb",
       "late": "Gecikmiş",
       "late_rejected": "Gecikmə rədd",
+      "returned": "Düzəlişə qaytarılıb",
       "overdue": "Vaxtı keçib",
       "completed": "Tamamlanıb"
     },
@@ -2551,7 +2555,8 @@
       "aiSuggestFailed": "AI təklifi alınmadı. Bir az sonra yenidən cəhd edin və ya əl ilə qiymətləndirin.",
       "aiApplied": "Təklif formaya köçürüldü — yoxlayıb saxlayın",
       "lateAccepted": "Gecikmiş təslim qəbul edildi",
-      "lateRejected": "Gecikmiş təslim rədd edildi"
+      "lateRejected": "Gecikmiş təslim rədd edildi",
+      "returnedForRevision": "İş düzəlişə qaytarıldı"
     }
   },
   "analytics": {
