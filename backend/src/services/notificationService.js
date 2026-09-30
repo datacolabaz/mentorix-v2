@@ -5,8 +5,9 @@
  */
 const db = require('../utils/db');
 const policy = require('../config/notificationPolicy');
-const { emailStatusFor, logDryRun, EMAIL_STATUS } = require('./notificationEmailGate');
+const { emailStatusFor, EMAIL_STATUS } = require('./notificationEmailGate');
 const { hasTemplate, renderTemplate } = require('./notificationTemplates');
+const { emailLocale } = require('./email/emailTemplates');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TITLE = 255;
@@ -157,19 +158,38 @@ async function createNotification(input, opts = {}) {
   if (!decision.inApp) meta.silent = true;
   if (emailStatus === EMAIL_STATUS.DIGEST) meta.email_frequency = decision.email.frequency;
 
+  // The outbox row is written by the same statement (atomic, no transaction needed), only
+  // when a new notification row was inserted — a deduped retry never queues a second email.
+  // Only ids/template/locale are queued; the worker renders at send time (no private body stored).
+  const enqueueEmail = emailStatus === EMAIL_STATUS.QUEUED;
   let id = null;
+  let queued = false;
   try {
     const { rows } = await q.query(
-      `INSERT INTO notifications (
-         user_id, title, body, type, is_read, read_at, meta,
-         category, priority, related_entity_type, related_entity_id,
-         actor_user_id, provider_workspace_id, group_id, email_status, dedupe_key
-       ) VALUES (
-         $1, $2, $3, $4, $5::boolean, CASE WHEN $5::boolean THEN NOW() ELSE NULL END, $6::jsonb,
-         $7, $8, $9, $10, $11, $12, $13, $14, $15
+      `WITH ins AS (
+         INSERT INTO notifications (
+           user_id, title, body, type, is_read, read_at, meta,
+           category, priority, related_entity_type, related_entity_id,
+           actor_user_id, provider_workspace_id, group_id, email_status, dedupe_key
+         ) VALUES (
+           $1, $2, $3, $4::text, $5::boolean, CASE WHEN $5::boolean THEN NOW() ELSE NULL END, $6::jsonb,
+           $7, $8, $9, $10, $11, $12, $13, $14, $15
+         )
+         ON CONFLICT (user_id, dedupe_key) WHERE dedupe_key IS NOT NULL DO NOTHING
+         RETURNING id, user_id
+       ), outbox AS (
+         INSERT INTO notification_queue (
+           channel, event_type, unique_key, user_id, to_addr, status, retry_count, next_retry_at,
+           notification_id, template_key, locale
+         )
+         SELECT 'email', $4::text, 'email:notification:' || ins.id::text, ins.user_id, '__resolve__', 'queued', 0, NOW(),
+                ins.id, $4::text, $16::varchar
+         FROM ins
+         WHERE $17::boolean
+         ON CONFLICT (unique_key) DO NOTHING
+         RETURNING id
        )
-       ON CONFLICT (user_id, dedupe_key) WHERE dedupe_key IS NOT NULL DO NOTHING
-       RETURNING id`,
+       SELECT ins.id, (SELECT COUNT(*) FROM outbox)::int AS queued FROM ins`,
       [
         n.recipientId,
         text.title,
@@ -186,9 +206,12 @@ async function createNotification(input, opts = {}) {
         n.groupId,
         emailStatus,
         n.dedupeKey,
+        emailLocale(recipient.locale),
+        enqueueEmail,
       ],
     );
     id = rows[0]?.id || null;
+    queued = Number(rows[0]?.queued || 0) > 0;
   } catch (err) {
     // Migrasiya 214 hələ tətbiq olunmayıbsa (yalnız lokal/köhnə DB) — köhnə formada yaz.
     if (err && err.code === '42703') {
@@ -199,11 +222,7 @@ async function createNotification(input, opts = {}) {
   }
 
   if (!id) return { created: false, deduped: true, id: null, inApp: decision.inApp, emailStatus };
-
-  if (emailStatus === EMAIL_STATUS.DRY_RUN) {
-    logDryRun({ notificationId: id, recipientId: n.recipientId, eventType: n.eventType });
-  }
-  return { created: true, deduped: false, id, inApp: decision.inApp, emailStatus };
+  return { created: true, deduped: false, id, inApp: decision.inApp, emailStatus, emailQueued: queued };
 }
 
 /** Fire-and-forget call site-lar üçün: xəta istifadəçi axınını pozmur. */

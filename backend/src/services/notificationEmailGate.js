@@ -1,29 +1,30 @@
 /**
- * Yeni bildiriş emailləri üçün qapı (Phase A).
- * Bu mərhələdə heç bir email GÖNDƏRİLMİR və `notification_queue`-ya sətir yazılmır
- * (mövcud SMTP worker-i onları göndərə bilməsin deyə). Yalnız niyyət/status qeyd olunur:
- *   skipped    — seçim/siyasət emaili söndürüb
- *   digest     — gündəlik/həftəlik xülasəyə saxlanılıb (planlaşdırma Phase B/sonra)
- *   suppressed — email kanalı qlobal söndürülüb (default; domen təsdiqlənənə qədər)
- *   dry_run    — EMAIL_ENABLED=true, amma göndərmə yoxdur; yalnız təhlükəsiz log
- * Phase B: `suppressed` sətirləri sonradan göndərilməməlidir (köhnə backlog).
+ * Email intent for a new notification (decided before anything is written):
+ *   skipped    — preference/policy turned email off
+ *   digest     — held for a daily/weekly summary (digest job not scheduled yet)
+ *   suppressed — email channel globally off (EMAIL_ENABLED unset/false). Nothing is queued and
+ *                these rows are never sent later, even after email is switched on.
+ *   queued     — written to notification_queue in the same statement as the notification.
+ *                The worker then records dry_run | sent | failed | skipped. Whether a queued
+ *                email is really sent is decided at send time (emailConfig.notificationMode):
+ *                EMAIL_ENABLED=true alone → dry_run; real sends also need EMAIL_DRY_RUN=false
+ *                and a production EMAIL_ENVIRONMENT.
  */
+const { getEmailConfig, notificationMode } = require('./email/emailConfig');
 
 const EMAIL_STATUS = Object.freeze({
   SKIPPED: 'skipped',
   DIGEST: 'digest',
   SUPPRESSED: 'suppressed',
+  QUEUED: 'queued',
   DRY_RUN: 'dry_run',
+  SENT: 'sent',
+  FAILED: 'failed',
 });
 
-function isTrue(v) {
-  return ['1', 'true', 'yes', 'on'].includes(String(v || '').trim().toLowerCase());
-}
-
-/** Spec adları: EMAIL_ENABLED, EMAIL_DRY_RUN. Default: söndürülüb. */
+/** 'off' | 'dry_run' | 'live' */
 function notificationEmailMode(env = process.env) {
-  if (!isTrue(env.EMAIL_ENABLED)) return 'off';
-  return 'dry_run';
+  return notificationMode(getEmailConfig(env));
 }
 
 /**
@@ -37,7 +38,7 @@ function emailStatusFor(emailDecision, env = process.env) {
     return EMAIL_STATUS.SKIPPED;
   }
   if (emailDecision.frequency === 'daily' || emailDecision.frequency === 'weekly') return EMAIL_STATUS.DIGEST;
-  return notificationEmailMode(env) === 'dry_run' ? EMAIL_STATUS.DRY_RUN : EMAIL_STATUS.SUPPRESSED;
+  return notificationEmailMode(env) === 'off' ? EMAIL_STATUS.SUPPRESSED : EMAIL_STATUS.QUEUED;
 }
 
 function maskId(id) {
@@ -45,11 +46,4 @@ function maskId(id) {
   return s.length > 8 ? `${s.slice(0, 8)}…` : s;
 }
 
-/** Heç vaxt email ünvanı, başlıq və ya mətn loglanmır. */
-function logDryRun({ notificationId, recipientId, eventType }) {
-  console.log(
-    `[notify-email:dry_run] template=${eventType} recipient=${maskId(recipientId)} notification=${maskId(notificationId)}`,
-  );
-}
-
-module.exports = { EMAIL_STATUS, notificationEmailMode, emailStatusFor, logDryRun, maskId };
+module.exports = { EMAIL_STATUS, notificationEmailMode, emailStatusFor, maskId };
