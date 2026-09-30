@@ -2,6 +2,7 @@ const {
   ACTIVITY_EVENTS,
   EXPIRY_GRACE_SECONDS,
   AUTOSAVE_LATE_TOLERANCE_SECONDS,
+  AUTO_SUBMIT_EARLY_TOLERANCE_SECONDS,
   nextExamStatus,
   parseAnswers,
   countAnsweredQuestions,
@@ -302,9 +303,14 @@ function createAssessmentAttemptService(overrides = {}) {
   /**
    * Vaxtı bitmiş açıq cəhdi yekunlaşdırır. Cavab varsa avtomatik təqdim + qiymətləndirmə, yoxdursa «cavabsız».
    * Idempotent: artıq yekunlaşmış cəhd üçün heç nə etmir.
-   * @param {{ now?: Date, graceSeconds?: number, via?: string, minimumMinutes?: number }} opts
+   * clientDeclared: tələbənin brauzeri vaxtın bitdiyini bildirib (auto_submit) — güzəşt gözlənilmir, amma son vaxta
+   * AUTO_SUBMIT_EARLY_TOLERANCE_SECONDS-dan çox qalıbsa cəhd yekunlaşdırılmır.
+   * @param {{ now?: Date, graceSeconds?: number, via?: string, minimumMinutes?: number, clientDeclared?: boolean }} opts
    */
-  async function finalizeExpiredAttempt(resultId, { now = new Date(), graceSeconds = EXPIRY_GRACE_SECONDS, via = 'sweep', minimumMinutes = 0 } = {}) {
+  async function finalizeExpiredAttempt(
+    resultId,
+    { now = new Date(), graceSeconds = EXPIRY_GRACE_SECONDS, via = 'sweep', minimumMinutes = 0, clientDeclared = false } = {},
+  ) {
     const out = await db().transaction(async (client) => {
       const { rows } = await client.query(
         `SELECT er.id, er.exam_id, er.student_id, er.started_at, er.submitted_at, er.status, er.answers,
@@ -325,7 +331,10 @@ function createAssessmentAttemptService(overrides = {}) {
 
       const deadline = examPersonalDeadline(r.started_at, r.duration_minutes, { minimumMinutes });
       if (!deadline) return { finalized: false, reason: 'no_deadline' };
-      if (now.getTime() <= deadline.getTime() + graceSeconds * 1000) return { finalized: false, reason: 'not_expired' };
+      const expired = clientDeclared
+        ? now.getTime() >= deadline.getTime() - AUTO_SUBMIT_EARLY_TOLERANCE_SECONDS * 1000
+        : now.getTime() > deadline.getTime() + graceSeconds * 1000;
+      if (!expired) return { finalized: false, reason: 'not_expired' };
 
       const answers = parseAnswers(r.answers) || {};
       const answered = countAnsweredQuestions(answers);

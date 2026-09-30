@@ -26,7 +26,7 @@ const {
 const { isFeatureEnabled } = require('../services/featureFlagService');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');
 const assessmentAttempts = require('../services/assessmentAttemptService');
-const { classifySubmission, countAnsweredQuestions } = require('../services/activityStatusRules');
+const { classifySubmission, countAnsweredQuestions, hasAnyAnswer } = require('../services/activityStatusRules');
 
 async function resultModesEnabled() {
   return isFeatureEnabled(FEATURE_FLAGS.EXAM_RESULT_MODES).catch(() => true);
@@ -1354,6 +1354,33 @@ const submitExam = async (req, res) => {
         });
       }
       return res.status(400).json({ success: false, code: 'EXAM_TIME_OVER', message: 'Vaxtınız bitib' });
+    }
+
+    /**
+     * Brauzer vaxt bitəndə boş cavabla avtomatik təqdim edib: 0 ballıq «tamamlandı» yazılmır.
+     * Serverdə saxlanmış (autosave) cavab varsa o təqdim olunur, yoxdursa cəhd «cavabsız» qalır və ortaya düşmür.
+     */
+    if (submission.kind === 'auto_expired' && !hasAnyAnswer(answers) && attempt?.id) {
+      const fin = await assessmentAttempts
+        .finalizeExpiredAttempt(attempt.id, { now, via: 'client_auto_submit', clientDeclared: true })
+        .catch((e) => {
+          console.error('[exam-expiry] empty auto submit finalize', e.message);
+          return { finalized: false };
+        });
+      if (fin.outcome === 'expired_auto_submitted') {
+        return res.status(400).json({
+          success: false,
+          code: 'EXAM_EXPIRED_AUTO_SUBMITTED',
+          message: 'Vaxtınız bitdi. Saxlanmış cavablarınız avtomatik təqdim edildi.',
+        });
+      }
+      if (fin.outcome === 'expired_no_answers') {
+        return res.status(400).json({
+          success: false,
+          code: 'EXAM_EXPIRED_NO_ANSWERS',
+          message: 'Vaxtınız bitdi. Cavab qeydə alınmayıb — yenidən giriş üçün müəllimə müraciət edin.',
+        });
+      }
     }
 
     const wrongPen = exam.wrong_penalty_enabled !== false;

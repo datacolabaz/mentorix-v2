@@ -279,6 +279,25 @@ test('within the grace window nothing is finalized (client submit may still arri
   assert.equal(fake.state.results.get('r5').status, 'in_progress');
 });
 
+test('empty client auto-submit at expiry (tab open): no-answer attempt becomes expired, not a 0-point result', async () => {
+  const { fake, svc } = setup();
+  const deadlineIn = (sec) => new Date(Date.now() - 30 * 60000 + sec * 1000);
+  addAttempt(fake, { id: 'r9', studentId: 'stu-i1', startedAt: deadlineIn(-5), answers: null });
+  const early = await svc.finalizeExpiredAttempt('r9', { now: new Date(Date.now() - 60000), clientDeclared: true });
+  assert.equal(early.reason, 'not_expired', 'a minute before the deadline the browser claim is not trusted');
+  const res = await svc.finalizeExpiredAttempt('r9', { clientDeclared: true, via: 'client_auto_submit' });
+  assert.equal(res.outcome, 'expired_no_answers');
+  const r = fake.state.results.get('r9');
+  assert.equal(r.status, 'expired');
+  assert.equal(r.submitted_at, null);
+  assert.equal(r.score, null, 'excluded from averages');
+
+  addAttempt(fake, { id: 'r10', studentId: 'stu-i2', startedAt: deadlineIn(-5), answers: { q1: 'A' } });
+  const saved = await svc.finalizeExpiredAttempt('r10', { clientDeclared: true, via: 'client_auto_submit' });
+  assert.equal(saved.outcome, 'expired_auto_submitted', 'autosaved answers are submitted even if the final request was empty');
+  assert.equal(fake.state.results.get('r10').score, 5);
+});
+
 test('late access voids only the empty expired attempt; voided attempts never count', async () => {
   const { fake, svc } = setup();
   addAttempt(fake, { id: 'r6', studentId: 'stu-f', startedAt: minutesAgo(45), answers: {} });
