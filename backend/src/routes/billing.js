@@ -12,6 +12,7 @@ const { normalizePlanSlug, planRank } = require('../config/plans');
 const { getOrderInfo } = require('../services/payriffService');
 const { sendPaymentEmail } = require('../services/emailService');
 const { enqueueNotification } = require('../services/notificationQueueService');
+const { getBrand } = require('../config/brand');
 const {
   createPlanCheckout,
   createSmsCheckout,
@@ -381,7 +382,8 @@ async function processPayriffCallback(req, res) {
         }).catch(() => ({ skipped: false, error: true }));
 
         // If direct sending is skipped/failed, enqueue for retry (idempotent via unique_key).
-        if (direct?.skipped || direct?.error) {
+        if ((direct?.skipped && direct.reason !== 'dry_run') || direct?.error) {
+          const brandName = getBrand().name;
           await enqueueNotification({
             channel: 'email',
             event_type: paid ? 'payment_success' : 'payment_fail',
@@ -389,8 +391,8 @@ async function processPayriffCallback(req, res) {
             user_id: r.user_id,
             to_addr: '__resolve__',
             subject: paid
-              ? `Mentorix — Ödəniş təsdiqləndi (${String(r.plan || '').toUpperCase()})`
-              : 'Mentorix — Ödəniş alınmadı',
+              ? `${brandName} — Ödəniş təsdiqləndi (${String(r.plan || '').toUpperCase()})`
+              : `${brandName} — Ödəniş alınmadı`,
             body: paid
               ? `Ödəniş uğurludur.\nPlan: ${r.plan}\nMəbləğ: ${(Number(r.amount_cents || 0) / 100).toFixed(2)} AZN\nOrder: ${orderId}\n`
               : `Ödəniş alınmadı.\nPlan: ${r.plan}\nMəbləğ: ${(Number(r.amount_cents || 0) / 100).toFixed(2)} AZN\nOrder: ${orderId}\nYenidən cəhd edin: panel → Upgrade.\n`,

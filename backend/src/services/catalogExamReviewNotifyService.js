@@ -1,6 +1,7 @@
 const db = require('../utils/db');
-const { sendEmail, userEmail } = require('./emailService');
+const { userEmail } = require('./emailService');
 const { enqueueNotification } = require('./notificationQueueService');
+const { getBrand } = require('../config/brand');
 
 async function notifyInstructorCatalogApproved({ instructorId, examId, examTitle }) {
   const title = 'Kataloq təsdiqi';
@@ -17,14 +18,15 @@ async function notifyInstructorCatalogApproved({ instructorId, examId, examTitle
   try {
     const to = await userEmail(instructorId);
     if (!to) return;
+    const brand = getBrand().name;
     await enqueueNotification({
       channel: 'email',
       event_type: 'catalog_exam_approved',
       unique_key: `catalog_exam_approved_${examId}`,
       instructor_id: instructorId,
       to_addr: to,
-      subject: `Mentorix — ${title}`,
-      body: `${body}\n\nMentorix → İmtahanlar bölməsindən izləyə bilərsiniz.`,
+      subject: `${brand} — ${title}`,
+      body: `${body}\n\n${brand} → İmtahanlar bölməsindən izləyə bilərsiniz.`,
       context: { exam_id: examId },
     });
   } catch (e) {
@@ -49,14 +51,15 @@ async function notifyInstructorCatalogRejected({ instructorId, examId, examTitle
   try {
     const to = await userEmail(instructorId);
     if (!to) return;
+    const brand = getBrand().name;
     await enqueueNotification({
       channel: 'email',
       event_type: 'catalog_exam_rejected',
       unique_key: `catalog_exam_rejected_${examId}_${Date.now()}`,
       instructor_id: instructorId,
       to_addr: to,
-      subject: `Mentorix — ${title}`,
-      body: `${body}\n\nMentorix → İmtahanı redaktə edib yenidən göndərin.`,
+      subject: `${brand} — ${title}`,
+      body: `${body}\n\n${brand} → İmtahanı redaktə edib yenidən göndərin.`,
       context: { exam_id: examId, reason },
     });
   } catch (e) {

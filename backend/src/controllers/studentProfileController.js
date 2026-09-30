@@ -203,7 +203,9 @@ const sendEnrollmentProfileCompletionEmail = async (req, res) => {
           ? 'Serverdə email (Resend/SMTP) konfiqurasiya olunmayıb — adminə müraciət edin.'
           : reason === 'no_email'
             ? 'Tələbənin email ünvanı tapılmadı.'
-            : emailResult?.error || 'Email göndərilmədi';
+            : reason === 'dry_run'
+              ? 'Email test rejimindədir (dry-run) — real email göndərilmədi.'
+              : emailResult?.error || 'Email göndərilmədi';
       return res.status(502).json({
         success: false,
         message: hint,

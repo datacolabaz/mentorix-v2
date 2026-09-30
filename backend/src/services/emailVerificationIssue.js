@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('../utils/db');
 const { sendVerificationEmail } = require('./emailVerificationService');
+const { maskEmail } = require('./email/emailTransport');
 
 const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60);
 
@@ -40,7 +41,7 @@ function queueEmailVerification(userId, email) {
       if (!mail?.ok) {
         console.error('[email-verification] send failed', {
           userId,
-          email,
+          email: maskEmail(email),
           error: mail?.error,
         });
       }
@@ -48,7 +49,7 @@ function queueEmailVerification(userId, email) {
     .catch((err) => {
       console.error('[email-verification] queue error', {
         userId,
-        email,
+        email: maskEmail(email),
         message: err?.message,
       });
     });
