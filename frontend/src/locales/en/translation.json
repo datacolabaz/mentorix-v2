@@ -2385,6 +2385,24 @@
       "mcq": "MCQ"
     }
   },
+  "adminActivity": {
+    "open": "Activity",
+    "reasonTitle": "Reason for access",
+    "reasonHelp": "Student activity for {{name}} instructor is sensitive data. Enter why you need to view it to continue.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "e.g. Support ticket #42: student reports the assignment is not visible",
+    "reasonTooShort": "The reason must be at least {{min}} characters.",
+    "reasonAuditNote": "The reason, your name and the time are written to the audit log.",
+    "reasonRequired": "Enter a reason to see this data.",
+    "reasonShown": "Reason: {{reason}}",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "changeReason": "Change reason",
+    "exit": "Exit admin view",
+    "thisInstructor": "this",
+    "bannerTitle": "Admin view: activity of {{name}}",
+    "readOnlyNote": "Read-only: sending reminders and changing deadlines is disabled. Every view is written to the audit log."
+  },
   "tasks": {
     "title": "Assignments",
     "subtitle": "Assign homework, review submissions, and enter scores and feedback.",

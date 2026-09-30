@@ -6,6 +6,7 @@ import EngagementPopover from './EngagementPopover'
 import { CountChip, ProgressBar } from './EngagementParts'
 import { fetchAssignmentDetail, reminderResultText, sendEngagementReminder } from './engagementApi'
 import { formatDue, relativeTime } from '../../lib/engagementCopy'
+import { engagementBasePath, isAdminActivityMode } from '../../lib/adminActivityAccess'
 
 const LIST_LIMIT = 5
 
@@ -35,7 +36,8 @@ export default function AssignmentEngagementCard({ assignment }) {
   const toast = useToast()
   const [sending, setSending] = useState(false)
   const due = formatDue(assignment.due_date)
-  const detailPath = `/instructor/engagement/assignment/${assignment.id}`
+  const detailPath = `${engagementBasePath()}/assignment/${assignment.id}`
+  const readOnly = isAdminActivityMode()
 
   const remind = async (refresh) => {
     setSending(true)
@@ -122,7 +124,7 @@ export default function AssignmentEngagementCard({ assignment }) {
                   <Link to={detailPath} className="mt-2 text-xs font-semibold text-primary hover:underline">
                     Təqdimləri yoxla →
                   </Link>
-                  {remindable ? (
+                  {remindable && !readOnly ? (
                     <button
                       type="button"
                       disabled={sending}

@@ -22,14 +22,19 @@ import {
   relativeTime,
 } from '../../lib/engagementCopy'
 import { localDatetimeInputToUtcIso, utcInstantToDatetimeLocalValue } from '../../lib/examDatetime'
+import { engagementBasePath, isAdminActivityMode } from '../../lib/adminActivityAccess'
 
 function canRemind(type, s) {
   return type === 'material' ? !s.viewed : !s.submitted
 }
 
-export default function InstructorEngagementDetail() {
-  const { type: rawType, id } = useParams()
+export default function InstructorEngagementDetail({ type: typeProp, id: idProp } = {}) {
+  const params = useParams()
+  const rawType = typeProp || params.type
+  const id = idProp || params.id
   const type = rawType === 'assignment' ? 'assignment' : 'material'
+  const readOnly = isAdminActivityMode()
+  const basePath = engagementBasePath()
   const toast = useToast()
   const [filter, setFilter] = useState('')
   const [state, setState] = useState({ loading: true, error: '', data: null })
@@ -126,7 +131,7 @@ export default function InstructorEngagementDetail() {
             <Button size="sm" variant="secondary" onClick={() => void load()}>
               Yenidən cəhd et
             </Button>
-            <Link to="/instructor/engagement">
+            <Link to={basePath}>
               <Button size="sm" variant="ghost">Aktivliyə qayıt</Button>
             </Link>
           </div>
@@ -141,7 +146,7 @@ export default function InstructorEngagementDetail() {
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto space-y-5">
       <Link
-        to={`/instructor/engagement${type === 'assignment' ? '?tab=assignments' : ''}`}
+        to={`${basePath}${type === 'assignment' ? '?tab=assignments' : ''}`}
         className="text-sm font-semibold text-primary hover:underline"
       >
         ← Aktivlik
@@ -169,10 +174,19 @@ export default function InstructorEngagementDetail() {
         {type === 'assignment' ? (
           <p className="text-xs text-token-textMuted">
             {entity?.due_date ? `Son tarix: ${formatDue(entity.due_date)}${entity.is_overdue ? ' (vaxtı keçib)' : ''}` : 'Son tarix yoxdur'} ·{' '}
-            {entity?.graded} qiymətləndirilib · {entity?.waiting_grading} yoxlama gözləyir ·{' '}
-            <Link to="/instructor/tasks" className="font-semibold text-primary hover:underline">
-              Təqdimləri yoxla
-            </Link>
+            {entity?.graded} qiymətləndirilib · {entity?.waiting_grading} yoxlama gözləyir
+            {readOnly ? null : (
+              <>
+                {' · '}
+                <Link to="/instructor/tasks" className="font-semibold text-primary hover:underline">
+                  Təqdimləri yoxla
+                </Link>
+              </>
+            )}
+          </p>
+        ) : readOnly ? (
+          <p className="text-xs text-token-textMuted">
+            {entity?.due_at ? `Son baxış tarixi: ${formatDue(entity.due_at)}` : 'Son baxış tarixi yoxdur'}
           </p>
         ) : (
           <div className="flex flex-wrap items-end gap-2">
@@ -211,19 +225,21 @@ export default function InstructorEngagementDetail() {
             {f.label}
           </button>
         ))}
-        <div className="ml-auto flex gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!selected.size || sending}
-            onClick={() => void remind([...selected])}
-          >
-            Seçilənlərə xatırlatma ({selected.size})
-          </Button>
-          <Button size="sm" disabled={!remindable.length || sending} loading={sending} onClick={() => void remind(null)}>
-            {type === 'material' ? 'Baxmayanlara xatırlat' : 'Təqdim etməyənlərə xatırlat'}
-          </Button>
-        </div>
+        {readOnly ? null : (
+          <div className="ml-auto flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!selected.size || sending}
+              onClick={() => void remind([...selected])}
+            >
+              Seçilənlərə xatırlatma ({selected.size})
+            </Button>
+            <Button size="sm" disabled={!remindable.length || sending} loading={sending} onClick={() => void remind(null)}>
+              {type === 'material' ? 'Baxmayanlara xatırlat' : 'Təqdim etməyənlərə xatırlat'}
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card className="overflow-hidden">
@@ -238,7 +254,7 @@ export default function InstructorEngagementDetail() {
                 type="checkbox"
                 aria-label="Hamısını seç"
                 checked={allSelected}
-                disabled={!remindable.length}
+                disabled={readOnly || !remindable.length}
                 onChange={() => setSelected(allSelected ? new Set() : new Set(remindable.map((s) => s.student_id)))}
                 className="accent-blue-500"
               />
@@ -254,7 +270,7 @@ export default function InstructorEngagementDetail() {
                     type="checkbox"
                     aria-label={`${s.full_name} seç`}
                     checked={selected.has(s.student_id)}
-                    disabled={!canRemind(type, s)}
+                    disabled={readOnly || !canRemind(type, s)}
                     onChange={() => toggle(s.student_id)}
                     className="accent-blue-500"
                   />

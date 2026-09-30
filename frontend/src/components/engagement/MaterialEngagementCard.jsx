@@ -6,6 +6,7 @@ import EngagementPopover from './EngagementPopover'
 import { AvatarStack, CountChip, ProgressBar, StatusBadge } from './EngagementParts'
 import { fetchMaterialDetail, reminderResultText, sendEngagementReminder } from './engagementApi'
 import { MATERIAL_KIND, MATERIAL_STATUS, formatDue, isRecent, materialStatusKey, relativeTime } from '../../lib/engagementCopy'
+import { engagementBasePath, isAdminActivityMode } from '../../lib/adminActivityAccess'
 
 const LIST_LIMIT = 6
 
@@ -40,7 +41,8 @@ export default function MaterialEngagementCard({ material }) {
   const kind = MATERIAL_KIND[material.kind] || MATERIAL_KIND.file
   const due = formatDue(material.due_at)
   const recent = isRecent(material.last_activity_at)
-  const detailPath = `/instructor/engagement/material/${material.id}`
+  const detailPath = `${engagementBasePath()}/material/${material.id}`
+  const readOnly = isAdminActivityMode()
 
   const remind = async (refresh) => {
     setSending(true)
@@ -128,7 +130,7 @@ export default function MaterialEngagementCard({ material }) {
                   <Link to={detailPath} className="mt-2 text-xs font-semibold text-primary hover:underline">
                     Bütün tələbələrə bax →
                   </Link>
-                  {notViewed.length ? (
+                  {notViewed.length && !readOnly ? (
                     <button
                       type="button"
                       disabled={sending}

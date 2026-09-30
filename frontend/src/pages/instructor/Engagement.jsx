@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import MaterialEngagementCard from '../../components/engagement/MaterialEngagementCard'
 import AssignmentEngagementCard from '../../components/engagement/AssignmentEngagementCard'
 import { CardSkeleton } from '../../components/engagement/EngagementParts'
+import { fetchEngagementList } from '../../components/engagement/engagementApi'
+import { isAdminActivityMode } from '../../lib/adminActivityAccess'
 
 const TABS = [
   { id: 'materials', label: 'Materiallar' },
@@ -36,7 +37,7 @@ export default function InstructorEngagement() {
     setError('')
     setData((d) => ({ ...d, [which]: null }))
     try {
-      const res = await api.get(`/engagement/${which}`)
+      const res = await fetchEngagementList(which)
       setData((d) => ({ ...d, [which]: Array.isArray(res?.[which]) ? res[which] : [] }))
     } catch (e) {
       setError(e?.message || 'Məlumat yüklənmədi')
@@ -111,9 +112,11 @@ export default function InstructorEngagement() {
         <Card className="p-8 text-center border border-dashed border-[color:var(--border-subtle)]">
           <h2 className="font-display font-bold text-lg text-token-textMain">{EMPTY[tab].title}</h2>
           <p className="text-sm text-token-textMuted mt-2 max-w-md mx-auto">{EMPTY[tab].text}</p>
-          <Link to={EMPTY[tab].cta.to} className="inline-block mt-4">
-            <Button size="sm">{EMPTY[tab].cta.label}</Button>
-          </Link>
+          {isAdminActivityMode() ? null : (
+            <Link to={EMPTY[tab].cta.to} className="inline-block mt-4">
+              <Button size="sm">{EMPTY[tab].cta.label}</Button>
+            </Link>
+          )}
         </Card>
       ) : !filtered.length ? (
         <p className="text-sm text-token-textMuted text-center py-10">«{query}» üzrə heç nə tapılmadı.</p>

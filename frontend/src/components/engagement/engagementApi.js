@@ -1,10 +1,15 @@
 import api from '../../lib/api'
+import { adminActivityParams } from '../../lib/adminActivityAccess'
+
+const withScope = (params = {}) => ({ params: { ...params, ...adminActivityParams() } })
+
+export const fetchEngagementList = (which) => api.get(`/engagement/${which}`, withScope())
 
 export const fetchMaterialDetail = (id, filter = '') =>
-  api.get(`/engagement/materials/${encodeURIComponent(id)}${filter ? `?filter=${encodeURIComponent(filter)}` : ''}`)
+  api.get(`/engagement/materials/${encodeURIComponent(id)}`, withScope(filter ? { filter } : {}))
 
 export const fetchAssignmentDetail = (id, filter = '') =>
-  api.get(`/engagement/assignments/${encodeURIComponent(id)}${filter ? `?filter=${encodeURIComponent(filter)}` : ''}`)
+  api.get(`/engagement/assignments/${encodeURIComponent(id)}`, withScope(filter ? { filter } : {}))
 
 export async function sendEngagementReminder(entity, id, studentIds = null) {
   const path = `/engagement/${entity === 'material' ? 'materials' : 'assignments'}/${encodeURIComponent(id)}/reminders`

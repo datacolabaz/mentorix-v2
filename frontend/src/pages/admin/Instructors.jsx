@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import api from "../../lib/api"
 import Card from "../../components/common/Card"
 import Button from "../../components/common/Button"
@@ -16,6 +17,7 @@ const selectClass =
   "border border-[color:var(--border-subtle)] rounded-lg px-2 py-1.5 text-token-textMain text-xs outline-none focus:border-primary/40 bg-token-surfaceCard disabled:opacity-50"
 
 export default function AdminInstructors() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const discoverFilter = searchParams.get("discover") === "pending" ? "pending" : "all"
   const [instructors, setInstructors] = useState([])
@@ -297,6 +299,9 @@ export default function AdminInstructors() {
                         </Button>
                       ) : null}
                       <Button size="sm" variant="secondary" onClick={() => openEdit(i)}>Redakte</Button>
+                      <Link to={`/admin/instructors/${i.id}/activity`} state={{ instructorName: i.full_name }}>
+                        <Button size="sm" variant="ghost">{t("adminActivity.open")}</Button>
+                      </Link>
                       <Button size="sm" variant={i.is_active ? "danger" : "ghost"} onClick={() => toggle(i)}>
                         {i.is_active ? "Deaktiv" : "Aktiv"}
                       </Button>

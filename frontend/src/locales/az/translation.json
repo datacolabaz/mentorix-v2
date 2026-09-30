@@ -2406,6 +2406,24 @@
       "mcq": "MCQ"
     }
   },
+  "adminActivity": {
+    "open": "Aktivlik",
+    "reasonTitle": "Baxış səbəbi",
+    "reasonHelp": "{{name}} müəlliminin tələbə fəaliyyəti həssas məlumatdır. Davam etmək üçün niyə baxdığınızı yazın.",
+    "reasonLabel": "Səbəb",
+    "reasonPlaceholder": "Məs.: Dəstək sorğusu #42 — tələbə tapşırığın görünmədiyini bildirir",
+    "reasonTooShort": "Səbəb ən azı {{min}} simvol olmalıdır.",
+    "reasonAuditNote": "Səbəb, adınız və vaxt audit jurnalına yazılır.",
+    "reasonRequired": "Məlumatı görmək üçün səbəb yazın.",
+    "reasonShown": "Səbəb: {{reason}}",
+    "continue": "Davam et",
+    "cancel": "Ləğv et",
+    "changeReason": "Səbəbi dəyiş",
+    "exit": "Admin baxışından çıx",
+    "thisInstructor": "Bu",
+    "bannerTitle": "Admin baxışı: {{name}} müəlliminin aktivliyi",
+    "readOnlyNote": "Yalnız oxumaq rejimi: xatırlatma göndərmək və son tarix dəyişmək mümkün deyil. Hər baxış audit jurnalına yazılır."
+  },
   "tasks": {
     "title": "Tapşırıqlar",
     "subtitle": "Ev tapşırığı verin, təslimləri yoxlayın, bal və rəy yazın.",
