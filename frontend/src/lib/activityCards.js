@@ -131,7 +131,7 @@ export function cardLines(type, card) {
   }
   return [
     line('viewed', c.viewed, 'green', '✓', 'viewed'),
-    line('downloaded', c.unique_downloaders, 'blue', '⬇', 'downloaded'),
+    line('downloaded', c.unique_downloaders, 'blue', '↓', 'downloaded'),
     line('not_viewed', c.not_viewed, 'gray', '○', 'not_viewed'),
     line('overdue', c.overdue, 'red', '!', 'overdue', { hideZero: true }),
   ].filter(Boolean)

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { SUBTLE_BG } from '../../lib/engagementCopy'
+import { PRIMARY_TEXT, SUBTLE_BG } from '../../lib/engagementCopy'
 
 const OPEN_DELAY_MS = 150
 const CLOSE_DELAY_MS = 220
@@ -44,6 +44,7 @@ export default function EngagementPopover({ trigger, load, children, label, trig
   const panelRef = useRef(null)
   const timer = useRef(null)
   const focusOnOpen = useRef(false)
+  const openedByHover = useRef(false)
   const panelId = useId()
   const titleId = useId()
 
@@ -59,6 +60,7 @@ export default function EngagementPopover({ trigger, load, children, label, trig
   const show = useCallback(
     ({ focus = false } = {}) => {
       focusOnOpen.current = focus
+      openedByHover.current = !focus
       setOpen(true)
       if (!state.data && !state.loading) void fetchDetail()
     },
@@ -157,8 +159,23 @@ export default function EngagementPopover({ trigger, load, children, label, trig
     close({ returnFocus: true })
   }
 
-  const hoverOpen = () => !sheet && canHover() && schedule(() => show(), OPEN_DELAY_MS)
-  const hoverClose = () => !sheet && canHover() && schedule(() => close(), CLOSE_DELAY_MS)
+  const hoverOpen = () => !sheet && canHover() && !open && schedule(() => show(), OPEN_DELAY_MS)
+  const hoverClose = () => !sheet && canHover() && openedByHover.current && schedule(() => close(), CLOSE_DELAY_MS)
+
+  /** Hover ilə açılmış popover-ə klik onu bağlamır: sabitləyir və fokusu panelə keçirir. */
+  const onTriggerClick = () => {
+    cancel()
+    if (!open) {
+      show({ focus: true })
+      return
+    }
+    if (openedByHover.current) {
+      openedByHover.current = false
+      panelRef.current?.focus()
+      return
+    }
+    close()
+  }
 
   const body = state.loading ? (
     <div className="space-y-2 py-2" role="status" aria-label={t('activity.common.loading')}>
@@ -172,7 +189,7 @@ export default function EngagementPopover({ trigger, load, children, label, trig
       <button
         type="button"
         onClick={() => void fetchDetail()}
-        className="mt-2 rounded text-xs font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        className={`mt-2 rounded text-xs font-semibold ${PRIMARY_TEXT} hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
       >
         {t('activity.common.retry')}
       </button>
@@ -191,7 +208,7 @@ export default function EngagementPopover({ trigger, load, children, label, trig
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         data-engagement-trigger=""
-        onClick={() => (open ? close() : show({ focus: true }))}
+        onClick={onTriggerClick}
       >
         <span className="sr-only">{label}. </span>
         {trigger}

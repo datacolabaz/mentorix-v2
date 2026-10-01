@@ -134,7 +134,7 @@ export default function MaterialEngagementCard({ material, variant = 'card', onS
                 />
                 <NameGroup
                   title={t('activity.material.popover.downloaded')}
-                  icon="⬇"
+                  icon="↓"
                   tone="blue"
                   students={downloaded}
                   renderMeta={(s) => `${s.download_count}×`}

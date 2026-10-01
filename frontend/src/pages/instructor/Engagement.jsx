@@ -41,9 +41,10 @@ export default function InstructorEngagement() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
 
-  const load = useCallback(async (which) => {
+  // silent: kartlar yerində qalır ki, açıq xatırlatma dialoqu nəticə addımında bağlanmasın.
+  const load = useCallback(async (which, { silent = false } = {}) => {
     setError('')
-    setData((d) => ({ ...d, [which]: null }))
+    if (!silent) setData((d) => ({ ...d, [which]: null }))
     try {
       const res = await fetchEngagementList(which)
       setData((d) => ({ ...d, [which]: Array.isArray(res?.[which]) ? res[which] : [] }))
@@ -132,11 +133,11 @@ export default function InstructorEngagement() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((it) =>
             tab === 'materials' ? (
-              <MaterialEngagementCard key={it.id} material={it} onChanged={() => void load(tab)} />
+              <MaterialEngagementCard key={it.id} material={it} onChanged={() => void load(tab, { silent: true })} />
             ) : tab === 'assignments' ? (
-              <AssignmentEngagementCard key={it.id} assignment={it} onChanged={() => void load(tab)} />
+              <AssignmentEngagementCard key={it.id} assignment={it} onChanged={() => void load(tab, { silent: true })} />
             ) : (
-              <AssessmentEngagementCard key={it.id} exam={it} onChanged={() => void load(tab)} />
+              <AssessmentEngagementCard key={it.id} exam={it} onChanged={() => void load(tab, { silent: true })} />
             ),
           )}
         </div>

@@ -48,8 +48,9 @@ export const SUBTLE_BG = 'bg-black/10 [.theme-dark_&]:bg-white/10'
 export const HOVER_BG = 'hover:bg-black/[0.03] [.theme-dark_&]:hover:bg-white/[0.04]'
 
 const FOCUS_RING = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1'
-export const CTA_LINK = `rounded text-xs font-semibold text-primary hover:underline ${FOCUS_RING}`
-export const CTA_BUTTON = `rounded-lg border border-primary/40 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-60 ${FOCUS_RING}`
+export const PRIMARY_TEXT = 'text-emerald-700 [.theme-dark_&]:text-primary'
+export const CTA_LINK = `rounded text-xs font-semibold ${PRIMARY_TEXT} hover:underline ${FOCUS_RING}`
+export const CTA_BUTTON = `rounded-lg border border-primary/40 px-2.5 py-1 text-xs font-semibold ${PRIMARY_TEXT} hover:bg-primary/10 disabled:opacity-60 ${FOCUS_RING}`
 
 export const MATERIAL_STATUS = {
   completed: { label: 'Baxıb', icon: '✓', tone: 'green' },
