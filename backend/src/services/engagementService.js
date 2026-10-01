@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const db = require('../utils/db');
 const {
   materialKind,
@@ -6,13 +7,24 @@ const {
   assignmentStudentStatus,
   summarizeMaterial,
   summarizeAssignment,
-  MATERIAL_FILTERS,
-  ASSIGNMENT_FILTERS,
-  reminderEligible,
   assignmentDueEnd,
 } = require('./engagementRules');
 const { logActivityEvent } = require('./activityProgressService');
-const { examStudentState, summarizeExam, EXAM_FILTERS, EXAM_INACTIVE_AFTER_MINUTES } = require('./activityStatusRules');
+const { examStudentState, summarizeExam, EXAM_INACTIVE_AFTER_MINUTES, ACTIVITY_EVENTS } = require('./activityStatusRules');
+const {
+  parseReportQuery,
+  applyReportQuery,
+  enrichReportRow,
+  earliestIso,
+  reminderEligibleFor,
+  REMINDER_NOTIFICATION_TYPES,
+  reminderMessage,
+  reminderMeta,
+  planReminderRecipients,
+  previewMessages,
+  sanitizeTimelineEvent,
+} = require('./activityReportRules');
+const { deliverReminderNotification } = require('./reminderDelivery');
 
 /** Eyni tələbəyə eyni material/tapşırıq üçün bu müddətdə ikinci xatırlatma getmir. */
 const REMINDER_COOLDOWN_HOURS = 6;
@@ -110,6 +122,7 @@ function studentRowsFor(material, rosterRows, now) {
       open_count: r.open_count || 0,
       download_count: r.download_count || 0,
       first_viewed_at: r.first_viewed_at || null,
+      first_activity_at: earliestIso([r.first_opened_at, r.first_viewed_at, r.first_downloaded_at]),
       ...materialStudentStatus(r, { dueAt: material.due_at, now }),
     }));
 }
@@ -135,15 +148,79 @@ async function getMaterialSummaries(instructorId, { materialIds = null, now = ne
   return materials.map((m) => materialCard(m, studentRowsFor(m, rows, now)));
 }
 
-async function getMaterialDetail(instructorId, materialId, { filter = null, now = new Date() } = {}) {
+/**
+ * Hesabat sətirlərini zənginləşdirir (qrup, ilk aktivlik, hadisə sayı) və filtr/səhifələmə tətbiq edir.
+ * Kart həmişə filtrsiz bütün sətirlərdən hesablanır; pagination.total = seçilmiş filtrə uyğun kart rəqəmi.
+ * Jurnal yalnız bu bir obyekt üçün oxunur (entity indeksi); kart siyahısı jurnala heç vaxt toxunmur.
+ */
+async function finishReport(instructorId, entityType, entityId, students, { query, enrich }) {
+  let rows = students;
+  let availableGroups = [];
+  if (enrich && students.length) {
+    const ids = students.map((s) => s.student_id);
+    const [groupsRes, logRes] = await Promise.all([
+      db.query(
+        `/* report_student_groups */
+         SELECT DISTINCT x.student_id, ig.id, ig.name
+         FROM (
+           SELECT e.student_id, e.group_id FROM enrollments e
+           WHERE e.student_id = ANY($2::uuid[]) AND e.group_id IS NOT NULL
+             AND e.status IN ('active', 'pending_setup') AND e.deleted_at IS NULL
+           UNION
+           SELECT igm.student_id, igm.group_id FROM instructor_group_members igm
+           WHERE igm.student_id = ANY($2::uuid[])
+         ) x
+         JOIN instructor_groups ig ON ig.id = x.group_id AND ig.instructor_id = $1
+         ORDER BY ig.name`,
+        [instructorId, ids],
+      ),
+      db.query(
+        `/* report_log_stats */
+         SELECT student_id, MIN(created_at) AS first_activity_at, COUNT(*)::int AS activity_count
+         FROM student_activity_log
+         WHERE entity_type = $1 AND entity_id = $2 AND event_type <> 'reminder_sent'
+         GROUP BY student_id`,
+        [entityType, entityId],
+      ),
+    ]);
+    const groupsBy = new Map();
+    const allGroups = new Map();
+    for (const g of groupsRes.rows) {
+      const key = String(g.student_id);
+      if (!groupsBy.has(key)) groupsBy.set(key, []);
+      groupsBy.get(key).push({ id: g.id, name: g.name });
+      allGroups.set(String(g.id), { id: g.id, name: g.name });
+    }
+    const statsBy = new Map(logRes.rows.map((r) => [String(r.student_id), r]));
+    rows = students.map((s) =>
+      enrichReportRow(s, { logStats: statsBy.get(String(s.student_id)), groups: groupsBy.get(String(s.student_id)) || [] }),
+    );
+    availableGroups = [...allGroups.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'az'));
+  }
+  const page = applyReportQuery(rows, query, entityType);
+  return {
+    students: page.rows,
+    pagination: { page: page.page, page_size: page.page_size, total: page.total, total_pages: page.total_pages },
+    available_groups: availableGroups,
+  };
+}
+
+function reportQuery(type, { query = null, filter = null } = {}) {
+  return query || parseReportQuery(filter ? { filter } : {}, type);
+}
+
+async function getMaterialDetail(instructorId, materialId, { filter = null, query = null, enrich = false, now = new Date() } = {}) {
   const [material] = await loadMaterials(instructorId, [materialId]);
   if (!material) throw httpError(404, 'Material tapılmadı');
   const { rows } = await db.query(MATERIAL_ROSTER_SQL, [instructorId, [materialId]]);
   const students = studentRowsFor(material, rows, now).sort(
     (a, b) => Number(b.viewed) - Number(a.viewed) || String(a.full_name).localeCompare(String(b.full_name), 'az'),
   );
-  const fn = filter ? MATERIAL_FILTERS[filter] : null;
-  return { material: materialCard(material, students), students: fn ? students.filter(fn) : students };
+  const report = await finishReport(instructorId, 'material', material.id, students, {
+    query: reportQuery('material', { query, filter }),
+    enrich,
+  });
+  return { material: materialCard(material, students), ...report };
 }
 
 async function loadAssignments(instructorId, assignmentIds = null) {
@@ -180,6 +257,7 @@ async function assignmentStudents(assignmentIds, assignmentsById, now) {
     reviewed_at: r.reviewed_at || null,
     returned_at: r.returned_at || null,
     first_submitted_at: r.first_submitted_at || null,
+    first_activity_at: earliestIso([r.first_opened_at, r.seen_at, r.started_at, r.first_submitted_at, r.submitted_at]),
     ...assignmentStudentStatus(r, r, { dueDate: assignmentsById.get(String(r.assignment_id))?.due_date, now }),
   }));
 }
@@ -209,7 +287,7 @@ async function getAssignmentSummaries(instructorId, { assignmentIds = null, now 
 
 const ASSIGNMENT_STATUS_ORDER = ['graded', 'submitted', 'returned', 'started', 'opened', 'overdue', 'not_opened'];
 
-async function getAssignmentDetail(instructorId, assignmentId, { filter = null, now = new Date() } = {}) {
+async function getAssignmentDetail(instructorId, assignmentId, { filter = null, query = null, enrich = false, now = new Date() } = {}) {
   const [assignment] = await loadAssignments(instructorId, [assignmentId]);
   if (!assignment) throw httpError(404, 'Tapşırıq tapılmadı');
   const byId = new Map([[String(assignment.id), assignment]]);
@@ -218,8 +296,11 @@ async function getAssignmentDetail(instructorId, assignmentId, { filter = null, 
       ASSIGNMENT_STATUS_ORDER.indexOf(a.status) - ASSIGNMENT_STATUS_ORDER.indexOf(b.status) ||
       String(a.full_name).localeCompare(String(b.full_name), 'az'),
   );
-  const fn = filter ? ASSIGNMENT_FILTERS[filter] : null;
-  return { assignment: assignmentCard(assignment, students, now), students: fn ? students.filter(fn) : students };
+  const report = await finishReport(instructorId, 'assignment', assignment.id, students, {
+    query: reportQuery('assignment', { query, filter }),
+    enrich,
+  });
+  return { assignment: assignmentCard(assignment, students, now), ...report };
 }
 
 /**
@@ -258,7 +339,7 @@ const EXAM_ROSTER_SQL = `
 
 async function loadExams(instructorId, examIds = null) {
   const { rows } = await db.query(
-    `SELECT e.id, e.title, e.subject, e.duration_minutes, e.available_from, e.available_until, e.start_time,
+    `SELECT e.id, e.title, e.subject, e.topic, e.duration_minutes, e.available_from, e.available_until, e.start_time,
             e.result_visibility_mode, e.created_at,
             (SELECT COUNT(*)::int FROM exam_questions q WHERE q.exam_id = e.id) AS question_count,
             (SELECT COALESCE(SUM(q.points::numeric), 0) FROM exam_questions q WHERE q.exam_id = e.id) AS max_points
@@ -279,17 +360,37 @@ function examStudentRows(exam, rosterRows, now) {
       full_name: r.full_name,
       result_id: r.result_id || null,
       submitted_at: r.result_submitted_at || null,
+      first_activity_at: earliestIso([r.viewed_at, r.started_at, r.result_started_at]),
       ...examStudentState(r, { now, inactiveAfterMinutes: EXAM_INACTIVE_AFTER_MINUTES }),
     }));
 }
 
-function examCard(exam, students) {
+/** İmtahan qrupa yox, tələbələrə təyin olunur: kartdakı qrup = təyin olunmuş tələbələrin bu müəllimdəki qrupları. */
+async function loadExamGroupNames(instructorId, examIds) {
+  if (!examIds.length) return new Map();
+  const { rows } = await db.query(
+    `/* exam_group_names */
+     SELECT ea.exam_id, array_agg(DISTINCT ig.name ORDER BY ig.name) AS group_names
+     FROM exam_assignments ea
+     JOIN enrollments e ON e.student_id = ea.student_id
+      AND e.status IN ('active', 'pending_setup') AND e.deleted_at IS NULL
+     JOIN instructor_groups ig ON ig.id = e.group_id AND ig.instructor_id = $1
+     WHERE ea.exam_id = ANY($2::uuid[])
+     GROUP BY ea.exam_id`,
+    [instructorId, examIds],
+  );
+  return new Map(rows.map((r) => [String(r.exam_id), r.group_names || []]));
+}
+
+function examCard(exam, students, groupNames = []) {
   const summary = summarizeExam(students);
   const maxPoints = Number(exam.max_points) || 0;
   return {
     id: exam.id,
     title: exam.title,
     subject: exam.subject || null,
+    topic: exam.topic || null,
+    group_names: groupNames,
     duration_minutes: exam.duration_minutes ?? null,
     available_from: exam.available_from || exam.start_time || null,
     available_until: exam.available_until || null,
@@ -307,8 +408,12 @@ function examCard(exam, students) {
 async function getExamSummaries(instructorId, { examIds = null, now = new Date() } = {}) {
   const exams = await loadExams(instructorId, examIds);
   if (!exams.length) return [];
-  const { rows } = await db.query(EXAM_ROSTER_SQL, [instructorId, exams.map((e) => e.id)]);
-  return exams.map((e) => examCard(e, examStudentRows(e, rows, now)));
+  const ids = exams.map((e) => e.id);
+  const [{ rows }, groupNames] = await Promise.all([
+    db.query(EXAM_ROSTER_SQL, [instructorId, ids]),
+    loadExamGroupNames(instructorId, ids),
+  ]);
+  return exams.map((e) => examCard(e, examStudentRows(e, rows, now), groupNames.get(String(e.id)) || []));
 }
 
 const EXAM_STATUS_ORDER = [
@@ -322,25 +427,51 @@ const EXAM_STATUS_ORDER = [
   'not_started',
 ];
 
-async function getExamDetail(instructorId, examId, { filter = null, now = new Date() } = {}) {
+async function getExamDetail(instructorId, examId, { filter = null, query = null, enrich = false, now = new Date() } = {}) {
   const [exam] = await loadExams(instructorId, [examId]);
   if (!exam) throw httpError(404, 'İmtahan tapılmadı');
-  const { rows } = await db.query(EXAM_ROSTER_SQL, [instructorId, [examId]]);
+  const [{ rows }, groupNames] = await Promise.all([
+    db.query(EXAM_ROSTER_SQL, [instructorId, [exam.id]]),
+    loadExamGroupNames(instructorId, [exam.id]),
+  ]);
   const students = examStudentRows(exam, rows, now).sort(
     (a, b) =>
       EXAM_STATUS_ORDER.indexOf(a.status) - EXAM_STATUS_ORDER.indexOf(b.status) ||
       String(a.full_name).localeCompare(String(b.full_name), 'az'),
   );
-  const fn = filter ? EXAM_FILTERS[filter] : null;
-  return { exam: examCard(exam, students), students: fn ? students.filter(fn) : students };
+  const report = await finishReport(instructorId, 'exam', exam.id, students, {
+    query: reportQuery('exam', { query, filter }),
+    enrich,
+  });
+  return { exam: examCard(exam, students, groupNames.get(String(exam.id)) || []), ...report };
 }
 
-async function logActivity(client, { studentId, instructorId, entityType, entityId, eventType, metadata = {} }) {
-  await client.query(
-    `INSERT INTO student_activity_log (student_id, instructor_id, entity_type, entity_id, event_type, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
-    [studentId, instructorId || null, entityType, entityId, eventType, JSON.stringify(metadata)],
+/**
+ * Bir tələbənin bu obyekt üzrə hadisə zaman xətti. Əvvəlcə obyektin bu müəllimə aid olduğu yoxlanılır
+ * (başqa workspace → 404); metadata-dan yalnız təhlükəsiz sahələr qaytarılır.
+ */
+async function getStudentTimeline(instructorId, entityType, entityId, studentId, { limit = 200 } = {}) {
+  const loaders = { material: loadMaterials, assignment: loadAssignments, exam: loadExams };
+  const load = loaders[entityType];
+  if (!load) throw httpError(400, 'Naməlum obyekt növü');
+  const [entity] = await load(instructorId, [entityId]);
+  if (!entity) throw httpError(404, 'Tapılmadı');
+  const { rows } = await db.query(
+    `/* report_timeline */
+     SELECT event_type, created_at, metadata, source
+     FROM student_activity_log
+     WHERE entity_type = $1 AND entity_id = $2 AND student_id = $3
+     ORDER BY created_at ASC, id ASC
+     LIMIT $4`,
+    [entityType, entity.id, studentId, limit + 1],
   );
+  return {
+    entity_type: entityType,
+    entity_id: entity.id,
+    student_id: studentId,
+    events: rows.slice(0, limit).map(sanitizeTimelineEvent),
+    truncated: rows.length > limit,
+  };
 }
 
 /**
@@ -435,71 +566,178 @@ function trackStudentAssignmentEvent(studentAssignmentId, eventType, opts) {
   });
 }
 
-async function sendReminders(instructorId, entityType, entityId, { studentIds = null, now = new Date() } = {}) {
-  const detail =
-    entityType === 'material'
-      ? await getMaterialDetail(instructorId, entityId, { now })
-      : await getAssignmentDetail(instructorId, entityId, { now });
-  const title = entityType === 'material' ? detail.material.title : detail.assignment.title;
-  const wanted = Array.isArray(studentIds) && studentIds.length ? new Set(studentIds.map(String)) : null;
-  const candidates = detail.students.filter((s) => !wanted || wanted.has(String(s.student_id)));
-  const eligible = candidates.filter((s) => reminderEligible(entityType, s));
-  const result = { sent: 0, skipped_recent: 0, not_eligible: candidates.length - eligible.length, recipients: [] };
-  if (!eligible.length) return result;
+/**
+ * Xatırlatma konteksti: obyektin adı + tələbə sətirləri (kart/hesabatla eyni funksiyalardan).
+ * Bitmiş imtahan (available_until keçib) üçün heç kimə xatırlatma getmir.
+ */
+async function loadReminderContext(instructorId, entityType, entityId, now) {
+  if (entityType === 'material') {
+    const d = await getMaterialDetail(instructorId, entityId, { now });
+    return { id: d.material.id, title: d.material.title, students: d.students, closed: false };
+  }
+  if (entityType === 'assignment') {
+    const d = await getAssignmentDetail(instructorId, entityId, { now });
+    return { id: d.assignment.id, title: d.assignment.title, students: d.students, closed: false };
+  }
+  if (entityType === 'exam') {
+    const d = await getExamDetail(instructorId, entityId, { now });
+    const until = d.exam.available_until ? new Date(d.exam.available_until) : null;
+    return {
+      id: d.exam.id,
+      title: d.exam.title,
+      students: d.students,
+      closed: Boolean(until && !Number.isNaN(until.getTime()) && until < now),
+    };
+  }
+  throw httpError(400, 'Naməlum obyekt növü');
+}
 
-  const { rows: recent } = await db.query(
-    `SELECT DISTINCT student_id FROM reminder_log
+function pickCandidates(students, studentIds) {
+  const wanted = Array.isArray(studentIds) && studentIds.length ? new Set(studentIds.map(String)) : null;
+  return students.filter((s) => !wanted || wanted.has(String(s.student_id)));
+}
+
+async function recentReminderMap(queryable, entityType, entityId, studentIds, now) {
+  if (!studentIds.length) return new Map();
+  const { rows } = await queryable.query(
+    `/* reminder_recent */
+     SELECT student_id, MAX(sent_at) AS last_sent_at FROM reminder_log
      WHERE entity_type = $1 AND entity_id = $2 AND status = 'sent'
        AND student_id = ANY($3::uuid[])
-       AND sent_at > $4::timestamptz - make_interval(hours => $5)`,
-    [entityType, entityId, eligible.map((s) => s.student_id), now.toISOString(), REMINDER_COOLDOWN_HOURS],
+       AND sent_at > $4::timestamptz - make_interval(hours => $5)
+     GROUP BY student_id`,
+    [entityType, entityId, studentIds, now.toISOString(), REMINDER_COOLDOWN_HOURS],
   );
-  const recentSet = new Set(recent.map((r) => String(r.student_id)));
+  return new Map(rows.map((r) => [String(r.student_id), r.last_sent_at]));
+}
 
-  const body =
-    entityType === 'material'
-      ? `Müəlliminiz «${title}» materialına baxmağınızı xatırladır.`
-      : `Müəlliminiz «${title}» tapşırığını təqdim etməyinizi xatırladır.`;
-  const type = entityType === 'material' ? 'material_reminder' : 'assignment_reminder';
+async function recipientLocales(studentIds) {
+  if (!studentIds.length) return new Map();
+  const { rows } = await db.query(`/* reminder_locales */ SELECT id, locale FROM users WHERE id = ANY($1::uuid[])`, [studentIds]);
+  return new Map(rows.map((r) => [String(r.id), r.locale]));
+}
+
+/**
+ * Göndərmədən önizləmə (heç nə yazılmır): alıcılar, son REMINDER_COOLDOWN_HOURS saatda artıq xatırlatma alanlar,
+ * uyğun olmayanlar və tələbəyə gedəcək mesaj (hər dil üçün). Admin üçün bağlıdır (controller write=true).
+ */
+async function previewReminders(instructorId, entityType, entityId, { studentIds = null, now = new Date() } = {}) {
+  const ctx = await loadReminderContext(instructorId, entityType, entityId, now);
+  const candidates = pickCandidates(ctx.students, studentIds);
+  const eligibleIds = candidates
+    .filter((s) => !ctx.closed && reminderEligibleFor(entityType, s))
+    .map((s) => s.student_id);
+  const recent = await recentReminderMap(db, entityType, ctx.id, eligibleIds, now);
+  const plan = planReminderRecipients({
+    entityType,
+    candidates,
+    recentSentAt: recent,
+    cooldownHours: REMINDER_COOLDOWN_HOURS,
+    now,
+    closed: ctx.closed,
+  });
+  const locales = await recipientLocales(plan.recipients.map((r) => r.student_id));
+  return {
+    entity: { type: entityType, id: ctx.id, title: ctx.title },
+    closed: ctx.closed,
+    cooldown_hours: REMINDER_COOLDOWN_HOURS,
+    ...plan,
+    messages: previewMessages(entityType, ctx.title, plan.recipients, locales),
+    counts: {
+      recipients: plan.recipients.length,
+      recently_reminded: plan.recently_reminded.length,
+      not_eligible: plan.not_eligible.length,
+    },
+  };
+}
+
+/**
+ * Müəllimin təsdiqindən sonra göndərmə. Eyni obyekt üçün paralel iki sorğu advisory lock ilə növbəyə düşür və
+ * soyuma müddəti kilidin içində yenidən yoxlanılır — ikiqat klik eyni tələbəyə ikinci xatırlatma yaratmır.
+ * Hər alıcı üçün reminder_log-a çatdırılma nəticəsi (sent | failed | skipped_recent) və jurnala reminder_sent yazılır.
+ * Avtomatik xatırlatma yoxdur: bu funksiya yalnız müəllimin əl ilə göndərməsindən çağırılır.
+ */
+async function sendReminders(instructorId, entityType, entityId, { studentIds = null, now = new Date() } = {}) {
+  const ctx = await loadReminderContext(instructorId, entityType, entityId, now);
+  const candidates = pickCandidates(ctx.students, studentIds);
+  const eligible = candidates.filter((s) => !ctx.closed && reminderEligibleFor(entityType, s));
+  const result = {
+    sent: 0,
+    failed: 0,
+    skipped_recent: 0,
+    not_eligible: candidates.length - eligible.length,
+    recipients: [],
+    batch_id: null,
+  };
+  if (!eligible.length) return result;
+
+  const locales = await recipientLocales(eligible.map((s) => s.student_id));
+  const batchId = crypto.randomUUID();
+  result.batch_id = batchId;
+  const type = REMINDER_NOTIFICATION_TYPES[entityType];
 
   await db.transaction(async (client) => {
-    for (const s of eligible) {
-      if (recentSet.has(String(s.student_id))) {
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`reminder:${entityType}:${ctx.id}`]);
+    const recent = await recentReminderMap(client, entityType, ctx.id, eligible.map((s) => s.student_id), now);
+    for (const [i, s] of eligible.entries()) {
+      if (recent.has(String(s.student_id))) {
         await client.query(
-          `INSERT INTO reminder_log (instructor_id, entity_type, entity_id, student_id, status)
-           VALUES ($1, $2, $3, $4, 'skipped_recent')`,
-          [instructorId, entityType, entityId, s.student_id],
+          `INSERT INTO reminder_log (instructor_id, entity_type, entity_id, student_id, status, batch_id)
+           VALUES ($1, $2, $3, $4, 'skipped_recent', $5)`,
+          [instructorId, entityType, ctx.id, s.student_id, batchId],
         );
         result.skipped_recent += 1;
         continue;
       }
+      const msg = reminderMessage(entityType, ctx.title, locales.get(String(s.student_id)));
+      const delivery = await deliverReminderNotification(client, {
+        recipientId: s.student_id,
+        instructorId,
+        entityType,
+        entityId: ctx.id,
+        type,
+        title: msg.title,
+        body: msg.body,
+        meta: reminderMeta(entityType, ctx.id),
+        dedupeKey: `reminder:${entityType}:${ctx.id}:${batchId}`,
+        savepoint: `reminder_${i}`,
+      });
+      const delivered = delivery.status === 'delivered';
       await client.query(
-        `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-         VALUES ($1, $2, $3, $4, FALSE, $5::jsonb)`,
+        `INSERT INTO reminder_log
+           (instructor_id, entity_type, entity_id, student_id, channel, status, notification_id, message_preview, batch_id, error_code)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
+          instructorId,
+          entityType,
+          ctx.id,
           s.student_id,
-          'Xatırlatma',
-          body,
-          type,
-          JSON.stringify(entityType === 'material' ? { material_id: entityId } : { assignment_id: entityId }),
+          delivery.channel,
+          delivered ? 'sent' : 'failed',
+          delivery.notificationId,
+          msg.body,
+          batchId,
+          delivery.errorCode,
         ],
       );
-      await client.query(
-        `INSERT INTO reminder_log (instructor_id, entity_type, entity_id, student_id, status)
-         VALUES ($1, $2, $3, $4, 'sent')`,
-        [instructorId, entityType, entityId, s.student_id],
-      );
-      await logActivity(client, {
+      await logActivityEvent(client, {
         studentId: s.student_id,
         instructorId,
         entityType,
-        entityId,
-        eventType: 'reminder_sent',
+        entityId: ctx.id,
+        eventType: ACTIVITY_EVENTS.REMINDER_SENT,
+        metadata: { batch_id: batchId, delivery: delivery.status, channel: delivery.channel },
+        dedupeKey: `reminder:${batchId}`,
+        source: 'server',
       });
+      if (!delivered) {
+        result.failed += 1;
+        continue;
+      }
       if (entityType === 'assignment') {
         await client.query(
-          `UPDATE student_assignments SET reminder_sent_at = NOW() WHERE assignment_id = $1 AND student_id = $2`,
-          [entityId, s.student_id],
+          `UPDATE student_assignments SET reminder_sent_at = $3 WHERE assignment_id = $1 AND student_id = $2`,
+          [ctx.id, s.student_id, now],
         );
       }
       result.sent += 1;
@@ -530,6 +768,8 @@ module.exports = {
   recordMaterialEvent,
   recordStudentAssignmentEvent,
   trackStudentAssignmentEvent,
+  getStudentTimeline,
+  previewReminders,
   sendReminders,
   setMaterialDueAt,
 };

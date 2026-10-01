@@ -5,13 +5,19 @@ const {
   getAssignmentDetail,
   getExamSummaries,
   getExamDetail,
+  getStudentTimeline,
   recordMaterialEvent,
+  previewReminders,
   sendReminders,
   setMaterialDueAt,
 } = require('../services/engagementService');
 const { normalizeExamStartTime } = require('../utils/examTime');
 const { resolveActivityScope, UUID_RE } = require('../services/activityAccessPolicy');
 const { recordAdminAccess } = require('../services/adminAccessAudit');
+const { parseReportQuery } = require('../services/activityReportRules');
+
+const ENTITY_PLURAL = Object.freeze({ material: 'materials', assignment: 'assignments', exam: 'exams' });
+const MAX_REMINDER_RECIPIENTS = 500;
 
 /**
  * Kimin məlumatına baxılır (activityAccessPolicy): müəllim — yalnız özününkü; admin — yalnız oxumaq,
@@ -49,7 +55,19 @@ function parseIds(raw) {
 }
 
 function fail(res, err) {
-  res.status(err.statusCode || 500).json({ success: false, code: err.code, message: err.message || 'Xəta' });
+  const status = err.statusCode || 500;
+  if (status >= 500) console.error('[engagement]', err.message);
+  res.status(status).json({
+    success: false,
+    code: err.code,
+    message: status >= 500 && !err.statusCode ? 'Server xətası' : err.message || 'Xəta',
+  });
+}
+
+function studentIdsFrom(body) {
+  const raw = body?.student_ids;
+  if (!Array.isArray(raw)) return null;
+  return raw.map(String).filter((s) => UUID_RE.test(s)).slice(0, MAX_REMINDER_RECIPIENTS);
 }
 
 function requireUuid(res, id) {
@@ -78,7 +96,7 @@ const getMaterialEngagement = async (req, res) => {
       entityId: req.params.id,
     });
     if (!owner) return;
-    const data = await getMaterialDetail(owner, req.params.id, { filter: req.query.filter || null });
+    const data = await getMaterialDetail(owner, req.params.id, { query: parseReportQuery(req.query, 'material'), enrich: true });
     res.json({ success: true, ...data });
   } catch (err) {
     fail(res, err);
@@ -105,7 +123,7 @@ const getAssignmentEngagement = async (req, res) => {
       entityId: req.params.id,
     });
     if (!owner) return;
-    const data = await getAssignmentDetail(owner, req.params.id, { filter: req.query.filter || null });
+    const data = await getAssignmentDetail(owner, req.params.id, { query: parseReportQuery(req.query, 'assignment'), enrich: true });
     res.json({ success: true, ...data });
   } catch (err) {
     fail(res, err);
@@ -132,8 +150,21 @@ const getExamEngagement = async (req, res) => {
       entityId: req.params.id,
     });
     if (!owner) return;
-    const data = await getExamDetail(owner, req.params.id, { filter: req.query.filter || null });
+    const data = await getExamDetail(owner, req.params.id, { query: parseReportQuery(req.query, 'exam'), enrich: true });
     res.json({ success: true, ...data });
+  } catch (err) {
+    fail(res, err);
+  }
+};
+
+/** Göndərmədən əvvəl: alıcı siyahısı, son 6 saatda artıq alanlar və mesaj önizləməsi. Heç nə yazmır. */
+const postReminderPreview = (entityType) => async (req, res) => {
+  try {
+    if (!requireUuid(res, req.params.id)) return;
+    const owner = await scopeFor(req, res, { action: `activity.${ENTITY_PLURAL[entityType]}.reminders.preview`, write: true });
+    if (!owner) return;
+    const preview = await previewReminders(owner, entityType, req.params.id, { studentIds: studentIdsFrom(req.body) });
+    res.json({ success: true, ...preview });
   } catch (err) {
     fail(res, err);
   }
@@ -142,12 +173,26 @@ const getExamEngagement = async (req, res) => {
 const postReminders = (entityType) => async (req, res) => {
   try {
     if (!requireUuid(res, req.params.id)) return;
-    const owner = await scopeFor(req, res, { action: `activity.${entityType}.reminders`, write: true });
+    const owner = await scopeFor(req, res, { action: `activity.${ENTITY_PLURAL[entityType]}.reminders`, write: true });
     if (!owner) return;
-    const raw = req.body?.student_ids;
-    const studentIds = Array.isArray(raw) ? raw.map(String).filter((s) => UUID_RE.test(s)) : null;
-    const result = await sendReminders(owner, entityType, req.params.id, { studentIds });
+    const result = await sendReminders(owner, entityType, req.params.id, { studentIds: studentIdsFrom(req.body) });
     res.json({ success: true, ...result });
+  } catch (err) {
+    fail(res, err);
+  }
+};
+
+const getTimeline = (entityType) => async (req, res) => {
+  try {
+    if (!requireUuid(res, req.params.id) || !requireUuid(res, req.params.studentId)) return;
+    const owner = await scopeFor(req, res, {
+      action: `activity.${ENTITY_PLURAL[entityType]}.timeline`,
+      entityType,
+      entityId: req.params.id,
+    });
+    if (!owner) return;
+    const timeline = await getStudentTimeline(owner, entityType, req.params.id, req.params.studentId);
+    res.json({ success: true, ...timeline });
   } catch (err) {
     fail(res, err);
   }
@@ -189,6 +234,13 @@ module.exports = {
   getExamEngagement,
   postMaterialReminders: postReminders('material'),
   postAssignmentReminders: postReminders('assignment'),
+  postExamReminders: postReminders('exam'),
+  postMaterialReminderPreview: postReminderPreview('material'),
+  postAssignmentReminderPreview: postReminderPreview('assignment'),
+  postExamReminderPreview: postReminderPreview('exam'),
+  getMaterialTimeline: getTimeline('material'),
+  getAssignmentTimeline: getTimeline('assignment'),
+  getExamTimeline: getTimeline('exam'),
   patchMaterialDeadline,
   postMaterialEvent,
 };

@@ -40,6 +40,8 @@ mock('../services/engagementService', {
     return { duplicate: false, event_type: 'material_opened' };
   },
   sendReminders: stub('sendReminders'),
+  previewReminders: stub('previewReminders'),
+  getStudentTimeline: stub('getStudentTimeline'),
   setMaterialDueAt: stub('setMaterialDueAt'),
 });
 mock('../services/adminAccessAudit', {
@@ -189,5 +191,104 @@ test('admin cannot send reminders or change deadlines on behalf of a teacher', a
     body: { due_at: null },
   });
   assert.equal(dl.status, 403);
+  assert.equal(serviceCalls.length, 0);
+});
+
+/* ---------------- Phase D: report query, reminder preview, timeline ---------------- */
+
+test('detail report query is parsed server-side and scoped to the caller', async () => {
+  reset();
+  const r = await call(c.getMaterialEngagement, {
+    user: { id: TEACHER_A, role: 'instructor' },
+    params: { id: EXAM_B },
+    query: { filter: 'downloaded', page: '2', page_size: '25', group: 'x; DROP', instructor_id: TEACHER_B },
+  });
+  assert.equal(r.status, 200);
+  const [, opts] = serviceCalls[0].rest;
+  assert.equal(serviceCalls[0].ownerId, TEACHER_A);
+  assert.equal(opts.enrich, true);
+  assert.deepEqual(
+    { filter: opts.query.filter, page: opts.query.page, size: opts.query.pageSize, group: opts.query.group },
+    { filter: 'downloaded', page: 2, size: 25, group: null },
+  );
+});
+
+test('cross-workspace: reminder preview, send and timeline always use the caller as owner', async () => {
+  reset();
+  const user = { id: TEACHER_A, role: 'instructor' };
+  const query = { instructor_id: TEACHER_B, reason: 'not an admin' };
+  await call(c.postExamReminderPreview, { user, params: { id: EXAM_B }, query, body: { student_ids: [STUDENT, 'bad'] } });
+  await call(c.postExamReminders, { user, params: { id: EXAM_B }, query, body: { student_ids: [STUDENT] } });
+  await call(c.getExamTimeline, { user, params: { id: EXAM_B, studentId: STUDENT }, query });
+  assert.deepEqual(serviceCalls.map((s) => [s.name, s.ownerId]), [
+    ['previewReminders', TEACHER_A],
+    ['sendReminders', TEACHER_A],
+    ['getStudentTimeline', TEACHER_A],
+  ]);
+  assert.deepEqual(serviceCalls[0].rest[2].studentIds, [STUDENT], 'non-uuid recipient ids are dropped');
+  assert.equal(auditCalls.length, 0);
+});
+
+test('students, partners and parents cannot preview, send reminders or read timelines', async () => {
+  for (const role of ['student', 'partner', 'parent']) {
+    reset();
+    const user = { id: STUDENT, role };
+    for (const [h, params] of [
+      [c.postMaterialReminderPreview, { id: EXAM_B }],
+      [c.postAssignmentReminderPreview, { id: EXAM_B }],
+      [c.postExamReminderPreview, { id: EXAM_B }],
+      [c.postExamReminders, { id: EXAM_B }],
+      [c.getMaterialTimeline, { id: EXAM_B, studentId: STUDENT }],
+      [c.getAssignmentTimeline, { id: EXAM_B, studentId: STUDENT }],
+      [c.getExamTimeline, { id: EXAM_B, studentId: STUDENT }],
+    ]) {
+      const r = await call(h, { user, params });
+      assert.equal(r.status, 403, `${role} blocked`);
+    }
+    assert.equal(serviceCalls.length, 0);
+  }
+});
+
+test('admin cannot preview or send reminders (read-only), and nothing is audited for it', async () => {
+  reset();
+  const user = { id: ADMIN, role: 'admin' };
+  const query = { instructor_id: TEACHER_B, reason: 'Support ticket #42' };
+  for (const h of [c.postMaterialReminderPreview, c.postExamReminderPreview, c.postExamReminders, c.postMaterialReminders]) {
+    const r = await call(h, { user, params: { id: EXAM_B }, query });
+    assert.equal(r.status, 403);
+    assert.equal(r.body.code, 'ADMIN_READ_ONLY');
+  }
+  assert.equal(serviceCalls.length, 0);
+  assert.equal(auditCalls.length, 0);
+});
+
+test('admin timeline requires a reason and writes an audit row first', async () => {
+  reset();
+  const user = { id: ADMIN, role: 'admin' };
+  const denied = await call(c.getAssignmentTimeline, { user, params: { id: EXAM_B, studentId: STUDENT }, query: { instructor_id: TEACHER_B } });
+  assert.equal(denied.status, 400);
+  assert.equal(denied.body.code, 'ADMIN_REASON_REQUIRED');
+  assert.equal(serviceCalls.length, 0);
+
+  const ok = await call(c.getAssignmentTimeline, {
+    user,
+    params: { id: EXAM_B, studentId: STUDENT },
+    query: { instructor_id: TEACHER_B, reason: 'Support ticket #42' },
+  });
+  assert.equal(ok.status, 200);
+  assert.deepEqual(
+    { action: auditCalls[0].action, entityType: auditCalls[0].entityType, entityId: auditCalls[0].entityId, target: auditCalls[0].targetUserId },
+    { action: 'activity.assignments.timeline', entityType: 'assignment', entityId: EXAM_B, target: TEACHER_B },
+  );
+  assert.equal(serviceCalls[0].ownerId, TEACHER_B);
+});
+
+test('timeline rejects a malformed student id before touching data', async () => {
+  reset();
+  const r = await call(c.getMaterialTimeline, {
+    user: { id: TEACHER_A, role: 'instructor' },
+    params: { id: EXAM_B, studentId: '../../etc' },
+  });
+  assert.equal(r.status, 400);
   assert.equal(serviceCalls.length, 0);
 });

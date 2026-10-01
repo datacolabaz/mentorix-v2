@@ -25,6 +25,7 @@ require.cache[dbId] = {
     query: async (sql, params) => {
       queries.push({ sql, params });
       const owner = params[0];
+      if (/exam_group_names/.test(sql)) return { rows: [] };
       if (/FROM exams e\s+WHERE e.instructor_id = \$1/.test(sql) && !/WITH ex AS/.test(sql)) {
         return { rows: EXAMS.filter((e) => e.instructor_id === owner && (!params[1] || params[1].includes(e.id))) };
       }
