@@ -1,4 +1,4 @@
-/** Mentorix knowledge — keep in sync with frontend/src/mentor/knowledge.js. Never invent features. */
+/** Mentorix knowledge — keep in sync with frontend/src/assistant/knowledge.js. Never invent features. */
 
 const ROLES = ['instructor', 'student', 'admin'];
 
@@ -6,7 +6,7 @@ const NOT_IN_PRODUCT = [
   'calendar session booking / sessiya bronu',
   'in-app payment between student and marketplace teacher',
   'login-screen chatbot',
-  'parent/course Digital Mentor tour',
+  'parent/course AI assistant tour',
 ];
 
 const PAGES = {
@@ -110,7 +110,7 @@ const PAGES = {
     actions: ['view-schedule'],
   },
   '/search': {
-    id: 'mentor-search',
+    id: 'teacher-search',
     roles: ['student', 'instructor', 'admin'],
     title: { az: 'Müəllim tap', ru: 'Найти преподавателя', en: 'Find a teacher' },
     summary: {
@@ -236,7 +236,7 @@ function availableActions(role, pathname) {
   return page.actions || [];
 }
 
-function buildMentorContext({ userRole, currentRoute, onboardingStep = null, completedSteps = [], locale = 'az' } = {}) {
+function buildAssistantContext({ userRole, currentRoute, onboardingStep = null, completedSteps = [], locale = 'az' } = {}) {
   const page = pageForRoute(currentRoute);
   const roleOk = ROLES.includes(userRole);
   return {
@@ -300,7 +300,7 @@ module.exports = {
   loc,
   pageForRoute,
   availableActions,
-  buildMentorContext,
+  buildAssistantContext,
   matchFaq,
   unknownAnswer,
   pageFallback,

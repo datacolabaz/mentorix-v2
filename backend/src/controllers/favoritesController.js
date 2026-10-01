@@ -22,7 +22,7 @@ async function listFavorites(req, res) {
 
 async function addFavorite(req, res) {
   const instructorId = String(req.params.instructorId || '').trim();
-  if (!validUuid(instructorId)) return res.status(400).json({ success: false, message: 'Mentor ID etibarsızdır' });
+  if (!validUuid(instructorId)) return res.status(400).json({ success: false, message: 'Təlimçi ID etibarsızdır' });
   if (instructorId === String(req.user.id)) {
     return res.status(400).json({ success: false, message: 'Öz profilinizi favoritə əlavə edə bilməzsiniz' });
   }
@@ -33,13 +33,13 @@ async function addFavorite(req, res) {
      ON CONFLICT (user_id, instructor_id) DO UPDATE SET created_at = user_favorites.created_at`,
     [req.user.id, instructorId],
   );
-  if (!rowCount) return res.status(404).json({ success: false, message: 'Mentor tapılmadı' });
+  if (!rowCount) return res.status(404).json({ success: false, message: 'Təlimçi tapılmadı' });
   return res.status(201).json({ success: true, instructor_id: instructorId, favorited: true });
 }
 
 async function removeFavorite(req, res) {
   const instructorId = String(req.params.instructorId || '').trim();
-  if (!validUuid(instructorId)) return res.status(400).json({ success: false, message: 'Mentor ID etibarsızdır' });
+  if (!validUuid(instructorId)) return res.status(400).json({ success: false, message: 'Təlimçi ID etibarsızdır' });
   await db.query('DELETE FROM user_favorites WHERE user_id = $1 AND instructor_id = $2', [req.user.id, instructorId]);
   return res.json({ success: true, instructor_id: instructorId, favorited: false });
 }

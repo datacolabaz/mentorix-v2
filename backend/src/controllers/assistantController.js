@@ -2,13 +2,21 @@ const db = require('../utils/db');
 const { localeFromReq } = require('../lib/userLocale');
 const {
   ROLES,
-  buildMentorContext,
+  buildAssistantContext,
   matchFaq,
   pageFallback,
   unknownAnswer,
-} = require('../mentor/knowledge');
+} = require('../assistant/knowledge');
 
 const STATUSES = new Set(['not_started', 'in_progress', 'paused', 'skipped', 'completed']);
+
+/** Tour step ids renamed after progress was already stored in users.onboarding_progress. */
+const LEGACY_STEP_IDS = Object.freeze({ 'mentor-search': 'teacher-search' });
+
+function currentStepId(id) {
+  const key = String(id);
+  return LEGACY_STEP_IDS[key] || key;
+}
 
 function firstStepId(role) {
   if (role === 'instructor') return 'welcome';
@@ -21,7 +29,7 @@ function normalizeProgress(raw, role) {
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const status = STATUSES.has(src.status) ? src.status : 'not_started';
   const completed = Array.isArray(src.completed_step_ids)
-    ? src.completed_step_ids.map((x) => String(x)).slice(0, 50)
+    ? [...new Set(src.completed_step_ids.map(currentStepId))].slice(0, 50)
     : [];
   const storedRole = ROLES.includes(src.role) ? src.role : role;
   if (storedRole !== role) {
@@ -35,7 +43,7 @@ function normalizeProgress(raw, role) {
   return {
     status,
     role,
-    current_step_id: src.current_step_id ? String(src.current_step_id).slice(0, 80) : firstStepId(role),
+    current_step_id: src.current_step_id ? currentStepId(src.current_step_id).slice(0, 80) : firstStepId(role),
     completed_step_ids: completed,
   };
 }
@@ -91,7 +99,12 @@ async function patchOnboarding(req, res, next) {
 async function askAnthropic({ question, context, locale }) {
   const apiKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
   if (!apiKey) return null;
-  const model = process.env.ANTHROPIC_MENTOR_MODEL || process.env.ANTHROPIC_GENERATION_MODEL || 'claude-sonnet-5';
+  // ANTHROPIC_MENTOR_MODEL: legacy env name still read so Railway config keeps working.
+  const model =
+    process.env.ANTHROPIC_ASSISTANT_MODEL ||
+    process.env.ANTHROPIC_MENTOR_MODEL ||
+    process.env.ANTHROPIC_GENERATION_MODEL ||
+    'claude-sonnet-5';
   const language = locale === 'ru' ? 'Russian' : locale === 'en' ? 'English' : 'Azerbaijani';
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20000);
@@ -107,7 +120,7 @@ async function askAnthropic({ question, context, locale }) {
         model,
         max_tokens: 400,
         system: [
-          'You are the Mentorix Digital Mentor.',
+          'You are the Mentorix AI assistant.',
           `Answer ONLY in ${language}.`,
           'Use ONLY the JSON CONTEXT of real Mentorix pages, actions and constraints.',
           'If the user asks for a feature that is missing from CONTEXT or listed in notInProduct, say it does not exist in Mentorix.',
@@ -151,7 +164,7 @@ async function postAsk(req, res, next) {
     const completedSteps = Array.isArray(req.body?.completedSteps)
       ? req.body.completedSteps.map((x) => String(x)).slice(0, 50)
       : [];
-    const context = buildMentorContext({
+    const context = buildAssistantContext({
       userRole: role,
       currentRoute,
       onboardingStep,

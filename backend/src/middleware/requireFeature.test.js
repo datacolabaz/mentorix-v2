@@ -59,14 +59,14 @@ test('flag ON: request passes', async () => {
 test('flag OFF: admin already authenticated passes', async () => {
   flagRows = [];
   invalidateFeatureFlagCache();
-  const out = await run(requireFeature(FEATURE_FLAGS.MENTOR_SERVICES), { user: { id: 'a', role: 'admin' } });
+  const out = await run(requireFeature(FEATURE_FLAGS.LIVE_ROOM), { user: { id: 'a', role: 'admin' } });
   assert.equal(out.nextCalled, true);
 });
 
 test('flag OFF: non-admin authenticated user is blocked', async () => {
   flagRows = [];
   invalidateFeatureFlagCache();
-  const out = await run(requireFeature(FEATURE_FLAGS.MENTOR_SERVICES), { user: { id: 's', role: 'student' } });
+  const out = await run(requireFeature(FEATURE_FLAGS.LIVE_ROOM), { user: { id: 's', role: 'student' } });
   assert.equal(out.status, 404);
 });
 

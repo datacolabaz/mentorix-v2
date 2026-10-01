@@ -103,7 +103,8 @@ app.use('/api/teacher-connections', require('./routes/teacherConnections'));
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/generation', require('./routes/generation'));
 app.use('/api/partner', require('./routes/partner'));
-app.use('/api/mentor', require('./routes/mentor'));
+app.use('/api/assistant', require('./routes/assistant'));
+app.use('/api/mentor', require('./routes/legacyMentor'));
 app.use('/api/favorites', requireFeature(FEATURE_FLAGS.MARKETPLACE), require('./routes/favorites'));
 
 app.get('/ZOOM_verify_0f26929a49814d8caf522cd2103f8a36.html', (req, res) =>
