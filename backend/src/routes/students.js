@@ -16,7 +16,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { normalizeEnrollmentParam } = require('../lib/enrollmentRef');
 const db = require('../utils/db');
 const { syncUsageStudentsCount } = require('../services/usageStudentsSync');
-const { patchStudentEmail } = require('../controllers/studentEmailController');
+const { patchStudentEmail, patchStudentParentEmail } = require('../controllers/studentEmailController');
 const { requireInstructorPhoneVerified } = require('../middleware/trial');
 const { attachEntitlements, enforceStudentsLimit, enforceActiveSubscription } = require('../middleware/entitlements');
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
@@ -1492,6 +1492,7 @@ router.get('/enrollment/:enrollmentId/lessons', authenticate, authorize('admin',
 router.patch('/:id/phone', authenticate, authorize('admin', 'instructor'), patchStudentPhone);
 
 router.patch('/:id/email', authenticate, authorize('admin', 'instructor'), patchStudentEmail);
+router.patch('/:id/parent-email', authenticate, authorize('admin', 'instructor'), patchStudentParentEmail);
 
 const {
   listActiveEnrollmentsForStudent,

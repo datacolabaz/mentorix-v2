@@ -58,8 +58,65 @@ function unsubscribeUrl(userId, category, env = process.env) {
   return token ? appLink(`/unsubscribe?token=${encodeURIComponent(token)}`, env) : null;
 }
 
-/** Turns off the email channel for one category. Idempotent. */
+/** Short digest binding a parent-address token to the exact address it was sent to. */
+function parentEmailDigest(email) {
+  return crypto.createHash('sha256').update(String(email || '').trim().toLowerCase()).digest('base64url').slice(0, 16);
+}
+
+/**
+ * Token for the optional parent contact address on a student profile (no user account behind it).
+ * Scope = one student profile + the address digest; a changed address invalidates old links.
+ */
+function createParentEmailUnsubscribeToken(studentId, parentEmail, env = process.env) {
+  const key = secret(env);
+  if (!key || !studentId || !String(parentEmail || '').trim()) return null;
+  const payload = b64(JSON.stringify({ k: 'pe', s: String(studentId), h: parentEmailDigest(parentEmail), v: VERSION }));
+  return `${payload}.${sign(payload, key)}`;
+}
+
+/** @returns {{ studentId: string, digest: string } | null} */
+function verifyParentEmailUnsubscribeToken(token, env = process.env) {
+  const key = secret(env);
+  const raw = String(token || '').trim();
+  if (!key || raw.length > 512) return null;
+  const [payload, sig] = raw.split('.');
+  if (!payload || !sig) return null;
+  const a = Buffer.from(sig);
+  const b = Buffer.from(sign(payload, key));
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (data.v !== VERSION || data.k !== 'pe' || !data.s || !data.h) return null;
+    return { studentId: String(data.s), digest: String(data.h) };
+  } catch {
+    return null;
+  }
+}
+
+function parentEmailUnsubscribeUrl(studentId, parentEmail, env = process.env) {
+  const token = createParentEmailUnsubscribeToken(studentId, parentEmail, env);
+  return token ? appLink(`/unsubscribe?token=${encodeURIComponent(token)}`, env) : null;
+}
+
+async function applyParentEmailUnsubscribe(v) {
+  const { rows } = await db.query(
+    `SELECT parent_email FROM student_profiles WHERE user_id = $1::uuid AND parent_email IS NOT NULL LIMIT 1`,
+    [v.studentId],
+  );
+  if (!rows[0] || parentEmailDigest(rows[0].parent_email) !== v.digest) return { ok: false, code: 'INVALID_TOKEN' };
+  await db.query(
+    `UPDATE student_profiles
+     SET parent_email_opt_out_at = COALESCE(parent_email_opt_out_at, NOW())
+     WHERE user_id = $1::uuid AND parent_email IS NOT NULL`,
+    [v.studentId],
+  );
+  return { ok: true, category: 'parent' };
+}
+
+/** Turns off the email channel for one category (or one parent contact address). Idempotent. */
 async function applyUnsubscribe(token) {
+  const pe = verifyParentEmailUnsubscribeToken(token);
+  if (pe) return applyParentEmailUnsubscribe(pe);
   const v = verifyUnsubscribeToken(token);
   if (!v) return { ok: false, code: 'INVALID_TOKEN' };
   const { rows } = await db.query(`SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1`, [v.userId]);
@@ -74,4 +131,14 @@ async function applyUnsubscribe(token) {
   return { ok: true, category: v.category };
 }
 
-module.exports = { createUnsubscribeToken, verifyUnsubscribeToken, unsubscribeUrl, applyUnsubscribe, canUnsubscribe };
+module.exports = {
+  createUnsubscribeToken,
+  verifyUnsubscribeToken,
+  unsubscribeUrl,
+  applyUnsubscribe,
+  canUnsubscribe,
+  parentEmailDigest,
+  createParentEmailUnsubscribeToken,
+  verifyParentEmailUnsubscribeToken,
+  parentEmailUnsubscribeUrl,
+};

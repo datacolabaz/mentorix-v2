@@ -850,6 +850,9 @@
       "parentNamePh": "Имя родителя",
       "parentPhone": "Телефон",
       "parentPhonePh": "+994XXXXXXXXX",
+      "parentEmail": "Email родителя",
+      "parentEmailPh": "parent@example.com",
+      "parentEmailHint": "Необязательно. Сюда отправляется краткая сводка результата экзамена; другие ученики его не видят.",
       "weekdays": {
         "1": {
           "short": "Пн",
@@ -914,6 +917,7 @@
       "lessonDayRequired": "Выберите хотя бы один день урока",
       "firstLessonRequired": "Выберите дату первого урока для пакета",
       "invalidEmail": "Неверный формат email",
+      "invalidParentEmail": "Неверный формат email родителя",
       "studentIdMissing": "ID ученика не найден — обновите страницу и попробуйте снова",
       "noChanges": "Нет изменений",
       "updated": "Данные обновлены!",

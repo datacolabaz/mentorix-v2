@@ -987,37 +987,60 @@ const syncExamReminderJob = async (examId) => {
 /**
  * Tələbə təqdim etdikdən sonra bağlı valideyn hesabına (student_profiles.parent_id) nəticə xülasəsi:
  * panel + e-poçt, "parent" kateqoriyası. Bal/cavab mətnə yazılmır — valideyn panelində görünür.
+ * Profildəki valideyn emailinə (student_profiles.parent_email) ayrıca qısa email gedir; ünvan hesabın
+ * emaili ilə eynidirsə yalnız hesab bildirişi göndərilir.
  */
 const notifyParentExamResultAfterSubmit = async (examId, studentId) => {
   const { createNotificationSafe } = require('./notificationService');
+  const { planParentResultDelivery, queueParentContactResultEmail } = require('./parentContactEmailService');
   const { rows: [row] } = await db.query(
     `SELECT e.title, e.notify_students, e.notify_enabled, e.instructor_id, u.full_name AS student_name,
-            pu.id AS parent_id
+            u.locale AS student_locale, pu.id AS parent_id, pu.email AS parent_account_email,
+            sp.parent_email, sp.parent_email_opt_out_at
      FROM exams e
      JOIN exam_assignments ea ON ea.exam_id = e.id AND ea.student_id = $2
      JOIN users u ON u.id = $2
      JOIN student_profiles sp ON sp.user_id = u.id
-     JOIN users pu ON pu.id = sp.parent_id AND pu.deleted_at IS NULL AND COALESCE(pu.is_active, TRUE) = TRUE
+     LEFT JOIN users pu ON pu.id = sp.parent_id AND pu.deleted_at IS NULL AND COALESCE(pu.is_active, TRUE) = TRUE
      WHERE e.id = $1`,
     [examId, studentId]
   );
-  if (!row?.parent_id || !row.notify_students || !row.notify_enabled) return;
-
-  await createNotificationSafe({
-    recipientId: row.parent_id,
-    category: 'parent',
-    eventType: 'parent_result_summary',
-    params: {
-      studentName: String(row.student_name || 'Tələbə').trim(),
-      examTitle: String(row.title || 'İmtahan').trim(),
-    },
-    meta: { exam_id: examId, student_id: studentId, href: '/parent' },
-    relatedEntityType: 'exam',
-    relatedEntityId: examId,
-    providerWorkspaceId: row.instructor_id || null,
-    dedupeKey: `parent_result_summary:${examId}:${studentId}`,
-    email: true,
+  if (!row || !row.notify_students || !row.notify_enabled) return;
+  const plan = planParentResultDelivery({
+    parentAccountId: row.parent_id,
+    parentAccountEmail: row.parent_account_email,
+    parentEmail: row.parent_email,
+    parentEmailOptedOut: Boolean(row.parent_email_opt_out_at),
   });
+  const params = {
+    studentName: String(row.student_name || 'Tələbə').trim(),
+    examTitle: String(row.title || 'İmtahan').trim(),
+  };
+
+  if (plan.account) {
+    await createNotificationSafe({
+      recipientId: row.parent_id,
+      category: 'parent',
+      eventType: 'parent_result_summary',
+      params,
+      meta: { exam_id: examId, student_id: studentId, href: '/parent' },
+      relatedEntityType: 'exam',
+      relatedEntityId: examId,
+      providerWorkspaceId: row.instructor_id || null,
+      dedupeKey: `parent_result_summary:${examId}:${studentId}`,
+      email: true,
+    });
+  }
+  if (plan.contact) {
+    await queueParentContactResultEmail({
+      examId,
+      studentId,
+      instructorId: row.instructor_id,
+      parentEmail: row.parent_email,
+      locale: row.student_locale,
+      params,
+    }).catch((e) => console.warn('[parent-contact] queue failed', String(examId).slice(0, 8), e?.code || 'error'));
+  }
 };
 
 module.exports = {

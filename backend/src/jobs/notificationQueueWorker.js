@@ -10,6 +10,7 @@ const { resolveNotificationLink } = require('../services/notificationLinkResolve
 const { emitNotificationEvent, NOTIFICATION_EVENTS } = require('../services/notificationEvents');
 const { formatDateTime } = require('../utils/formatDateTime');
 const { getBrand } = require('../config/brand');
+const { isParentContactRow, processParentContactEmail } = require('../services/parentContactEmailService');
 
 const shortId = (id) => String(id || '').slice(0, 8);
 
@@ -155,6 +156,7 @@ async function processRow(row) {
   if (Number(row.retry_count || 0) >= MAX_RETRIES) {
     return { kind: 'failed', transient: false, errorCode: 'max_attempts', errorMessageSafe: 'Too many attempts' };
   }
+  if (isParentContactRow(row)) return processParentContactEmail(row);
   if (row.channel === 'email') {
     return isNotificationRow(row) ? processNotificationEmail(row) : processLegacyEmail(row);
   }

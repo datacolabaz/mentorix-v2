@@ -860,6 +860,9 @@
       "parentNamePh": "Valideyn adi",
       "parentPhone": "Telefon",
       "parentPhonePh": "+994XXXXXXXXX",
+      "parentEmail": "Valideyn emaili",
+      "parentEmailPh": "valideyn@example.com",
+      "parentEmailHint": "İstəyə bağlı. İmtahan nəticəsinin qısa xülasəsi bu ünvana göndərilir; digər tələbələr görmür.",
       "weekdays": {
         "1": {
           "short": "B.e.",
@@ -924,6 +927,7 @@
       "lessonDayRequired": "Ən azı bir dərs günü seçin",
       "firstLessonRequired": "Paket üçün ilk dərs tarixini seçin",
       "invalidEmail": "Email formatı düzgün deyil",
+      "invalidParentEmail": "Valideyn emailinin formatı düzgün deyil",
       "studentIdMissing": "Tələbə ID tapılmadı — səhifəni yeniləyib yenidən cəhd edin",
       "noChanges": "Dəyişiklik yoxdur",
       "updated": "Melumatlari yenilendi!",

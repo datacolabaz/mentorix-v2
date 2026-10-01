@@ -313,6 +313,11 @@ const EMAIL_FIRST_TEMPLATES = {
     en: { subject: '{{studentName}}: assessment result is ready', eyebrow: 'Parent', lines: ['{{studentName}} completed “{{examTitle}}”.', 'See the result and summary in your parent dashboard.'], cta: RESULT_CTA.en },
     ru: { subject: '{{studentName}}: результат экзамена готов', eyebrow: 'Родителям', lines: ['{{studentName}} завершил(а) «{{examTitle}}».', 'Результат и сводка — в кабинете родителя.'], cta: RESULT_CTA.ru },
   }),
+  parent_result_contact: compact({
+    az: { subject: '{{studentName}}: imtahan tamamlandı', eyebrow: 'Valideyn', lines: ['{{studentName}} «{{examTitle}}» imtahanını tamamladı.', 'Ətraflı nəticəni müəllimdən və ya tələbənin Mentorix hesabından öyrənə bilərsiniz.', 'Bu ünvan müəllim tərəfindən tələbə profilində valideyn emaili kimi qeyd olunub.'], cta: RESULT_CTA.az },
+    en: { subject: '{{studentName}}: assessment completed', eyebrow: 'Parent', lines: ['{{studentName}} completed “{{examTitle}}”.', 'Ask the teacher or check the student’s Mentorix account for the detailed result.', 'The teacher saved this address as the parent email on the student profile.'], cta: RESULT_CTA.en },
+    ru: { subject: '{{studentName}}: экзамен завершён', eyebrow: 'Родителям', lines: ['{{studentName}} завершил(а) «{{examTitle}}».', 'Подробный результат можно узнать у преподавателя или в аккаунте ученика в Mentorix.', 'Преподаватель указал этот адрес как email родителя в профиле ученика.'], cta: RESULT_CTA.ru },
+  }),
   weekly_teacher_digest: compact({
     az: { subject: 'Həftəlik xülasə: {{periodLabel}}', eyebrow: 'Həftəlik xülasə', lines: ['Aktiv tələbələr: {{activeStudents}}', 'İmtahan təqdimatları: {{examSubmissions}}', 'Tapşırıq təqdimatları: {{assignmentSubmissions}}', 'Yoxlama gözləyən işlər: {{pendingReviews}}', 'Canlı dərslər: {{liveLessons}}'], cta: REPORT_CTA.az },
     en: { subject: 'Weekly summary: {{periodLabel}}', eyebrow: 'Weekly summary', lines: ['Active students: {{activeStudents}}', 'Assessment submissions: {{examSubmissions}}', 'Assignment submissions: {{assignmentSubmissions}}', 'Awaiting review: {{pendingReviews}}', 'Live lessons: {{liveLessons}}'], cta: REPORT_CTA.en },

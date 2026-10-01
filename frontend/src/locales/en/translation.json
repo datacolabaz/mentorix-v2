@@ -850,6 +850,9 @@
       "parentNamePh": "Parent name",
       "parentPhone": "Phone",
       "parentPhonePh": "+994XXXXXXXXX",
+      "parentEmail": "Parent email",
+      "parentEmailPh": "parent@example.com",
+      "parentEmailHint": "Optional. A short assessment result summary is sent here; other students never see it.",
       "weekdays": {
         "1": {
           "short": "Mon",
@@ -914,6 +917,7 @@
       "lessonDayRequired": "Select at least one lesson day",
       "firstLessonRequired": "Select the first lesson date for the package",
       "invalidEmail": "Invalid email format",
+      "invalidParentEmail": "Invalid parent email format",
       "studentIdMissing": "Student ID not found — refresh the page and try again",
       "noChanges": "No changes",
       "updated": "Details updated!",
