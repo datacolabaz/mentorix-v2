@@ -511,6 +511,20 @@ const TEMPLATES = Object.freeze({
       body: 'Облачное хранилище заполнено ({{used}} / {{limit}}). Существующие файлы сохраняются. Чтобы загрузить новые файлы, удалите старые или свяжитесь с поддержкой[[ ({{supportPhone}})]].[[ Также можно перейти на тариф {{nextPlan}}.]]',
     },
   },
+  legacy_recordings_retiring: {
+    az: {
+      title: 'Köhnə video yazılarınız {{deleteAfter}} tarixindən sonra silinəcək',
+      body: 'Mentorix-in daxili video otağı dayandırılıb. Sizin {{count}} dərs yazınız ({{size}}) hələ saxlanılır. Onları {{deleteAfter}} tarixinədək yükləyə bilərsiniz: Canlı dərslər → Köhnə dərs yazıları → «Yüklə». Bu tarixdən sonra yazılar silinə bilər. Sualınız varsa dəstək ilə əlaqə saxlayın.',
+    },
+    en: {
+      title: 'Your old video recordings will be deleted after {{deleteAfter}}',
+      body: 'The Mentorix internal video room has been retired. {{count}} of your lesson recordings ({{size}}) are still stored. You can download them until {{deleteAfter}}: Live lessons → Old lesson recordings → “Download”. After that date the recordings may be deleted. Contact support if you have questions.',
+    },
+    ru: {
+      title: 'Ваши старые видеозаписи будут удалены после {{deleteAfter}}',
+      body: 'Встроенная видеокомната Mentorix закрыта. У вас ещё хранится {{count}} записей уроков ({{size}}). Их можно скачать до {{deleteAfter}}: Живые уроки → Старые записи уроков → «Скачать». После этой даты записи могут быть удалены. Если есть вопросы, свяжитесь с поддержкой.',
+    },
+  },
   legacy_plan_migration_notice: {
     az: {
       title: 'STANDART paketi PROFESSIONAL ilə əvəz olunur',

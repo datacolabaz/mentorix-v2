@@ -7,6 +7,7 @@ const { deleteLiveRoomForInstructor, listInstructorLiveHistory } = require('../s
 const { userCanAccessLiveRecording, sendLiveRecordingToResponse } = require('../services/liveRecordingStorage');
 const { listGuestsForRoom } = require('../services/liveGuestService');
 const { getRecordingUsageSnapshot } = require('../services/liveRecordingQuotaService');
+const { recordingDeleteAfter } = require('../jobs/liveRecordingRetirement');
 
 const getHistory = async (req, res) => {
   try {
@@ -43,6 +44,7 @@ const getHistory = async (req, res) => {
             ? `/live/recording-file/${encodeURIComponent(r.recording_filename)}`
             : null,
           recording_duration_sec: r.recording_duration_sec || null,
+          recording_delete_after: recordingDeleteAfter(r.recording_retirement_notice_sent_at),
           recorded_by_name: r.recorded_by_name || null,
         };
       }),
@@ -76,7 +78,10 @@ const getRecordingFile = async (req, res) => {
     const filename = String(req.params.filename || '').trim();
     const { rows } = await db.query(`SELECT * FROM live_recordings WHERE filename = $1 LIMIT 1`, [filename]);
     const recording = rows[0];
-    if (!recording || recording.deleted_at || (recording.expires_at && new Date(recording.expires_at) <= new Date())) {
+    // Past the old plan retention the owner can still export it until the 30-day retirement purge.
+    const expired = recording?.expires_at && new Date(recording.expires_at) <= new Date();
+    const isOwner = recording && String(recording.instructor_id) === String(req.user?.id);
+    if (!recording || recording.deleted_at || (expired && !isOwner)) {
       return res.status(404).json({ success: false, message: 'Yazı tapılmadı' });
     }
     const ok = await userCanAccessLiveRecording(req.user, recording);

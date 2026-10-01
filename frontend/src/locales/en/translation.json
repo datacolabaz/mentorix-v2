@@ -4904,7 +4904,8 @@
       "download": "Download",
       "delete": "Delete",
       "deleteTitle": "Delete recording",
-      "deleteText": "Delete this recording permanently?"
+      "deleteText": "Delete this recording permanently?",
+      "deleteAfter": "These recordings will be deleted after {{date}} — download the ones you want to keep now."
     },
     "untitled": "Untitled lesson",
     "retired": {

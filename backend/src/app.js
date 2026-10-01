@@ -32,6 +32,7 @@ const { runLiveLessonReminders } = require('./services/liveLessonService');
 const { runWeeklyTeacherDigest } = require('./jobs/weeklyTeacherDigest');
 const { runStorageLimitAlerts } = require('./jobs/storageLimitAlerts');
 const { runLegacyPlanMigrationNotices } = require('./services/legacyPlanMigrationService');
+const { sendRecordingRetirementNotices, purgeNoticedLegacyRecordings } = require('./jobs/liveRecordingRetirement');
 const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
@@ -243,8 +244,15 @@ cron.schedule('10 */2 * * *', () => {
   );
 });
 
-// Internal-video recordings: the hourly expiry cleanup (jobs/liveRecordingCleanup.js) is paused so nothing
-// is deleted before the owner's retention/export decision (specs/audit-sms-video-pricing.md).
+// Internal-video recordings: the old plan-retention cleanup (jobs/liveRecordingCleanup.js) stays paused.
+// Owner decision: notify each teacher once (export link), delete 30 days after the notice, and only when
+// LIVE_RECORDING_PURGE_ENABLED=true — otherwise the purge is a dry run that logs candidates.
+cron.schedule('0 7 * * *', () => {
+  sendRecordingRetirementNotices().catch((e) => console.error('recording retirement notices cron', e.message));
+});
+cron.schedule('45 3 * * *', () => {
+  purgeNoticedLegacyRecordings().catch((e) => console.error('recording retirement purge cron', e.message));
+});
 
 // Live lesson (Meet/Zoom link) reminders: every minute; rows are claimed with SKIP LOCKED
 cron.schedule('* * * * *', () => {

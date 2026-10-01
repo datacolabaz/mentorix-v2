@@ -4913,7 +4913,8 @@
       "download": "Yüklə",
       "delete": "Sil",
       "deleteTitle": "Yazını sil",
-      "deleteText": "Bu yazı birdəfəlik silinsin?"
+      "deleteText": "Bu yazı birdəfəlik silinsin?",
+      "deleteAfter": "Bu yazılar {{date}} tarixindən sonra silinəcək — saxlamaq istədiklərinizi indi yükləyin."
     },
     "untitled": "Adsız dərs",
     "retired": {

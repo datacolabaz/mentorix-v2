@@ -30,6 +30,11 @@ export default function LegacyRecordings() {
 
   if (!items.length) return null
 
+  const deleteAfter = items
+    .map((s) => s.recording_delete_after)
+    .filter(Boolean)
+    .sort()[0]
+
   const download = async (s) => {
     setBusy(s.id)
     try {
@@ -64,11 +69,23 @@ export default function LegacyRecordings() {
   }
 
   return (
-    <section className="rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceMain p-4 sm:p-5" aria-labelledby="ll-legacy-title">
+    <section
+      id="legacy-recordings"
+      className="rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceMain p-4 sm:p-5"
+      aria-labelledby="ll-legacy-title"
+    >
       <h2 id="ll-legacy-title" className="text-sm font-semibold text-token-textMain">
         {t('liveLessons.legacy.title')}
       </h2>
       <p className="mt-1 text-xs text-token-textMuted">{t('liveLessons.legacy.hint')}</p>
+      {deleteAfter ? (
+        <p
+          className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-token-textMain"
+          data-testid="legacy-recordings-delete-after"
+        >
+          {t('liveLessons.legacy.deleteAfter', { date: formatDateTime(deleteAfter, i18n.language) })}
+        </p>
+      ) : null}
       <ul className="mt-3 divide-y divide-[color:var(--border-subtle)]">
         {items.map((s) => (
           <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
