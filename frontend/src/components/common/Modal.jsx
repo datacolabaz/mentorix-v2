@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import useUiStore from '../../hooks/useUi'
 
@@ -16,6 +16,7 @@ export default function Modal({
 }) {
   const theme = useUiStore((s) => s.theme)
   const isDark = theme === 'dark'
+  const titleId = useId()
 
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
@@ -33,6 +34,8 @@ export default function Modal({
       style={{ zIndex }}
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-label={title ? undefined : closeLabel}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -41,33 +44,27 @@ export default function Modal({
           'rounded-2xl w-full shadow-2xl flex flex-col overflow-hidden',
           sizes[size],
           'max-h-[min(90vh,900px)]',
-          isDark
-            ? 'bg-surface-2 border border-white/10'
-            : 'bg-white border border-slate-200',
+          'bg-surface-elevated border border-line text-fg',
           scrollBody ? '' : 'overflow-y-auto',
         ].join(' ')}
         style={{ colorScheme: isDark ? 'dark' : 'light' }}
       >
         <div
           className={[
-            'flex shrink-0 items-center justify-between border-b',
+            'flex shrink-0 items-center justify-between border-b border-line',
             compact ? 'px-5 py-4' : 'p-6',
-            isDark ? 'border-white/10' : 'border-slate-200',
           ].join(' ')}
         >
-          <h2 className={['font-display font-700 text-lg', isDark ? 'text-white' : 'text-slate-900'].join(' ')}>
+          <h2 id={titleId} className="font-display font-700 text-lg text-fg">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className={[
-              'transition-colors text-xl',
-              isDark ? 'text-gray-400 hover:text-white' : 'text-slate-500 hover:text-slate-900',
-            ].join(' ')}
+            className="rounded-lg text-xl text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             aria-label={closeLabel}
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
         <div
@@ -75,7 +72,7 @@ export default function Modal({
             scrollBody
               ? `flex-1 min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none] ${compact ? 'p-5' : 'p-6'}`
               : compact ? 'p-5' : 'p-6',
-            isDark ? 'text-zinc-200' : 'text-slate-800',
+            'text-fg',
           ].join(' ')}
         >
           {children}
@@ -83,9 +80,8 @@ export default function Modal({
         {footer ? (
           <div
             className={[
-              'shrink-0 border-t',
+              'shrink-0 border-t border-line bg-surface-elevated text-fg',
               compact ? 'px-5 py-3' : 'px-6 py-4',
-              isDark ? 'border-white/10 text-zinc-200 bg-surface-2' : 'border-slate-200 text-slate-800 bg-white',
             ].join(' ')}
           >
             {footer}

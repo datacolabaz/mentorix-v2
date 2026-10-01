@@ -91,7 +91,7 @@ export default function LiveLessons() {
             aria-selected={scope === s}
             onClick={() => setScope(s)}
             className={`rounded-xl px-3 py-1.5 text-sm font-medium ${
-              scope === s ? 'bg-primary/15 text-token-textMain' : 'text-token-textMuted hover:text-token-textMain'
+              scope === s ? 'bg-brand-subtle text-fg' : 'text-token-textMuted hover:text-token-textMain'
             }`}
           >
             {t(`liveLessons.scopeTabs.${s}`)}
@@ -106,7 +106,7 @@ export default function LiveLessons() {
           ))}
         </div>
       ) : error ? (
-        <div role="alert" className="rounded-2xl border border-red-500/30 p-4 text-sm text-red-500">
+        <div role="alert" className="rounded-2xl border border-error/30 bg-error-subtle p-4 text-sm text-error">
           {error}{' '}
           <button type="button" onClick={() => void load()} className="underline">
             {t('liveLessons.retry')}

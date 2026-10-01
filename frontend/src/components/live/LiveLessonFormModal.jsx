@@ -20,7 +20,7 @@ import {
 } from '../../lib/liveLessons'
 
 const INPUT =
-  'w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-primary/50'
+  'w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm text-token-textMain outline-none focus:border-brand focus-visible:ring-2 focus-visible:ring-focus'
 const PLATFORMS = ['google_meet', 'zoom', 'other']
 const URL_PLACEHOLDER = {
   google_meet: 'https://meet.google.com/abc-defg-hij',
@@ -31,7 +31,7 @@ const URL_PLACEHOLDER = {
 function FieldError({ id, message }) {
   if (!message) return null
   return (
-    <p id={id} role="alert" className="text-xs text-red-500">
+    <p id={id} role="alert" className="text-xs text-error">
       {message}
     </p>
   )
@@ -203,7 +203,7 @@ export default function LiveLessonFormModal({ open, onClose, onSaved, lesson = n
                     onClick={() => set('target', k)}
                     className={`rounded-xl border px-3 py-1.5 text-sm ${
                       form.target === k
-                        ? 'border-primary/60 bg-primary/10 text-token-textMain'
+                        ? 'border-brand bg-brand-subtle text-fg'
                         : 'border-[color:var(--border-subtle)] text-token-textMuted hover:text-token-textMain'
                     }`}
                   >
@@ -279,7 +279,7 @@ export default function LiveLessonFormModal({ open, onClose, onSaved, lesson = n
                   onClick={() => set('platform', p)}
                   className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm ${
                     form.platform === p
-                      ? 'border-primary/60 bg-primary/10 text-token-textMain'
+                      ? 'border-brand bg-brand-subtle text-fg'
                       : 'border-[color:var(--border-subtle)] text-token-textMuted hover:text-token-textMain'
                   }`}
                 >
@@ -350,7 +350,7 @@ export default function LiveLessonFormModal({ open, onClose, onSaved, lesson = n
                           aria-pressed={on}
                           onClick={() => setRecurrence({ days: on ? r.days.filter((x) => x !== d) : [...(r.days || []), d] })}
                           className={`rounded-lg border px-2.5 py-1 text-xs ${
-                            on ? 'border-primary/60 bg-primary/10 text-token-textMain' : 'border-[color:var(--border-subtle)] text-token-textMuted'
+                            on ? 'border-brand bg-brand-subtle text-fg' : 'border-[color:var(--border-subtle)] text-token-textMuted'
                           }`}
                         >
                           {t(`liveLessons.weekdays.${d}`)}
@@ -415,7 +415,7 @@ export default function LiveLessonFormModal({ open, onClose, onSaved, lesson = n
                     <button
                       type="button"
                       onClick={() => set('materials', form.materials.filter((_, j) => j !== i))}
-                      className="text-xs text-token-textMuted hover:text-red-500"
+                      className="text-xs text-token-textMuted hover:text-error"
                     >
                       {t('liveLessons.remove')}
                     </button>
@@ -432,7 +432,7 @@ export default function LiveLessonFormModal({ open, onClose, onSaved, lesson = n
                 </Button>
               </div>
             ) : null}
-            <button type="button" onClick={() => setLibraryOpen(true)} className="text-xs font-medium text-primary hover:underline">
+            <button type="button" onClick={() => setLibraryOpen(true)} className="text-xs font-medium text-brand-text hover:underline">
               {t('liveLessons.fields.fromLibrary')}
             </button>
             <FieldError message={errors.materials} />

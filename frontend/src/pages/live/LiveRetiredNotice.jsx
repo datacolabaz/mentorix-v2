@@ -9,7 +9,7 @@ export default function LiveRetiredNotice() {
       <div className="max-w-xl rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceMain p-6 text-center sm:p-8">
         <h1 className="font-display text-lg font-bold text-token-textMain">{t('liveLessons.retired.title')}</h1>
         <p className="mt-2 text-sm text-token-textMuted">{t('liveLessons.retired.publicText')}</p>
-        <Link to="/" className="mt-5 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[#041018]">
+        <Link to="/" className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-on hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
           {t('liveLessons.retired.home')}
         </Link>
       </div>

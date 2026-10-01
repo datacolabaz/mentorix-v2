@@ -1,4 +1,6 @@
 /** Plan kartı feature sətri — "Record: ✓ (local)" badge-i ayrıca nowrap saxlayır. */
+import { CheckIcon } from './icons'
+
 const LIVE_RECORD_SPLIT = /\s·\s(?=(?:Record|Запись):)/i
 
 export default function PricingFeatureListItem({ line, isBasicTrial = false }) {
@@ -17,15 +19,15 @@ export default function PricingFeatureListItem({ line, isBasicTrial = false }) {
   if (isBasicTrial) {
     return (
       <li className="pricing-feature flex items-start gap-1.5 min-w-0">
-        <span className="text-primary shrink-0 font-semibold leading-none mt-px">✓</span>
+        <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-brand-text" />
         {body}
       </li>
     )
   }
 
   return (
-    <li className="pricing-feature flex items-start gap-1 min-w-0">
-      <span className="text-gray-400 shrink-0">•</span>
+    <li className="pricing-feature flex items-start gap-1.5 min-w-0">
+      <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" />
       {body}
     </li>
   )

@@ -11,7 +11,7 @@ function Notice({ title, text, backTo, backLabel }) {
       <h1 className="font-display text-lg font-bold text-token-textMain">{title}</h1>
       <p className="mt-2 text-sm text-token-textMuted">{text}</p>
       {backTo ? (
-        <Link to={backTo} className="mt-5 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[#041018]">
+        <Link to={backTo} className="mt-5 inline-flex rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-on hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
           {backLabel}
         </Link>
       ) : null}

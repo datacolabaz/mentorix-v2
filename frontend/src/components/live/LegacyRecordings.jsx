@@ -80,7 +80,7 @@ export default function LegacyRecordings() {
       <p className="mt-1 text-xs text-token-textMuted">{t('liveLessons.legacy.hint')}</p>
       {deleteAfter ? (
         <p
-          className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-token-textMain"
+          className="mt-2 rounded-lg border border-warning/35 bg-warning-subtle px-3 py-2 text-xs text-fg"
           data-testid="legacy-recordings-delete-after"
         >
           {t('liveLessons.legacy.deleteAfter', { date: formatDateTime(deleteAfter, i18n.language) })}

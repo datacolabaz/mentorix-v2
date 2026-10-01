@@ -76,7 +76,7 @@ export default function LiveLessonAttendanceModal({ open, lesson, onClose }) {
       {loading ? (
         <p className="py-6 text-center text-sm text-token-textMuted">{t('liveLessons.loading')}</p>
       ) : error ? (
-        <p role="alert" className="py-6 text-center text-sm text-red-500">{error}</p>
+        <p role="alert" className="py-6 text-center text-sm text-error">{error}</p>
       ) : !rows.length ? (
         <p className="py-6 text-center text-sm text-token-textMuted">{t('liveLessons.noStudents')}</p>
       ) : (

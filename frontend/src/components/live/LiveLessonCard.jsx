@@ -8,11 +8,11 @@ import { safeExternalHref } from '../../lib/meetingUrl'
 import { bakuParts, downloadLessonIcs } from '../../lib/liveLessons'
 
 const STATE_TONE = {
-  live: 'bg-emerald-500/15 text-emerald-600',
-  upcoming: 'bg-sky-500/15 text-sky-600',
-  ended: 'bg-slate-500/15 text-token-textMuted',
-  cancelled: 'bg-red-500/15 text-red-500',
-  legacy: 'bg-slate-500/15 text-token-textMuted',
+  live: 'bg-success-subtle text-success',
+  upcoming: 'bg-info-subtle text-info',
+  ended: 'bg-canvas-subtle text-fg-muted',
+  cancelled: 'bg-error-subtle text-error',
+  legacy: 'bg-canvas-subtle text-fg-muted',
 }
 
 export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance }) {
@@ -43,9 +43,9 @@ export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance 
         <PlatformIcon platform={lesson.platform} />
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 id={`ll-${lesson.id}-title`} className="min-w-0 truncate text-base font-semibold text-token-textMain">
+            <h2 id={`ll-${lesson.id}-title`} className="min-w-0 truncate text-base font-semibold text-token-textMain">
               {lesson.title}
-            </h3>
+            </h2>
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATE_TONE[lesson.state] || STATE_TONE.ended}`}>
               {t(`liveLessons.state.${lesson.state}`)}
             </span>
@@ -62,7 +62,7 @@ export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance 
             {!lesson.is_owner && lesson.instructor_name ? <span>{target ? ' · ' : ''}{lesson.instructor_name}</span> : null}
           </p>
           {lesson.state === 'cancelled' && lesson.cancel_reason ? (
-            <p className="text-sm text-red-500">{t('liveLessons.cancelReason', { reason: lesson.cancel_reason })}</p>
+            <p className="text-sm text-error">{t('liveLessons.cancelReason', { reason: lesson.cancel_reason })}</p>
           ) : null}
           {lesson.my_attendance?.status ? (
             <p className="text-xs text-token-textMuted">
@@ -83,7 +83,7 @@ export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance 
               return (
                 <li key={`${m.id || m.url}-${i}`} className="text-sm">
                   {href ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-text hover:underline">
                       {m.title || href}
                       <ExternalLinkIcon className="h-3.5 w-3.5" />
                     </a>
@@ -103,7 +103,7 @@ export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance 
             href={startHref || joinHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-[#041018] hover:brightness-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-on hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             {t('liveLessons.join')}
             <ExternalLinkIcon />
@@ -126,7 +126,7 @@ export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance 
           </Button>
         ) : null}
         {canManage && lesson.state !== 'ended' ? (
-          <Button type="button" variant="ghost" className="text-red-500" onClick={() => onCancel?.(lesson)}>
+          <Button type="button" variant="ghost" className="text-error" onClick={() => onCancel?.(lesson)}>
             {t('liveLessons.cancel')}
           </Button>
         ) : null}

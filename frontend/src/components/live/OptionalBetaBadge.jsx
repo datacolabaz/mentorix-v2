@@ -6,7 +6,7 @@ export default function OptionalBetaBadge({ className = '' }) {
   return (
     <span
       data-testid="optional-beta-badge"
-      className={`ml-2 inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200 ${className}`}
+      className={`ml-2 inline-flex items-center rounded-full border border-warning/40 bg-warning-subtle px-2 py-0.5 align-middle text-caption font-semibold uppercase tracking-wide text-warning ${className}`}
     >
       {t('live.optionalBeta')}
     </span>

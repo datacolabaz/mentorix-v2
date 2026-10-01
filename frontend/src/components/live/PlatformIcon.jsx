@@ -1,7 +1,7 @@
 const STYLES = {
-  google_meet: { bg: 'bg-emerald-500/15', fg: 'text-emerald-500' },
-  zoom: { bg: 'bg-sky-500/15', fg: 'text-sky-500' },
-  other: { bg: 'bg-slate-500/15', fg: 'text-token-textMuted' },
+  google_meet: { bg: 'bg-brand-subtle', fg: 'text-brand-text' },
+  zoom: { bg: 'bg-info-subtle', fg: 'text-info' },
+  other: { bg: 'bg-canvas-subtle', fg: 'text-fg-muted' },
 }
 
 export default function PlatformIcon({ platform, className = 'h-9 w-9' }) {
