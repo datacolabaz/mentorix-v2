@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import Card from '../../components/common/Card'
-import { formatBankCardDisplay } from '../../lib/billingPaymentLabels'
+import { BILLING_RECEIPT_WHATSAPP_MSISDN, formatBankCardDisplay } from '../../lib/billingPaymentLabels'
+import { formatAzMsisdnDisplay } from '../../lib/platformContact'
 import BillingReceiptWhatsAppButton from '../../components/instructor/BillingReceiptWhatsAppButton'
 
 export default function PaymentPending() {
@@ -35,7 +36,7 @@ export default function PaymentPending() {
         </div>
         <p className="text-xs text-token-textMuted leading-relaxed">
           Ödənişdən sonra qəbzi WhatsApp üzərindən{' '}
-          <span className="text-token-textMain font-medium">+994 55 377 57 70</span> nömrəsinə göndərin. Təsdiqdən
+          <span className="text-token-textMain font-medium">{formatAzMsisdnDisplay(BILLING_RECEIPT_WHATSAPP_MSISDN)}</span> nömrəsinə göndərin. Təsdiqdən
           sonra paket aktivləşdiriləcək.
         </p>
         <BillingReceiptWhatsAppButton amountAzn={amount} product={product} />

@@ -1,3 +1,5 @@
+import { DEFAULT_PLATFORM_WHATSAPP_MSISDN } from './platformContact'
+
 /** Bank kartı (köçürmə üçün) — 16 rəqəm */
 
 export const BANK_CARD_DIGITS = 16
@@ -45,7 +47,7 @@ export function billingPaymentTitle(p) {
 }
 
 /** Köçürmə qəbzini qəbul edən WhatsApp */
-export const BILLING_RECEIPT_WHATSAPP_MSISDN = '994553775770'
+export const BILLING_RECEIPT_WHATSAPP_MSISDN = DEFAULT_PLATFORM_WHATSAPP_MSISDN
 
 export function billingReceiptWhatsAppUrl({ amountAzn, product } = {}) {
   const productAz =
