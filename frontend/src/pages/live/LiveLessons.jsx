@@ -76,7 +76,7 @@ export default function LiveLessons() {
           <p className="mt-1 text-sm text-token-textMuted">{isInstructor ? t('liveLessons.subtitleInstructor') : t('liveLessons.subtitleStudent')}</p>
         </div>
         {isInstructor ? (
-          <Button type="button" onClick={() => setFormOpen(true)}>
+          <Button type="button" className="shrink-0 whitespace-nowrap" onClick={() => setFormOpen(true)}>
             {t('liveLessons.new')}
           </Button>
         ) : null}
