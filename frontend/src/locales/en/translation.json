@@ -1960,6 +1960,126 @@
       "open_grading_pending": {
         "title": "Open answers awaiting review",
         "body": "{{count}} student answers are waiting for your confirmation — “{{examTitle}}”."
+      },
+      "assignment_late_submitted": {
+        "title": "Assignment submitted late",
+        "body": "{{studentName}} submitted the assignment “{{assignmentTitle}}” after the due date."
+      },
+      "exam_submitted": {
+        "title": "Assessment submitted",
+        "body": "{{studentName}} submitted the assessment “{{examTitle}}”."
+      },
+      "exam_submitted_review": {
+        "title": "Assessment awaiting review",
+        "body": "{{studentName}} submitted “{{examTitle}}” — open answers are waiting for your review."
+      },
+      "exam_auto_submitted": {
+        "title": "Time ran out — auto-submitted",
+        "body": "Time ran out for {{studentName}} on “{{examTitle}}”; the answers were submitted automatically."
+      },
+      "exam_auto_submitted_review": {
+        "title": "Auto-submitted — awaiting review",
+        "body": "Time ran out for {{studentName}} on “{{examTitle}}”; open answers are waiting for your review."
+      },
+      "exam_expired_no_answers": {
+        "title": "Attempts expired without answers",
+        "body": "Some students ran out of time on “{{examTitle}}” without answering."
+      },
+      "catalog_exam_approved": {
+        "title": "Catalog approval",
+        "body": "Your assessment “{{examTitle}}” was approved and published in the certified catalog."
+      },
+      "catalog_exam_rejected": {
+        "title": "Catalog rejection",
+        "body": "Your assessment “{{examTitle}}” was not accepted for the catalog: {{reason}}. You can edit it and submit it again."
+      },
+      "exam_access_approved": {
+        "title": "Assessment access approved",
+        "body": "Your teacher approved your access to “{{examTitle}}”. You can start the assessment now."
+      },
+      "exam_access_rejected": {
+        "title": "Assessment access declined",
+        "body": "Your teacher declined your request to join “{{examTitle}}”."
+      },
+      "exam_result_released": {
+        "title": "Result released",
+        "body": "Your result for “{{examTitle}}” is now available."
+      },
+      "task_access_rejected": {
+        "title": "Assignment access declined",
+        "body": "Your teacher declined your request to join “{{assignmentTitle}}”."
+      },
+      "join_request_approved": {
+        "title": "Join request approved",
+        "body": "You have been accepted into the group “{{groupName}}”."
+      },
+      "join_request_rejected": {
+        "title": "Join request declined",
+        "body": "Your request to join the group “{{groupName}}” was declined."
+      },
+      "assignment_due_soon": {
+        "title": "Assignment reminder",
+        "body": "Less than 24 hours left to submit “{{assignmentTitle}}” (due {{dueDate}})."
+      },
+      "assignment_overdue": {
+        "title": "Assignment overdue",
+        "body": "The due date for “{{assignmentTitle}}” has passed. Submit it or contact your teacher."
+      },
+      "assignment_reviewed": {
+        "title": "Assignment reviewed",
+        "body": "Your teacher reviewed “{{assignmentTitle}}”. Open the assignment to see the result."
+      },
+      "assignment_returned": {
+        "title": "Assignment returned for revision",
+        "body": "Your teacher returned “{{assignmentTitle}}” for revision. Please submit it again."
+      },
+      "material_shared": {
+        "title": "New material",
+        "body": "{{instructorName}} shared the material “{{materialTitle}}” with you."
+      },
+      "partner_application_approved": {
+        "title": "Partner application approved",
+        "body": "Your partner program application was approved. Your referral link is ready in your dashboard."
+      },
+      "partner_application_rejected": {
+        "title": "Partner application declined",
+        "body": "Your partner program application was declined."
+      },
+      "partner_suspended": {
+        "title": "Partner account suspended",
+        "body": "Your partner account was suspended. Please contact support for details."
+      },
+      "partner_commission_approved": {
+        "title": "Commission approved",
+        "body": "A commission of {{amount}} AZN from a referral payment was added to your balance."
+      },
+      "partner_payout_approved": {
+        "title": "Payout approved",
+        "body": "Your payout request of {{amount}} AZN was approved."
+      },
+      "partner_payout_paid": {
+        "title": "Payout sent",
+        "body": "{{amount}} AZN was paid to your account"
+      },
+      "partner_payout_rejected": {
+        "title": "Payout request declined",
+        "body": "Your payout request of {{amount}} AZN was declined. The commissions are back in your balance."
+      },
+      "partner_application_submitted": {
+        "title": "New partner application",
+        "body": "{{partnerName}} applied to the partner program."
+      },
+      "partner_payout_requested": {
+        "title": "Payout request awaiting review",
+        "body": "{{partnerName}} requested a payout of {{amount}} AZN."
+      },
+      "notification_delivery_failed": {
+        "title": "Notification deliveries failed",
+        "body": "{{count}} notification emails failed to deliver between {{from}} and {{to}} (UTC)."
+      },
+      "admin_login_failures": {
+        "title": "Failed admin sign-ins",
+        "body": "{{count}} failed sign-in attempts on the admin account {{account}} in the last {{minutes}} minutes."
       }
     }
   },
