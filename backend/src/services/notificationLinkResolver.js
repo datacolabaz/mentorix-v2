@@ -259,7 +259,7 @@ async function resolveNotificationLink(notification, user, opts = {}) {
     case 'billing':
       return resolveBilling(user);
     case 'storage':
-      return user.role === 'instructor' ? ok('/instructor/payments#storage') : NONE;
+      return user.role === 'instructor' ? ok('/instructor/settings#billing-plans') : NONE;
     case 'digest':
       return user.role === 'instructor' ? ok('/instructor/analytics') : NONE;
     case 'live_lesson':

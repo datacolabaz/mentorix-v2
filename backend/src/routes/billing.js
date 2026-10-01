@@ -20,6 +20,7 @@ const {
 } = require('../services/billingCheckoutService');
 const { fulfillBillingPayment } = require('../services/billingActivationService');
 const { getBillingConfig } = require('../services/billingSettingsService');
+const { getActivePlansMap } = require('../services/subscriptionPlansService');
 
 function callbackUrlFromReq(req) {
   const env = String(process.env.PAYRIFF_CALLBACK_URL || '').trim();
@@ -54,8 +55,12 @@ function callbackTokenOk(req) {
 router.get('/status', authenticate, authorize('instructor'), async (req, res) => {
   try {
     const out = await resolveEntitlements(req.user.id, { locale: localeFromReq(req) });
+    const planRow = (await getActivePlansMap())[out.plan] || null;
     res.json({
       plan: out.plan,
+      plan_title: planRow?.title || null,
+      plan_price_azn: planRow ? planRow.price_azn : null,
+      plan_is_public: planRow ? planRow.is_public !== false : true,
       can_buy_addons: out.can_buy_addons,
       can_renew_basic: out.can_renew_basic,
       basic_trial_ip_denied: out.basic_trial_ip_denied,

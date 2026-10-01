@@ -59,7 +59,7 @@ async function runStorageLimitAlerts({ now = new Date() } = {}) {
           used: formatBytes(used),
           limit: formatBytes(cap),
         },
-        meta: { href: '/instructor/payments#storage' },
+        meta: { href: '/instructor/settings#billing-plans' },
         providerWorkspaceId: r.user_id,
         dedupeKey: `${eventType}:${cap}:${month}`,
         email: true,

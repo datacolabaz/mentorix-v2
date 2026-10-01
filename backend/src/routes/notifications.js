@@ -22,11 +22,14 @@ router.post('/quick', authenticate, authorize('instructor'), require('../control
 router.post('/unsubscribe', async (req, res) => {
   try {
     const out = await require('../services/emailUnsubscribe').applyUnsubscribe(req.body?.token);
-    if (!out.ok) return res.status(400).json({ error: 'Link etibarsızdır və ya vaxtı keçib.', code: out.code });
-    return res.json({ ok: true, category: out.category });
+    if (!out.ok) {
+      const message = 'Link etibarsızdır və ya vaxtı keçib.';
+      return res.status(400).json({ success: false, ok: false, message, error: message, code: out.code });
+    }
+    return res.json({ success: true, ok: true, category: out.category });
   } catch (e) {
     console.error('[notifications/unsubscribe]', e?.message || e);
-    return res.status(500).json({ error: 'Server xətası' });
+    return res.status(500).json({ success: false, message: 'Server xətası', error: 'Server xətası' });
   }
 });
 

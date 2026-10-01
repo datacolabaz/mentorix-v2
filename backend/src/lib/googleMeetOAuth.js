@@ -163,7 +163,7 @@ function frontendConnectRedirect({ success, error, returnPath } = {}) {
   const path =
     returnPath && String(returnPath).startsWith('/')
       ? String(returnPath).split('?')[0]
-      : '/instructor/live/history';
+      : '/instructor/live-lessons';
   const qs = new URLSearchParams();
   if (success) qs.set('meet_connected', '1');
   if (error) qs.set('meet_error', String(error).slice(0, 80));
