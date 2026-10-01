@@ -52,6 +52,23 @@ const OPT_IN_EMAIL_EVENT_TYPES = new Set([
   'video_progressed',
 ]);
 
+/**
+ * Events that emailed instructors through the old SMTP path before the notification outbox.
+ * While real notification sending is not live, their email still goes through that legacy
+ * path (if SMTP is configured); once live, only through the outbox. Decided in one place:
+ * notificationEmailGate.emailRoute().
+ */
+const LEGACY_EMAIL_FALLBACK_EVENT_TYPES = new Set([
+  'join_request',
+  'exam_access_request',
+  'task_access_request',
+  'open_grading_pending',
+]);
+
+function hasLegacyEmailFallback(eventType) {
+  return LEGACY_EMAIL_FALLBACK_EVENT_TYPES.has(String(eventType || ''));
+}
+
 const ROLE_GROUPS = Object.freeze({
   admin: 'admin',
   instructor: 'provider',
@@ -353,6 +370,8 @@ module.exports = {
   MANDATORY_EVENT_TYPES,
   NEVER_EMAIL_EVENT_TYPES,
   OPT_IN_EMAIL_EVENT_TYPES,
+  LEGACY_EMAIL_FALLBACK_EVENT_TYPES,
+  hasLegacyEmailFallback,
   ROLE_DEFAULTS,
   isCategory,
   isPriority,

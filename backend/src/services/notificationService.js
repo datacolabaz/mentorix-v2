@@ -3,11 +3,14 @@
  * security kateqoriyasının söndürülə bilməməsi. Yeni call site-lar birbaşa
  * `INSERT INTO notifications` əvəzinə bunu istifadə etməlidir.
  */
+const crypto = require('crypto');
 const db = require('../utils/db');
 const policy = require('../config/notificationPolicy');
-const { emailStatusFor, EMAIL_STATUS } = require('./notificationEmailGate');
+const { emailPlan, EMAIL_STATUS, EMAIL_ROUTE } = require('./notificationEmailGate');
 const { hasTemplate, renderTemplate } = require('./notificationTemplates');
-const { emailLocale } = require('./email/emailTemplates');
+const { emailLocale, renderEmail, notificationTemplateKey, GENERIC_NOTIFICATION_KEY } = require('./email/emailTemplates');
+const { appLink } = require('./email/emailConfig');
+const { formatDateTime } = require('../utils/formatDateTime');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TITLE = 255;
@@ -107,6 +110,18 @@ function renderText(n, locale) {
   return { title, body, templated: Boolean(rendered) };
 }
 
+/**
+ * Legacy-route email (old SMTP path, see notificationEmailGate.emailRoute): rendered now from
+ * the same notification email template, because legacy queue rows carry their own text.
+ */
+function renderLegacyEmail(n, text, locale, notificationId) {
+  const key = notificationTemplateKey(n.eventType);
+  const params = key === GENERIC_NOTIFICATION_KEY ? { title: text.title, body: text.body } : { ...n.params };
+  params.when = formatDateTime(new Date(), locale);
+  const email = renderEmail(key, locale, params, { ctaUrl: appLink(`/notifications?open=${notificationId}`) });
+  return { subject: email.subject, body: email.text };
+}
+
 async function legacyInsert(q, n, text, meta) {
   const { rows } = await q.query(
     `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
@@ -147,7 +162,8 @@ async function createNotification(input, opts = {}) {
     wantsEmail: n.wantsEmail,
   });
 
-  const emailStatus = emailStatusFor(decision.email);
+  const plan = emailPlan({ eventType: n.eventType, emailDecision: decision.email });
+  const emailStatus = plan.status;
   if (!decision.inApp && (emailStatus == null || emailStatus === EMAIL_STATUS.SKIPPED)) {
     return { created: false, deduped: false, id: null, reason: 'disabled_by_preference' };
   }
@@ -157,11 +173,17 @@ async function createNotification(input, opts = {}) {
   if (text.templated) meta.i18n = { key: n.eventType, params: n.params };
   if (!decision.inApp) meta.silent = true;
   if (emailStatus === EMAIL_STATUS.DIGEST) meta.email_frequency = decision.email.frequency;
+  if (plan.route === EMAIL_ROUTE.LEGACY) meta.email_route = 'legacy';
 
-  // The outbox row is written by the same statement (atomic, no transaction needed), only
-  // when a new notification row was inserted — a deduped retry never queues a second email.
-  // Only ids/template/locale are queued; the worker renders at send time (no private body stored).
-  const enqueueEmail = emailStatus === EMAIL_STATUS.QUEUED;
+  // The email row is written by the same statement (atomic, no transaction needed), only when
+  // a new notification row was inserted — a deduped retry never queues a second email.
+  // Outbox rows hold ids/template/locale only (rendered at send time). Legacy rows carry the
+  // rendered text, like every other legacy queue row. At most one of the two is written.
+  const locale = emailLocale(recipient.locale);
+  const newId = crypto.randomUUID();
+  const enqueueOutbox = plan.route === EMAIL_ROUTE.OUTBOX;
+  const enqueueLegacy = plan.route === EMAIL_ROUTE.LEGACY;
+  const legacyEmail = enqueueLegacy ? renderLegacyEmail(n, text, locale, newId) : { subject: null, body: null };
   let id = null;
   let queued = false;
   try {
@@ -170,10 +192,10 @@ async function createNotification(input, opts = {}) {
          INSERT INTO notifications (
            user_id, title, body, type, is_read, read_at, meta,
            category, priority, related_entity_type, related_entity_id,
-           actor_user_id, provider_workspace_id, group_id, email_status, dedupe_key
+           actor_user_id, provider_workspace_id, group_id, email_status, dedupe_key, id
          ) VALUES (
            $1, $2, $3, $4::text, $5::boolean, CASE WHEN $5::boolean THEN NOW() ELSE NULL END, $6::jsonb,
-           $7, $8, $9, $10, $11, $12, $13, $14, $15
+           $7, $8, $9, $10, $11, $12, $13, $14, $15, $18::uuid
          )
          ON CONFLICT (user_id, dedupe_key) WHERE dedupe_key IS NOT NULL DO NOTHING
          RETURNING id, user_id
@@ -188,8 +210,22 @@ async function createNotification(input, opts = {}) {
          WHERE $17::boolean
          ON CONFLICT (unique_key) DO NOTHING
          RETURNING id
+       ), legacy AS (
+         INSERT INTO notification_queue (
+           channel, event_type, unique_key, user_id, to_addr, subject, body, status, retry_count, next_retry_at,
+           notification_id
+         )
+         SELECT 'email', $4::text, 'email:legacy:' || ins.id::text, ins.user_id, '__resolve__', $19::text, $20::text,
+                'pending', 0, NOW(), ins.id
+         FROM ins
+         WHERE $21::boolean AND NOT $17::boolean
+         ON CONFLICT (unique_key) DO NOTHING
+         RETURNING id
        )
-       SELECT ins.id, (SELECT COUNT(*) FROM outbox)::int AS queued FROM ins`,
+       SELECT ins.id,
+              (SELECT COUNT(*) FROM outbox)::int AS queued,
+              (SELECT COUNT(*) FROM legacy)::int AS legacy_queued
+       FROM ins`,
       [
         n.recipientId,
         text.title,
@@ -206,12 +242,16 @@ async function createNotification(input, opts = {}) {
         n.groupId,
         emailStatus,
         n.dedupeKey,
-        emailLocale(recipient.locale),
-        enqueueEmail,
+        locale,
+        enqueueOutbox,
+        newId,
+        legacyEmail.subject,
+        legacyEmail.body,
+        enqueueLegacy,
       ],
     );
     id = rows[0]?.id || null;
-    queued = Number(rows[0]?.queued || 0) > 0;
+    queued = Number(rows[0]?.queued || 0) + Number(rows[0]?.legacy_queued || 0) > 0;
   } catch (err) {
     // Migrasiya 214 hələ tətbiq olunmayıbsa (yalnız lokal/köhnə DB) — köhnə formada yaz.
     if (err && err.code === '42703') {
@@ -222,7 +262,7 @@ async function createNotification(input, opts = {}) {
   }
 
   if (!id) return { created: false, deduped: true, id: null, inApp: decision.inApp, emailStatus };
-  return { created: true, deduped: false, id, inApp: decision.inApp, emailStatus, emailQueued: queued };
+  return { created: true, deduped: false, id, inApp: decision.inApp, emailStatus, emailRoute: plan.route, emailQueued: queued };
 }
 
 /** Fire-and-forget call site-lar üçün: xəta istifadəçi axınını pozmur. */
