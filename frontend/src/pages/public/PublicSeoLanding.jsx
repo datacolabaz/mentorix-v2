@@ -19,10 +19,13 @@ import { setPageSeo } from '../../lib/pageSeo'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { allActivePlanTitlesList } from '../../lib/subscriptionPlanGuards'
 import api from '../../lib/api'
+import useUiStore from '../../hooks/useUi'
+import { BRAND } from '../../lib/brand'
 
 export default function PublicSeoLanding() {
   const { t, i18n } = useTranslation()
   const { pathname } = useLocation()
+  const theme = useUiStore((s) => s.theme)
   const rawLanding = landingByPath(pathname)
   const landing = useMemo(() => localizePublicLanding(rawLanding, t), [rawLanding, t, i18n.language])
   const platformFeatures = localizePlatformFeatures(t, MENTORIX_PLATFORM_FEATURES)
@@ -62,7 +65,7 @@ export default function PublicSeoLanding() {
       canonicalPath: landing.path,
       keywords: landing.keywords || 'repetitor, müəllim tap, Bakı, Mentorix',
       breadcrumbs: [
-        { name: 'Mentorix', path: '/' },
+        { name: BRAND.name, path: '/' },
         { name: landing.h1, path: landing.path },
       ],
       pricingProduct: Boolean(landing.showPricingPlans),
@@ -74,24 +77,36 @@ export default function PublicSeoLanding() {
   const ctaHref = ctaHrefForLanding(landing)
   const isPanel = landing.kind === 'panel' || landing.kind === 'feature'
   const ctaClass =
-    'inline-flex w-full justify-center items-center rounded-xl bg-primary px-6 py-4 min-h-[52px] text-base font-bold text-[#041018] shadow-lg shadow-primary/20 hover:brightness-95'
+    'inline-flex w-full justify-center items-center rounded-xl bg-brand px-6 min-h-[52px] text-body font-semibold text-brand-on shadow-card hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas'
 
   return (
-    <div className="min-h-[100svh] bg-[#f4f6fb] text-slate-800 flex flex-col">
+    <div
+      className={`mx-public-page ${theme === 'dark' ? 'theme-dark' : 'theme-light'} min-h-[100svh] bg-canvas text-fg-secondary flex flex-col`}
+    >
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[3000] focus:rounded-lg focus:bg-surface-elevated focus:px-4 focus:py-2 focus:text-body-sm focus:font-semibold focus:text-fg focus:shadow-elevated focus:outline-none focus:ring-2 focus:ring-focus"
+      >
+        {t('home.skipLink')}
+      </a>
       <PublicMarketingNav />
 
-      <main className={`flex-1 ${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-8 sm:py-12 w-full space-y-8`}>
+      <main
+        id="main"
+        tabIndex={-1}
+        className={`flex-1 ${isPricingPage ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-8 sm:py-12 w-full space-y-8 focus:outline-none`}
+      >
         <div className="space-y-4">
           <Link
             to="/"
-            className="inline-flex items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+            className="inline-flex items-center gap-1 rounded-sm text-body-sm font-semibold text-brand-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
-            ← {t('landing.pricingPage.backHome')}
+            <span aria-hidden>←</span> {t('landing.pricingPage.backHome')}
           </Link>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-            Mentorix · {isPanel ? t('publicLandings.ecosystem') : t('publicLandings.searchEyebrow')}
+          <p className="text-caption font-semibold uppercase tracking-[0.14em] text-brand-text">
+            {BRAND.name} · {isPanel ? t('publicLandings.ecosystem') : t('publicLandings.searchEyebrow')}
           </p>
-          <h1 className="text-[1.85rem] sm:text-4xl font-bold tracking-tight leading-tight text-slate-900">
+          <h1 className="text-h1 text-fg">
             {isPricingPage ? t('landing.pricingPage.heading') : landing.h1}
           </h1>
           {isPricingPage ? (

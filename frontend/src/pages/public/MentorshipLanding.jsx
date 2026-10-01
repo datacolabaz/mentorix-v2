@@ -5,6 +5,8 @@ import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import { setPageSeo } from '../../lib/pageSeo'
 import useAuthStore from '../../hooks/useAuth'
+import usePublicPageTheme from '../../hooks/usePublicPageTheme'
+import { BRAND } from '../../lib/brand'
 
 const GOALS = [
   { key: 'career', icon: '↗' },
@@ -29,6 +31,7 @@ const OPEN_REQUESTS = [
 
 export default function MentorshipLanding() {
   const { t } = useTranslation()
+  const pageTheme = usePublicPageTheme()
   const { user } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -55,14 +58,14 @@ export default function MentorshipLanding() {
       canonicalPath: '/mentorship',
       keywords: t('mentorship.seoKeywords'),
       breadcrumbs: [
-        { name: 'Mentorix', path: '/' },
+        { name: BRAND.name, path: '/' },
         { name: t('mentorship.navLabel'), path: '/mentorship' },
       ],
     })
   }, [t])
 
   return (
-    <div className="min-h-[100svh] bg-[#f4f7fa] text-slate-800 flex flex-col">
+    <div className={`${pageTheme.className} min-h-[100svh] flex flex-col`}>
       <PublicMarketingNav />
 
       <main className="flex-1">

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
+import usePublicPageTheme from '../../hooks/usePublicPageTheme'
 
 const PRINCIPLES = [
   ['Yoxlama nə deməkdir?', 'Mentor profilindəki yoxlama badge-i şəxsiyyət, peşəkar təcrübə və onboarding mərhələlərindən hansının tamamlandığını göstərir. Badge görmək bütün nəticələrə zəmanət deyil; qərar verməzdən əvvəl profil və təklif detallarını yoxlayın.'],
@@ -10,8 +11,9 @@ const PRINCIPLES = [
 ]
 
 export default function MentorshipSafety() {
+  const pageTheme = usePublicPageTheme()
   return (
-    <div className="min-h-[100svh] bg-[#f4f6fb] text-slate-800 flex flex-col">
+    <div className={`${pageTheme.className} min-h-[100svh] flex flex-col`}>
       <PublicMarketingNav />
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:py-16">
         <Link to="/mentorship" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">← Mentorluğa qayıt</Link>

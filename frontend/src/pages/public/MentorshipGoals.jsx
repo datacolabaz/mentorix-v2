@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
+import usePublicPageTheme from '../../hooks/usePublicPageTheme'
 
 const GOALS = ['career', 'technology', 'university', 'language']
 const LEVELS = ['beginner', 'developing', 'experienced']
@@ -10,6 +11,7 @@ const AVAILABILITY = ['weekdayMorning', 'weekdayEvening', 'weekend']
 
 export default function MentorshipGoals() {
   const { t } = useTranslation()
+  const pageTheme = usePublicPageTheme()
   const [searchParams, setSearchParams] = useSearchParams()
   const [goal, setGoal] = useState(() => {
     const initial = searchParams.get('goal')
@@ -41,7 +43,7 @@ export default function MentorshipGoals() {
   const goalPath = `/mentorship/goals?${searchParams.toString()}`
 
   return (
-    <div className="min-h-[100svh] bg-[#f4f6fb] text-slate-800 flex flex-col">
+    <div className={`${pageTheme.className} min-h-[100svh] flex flex-col`}>
       <PublicMarketingNav />
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 sm:py-12">
         <Link to="/mentorship" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">

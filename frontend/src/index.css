@@ -232,7 +232,7 @@ body {
     --mx-brand-subtle: 230 250 240; /* #E6FAF0 */
     --mx-success: 4 120 87; /* #047857 */
     --mx-success-subtle: 236 253 245;
-    --mx-warning: 161 92 7; /* #A15C07 */
+    --mx-warning: 146 82 6; /* #925206 */
     --mx-warning-subtle: 255 247 230;
     --mx-error: 185 28 28; /* #B91C1C */
     --mx-error-subtle: 254 242 242;
@@ -650,7 +650,7 @@ body {
   --mx-brand-subtle: 230 250 240;
   --mx-success: 4 120 87;
   --mx-success-subtle: 236 253 245;
-  --mx-warning: 161 92 7;
+  --mx-warning: 146 82 6;
   --mx-warning-subtle: 255 247 230;
   --mx-error: 185 28 28;
   --mx-error-subtle: 254 242 242;
@@ -813,6 +813,12 @@ body {
 }
 .mx-public-page.theme-dark :is(.bg-slate-50, .bg-slate-100) {
   background-color: rgb(var(--mx-surface-elevated));
+}
+.mx-public-page.theme-dark :is(.bg-slate-200, .bg-slate-200\/80, .bg-slate-300) {
+  background-color: rgb(var(--mx-bg-secondary));
+}
+.mx-public-page.theme-dark .hover\:text-slate-900:hover {
+  color: rgb(var(--mx-text-primary));
 }
 .mx-public-page.theme-dark :is(.border-slate-200, .border-slate-100, .border-slate-300) {
   border-color: rgb(var(--mx-border));

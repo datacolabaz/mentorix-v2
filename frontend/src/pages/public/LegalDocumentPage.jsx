@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import { setPageSeo } from '../../lib/pageSeo'
+import usePublicPageTheme from '../../hooks/usePublicPageTheme'
+import { BRAND } from '../../lib/brand'
 
 const CONTACT_EMAIL = 'datacolabaz@gmail.com'
 const SUPPORT_EMAIL = 'support@mentorix.io'
@@ -21,6 +23,7 @@ export default function LegalDocumentPage({ doc }) {
   const updated = t(`${ns}.updated`)
   const sections = t(`${ns}.sections`, { returnObjects: true })
   const sectionList = Array.isArray(sections) ? sections : []
+  const pageTheme = usePublicPageTheme()
 
   useEffect(() => {
     setPageSeo({
@@ -28,17 +31,17 @@ export default function LegalDocumentPage({ doc }) {
       description: t(`${ns}.seoDesc`),
       canonicalPath: path,
       breadcrumbs: [
-        { name: 'Mentorix', path: '/' },
+        { name: BRAND.name, path: '/' },
         { name: title, path },
       ],
     })
   }, [ns, path, t, title, i18n.language])
 
   return (
-    <div className="min-h-[100svh] bg-[#f4f6fb] text-slate-800 flex flex-col">
+    <div className={`${pageTheme.className} min-h-[100svh] flex flex-col`}>
       <PublicMarketingNav />
 
-      <main className="flex-1 max-w-3xl mx-auto px-4 py-8 sm:py-12 w-full">
+      <main id="main" className="flex-1 max-w-3xl mx-auto px-4 py-8 sm:py-12 w-full">
         <Link
           to="/"
           className="inline-flex items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800"
@@ -48,7 +51,7 @@ export default function LegalDocumentPage({ doc }) {
 
         <header className="mt-6 space-y-3">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-            Mentorix · {t('legal.eyebrow')}
+            {BRAND.name} · {t('legal.eyebrow')}
           </p>
           <h1 className="text-[1.85rem] sm:text-4xl font-bold tracking-tight leading-tight text-slate-900">
             {title}
@@ -83,11 +86,11 @@ export default function LegalDocumentPage({ doc }) {
             <h2 className="text-lg font-bold text-slate-900">{t('legal.contactHeading')}</h2>
             <p>
               {t('legal.contactBody')}{' '}
-              <a className="text-emerald-700 font-semibold hover:underline" href={`mailto:${CONTACT_EMAIL}`}>
+              <a className="text-emerald-700 font-semibold underline underline-offset-4" href={`mailto:${CONTACT_EMAIL}`}>
                 {CONTACT_EMAIL}
               </a>
               {' · '}
-              <a className="text-emerald-700 font-semibold hover:underline" href={`mailto:${SUPPORT_EMAIL}`}>
+              <a className="text-emerald-700 font-semibold underline underline-offset-4" href={`mailto:${SUPPORT_EMAIL}`}>
                 {SUPPORT_EMAIL}
               </a>
             </p>
@@ -98,14 +101,14 @@ export default function LegalDocumentPage({ doc }) {
             {isPrivacy ? (
               <>
                 {t('legal.seeAlso')}{' '}
-                <Link to="/terms" className="text-emerald-700 font-semibold hover:underline">
+                <Link to="/terms" className="text-emerald-700 font-semibold underline underline-offset-4">
                   {t('legal.termsLink')}
                 </Link>
               </>
             ) : (
               <>
                 {t('legal.seeAlso')}{' '}
-                <Link to="/privacy" className="text-emerald-700 font-semibold hover:underline">
+                <Link to="/privacy" className="text-emerald-700 font-semibold underline underline-offset-4">
                   {t('legal.privacyLink')}
                 </Link>
               </>
