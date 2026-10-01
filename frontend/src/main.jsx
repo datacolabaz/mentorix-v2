@@ -1,4 +1,9 @@
-import './i18n/index.js'
+import { i18nReady } from './i18n/index.js'
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/inter/800.css'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -7,6 +12,7 @@ import App from './App'
 import { ToastProvider } from './components/common/Toast'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { installChunkReloadHandler } from './lib/chunkReload'
+import { BRAND } from './lib/brand'
 import './index.css'
 import './styles/livekit-override.css'
 import 'leaflet/dist/leaflet.css'
@@ -24,7 +30,7 @@ try {
     }
     meta.setAttribute(
       'content',
-      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover',
+      'width=device-width, initial-scale=1, viewport-fit=cover',
     )
   }
   ensureViewport()
@@ -43,16 +49,18 @@ const queryClient = new QueryClient({
   },
 })
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ErrorBoundary title="Mentorix açılmadı">
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </QueryClientProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
-  </React.StrictMode>
-)
+i18nReady.finally(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <ErrorBoundary title={`${BRAND.name} açılmadı`}>
+        <BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </QueryClientProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
+    </React.StrictMode>
+  )
+})
