@@ -24,7 +24,11 @@ async function sendPasswordResetEmail({ email, token, locale }) {
     to,
     templateKey: 'password_reset',
     locale,
-    params: { url: buildResetUrl(token), ttlMinutes: 30, ref: crypto.randomBytes(4).toString('hex') },
+    params: {
+      url: buildResetUrl(token),
+      ttlMinutes: Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30),
+      ref: crypto.randomBytes(4).toString('hex'),
+    },
   });
   if (r.ok) return { ok: true, messageId: r.messageId || null };
   if (r.status === 'dry_run') return { ok: false, error: 'Email dry-run rejimindədir — göndərilmədi' };
