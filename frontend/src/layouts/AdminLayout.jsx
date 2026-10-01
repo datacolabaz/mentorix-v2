@@ -34,6 +34,7 @@ const NAV_SECTION_DEFS = [
     title: 'SYSTEM',
     items: [
       { to: '/admin/notifications', key: 'notifications', labelKey: 'nav.admin.notifications', label: 'Bildirişlər', icon: 'notifications' },
+      { to: '/admin/operations', key: 'operations', labelKey: 'adminOperations.nav', label: 'Əməliyyat xətaları', icon: 'settings' },
       { to: '/admin/marketing/login', key: 'marketingLogin', labelKey: 'nav.admin.marketingLogin', label: 'Landing məzmunu', icon: 'analytics' },
       { to: '/admin/instructor-nav', key: 'instructorNav', labelKey: 'nav.admin.instructorNav', label: 'Müəllim menyusu', icon: 'settings' },
       { to: '/admin/feature-flags', key: 'featureFlags', labelKey: 'nav.admin.featureFlags', label: 'Platforma funksiyaları', icon: 'settings' },

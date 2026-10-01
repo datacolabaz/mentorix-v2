@@ -4922,5 +4922,150 @@
         "cta": "Перейти к экзаменам"
       }
     }
+  },
+  "dashboardSummary": {
+    "title": {
+      "admin": "Сводка операций",
+      "teacher": "Требует внимания",
+      "student": "Новое для вас"
+    },
+    "subtitle": {
+      "admin": "Безопасность, заявки и сбои — только общие количества",
+      "teacher": "Проверка, просрочки и активность учеников — только ваши группы",
+      "student": "Новые задания, ближайшие сроки и результаты"
+    },
+    "loading": "Загрузка сводки…",
+    "error": "Не удалось загрузить сводку.",
+    "retry": "Повторить",
+    "allClear": "Всё в порядке",
+    "attention": "Требует внимания: {{count}}",
+    "status": {
+      "unavailable": "Нет данных",
+      "none": "Нет",
+      "urgent": "Срочно",
+      "review": "Проверить",
+      "new": "Новое",
+      "ready": "Готово",
+      "info": "Инфо"
+    },
+    "items": {
+      "security_events": "Непрочитанные события безопасности",
+      "partner_applications": "Заявки партнёров на рассмотрении",
+      "failed_email_deliveries": "Неудачные отправки email (24 ч)",
+      "failed_background_jobs": "Сбои фоновых задач",
+      "commission_actions": "Комиссии, ожидающие проверки",
+      "unread_submissions": "Непрочитанные сдачи учеников",
+      "pending_grading": "Ожидает оценки",
+      "overdue_assignments": "Просроченные задания",
+      "assessment_expiry": "Истёкшие экзамены",
+      "unviewed_materials": "Непросмотренные материалы",
+      "join_requests": "Заявки на вступление",
+      "new_assessments": "Новые экзамены",
+      "new_assignments": "Новые задания",
+      "new_materials": "Новые материалы",
+      "upcoming_deadlines": "Ближайшие сроки (7 дней)",
+      "released_results": "Опубликованные результаты",
+      "teacher_feedback": "Отзыв учителя"
+    },
+    "detail": {
+      "security_events": "Неудачных входов за 24 ч: {{count}}",
+      "partner_applications": "Самая старая: {{date}}",
+      "failed_email_deliveries": "За 7 дней: {{count}}",
+      "failed_background_jobs": "За {{days}} дн. · очередь AI-проверки",
+      "commission_actions": "Выплаты: {{payouts}} ({{amount}}) · Комиссии: {{commissions}}",
+      "pending_grading": "Задания: {{assignments}} · Экзамены: {{exams}}",
+      "overdue_assignments": "Заданий: {{count}}",
+      "assessment_expiry": "Автосдача: {{auto}} · Без ответов: {{empty}}",
+      "unviewed_materials": "Материалов: {{materials}} · Срок прошёл: {{overdue}}",
+      "upcoming_deadlines": "Ближайший: {{date}}",
+      "released_results": "Последний: {{date}}",
+      "teacher_feedback": "Оценено: {{graded}} · Возвращено на доработку: {{returned}}"
+    },
+    "activity": {
+      "title": "Активность за 24 часа",
+      "open": "Отчёт об активности",
+      "countsLabel": "Количество по типам событий",
+      "empty": "За последние 24 часа активности учеников не было.",
+      "capped": "Много событий — подсчёт по последним 5000.",
+      "student": "Ученик",
+      "buckets": {
+        "submissions": "Сдачи: {{count}}",
+        "exams_completed": "Экзамены завершены: {{count}}",
+        "exams_started": "Экзамены начаты: {{count}}",
+        "material_views": "Просмотры материалов: {{count}}",
+        "downloads": "Скачивания: {{count}}",
+        "expired": "Время истекло: {{count}}"
+      },
+      "events": {
+        "assignment_submitted": "сдал(а) задание",
+        "assignment_late_submitted": "сдал(а) задание с опозданием",
+        "exam_submitted": "завершил(а) экзамен",
+        "exam_started": "начал(а) экзамен",
+        "exam_expired": "время экзамена истекло",
+        "material_viewed": "просмотрел(а) материал",
+        "video_started": "начал(а) видео",
+        "video_completed": "досмотрел(а) видео",
+        "material_file_downloaded": "скачал(а) файл"
+      }
+    },
+    "join": {
+      "title": "Заявки на вступление в группу",
+      "open": "Мои группы",
+      "group": "Группа",
+      "status": {
+        "pending": "На рассмотрении",
+        "approved": "Принята",
+        "rejected": "Отклонена"
+      }
+    },
+    "admin": {
+      "aggregateNote": "Здесь показаны только общие количества. Данные по ученикам доступны на странице активности учителя — с указанием причины и записью в журнал аудита."
+    }
+  },
+  "adminOperations": {
+    "nav": "Сбои операций",
+    "title": "Сбои операций",
+    "subtitle": "Неудачные входы, отправки email и фоновые задачи. Только просмотр.",
+    "back": "Назад к панели",
+    "refresh": "Обновить",
+    "empty": "За этот период сбоев нет.",
+    "sectionUnavailable": "Не удалось загрузить этот раздел.",
+    "failures": "Сбоев: {{count}}",
+    "noFailures": "Сбоев нет",
+    "cols": {
+      "event": "Событие",
+      "reason": "Причина",
+      "count": "Кол-во",
+      "last": "Последнее",
+      "template": "Шаблон",
+      "error": "Ошибка",
+      "retries": "Попытки",
+      "failedAt": "Время сбоя",
+      "job": "Задача"
+    },
+    "security": {
+      "title": "Неудачные входы",
+      "subtitle": "За {{hours}} ч, сгруппировано по причине",
+      "privacy": "Email, телефоны и IP-адреса не показываются.",
+      "events": {
+        "login_failed": "Неудачный вход",
+        "legacy_login_blocked": "Устаревший способ входа заблокирован"
+      }
+    },
+    "email": {
+      "title": "Неудачные отправки email",
+      "subtitle": "За {{hours}} ч",
+      "privacy": "Адреса получателей, темы и тексты не показываются."
+    },
+    "jobs": {
+      "title": "Сбои фоновых задач",
+      "subtitle": "За {{days}} дн.",
+      "openGrading": "AI-проверка открытых ответов"
+    },
+    "omitted": {
+      "title": "Пока не отслеживается",
+      "privacy_requests": "Запросы о конфиденциальности: источника данных пока нет.",
+      "cross_workspace_attempts": "Попытки доступа к чужому рабочему пространству: отклонённые попытки пока не журналируются."
+    }
   }
 }

@@ -4929,5 +4929,150 @@
         "cta": "İmtahanlara keç"
       }
     }
+  },
+  "dashboardSummary": {
+    "title": {
+      "admin": "Əməliyyat xülasəsi",
+      "teacher": "Diqqət tələb edənlər",
+      "student": "Sizin üçün yeniliklər"
+    },
+    "subtitle": {
+      "admin": "Təhlükəsizlik, müraciətlər və uğursuz əməliyyatlar — yalnız ümumi saylar",
+      "teacher": "Yoxlama, gecikmə və tələbə aktivliyi — öz qruplarınız üzrə",
+      "student": "Yeni tapşırıqlar, son tarixlər və nəticələr"
+    },
+    "loading": "Xülasə yüklənir…",
+    "error": "Xülasəni yükləmək alınmadı.",
+    "retry": "Yenidən cəhd et",
+    "allClear": "Hər şey qaydasındadır",
+    "attention": "Diqqət tələb edir: {{count}}",
+    "status": {
+      "unavailable": "Məlumat alınmadı",
+      "none": "Yoxdur",
+      "urgent": "Təcili",
+      "review": "Baxılmalıdır",
+      "new": "Yeni",
+      "ready": "Hazırdır",
+      "info": "Məlumat"
+    },
+    "items": {
+      "security_events": "Oxunmamış təhlükəsizlik hadisələri",
+      "partner_applications": "Gözləyən partnyor müraciətləri",
+      "failed_email_deliveries": "Uğursuz email göndərişləri (24 saat)",
+      "failed_background_jobs": "Uğursuz fon işləri",
+      "commission_actions": "Baxış gözləyən komissiya əməliyyatları",
+      "unread_submissions": "Oxunmamış tələbə təqdimləri",
+      "pending_grading": "Qiymətləndirmə gözləyir",
+      "overdue_assignments": "Vaxtı keçmiş tapşırıqlar",
+      "assessment_expiry": "Vaxtı bitən imtahanlar",
+      "unviewed_materials": "Baxılmamış materiallar",
+      "join_requests": "Qoşulma sorğuları",
+      "new_assessments": "Yeni imtahanlar",
+      "new_assignments": "Yeni tapşırıqlar",
+      "new_materials": "Yeni materiallar",
+      "upcoming_deadlines": "Yaxınlaşan son tarixlər (7 gün)",
+      "released_results": "Açıqlanan nəticələr",
+      "teacher_feedback": "Müəllim rəyi"
+    },
+    "detail": {
+      "security_events": "Son 24 saatda uğursuz giriş: {{count}}",
+      "partner_applications": "Ən köhnəsi: {{date}}",
+      "failed_email_deliveries": "Son 7 gündə: {{count}}",
+      "failed_background_jobs": "Son {{days}} gün · AI yoxlama növbəsi",
+      "commission_actions": "Ödəniş: {{payouts}} ({{amount}}) · Komissiya: {{commissions}}",
+      "pending_grading": "Tapşırıq: {{assignments}} · İmtahan: {{exams}}",
+      "overdue_assignments": "Tapşırıq sayı: {{count}}",
+      "assessment_expiry": "Avtomatik təhvil: {{auto}} · Cavabsız bitib: {{empty}}",
+      "unviewed_materials": "Material sayı: {{materials}} · Vaxtı keçib: {{overdue}}",
+      "upcoming_deadlines": "Ən yaxını: {{date}}",
+      "released_results": "Sonuncu: {{date}}",
+      "teacher_feedback": "Qiymətləndirilib: {{graded}} · Düzəlişə qaytarılıb: {{returned}}"
+    },
+    "activity": {
+      "title": "Son 24 saatın aktivliyi",
+      "open": "Aktivlik hesabatı",
+      "countsLabel": "Hadisə növləri üzrə saylar",
+      "empty": "Son 24 saatda tələbə aktivliyi olmayıb.",
+      "capped": "Çox hadisə var — saylar ən son 5000 hadisə üzrədir.",
+      "student": "Tələbə",
+      "buckets": {
+        "submissions": "Təqdim: {{count}}",
+        "exams_completed": "İmtahan bitirib: {{count}}",
+        "exams_started": "İmtahana başlayıb: {{count}}",
+        "material_views": "Material baxışı: {{count}}",
+        "downloads": "Yükləmə: {{count}}",
+        "expired": "Vaxtı bitib: {{count}}"
+      },
+      "events": {
+        "assignment_submitted": "tapşırığı təqdim etdi",
+        "assignment_late_submitted": "tapşırığı gecikmə ilə təqdim etdi",
+        "exam_submitted": "imtahanı bitirdi",
+        "exam_started": "imtahana başladı",
+        "exam_expired": "imtahanın vaxtı bitdi",
+        "material_viewed": "materiala baxdı",
+        "video_started": "videoya başladı",
+        "video_completed": "videonu bitirdi",
+        "material_file_downloaded": "faylı yüklədi"
+      }
+    },
+    "join": {
+      "title": "Qrupa qoşulma sorğuları",
+      "open": "Qruplarım",
+      "group": "Qrup",
+      "status": {
+        "pending": "Gözləyir",
+        "approved": "Qəbul edildi",
+        "rejected": "Rədd edildi"
+      }
+    },
+    "admin": {
+      "aggregateNote": "Burada yalnız ümumi saylar göstərilir. Tələbə səviyyəsində məlumata baxış səbəb göstərilməklə və audit jurnalına yazılmaqla müəllimin aktivlik səhifəsindən mümkündür."
+    }
+  },
+  "adminOperations": {
+    "nav": "Əməliyyat xətaları",
+    "title": "Əməliyyat xətaları",
+    "subtitle": "Uğursuz girişlər, email göndərişləri və fon işləri. Yalnız oxumaq üçündür.",
+    "back": "Dashboard-a qayıt",
+    "refresh": "Yenilə",
+    "empty": "Bu dövrdə xəta yoxdur.",
+    "sectionUnavailable": "Bu bölmənin məlumatını yükləmək alınmadı.",
+    "failures": "Xəta: {{count}}",
+    "noFailures": "Xəta yoxdur",
+    "cols": {
+      "event": "Hadisə",
+      "reason": "Səbəb",
+      "count": "Say",
+      "last": "Sonuncu",
+      "template": "Şablon",
+      "error": "Xəta",
+      "retries": "Cəhd",
+      "failedAt": "Uğursuz oldu",
+      "job": "İş"
+    },
+    "security": {
+      "title": "Uğursuz girişlər",
+      "subtitle": "Son {{hours}} saat, səbəb üzrə qruplaşdırılıb",
+      "privacy": "Email, telefon və IP ünvanları göstərilmir.",
+      "events": {
+        "login_failed": "Uğursuz giriş",
+        "legacy_login_blocked": "Köhnə giriş üsulu bloklandı"
+      }
+    },
+    "email": {
+      "title": "Uğursuz email göndərişləri",
+      "subtitle": "Son {{hours}} saat",
+      "privacy": "Alıcı ünvanı, mövzu və mətn göstərilmir."
+    },
+    "jobs": {
+      "title": "Uğursuz fon işləri",
+      "subtitle": "Son {{days}} gün",
+      "openGrading": "AI ilə açıq sual yoxlaması"
+    },
+    "omitted": {
+      "title": "Hələ izlənməyənlər",
+      "privacy_requests": "Məxfilik sorğuları: sistemdə belə sorğular üçün mənbə yoxdur.",
+      "cross_workspace_attempts": "Başqa iş sahəsinə giriş cəhdləri: rədd edilən cəhdlər hələ jurnala yazılmır."
+    }
   }
 }

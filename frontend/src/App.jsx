@@ -107,6 +107,7 @@ const InstructorCertificates = lazy(() => import('./pages/instructor/Certificate
 const AdminBilling = lazy(() => import('./pages/admin/AdminBilling'))
 const AdminPartners = lazy(() => import('./pages/admin/AdminPartners'))
 const AdminInventory = lazy(() => import('./pages/admin/AdminInventory'))
+const AdminOperations = lazy(() => import('./pages/admin/AdminOperations'))
 const ParentNotifications = lazy(() => import('./pages/parent/Notifications'))
 const NotificationCenter = lazy(() => import('./pages/common/NotificationCenter'))
 const NotificationSettings = lazy(() => import('./pages/common/NotificationSettings'))
@@ -379,6 +380,7 @@ export default function App() {
         <Route path="partners" element={<AdminPartners />} />
         <Route path="partners/partners" element={<Navigate to="/admin/partners" replace />} />
         <Route path="inventory" element={<AdminInventory />} />
+        <Route path="operations" element={<AdminOperations />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="marketing/login" element={<AdminMarketingLogin />} />

@@ -19,6 +19,8 @@ import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
 import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
+import DashboardSummary from '../../components/dashboard/DashboardSummary'
+import { summaryEnrollmentId } from '../../lib/dashboardSummary'
 import {
   pathForPendingStudentDeepLink,
   peekPendingStudentDeepLink,
@@ -215,6 +217,8 @@ export default function StudentDashboard() {
           hint={activeEnrollment ? activeEnrollment.subject_name : undefined}
         />
       </div>
+
+      <DashboardSummary role="student" enrollmentId={summaryEnrollmentId(activeEnrollment)} className="mb-6" />
 
       {enrollments.length > 1 && (
         <Card className="p-4 mb-6 border border-[color:var(--border-subtle)]">

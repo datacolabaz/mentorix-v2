@@ -5,6 +5,7 @@ import { az } from 'date-fns/locale'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import { formatNamedDate } from '../../lib/azMonths'
+import DashboardSummary from '../../components/dashboard/DashboardSummary'
 
 const ROLE_LABELS = {
   instructor: 'müəllim',
@@ -172,6 +173,8 @@ export default function AdminDashboard() {
           ))}
         </div>
       ) : null}
+
+      <DashboardSummary role="admin" />
 
       {loading ? (
         <div className="text-sm text-gray-500 py-16 text-center">Dashboard yüklənir…</div>

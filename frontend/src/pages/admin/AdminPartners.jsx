@@ -13,18 +13,24 @@ function partnerLabel(p) {
   return p?.display_name || p?.full_name || p?.email || p?.id || '—'
 }
 
+/** Dashboard keçidləri: /admin/partners?status=pending, ?tab=payouts. */
+const PARTNER_TABS = ['partners', 'commissions', 'payouts', 'campaigns']
+const PARTNER_STATUSES = ['pending', 'approved', 'rejected', 'suspended']
+
 export default function AdminPartners() {
   const { t } = useTranslation()
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('partner') || ''
 
-  const [tab, setTab] = useState('partners')
+  const [tab, setTab] = useState(() => (PARTNER_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'partners'))
   const [partners, setPartners] = useState([])
   const [payouts, setPayouts] = useState([])
   const [commissions, setCommissions] = useState([])
   const [campaigns, setCampaigns] = useState([])
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState(() =>
+    PARTNER_STATUSES.includes(searchParams.get('status')) ? searchParams.get('status') : '',
+  )
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(null)
   const [detail, setDetail] = useState(null)
