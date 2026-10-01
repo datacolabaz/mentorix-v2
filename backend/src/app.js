@@ -28,7 +28,9 @@ const { ensureStarted: ensureCertificateIssueWorker } = require('./jobs/certific
 const { ensureStarted: ensureOpenExamGradingWorker } = require('./jobs/openExamGradingWorker');
 const { runOpenGradingInstructorNotifications } = require('./jobs/openGradingInstructorNotifications');
 const { runInstructorCompleteProfileReminders } = require('./jobs/instructorCompleteProfileReminders');
-const { cleanupExpiredLiveRecordings } = require('./jobs/liveRecordingCleanup');
+const { runLiveLessonReminders } = require('./services/liveLessonService');
+const { runWeeklyTeacherDigest } = require('./jobs/weeklyTeacherDigest');
+const { runStorageLimitAlerts } = require('./jobs/storageLimitAlerts');
 const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
@@ -240,9 +242,22 @@ cron.schedule('10 */2 * * *', () => {
   );
 });
 
-// Expired live recordings soft-delete + file cleanup: hourly
-cron.schedule('40 * * * *', () => {
-  cleanupExpiredLiveRecordings().catch((e) => console.error('live recording cleanup cron', e.message));
+// Internal-video recordings: the hourly expiry cleanup (jobs/liveRecordingCleanup.js) is paused so nothing
+// is deleted before the owner's retention/export decision (specs/audit-sms-video-pricing.md).
+
+// Live lesson (Meet/Zoom link) reminders: every minute; rows are claimed with SKIP LOCKED
+cron.schedule('* * * * *', () => {
+  runLiveLessonReminders().catch((e) => console.error('live lesson reminders cron', e.message));
+});
+
+// Weekly teacher digest: Monday 09:00 Baku (05:00 UTC); dedupe key per teacher per week
+cron.schedule('0 5 * * 1', () => {
+  runWeeklyTeacherDigest().catch((e) => console.error('weekly teacher digest cron', e.message));
+});
+
+// Cloud storage 80% / 100% alerts: hourly
+cron.schedule('50 * * * *', () => {
+  runStorageLimitAlerts().catch((e) => console.error('storage limit alerts cron', e.message));
 });
 
 module.exports = app;

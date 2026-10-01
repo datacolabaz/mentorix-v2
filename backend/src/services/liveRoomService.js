@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const db = require('../utils/db');
 const { resolveGroupStudentIds } = require('./assignmentHomeworkService');
-const { sendSms } = require('./smsService');
 const { sendLiveClassStartedEmail, frontendBaseUrl } = require('./studentNotificationEmailService');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const {
@@ -112,7 +111,6 @@ async function createLiveRoom(
   {
     groupId,
     title,
-    notifySms = false,
     notifyEmail = false,
     scheduledAt = null,
     provider = 'mentorix_live',
@@ -186,16 +184,14 @@ async function createLiveRoom(
   );
   const room = rows[0];
 
-  const wantsNotify = Boolean(notifySms || notifyEmail) && !isFuture;
-  const notifications = wantsNotify
-    ? await notifyGroupForLiveClass(instructorId, room, { notifySms, notifyEmail })
-    : { sms: 0, email: 0 };
+  const wantsNotify = Boolean(notifyEmail) && !isFuture;
+  const notifications = wantsNotify ? await notifyGroupForLiveClass(instructorId, room, { notifyEmail }) : { email: 0 };
 
   return { room, notifications };
 }
 
-async function notifyGroupForLiveClass(instructorId, room, { notifySms = false, notifyEmail = false } = {}) {
-  if (!room?.group_id || (!notifySms && !notifyEmail)) return { sms: 0, email: 0 };
+async function notifyGroupForLiveClass(instructorId, room, { notifyEmail = false } = {}) {
+  if (!room?.group_id || !notifyEmail) return { email: 0 };
 
   const { rows: instructorRows } = await db.query(
     `SELECT full_name FROM users WHERE id = $1 LIMIT 1`,
@@ -205,43 +201,25 @@ async function notifyGroupForLiveClass(instructorId, room, { notifySms = false, 
   const appBase = String(process.env.APP_URL || process.env.FRONTEND_URL || frontendBaseUrl()).replace(/\/$/, '');
   const externalJoin = room.join_url && String(room.join_url).trim();
   const link = externalJoin || `${appBase}/live/${room.room_code}`;
-  const message = `${instructorName} müəllim canlı dərsi başlatdı!\nQoşulmaq üçün: ${link}`;
   const roomTitle = String(room.title || 'Canlı dərs').trim();
 
   const studentIds = await resolveGroupStudentIds(instructorId, room.group_id);
-  if (!studentIds.length) return { sms: 0, email: 0 };
+  if (!studentIds.length) return { email: 0 };
 
-  const { rows: students } = await db.query(
-    `SELECT id, phone, email FROM users WHERE id = ANY($1::uuid[])`,
-    [studentIds],
-  );
+  const { rows: students } = await db.query(`SELECT id FROM users WHERE id = ANY($1::uuid[])`, [studentIds]);
 
-  let sms = 0;
   let email = 0;
   for (const student of students) {
-    if (notifySms && student.phone && String(student.phone).trim()) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await sendSms({
-        instructorId,
-        phone: student.phone,
-        message,
-        logType: 'live_class',
-        studentId: student.id,
-      });
-      if (result?.success) sms += 1;
-    }
-    if (notifyEmail) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await sendLiveClassStartedEmail({
-        userId: student.id,
-        instructorName,
-        roomTitle,
-        liveLink: link,
-      });
-      if (result?.ok) email += 1;
-    }
+    // eslint-disable-next-line no-await-in-loop
+    const result = await sendLiveClassStartedEmail({
+      userId: student.id,
+      instructorName,
+      roomTitle,
+      liveLink: link,
+    });
+    if (result?.ok) email += 1;
   }
-  return { sms, email };
+  return { email };
 }
 
 async function getLiveRoomForRecordingUpload(roomCode, user) {

@@ -19,21 +19,6 @@ const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers
 const { getPublicLibraryInvite, postPublicLibraryGuestJoin } = require('../controllers/publicLibraryInviteController');
 const { getPublicMaterialInvite, postPublicMaterialGuestJoin } = require('../controllers/publicMaterialInviteController');
 const { getPublicMaterialPreview, servePublicMaterialPreviewFile } = require('../controllers/publicMaterialPreviewController');
-const { getPublicRecording, getPublicRecordingInfo } = require('../controllers/liveRoomController');
-const {
-  getPublicLiveGuestInvite,
-  postPublicLiveGuestJoin,
-  postPublicLiveGuestLeave,
-} = require('../controllers/publicLiveGuestController');
-const { getPublicGuestAdmission } = require('../controllers/liveAdmissionController');
-const { uploadLiveChatAttachment } = require('../services/liveChatAttachmentStorage');
-const {
-  multerFail,
-  postGuestChatAttachment,
-  postGuestChatMessage,
-  getGuestChatHistory,
-} = require('../controllers/liveChatAttachmentController');
-const { publicGuestJoinRateLimit } = require('../middleware/publicGuestJoinRateLimit');
 const { postAccessEvent } = require('../controllers/accessAnalyticsController');
 const { postMarketplaceAiSearch } = require('../controllers/marketplaceAiSearchController');
 const { getPublicContact } = require('../controllers/platformContactController');
@@ -66,7 +51,6 @@ const { getFeatureFlagSnapshot } = require('../services/featureFlagService');
 const { googleOnlyGate } = require('../lib/googleOnlyAuth');
 
 const marketplaceOn = requireFeature(FEATURE_FLAGS.MARKETPLACE);
-const liveRoomOn = requireFeature(FEATURE_FLAGS.LIVE_ROOM);
 
 const router = express.Router();
 
@@ -91,26 +75,14 @@ router.get('/material-invite/:materialId', getPublicMaterialInvite);
 router.post('/material-invite/:materialId/join', googleOnlyGate('material_guest_join', { allowLegacy: false }), postPublicMaterialGuestJoin);
 router.get('/material-preview/:token', getPublicMaterialPreview);
 router.get('/material-preview/:token/file', servePublicMaterialPreviewFile);
-router.get('/live-recording/:shareToken/info', getPublicRecordingInfo);
-router.get('/live-recording/:shareToken', getPublicRecording);
-router.get('/live-guest/:token', liveRoomOn, getPublicLiveGuestInvite);
-router.post('/live-guest/:token/join', liveRoomOn, publicGuestJoinRateLimit, postPublicLiveGuestJoin);
-router.get('/live-guest/:token/admission/:admissionId', liveRoomOn, getPublicGuestAdmission);
-router.post('/live-guest/:token/leave', postPublicLiveGuestLeave);
-router.post(
-  '/live-guest/:token/chat-attachments',
-  liveRoomOn,
-  publicGuestJoinRateLimit,
-  (req, res, next) => {
-    uploadLiveChatAttachment.single('file')(req, res, (err) => {
-      if (multerFail(err, res)) return;
-      next();
-    });
-  },
-  postGuestChatAttachment,
-);
-router.get('/live-guest/:token/chat-messages', liveRoomOn, getGuestChatHistory);
-router.post('/live-guest/:token/chat-messages', liveRoomOn, publicGuestJoinRateLimit, postGuestChatMessage);
+// Internal video retired: public recording shares and guest joins answer 410 (data kept; teachers export
+// recordings from their live history until the retention decision).
+const { LIVE_ROOM_RETIRED } = require('./live');
+const liveRetired = (_req, res) => res.status(410).json(LIVE_ROOM_RETIRED);
+router.all('/live-recording/:shareToken', liveRetired);
+router.all('/live-recording/:shareToken/info', liveRetired);
+router.all('/live-guest/:token', liveRetired);
+router.all('/live-guest/:token/*', liveRetired);
 
 router.post('/analytics/event', postAccessEvent);
 router.get('/landing-stats', getLandingStats);
