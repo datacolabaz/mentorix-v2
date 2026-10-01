@@ -525,7 +525,7 @@ export default function InstructorLayout() {
             {renderedNavSections.map((section) => (
               <div key={section.id || section.title} className="space-y-2">
                 <div className="px-4 pt-2">
-                  <div className={`text-xs tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
+                  <div className={`text-xs tracking-wider text-token-textMuted`}>
                     {section.title}
                   </div>
                 </div>

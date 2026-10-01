@@ -206,7 +206,7 @@ function OrgSidebarChrome() {
               {navSections.map((section) => (
                 <div key={section.id} className="space-y-1">
                   {!collapsed ? (
-                    <div className="px-3 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-token-textMuted/70">
+                    <div className="px-3 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-token-textMuted">
                       {section.title}
                     </div>
                   ) : (
