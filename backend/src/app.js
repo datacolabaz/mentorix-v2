@@ -31,6 +31,7 @@ const { runInstructorCompleteProfileReminders } = require('./jobs/instructorComp
 const { runLiveLessonReminders } = require('./services/liveLessonService');
 const { runWeeklyTeacherDigest } = require('./jobs/weeklyTeacherDigest');
 const { runStorageLimitAlerts } = require('./jobs/storageLimitAlerts');
+const { runLegacyPlanMigrationNotices } = require('./services/legacyPlanMigrationService');
 const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
@@ -258,6 +259,11 @@ cron.schedule('0 5 * * 1', () => {
 // Cloud storage 80% / 100% alerts: hourly
 cron.schedule('50 * * * *', () => {
   runStorageLimitAlerts().catch((e) => console.error('storage limit alerts cron', e.message));
+});
+
+// Legacy STANDART (5 AZN) -> PROFESSIONAL advance notices (14-15 days before renewal): daily 10:00 Baku
+cron.schedule('0 6 * * *', () => {
+  runLegacyPlanMigrationNotices().catch((e) => console.error('legacy plan migration notices cron', e.message));
 });
 
 module.exports = app;

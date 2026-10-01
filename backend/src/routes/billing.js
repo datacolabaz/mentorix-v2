@@ -21,6 +21,7 @@ const {
 const { fulfillBillingPayment } = require('../services/billingActivationService');
 const { getBillingConfig } = require('../services/billingSettingsService');
 const { getActivePlansMap } = require('../services/subscriptionPlansService');
+const { legacyMigrationStatus } = require('../services/legacyPlanMigrationService');
 
 function callbackUrlFromReq(req) {
   const env = String(process.env.PAYRIFF_CALLBACK_URL || '').trim();
@@ -78,6 +79,8 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       timezone: out.timezone,
       requirements: out.requirements,
       can_direct_chat: planRank(out.plan) >= planRank('pro'),
+      legacy_migration:
+        planRow?.is_public === false ? await legacyMigrationStatus(db, req.user.id).catch(() => null) : null,
     });
   } catch (err) {
     res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });

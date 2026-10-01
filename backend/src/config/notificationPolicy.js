@@ -48,6 +48,9 @@ const MANDATORY_EVENT_TYPES = new Set([
   'google_account_changed',
   'account_suspended',
   'privacy_request_status',
+  // Contract notices: plan price change at next renewal, retirement of stored recordings.
+  'legacy_plan_migration_notice',
+  'legacy_recordings_retiring',
 ]);
 
 /** Heç vaxt email yoxdur (seçimlə də açıla bilməz). */

@@ -511,6 +511,20 @@ const TEMPLATES = Object.freeze({
       body: 'Облачное хранилище заполнено ({{used}} / {{limit}}). Существующие файлы сохраняются. Чтобы загрузить новые файлы, удалите старые или свяжитесь с поддержкой[[ ({{supportPhone}})]].[[ Также можно перейти на тариф {{nextPlan}}.]]',
     },
   },
+  legacy_plan_migration_notice: {
+    az: {
+      title: 'STANDART paketi PROFESSIONAL ilə əvəz olunur',
+      body: 'Köhnə STANDART paketi ({{oldPrice}}/ay) artıq təklif olunmur. Cari ödənişli dövrünüz dəyişmir[[ ({{periodEnd}} tarixinədək)]]. [[{{effectiveDate}} tarixindən sonrakı yeniləməniz {{newPlan}} paketi ilə olacaq ({{newPrice}}/ay: 50 tələbə, 20 GB yaddaş).]][[Dövrün bitməsinə {{daysLeft}} gün qaldığı üçün növbəti yeniləməni bir dəfə də {{oldPrice}}-ə (aylıq) edə bilərsiniz; ondan sonrakı yeniləmə {{newPlan}} ({{newPrice}}/ay) olacaq və 14 gün əvvəl yenidən xəbər verəcəyik.]] Avtomatik ödəniş yoxdur — yeniləmə yalnız siz ödəniş etdikdə baş verir.',
+    },
+    en: {
+      title: 'STANDART is being replaced by PROFESSIONAL',
+      body: 'The old STANDART plan ({{oldPrice}}/month) is no longer offered. Your current paid period does not change[[ (until {{periodEnd}})]]. [[Your renewal after {{effectiveDate}} will be on the {{newPlan}} plan ({{newPrice}}/month: 50 students, 20 GB storage).]][[Because your period ends in {{daysLeft}} days, you can renew once more at {{oldPrice}} (monthly); the renewal after that will be {{newPlan}} ({{newPrice}}/month) and we will remind you 14 days before.]] There is no automatic charge — a renewal only happens when you make a payment.',
+    },
+    ru: {
+      title: 'Тариф STANDART заменяется на PROFESSIONAL',
+      body: 'Старый тариф STANDART ({{oldPrice}}/мес.) больше не предлагается. Текущий оплаченный период не меняется[[ (до {{periodEnd}})]]. [[Продление после {{effectiveDate}} будет на тарифе {{newPlan}} ({{newPrice}}/мес.: 50 учеников, 20 ГБ хранилища).]][[Так как до конца периода осталось {{daysLeft}} дн., вы можете ещё один раз продлить за {{oldPrice}} (помесячно); следующее продление будет на {{newPlan}} ({{newPrice}}/мес.), и мы напомним за 14 дней.]] Автоматического списания нет — продление происходит только когда вы сами оплачиваете.',
+    },
+  },
 });
 
 const LOCALES = ['az', 'en', 'ru'];

@@ -155,6 +155,14 @@ export default function InstructorSettings() {
     }
     return [...plans, legacy].sort((a, b) => planRank(a.id) - planRank(b.id))
   }, [billing?.limits, billing?.plan, billing?.plan_is_public, billing?.plan_price_azn, billing?.plan_title, plans])
+  const legacyMigration = billing?.plan_is_public === false ? billing?.legacy_migration || null : null
+  function legacyRenewTarget(card) {
+    return card?.legacy && legacyMigration?.renewal_blocked ? legacyMigration.to_plan || 'growth' : card.id
+  }
+  function formatLegacyDate(iso) {
+    const d = iso ? new Date(iso) : null
+    return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString(i18n.language || 'az') : '—'
+  }
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
   const [mapRegion, setMapRegion] = useState('')
@@ -613,11 +621,12 @@ export default function InstructorSettings() {
   }, [planBusy])
 
   function openPlanCheckout(planId) {
-    const p = plans.find((x) => x && String(x.id).toLowerCase() === String(planId).toLowerCase())
+    const p = planCards.find((x) => x && String(x.id).toLowerCase() === String(planId).toLowerCase())
     const monthly = Number(p?.price_azn || 0)
-    const amountAzn =
-      billingInterval === 'yearly' ? yearlyTotalAzn(monthly, YEARLY_DISCOUNT) : monthly
-    setCheckout({ type: 'plan', planId, amountAzn, title: p?.title || planId })
+    // Legacy plans renew monthly only (server enforces LEGACY_PLAN_MONTHLY_ONLY).
+    const interval = p?.legacy ? 'monthly' : billingInterval
+    const amountAzn = interval === 'yearly' ? yearlyTotalAzn(monthly, YEARLY_DISCOUNT) : monthly
+    setCheckout({ type: 'plan', planId, amountAzn, title: p?.title || planId, interval })
   }
 
   function openStorageCheckout(pack) {
@@ -637,7 +646,7 @@ export default function InstructorSettings() {
       if (checkout.type === 'plan') {
         const r = await api.post('/billing/create-payment', {
           plan: checkout.planId,
-          interval: billingInterval,
+          interval: checkout.interval || billingInterval,
           payment_method: paymentMethod,
         })
         const pay = r?.payment
@@ -686,7 +695,11 @@ export default function InstructorSettings() {
           ? e?.message || t('settings.toasts.usageExceeds')
           : e?.code === 'PLAN_NOT_UPGRADE'
             ? t('settings.toasts.notUpgrade')
-            : e?.message || t('settings.toasts.paymentFailed')
+            : e?.code === 'LEGACY_PLAN_MIGRATED'
+              ? t('settings.legacyMigration.renewBlocked')
+              : e?.code === 'LEGACY_PLAN_MONTHLY_ONLY'
+                ? t('settings.legacyMigration.monthlyOnly')
+                : e?.message || t('settings.toasts.paymentFailed')
       setPlanErr(msg)
     } finally {
       setPlanBusy(false)
@@ -976,7 +989,7 @@ export default function InstructorSettings() {
                   setStorageAddonOpen(true)
                   return
                 }
-                return openPlanCheckout(p.id)
+                return openPlanCheckout(legacyRenewTarget(p))
               }
               if (isUpgrade) {
                 return openPlanCheckout(p.id)
@@ -1089,6 +1102,20 @@ export default function InstructorSettings() {
                 <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
                   {p.legacy ? (
                     <p className="text-[11px] leading-relaxed text-token-textMuted">{t('settings.legacyPlanNote')}</p>
+                  ) : null}
+                  {p.legacy && legacyMigration ? (
+                    <p
+                      className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-2.5 py-2 text-[11px] leading-relaxed text-token-textMain"
+                      data-testid="legacy-migration-note"
+                    >
+                      {legacyMigration.renewal_blocked
+                        ? t('settings.legacyMigration.noteBlocked')
+                        : legacyMigration.pro_renewals_left > 0
+                          ? t('settings.legacyMigration.noteExtraRenewal')
+                          : t('settings.legacyMigration.noteScheduled', {
+                              date: formatLegacyDate(legacyMigration.effective_at),
+                            })}
+                    </p>
                   ) : null}
                   <p className="text-[11px] font-medium leading-relaxed text-token-textMain/90">{limitsNote}</p>
                   <p className="whitespace-pre-line text-[11px] leading-relaxed text-token-textMain/85">

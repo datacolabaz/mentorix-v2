@@ -2966,7 +2966,14 @@
       "errRemove": "Could not remove"
     },
     "buyExtraStorage": "Buy extra storage",
-    "legacyPlanNote": "Legacy plan — kept for you on the same terms, no longer offered to new subscribers."
+    "legacyPlanNote": "Legacy plan — kept for you on the same terms, no longer offered to new subscribers.",
+    "legacyMigration": {
+      "noteScheduled": "STANDART is being replaced by PROFESSIONAL. Your current period does not change; the renewal after {{date}} will be PROFESSIONAL (10 AZN/month). There is no automatic charge.",
+      "noteExtraRenewal": "STANDART is being replaced by PROFESSIONAL. Because the notice is shorter than 14 days, you can renew once more at 5 AZN (monthly); after that PROFESSIONAL (10 AZN/month).",
+      "noteBlocked": "As announced, STANDART can no longer be renewed. Renewal is on PROFESSIONAL (10 AZN/month) — a payment only starts when you start it.",
+      "renewBlocked": "STANDART can no longer be renewed — choose PROFESSIONAL (10 AZN/month).",
+      "monthlyOnly": "STANDART renews monthly only. Choose PROFESSIONAL for yearly billing."
+    }
   },
   "assignmentAnalytics": {
     "title": "Assignment analytics",

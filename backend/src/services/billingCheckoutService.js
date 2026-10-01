@@ -23,6 +23,7 @@ const { normalizeBillingInterval } = require('./billingActivationService');
 const { logBillingEvent, assertDowngradeAllowed } = require('./billingEntitlements');
 const { getCheckoutDiscountForUser } = require('./partner/partnerCommissionService');
 const { applyDiscountCents } = require('./partner/partnerMath');
+const { LEGACY_PLAN, assertLegacyRenewalAllowed } = require('./legacyPlanMigrationService');
 
 function yearlyTotalFromMonthly(monthlyAzn, discountPct = 0.2) {
   const m = Number(monthlyAzn || 0) || 0;
@@ -91,6 +92,9 @@ async function createPlanCheckout({
   }
 
   const billingInterval = normalizeBillingInterval(intervalRaw);
+  if (picked?.is_public === false && plan === from && plan === LEGACY_PLAN) {
+    await assertLegacyRenewalAllowed(db, { userId, subscriptionStatus: cur.status, billingInterval });
+  }
   let finalPriceAzn = billingInterval === 'yearly' ? yearlyTotalFromMonthly(priceAzn, 0.2) : priceAzn;
 
   if (

@@ -2976,7 +2976,14 @@
       "errRemove": "Silinmədi"
     },
     "buyExtraStorage": "Əlavə yaddaş al",
-    "legacyPlanNote": "Köhnə paket — sizin üçün eyni şərtlərlə saxlanılır, yeni abunəliklər üçün təklif olunmur."
+    "legacyPlanNote": "Köhnə paket — sizin üçün eyni şərtlərlə saxlanılır, yeni abunəliklər üçün təklif olunmur.",
+    "legacyMigration": {
+      "noteScheduled": "STANDART paketi PROFESSIONAL ilə əvəz olunur. Cari dövr dəyişmir; {{date}} tarixindən sonrakı yeniləmə PROFESSIONAL (10 AZN/ay) olacaq. Avtomatik ödəniş yoxdur.",
+      "noteExtraRenewal": "STANDART paketi PROFESSIONAL ilə əvəz olunur. Bildiriş müddəti 14 gündən az olduğu üçün növbəti yeniləməni bir dəfə də 5 AZN-ə (aylıq) edə bilərsiniz; ondan sonra PROFESSIONAL (10 AZN/ay).",
+      "noteBlocked": "Əvvəlcədən bildirildiyi kimi STANDART paketi artıq yenilənmir. Yeniləmə PROFESSIONAL (10 AZN/ay) ilə olur — ödənişi yalnız siz başladırsınız.",
+      "renewBlocked": "STANDART paketi artıq yenilənmir — PROFESSIONAL (10 AZN/ay) seçin.",
+      "monthlyOnly": "STANDART paketi yalnız aylıq yenilənir. İllik ödəniş üçün PROFESSIONAL seçin."
+    }
   },
   "assignmentAnalytics": {
     "title": "Tapşırıq analitikası",

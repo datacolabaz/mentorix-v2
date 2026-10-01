@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
 const { createPartnerCommissionIfEligible } = require('./partner/partnerCommissionService');
+const { onPlanActivated } = require('./legacyPlanMigrationService');
 
 function normalizeBillingInterval(raw) {
   const s = String(raw ?? '')
@@ -57,6 +58,8 @@ async function activatePlanPayment(client, payment) {
      VALUES ($1, 'upgrade', $2, $3, $4, 'AZN', 'paid', $5, $6)`,
     [userId, oldPlan, newPlan, payment.amount_cents || null, payment.provider || 'manual', String(orderId)]
   );
+
+  await onPlanActivated(client, { userId, newPlan });
 
   return { oldPlan, newPlan };
 }
