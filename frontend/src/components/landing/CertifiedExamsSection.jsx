@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import { trackEvent } from '../../lib/analytics'
 import CertificatePreviewMockup from './CertificatePreviewMockup'
+import { ArrowRightIcon, BadgeCheckIcon } from './icons'
+import { BRAND } from '../../lib/brand'
+
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
 
 /** Landing-də ilk baxışda göstərilən populyar kateqoriyalar (sıra = vurğu). */
 const FEATURED_CATEGORY_SLUGS = [
@@ -14,8 +18,7 @@ const FEATURED_CATEGORY_SLUGS = [
 ]
 const FEATURED_LIMIT = 4
 
-const CARD_CLASS =
-  'group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left hover:border-emerald-300 hover:bg-emerald-50/60 transition'
+const CARD_CLASS = `group flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3 text-left transition-colors hover:border-line-strong hover:bg-canvas-subtle ${FOCUS}`
 
 export function splitLandingCategories(categories, featuredSlugs = FEATURED_CATEGORY_SLUGS, limit = FEATURED_LIMIT) {
   const list = Array.isArray(categories) ? categories : []
@@ -52,15 +55,16 @@ function CategoryRow({ cat, t, assessmentLabel, onNavigate }) {
       }}
       className={CARD_CLASS}
     >
-      <span className="text-lg w-7 shrink-0 text-center" aria-hidden>
-        {cat.icon || '📚'}
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand-text">
+        <BadgeCheckIcon className="h-5 w-5" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-slate-900 leading-snug group-hover:text-emerald-700 transition-colors">
+        <span className="block text-body-sm font-semibold leading-snug text-fg">
           {t(`certifiedExams.categories.${cat.slug}`, { defaultValue: cat.name })}
         </span>
-        <span className="block text-[11px] text-slate-500 mt-0.5 tabular-nums">{assessmentLabel(cat.assessment_count)}</span>
+        <span className="mt-0.5 block text-caption tabular-nums text-fg-muted">{assessmentLabel(cat.assessment_count)}</span>
       </span>
+      <ArrowRightIcon className="h-4 w-4 shrink-0 text-fg-muted transition-transform group-hover:translate-x-0.5" />
     </Link>
   )
 }
@@ -160,17 +164,18 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
   return (
     <section
       id="mx-certified-exams"
-      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white px-6 py-8 sm:px-10 sm:py-10 shadow-sm"
+      aria-labelledby="mx-certified-title"
+      className="scroll-mt-24 rounded-2xl border border-line bg-surface px-6 py-8 shadow-card sm:px-10 sm:py-10"
     >
-      <div className="flex items-center justify-between gap-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
-          <span aria-hidden>🎓</span>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="inline-flex items-center gap-2 rounded-full bg-brand-subtle px-3 py-1 text-caption font-semibold text-brand-text">
+          <BadgeCheckIcon className="h-4 w-4" />
           {t('certifiedExams.badge')}
-        </div>
+        </p>
         <button
           type="button"
           onClick={openSample}
-          className="inline-flex items-center gap-2 shrink-0 max-w-[70%] sm:max-w-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-h-[40px] text-xs sm:text-sm font-semibold text-slate-800 hover:bg-white"
+          className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-surface px-3.5 text-body-sm font-semibold text-fg hover:bg-canvas-subtle ${FOCUS}`}
           aria-haspopup="dialog"
           aria-expanded={sampleOpen}
         >
@@ -183,8 +188,11 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
       </div>
 
       <div className="mt-8 max-w-2xl space-y-3">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">{t('certifiedExams.title')}</h2>
-        <p className="text-base text-slate-600 leading-relaxed">{t('certifiedExams.description')}</p>
+        <h2 id="mx-certified-title" className="text-h2 text-fg">
+          {t('certifiedExams.title')}
+        </h2>
+        <p className="text-body-lg text-fg-secondary">{t('certifiedExams.description')}</p>
+        <p className="text-body-sm text-fg-muted">{t('home.certified.disclaimer', { brand: BRAND.name })}</p>
       </div>
 
       {featured.length > 0 ? (
@@ -198,16 +206,16 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
             <button
               type="button"
               onClick={openMore}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:brightness-110"
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm text-body-sm font-semibold text-brand-text underline-offset-4 hover:underline ${FOCUS}`}
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
             >
               {t('certifiedExams.moreCategories')}
-              <span aria-hidden>→</span>
+              <ArrowRightIcon className="h-4 w-4" />
             </button>
           ) : null}
           {stats.certificates_issued > 0 || stats.verified_exam_types > 0 ? (
-            <p className="text-xs text-gray-500">
+            <p className="text-caption text-fg-muted">
               {t('certifiedExams.statsLine', {
                 certificates: stats.certificates_issued,
                 exams: stats.verified_exam_types,
@@ -221,7 +229,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
         <Link
           to="/sertifikatli-imtahanlar"
           onClick={() => trackEvent('mx_landing_certified_cta', { action: 'catalog' })}
-          className="inline-flex justify-center items-center rounded-xl bg-primary px-5 py-3 min-h-[48px] text-sm font-bold text-[#041018] shadow-lg shadow-primary/25 hover:brightness-95"
+          className={`inline-flex min-h-12 items-center justify-center rounded-xl bg-brand px-5 text-button text-brand-on shadow-card hover:bg-brand-hover ${FOCUS}`}
         >
           {t('certifiedExams.ctaCatalog')}
         </Link>
@@ -232,7 +240,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
             if (onHowItWorks) onHowItWorks()
             else navigate('/sertifikatli-imtahanlar')
           }}
-          className="inline-flex justify-center items-center rounded-xl border border-slate-200 bg-white px-5 py-3 min-h-[48px] text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          className={`inline-flex min-h-12 items-center justify-center rounded-xl border border-line-strong bg-surface px-5 text-button text-fg hover:bg-canvas-subtle ${FOCUS}`}
         >
           {t('certifiedExams.ctaHowItWorks')}
         </button>
@@ -247,7 +255,7 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
             onClick={closeSample}
           />
           <aside
-            className={`absolute inset-y-0 right-0 w-full max-w-sm sm:max-w-md overflow-y-auto border-l border-white/10 bg-[#0b0b0b] p-5 sm:p-6 shadow-2xl transition-transform duration-300 ease-out ${
+            className={`absolute inset-y-0 right-0 w-full max-w-sm sm:max-w-md overflow-y-auto border-l border-white/10 bg-surface-1 p-5 sm:p-6 shadow-2xl transition-transform duration-300 ease-out ${
               sampleEntered ? 'translate-x-0' : 'translate-x-full'
             }`}
           >
@@ -285,18 +293,18 @@ export default function CertifiedExamsSection({ onHowItWorks }) {
             onClick={closeMore}
           />
           <div
-            className={`relative w-full max-w-md rounded-2xl border border-white/10 bg-[#111] p-5 sm:p-6 shadow-2xl transition duration-200 ${
+            className={`relative w-full max-w-md rounded-2xl border border-line bg-surface-elevated p-5 text-fg shadow-elevated transition duration-200 sm:p-6 ${
               moreEntered ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
             }`}
           >
             <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 id="mx-certified-more-title" className="text-base font-semibold text-white">
+              <h3 id="mx-certified-more-title" className="text-h3 text-fg">
                 {t('certifiedExams.moreCategoriesTitle')}
               </h3>
               <button
                 type="button"
                 onClick={closeMore}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
+                className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border border-line text-fg-secondary hover:bg-canvas-subtle hover:text-fg ${FOCUS}`}
                 aria-label={t('certifiedExams.closeSample')}
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
