@@ -41,7 +41,7 @@ export function materialPublicFileUrl(shareToken) {
   if (!shareToken) return ''
   const path = `/public/material-preview/${encodeURIComponent(shareToken)}/file`
   if (typeof window === 'undefined') return `/api${path}`
-  const base = normalizeApiBaseUrl(import.meta.env?.VITE_API_URL)
+  const base = normalizeApiBaseUrl(import.meta.env.VITE_API_URL)
   if (base.startsWith('http')) return `${base}${path}`
   return `${window.location.origin}${base}${path}`
 }

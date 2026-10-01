@@ -25,7 +25,10 @@ const KEYS = {
   supportEmail: 'SUPPORT_EMAIL',
 }
 
-/** Accepts process.env, import.meta.env or a loadEnv() result; VITE_-prefixed keys also work. */
+/**
+ * Accepts process.env, a loadEnv() result or an explicit object of VITE_* keys; VITE_-prefixed
+ * keys win. Browser code must not pass import.meta.env whole (Vite would inline every VITE_* var).
+ */
 export function resolveBrand(env = {}) {
   const read = (key) => String(env?.[`VITE_${key}`] ?? env?.[key] ?? '').trim()
   const out = {}

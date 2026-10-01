@@ -3,8 +3,7 @@
 let loadPromise = null
 
 export function getGoogleMapsApiKey() {
-  const env = typeof import.meta !== 'undefined' ? import.meta.env : undefined
-  const k = env?.VITE_GOOGLE_MAPS_API_KEY
+  const k = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   return k != null && String(k).trim() !== '' ? String(k).trim() : null
 }
 
