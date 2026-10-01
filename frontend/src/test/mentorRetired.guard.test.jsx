@@ -22,7 +22,7 @@ const TEXT_EXT = new Set(['.js', '.jsx', '.mjs', '.cjs', '.json', '.css', '.html
 const ALLOWLIST = [
   {
     file: 'frontend/src/lib/retiredRoutes.js',
-    lines: /^\s*\* URLs of the retired mentorship product|^\s*\{ from: '\/[a-z/-]+', to: '\/[a-z/-]+' \},$|^\s*'\/[a-z/*-]+',$/,
+    lines: /^\s*\* URLs of the retired mentorship product|^\s*\{ from: '\/[a-z/*-]+', to: '\/[a-z/-]+' \},$|^\s*'\/[a-z/*-]+',$/,
     reason: 'list of old URLs that must keep redirecting (301) or showing the retired page',
   },
   {

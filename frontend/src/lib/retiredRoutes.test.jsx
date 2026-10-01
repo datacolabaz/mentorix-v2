@@ -10,7 +10,7 @@ import { retiredHtml, RETIRED_FALLBACK_HTML } from '../../api/_lib/retiredPage.j
 import appSrc from '../App.jsx?raw'
 
 const isRetired = (p) => RETIRED_PAGES.some((pattern) => matchPath({ path: pattern, end: true }, p))
-const isRedirected = (p) => RETIRED_REDIRECTS.some((r) => r.from === p)
+const isRedirected = (p) => RETIRED_REDIRECTS.some((r) => matchPath({ path: r.from, end: true }, p))
 const vercelSource = (p) => (p.endsWith('/*') ? `${p.slice(0, -2)}/:rest+` : p)
 
 function Where() {
@@ -46,7 +46,7 @@ describe('retired mentor URLs', () => {
 
   it('vercel.json serves every redirect as a 301 and every retired page through the 410 function', () => {
     for (const { from, to } of RETIRED_REDIRECTS) {
-      const rule = vercelConfig.redirects.find((r) => r.source === from)
+      const rule = vercelConfig.redirects.find((r) => r.source === vercelSource(from))
       expect(rule, from).toBeTruthy()
       expect(rule.destination).toBe(to)
       expect(rule.statusCode).toBe(301)
@@ -68,12 +68,12 @@ describe('retired mentor URLs', () => {
     expect(appSrc).toMatch(/RETIRED_PAGES\.map\(/)
   })
 
-  it.each(RETIRED_REDIRECTS.map((r) => [r.from, r.to]))('%s redirects to %s', (from, to) => {
+  it.each(RETIRED_REDIRECTS.map((r) => [r.from.replace('/*', '/goals'), r.to]))('%s redirects to %s', (from, to) => {
     renderAt(from)
     expect(screen.getByTestId('where').textContent).toBe(to)
   })
 
-  it.each(['/mentorship', '/mentorship/goals', '/mentorship/safety', '/mentor/connections', '/student/mentorship', '/instructor/roadmap'])(
+  it.each(['/mentor/connections', '/mentor-booking', '/mentor-sessions', '/student/mentorship', '/instructor/roadmap'])(
     '%s shows the retired page',
     async (url) => {
       await i18n.changeLanguage('az')
@@ -81,6 +81,19 @@ describe('retired mentor URLs', () => {
       expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Bu səhifə artıq mövcud deyil')
       expect(screen.getByRole('link', { name: 'Ana səhifə' })).toHaveAttribute('href', '/')
       expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex')
+    },
+  )
+
+  it.each(['/mentorship', '/mentorship/goals', '/mentorship/safety', '/mentoring', '/mentorluq', '/mentors', '/find-mentor', '/find-a-mentor', '/mentor-tap', '/become-mentor'])(
+    'old public marketing URL %s is a 301 to /muellimler-ucun',
+    (url) => {
+      expect(isRetired(url), url).toBe(false)
+      const rule = vercelConfig.redirects.find((r) => matchPath({ path: r.source.replace('/:rest+', '/*'), end: true }, url))
+      expect(rule, url).toBeTruthy()
+      expect(rule.destination).toBe('/muellimler-ucun')
+      expect(rule.statusCode).toBe(301)
+      renderAt(url)
+      expect(screen.getByTestId('where').textContent).toBe('/muellimler-ucun')
     },
   )
 
