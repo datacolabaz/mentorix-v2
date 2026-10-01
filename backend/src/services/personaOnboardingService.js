@@ -1,11 +1,13 @@
 const db = require('../utils/db');
 const {
   isPersonaId,
+  normalizePersonaId,
+  publicPersona,
+  publicPersonaProfile,
   authRoleForPersona,
   personaFromLegacyRole,
   sanitizePersonaProfile,
   requiredProfileComplete,
-  parseStoredProfile,
   mergePersonaProfile,
   isAdminRole,
   rowNeedsOnboarding,
@@ -57,8 +59,8 @@ function attachPersonaFields(userLite, row = null) {
   const src = row || userLite;
   return {
     ...userLite,
-    persona: src.persona || null,
-    persona_profile: parseStoredProfile(src.persona_profile),
+    persona: publicPersona(src.persona),
+    persona_profile: publicPersonaProfile(src.persona_profile),
     onboarding_completed: src.onboarding_completed === true,
   };
 }
@@ -151,7 +153,7 @@ async function provisionForAuthRole(client, { userId, authRole, fullName, person
  * @param {{ requireComplete?: boolean, merge?: boolean }} opts
  */
 async function applyPersonaSelection({ userId, persona, profile, req, requireComplete = true, merge = true }) {
-  const personaId = String(persona || '').trim();
+  const personaId = normalizePersonaId(persona) || '';
   if (!isPersonaId(personaId)) {
     throw badRequest('İstifadə məqsədini seçin', 'INVALID_PERSONA');
   }
@@ -252,8 +254,8 @@ async function skipOnboarding(userId) {
 }
 
 function resolvePersonaInput(body) {
-  const direct = String(body?.persona || '').trim();
-  if (isPersonaId(direct)) return direct;
+  const direct = normalizePersonaId(body?.persona);
+  if (direct) return direct;
   const legacy = personaFromLegacyRole(body?.role);
   return legacy || '';
 }

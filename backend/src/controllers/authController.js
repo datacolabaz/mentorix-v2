@@ -1,9 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { sign, signOTP, signSession } = require('../utils/jwt');
-const { isFeatureEnabled } = require('../services/featureFlagService');
-const { sendFeatureDisabled } = require('../middleware/requireFeature');
-const { FEATURE_FLAGS } = require('../constants/featureFlags');
+const { publicPersona, publicPersonaProfile, normalizePersonaId, PERSONAS } = require('../config/personas');
 const { logAuthEvent } = require('../services/authEventService');
 const { recordAdminPasswordFailure } = require('../services/adminLoginFailureAlerts');
 const { signAccountLinkToken, verifyAccountLinkToken, maskEmail } = require('../lib/googleOnlyAuth');
@@ -1262,7 +1260,7 @@ const updatePersona = async (req, res) => {
 
 /**
  * Multi-role Workspace Switcher (Single Identity Architecture).
- * Allows switching between Student/Mentee, Teacher, Mentor, and Course roles.
+ * Allows switching between Student, Teacher (Təlimçi) and Course roles.
  */
 const switchWorkspace = async (req, res) => {
   try {
@@ -1270,30 +1268,17 @@ const switchWorkspace = async (req, res) => {
     if (!me || me.is_active === false) return res.status(404).json({ success: false, message: 'Tapılmadı' });
     if (!guardEmailVerifiedBeforeToken(res, me)) return;
 
-    const target = String(req.body?.target || req.body?.role || req.body?.persona || '').trim().toLowerCase();
-    if (!target) {
+    const rawTarget = String(req.body?.target || req.body?.role || req.body?.persona || '').trim().toLowerCase();
+    if (!rawTarget) {
       return res.status(400).json({ success: false, message: 'Hədəf kabinet təyin olunmayıb' });
     }
-    if (target === 'mentor' && !(await isFeatureEnabled(FEATURE_FLAGS.MENTOR_SERVICES))) {
-      return sendFeatureDisabled(res, FEATURE_FLAGS.MENTOR_SERVICES);
-    }
+    // Retired persona ids from older clients resolve to their current cabinet.
+    const target = normalizePersonaId(rawTarget) === PERSONAS.TEACHER ? 'teacher' : rawTarget;
 
     let targetRole = null;
     let targetPersona = null;
 
-    if (target === 'mentor') {
-      targetRole = 'instructor';
-      targetPersona = 'mentor';
-      await grantUserRole(me.id, 'instructor');
-      await applyPersonaSelection({
-        userId: me.id,
-        persona: 'mentor',
-        profile: req.body?.profile || {},
-        req,
-        requireComplete: false,
-        merge: true,
-      });
-    } else if (target === 'teacher' || target === 'instructor') {
+    if (target === 'teacher' || target === 'instructor') {
       targetRole = 'instructor';
       targetPersona = 'teacher';
       await grantUserRole(me.id, 'instructor');
@@ -1305,7 +1290,7 @@ const switchWorkspace = async (req, res) => {
         requireComplete: false,
         merge: true,
       });
-    } else if (target === 'student' || target === 'mentee') {
+    } else if (target === 'student') {
       targetRole = 'student';
       targetPersona = 'student';
       await grantUserRole(me.id, 'student');
@@ -1431,8 +1416,8 @@ const signup = async (req, res) => {
       email: created.email,
       role: null,
       phone: created.phone,
-      persona: created.persona || null,
-      persona_profile: created.persona_profile || {},
+      persona: publicPersona(created.persona),
+      persona_profile: publicPersonaProfile(created.persona_profile),
       onboarding_completed: false,
     };
     return res.status(201).json({
@@ -1501,8 +1486,8 @@ const loginWithEmail = async (req, res) => {
         email: user.email,
         role: null,
         phone: user.phone,
-        persona: user.persona || null,
-        persona_profile: user.persona_profile || {},
+        persona: publicPersona(user.persona),
+        persona_profile: publicPersonaProfile(user.persona_profile),
         onboarding_completed: false,
       };
       return res.json({

@@ -4,6 +4,9 @@ const {
   PERSONAS,
   PERSONA_ORDER,
   isPersonaId,
+  normalizePersonaId,
+  publicPersona,
+  publicPersonaProfile,
   authRoleForPersona,
   personaFromLegacyRole,
   sanitizePersonaProfile,
@@ -16,7 +19,6 @@ const {
 describe('personas config', () => {
   it('maps each persona to an authorization role without treating course as a persona', () => {
     assert.equal(authRoleForPersona(PERSONAS.TEACHER), 'instructor');
-    assert.equal(authRoleForPersona(PERSONAS.MENTOR), 'instructor');
     assert.equal(authRoleForPersona(PERSONAS.EDUCATION_CENTER), 'course');
     assert.equal(authRoleForPersona(PERSONAS.STUDENT), 'student');
     assert.equal(authRoleForPersona(PERSONAS.PARENT), 'parent');
@@ -34,12 +36,25 @@ describe('personas config', () => {
     assert.deepEqual(sanitizePersonaProfile(PERSONAS.PARTNER, { note: '  hi  ', extra: 1 }), { note: 'hi' });
   });
 
-  it('accepts mentor profiles without requiring an extra onboarding form', () => {
-    assert.equal(requiredProfileComplete(PERSONAS.MENTOR, {}), true);
-    assert.deepEqual(
-      sanitizePersonaProfile(PERSONAS.MENTOR, { mentorship_focus: ' AI ', extra: 1 }),
-      { mentorship_focus: 'AI' },
-    );
+  it('retired mentor persona is not a persona; it normalises to the trainer (teacher) persona', () => {
+    assert.equal(isPersonaId('mentor'), false);
+    assert.equal(PERSONA_ORDER.includes('mentor'), false);
+    assert.equal(Object.values(PERSONAS).includes('mentor'), false);
+    assert.equal(normalizePersonaId('mentor'), PERSONAS.TEACHER);
+    assert.equal(normalizePersonaId(' Mentor '), PERSONAS.TEACHER);
+    assert.equal(normalizePersonaId('student'), PERSONAS.STUDENT);
+    assert.equal(normalizePersonaId('nope'), null);
+    assert.equal(publicPersona('mentor'), PERSONAS.TEACHER);
+    assert.equal(publicPersona(null), null);
+    assert.equal(authRoleForPersona(normalizePersonaId('mentor')), 'instructor');
+  });
+
+  it('client persona_profile never carries the retired mentor slice', () => {
+    const out = publicPersonaProfile({ mentor: { mentorship_focus: 'AI' }, teacher: { subject: 'Fizika' }, current: 'mentor' });
+    assert.deepEqual(out, { teacher: { subject: 'Fizika' }, current: 'teacher' });
+    assert.deepEqual(publicPersonaProfile('{"current":"student"}'), { current: 'student' });
+    const merged = mergePersonaProfile({ mentor: { mentorship_focus: 'AI' }, current: 'mentor' }, PERSONAS.TEACHER, { subject: 'Kimya' });
+    assert.deepEqual(merged, { teacher: { subject: 'Kimya' }, current: 'teacher' });
   });
 
   it('maps legacy signup roles to personas', () => {

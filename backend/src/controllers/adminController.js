@@ -20,6 +20,7 @@ const { decorateAdminClassRow } = require('../lib/participantGroupLabels');
 
 const { mapRowsWithPresence } = require('../services/userPresenceService');
 const { isRegistrationIncomplete } = require('../lib/adminRegistrationStatus');
+const { publicPersona } = require('../config/personas');
 
 // Butun muellimler
 const getInstructors = async (req, res) => {
@@ -622,6 +623,7 @@ const searchUsers = async (req, res) => {
       success: true,
       users: (rows || []).map((r) => ({
         ...r,
+        persona: publicPersona(r.persona),
         role_selected: r.role_selected !== false,
         onboarding_completed: r.onboarding_completed === true,
         registration_incomplete: Boolean(r.registration_incomplete),
@@ -648,6 +650,7 @@ const getStudents = async (req, res) => {
     const students = mapRowsWithPresence(
       (rows || []).map((r) => ({
         ...r,
+        persona: publicPersona(r.persona),
         registration_incomplete: isRegistrationIncomplete(r),
         is_deleted: Boolean(r.is_deleted || r.deleted_at),
       })),

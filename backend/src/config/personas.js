@@ -5,7 +5,6 @@
 
 const PERSONAS = Object.freeze({
   TEACHER: 'teacher',
-  MENTOR: 'mentor',
   EDUCATION_CENTER: 'education_center',
   STUDENT: 'student',
   PARENT: 'parent',
@@ -16,7 +15,6 @@ const PERSONAS = Object.freeze({
 
 const PERSONA_ORDER = Object.freeze([
   PERSONAS.TEACHER,
-  PERSONAS.MENTOR,
   PERSONAS.EDUCATION_CENTER,
   PERSONAS.STUDENT,
   PERSONAS.PARENT,
@@ -28,7 +26,6 @@ const PERSONA_ORDER = Object.freeze([
 /** Partner has no dedicated auth role — referral cabinet is role-agnostic. */
 const PERSONA_TO_AUTH_ROLE = Object.freeze({
   [PERSONAS.TEACHER]: 'instructor',
-  [PERSONAS.MENTOR]: 'instructor',
   [PERSONAS.EDUCATION_CENTER]: 'course',
   [PERSONAS.STUDENT]: 'student',
   [PERSONAS.PARENT]: 'parent',
@@ -51,6 +48,14 @@ const LEGACY_ROLE_TO_PERSONA = Object.freeze({
   parent: PERSONAS.PARENT,
 });
 
+/**
+ * Retired persona ids still present in old rows / old clients (migration 234 rewrites the rows).
+ * `mentor` was an instructor persona; it is now the trainer (teacher) persona.
+ */
+const LEGACY_PERSONA_ALIASES = Object.freeze({
+  mentor: PERSONAS.TEACHER,
+});
+
 const PERSONA_ID_SET = new Set(PERSONA_ORDER);
 
 const TEACHING_FORMATS = Object.freeze(['individual', 'group', 'online', 'hybrid']);
@@ -71,6 +76,21 @@ const HR_EXAM_PURPOSES = Object.freeze([
 
 function isPersonaId(value) {
   return PERSONA_ID_SET.has(String(value || '').trim());
+}
+
+/** Current persona id for a stored/requested value; retired ids map to their replacement. */
+function normalizePersonaId(value) {
+  const key = String(value || '').trim();
+  if (!key) return null;
+  if (PERSONA_ID_SET.has(key)) return key;
+  return LEGACY_PERSONA_ALIASES[key.toLowerCase()] || null;
+}
+
+/** persona as returned to clients: never a retired id. Unknown values pass through unchanged. */
+function publicPersona(value) {
+  const key = String(value || '').trim();
+  if (!key) return null;
+  return normalizePersonaId(key) || key;
 }
 
 function authRoleForPersona(persona) {
@@ -115,10 +135,6 @@ function sanitizePersonaProfile(persona, raw) {
         teaching_format: pickEnum(src.teaching_format, TEACHING_FORMATS),
         student_count: pickEnum(src.student_count, COUNT_BUCKETS_SMALL),
       });
-    case PERSONAS.MENTOR:
-      return compactObject({
-        mentorship_focus: cleanStr(src.mentorship_focus, 160),
-      });
     case PERSONAS.EDUCATION_CENTER:
       return compactObject({
         center_name: cleanStr(src.center_name, 160),
@@ -161,8 +177,6 @@ function requiredProfileComplete(persona, profile) {
     // Google-only onboarding yalnız niyyəti soruşur; təfərrüatlar sonra profildən doldurulur.
     case PERSONAS.TEACHER:
       return true;
-    case PERSONAS.MENTOR:
-      return true;
     case PERSONAS.EDUCATION_CENTER:
       return Boolean(p.center_name && p.teacher_count && p.student_count && p.exam_purpose);
     case PERSONAS.STUDENT:
@@ -193,8 +207,16 @@ function parseStoredProfile(raw) {
   return typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
 }
 
+/** persona_profile as returned to clients: retired persona slices dropped, `current` normalised. */
+function publicPersonaProfile(raw) {
+  const profile = { ...parseStoredProfile(raw) };
+  for (const legacy of Object.keys(LEGACY_PERSONA_ALIASES)) delete profile[legacy];
+  if (profile.current != null) profile.current = publicPersona(profile.current);
+  return profile;
+}
+
 function mergePersonaProfile(existing, persona, nextSlice) {
-  const base = parseStoredProfile(existing);
+  const base = publicPersonaProfile(existing);
   const prevSlice =
     base[persona] && typeof base[persona] === 'object' && !Array.isArray(base[persona])
       ? base[persona]
@@ -229,6 +251,7 @@ module.exports = {
   PERSONA_TO_AUTH_ROLE,
   AUTH_ROLE_TO_DEFAULT_PERSONA,
   LEGACY_ROLE_TO_PERSONA,
+  LEGACY_PERSONA_ALIASES,
   PERSONA_ID_SET,
   TEACHING_FORMATS,
   COUNT_BUCKETS_SMALL,
@@ -240,6 +263,9 @@ module.exports = {
   COMPANY_SIZES,
   HR_EXAM_PURPOSES,
   isPersonaId,
+  normalizePersonaId,
+  publicPersona,
+  publicPersonaProfile,
   authRoleForPersona,
   defaultPersonaForAuthRole,
   personaFromLegacyRole,
