@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { resolveEntitlements, logBillingEvent } = require('../services/billingEntitlements');
+const { storageLimitMessageForRequest } = require('../lib/storageLimitCopy');
 
 function httpError(code, status = 403, message = code) {
   const err = new Error(message);
@@ -43,7 +44,7 @@ function enforceStudentsLimit(req, _res, next) {
   }
 }
 
-function enforceStorageLimit(req, _res, next) {
+async function enforceStorageLimit(req, _res, next) {
   try {
     const e = req.entitlements;
     if (!e) return next();
@@ -64,7 +65,11 @@ function enforceStorageLimit(req, _res, next) {
       throw httpError(
         'STORAGE_LIMIT',
         429,
-        'Yaddaş limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+        await storageLimitMessageForRequest(req, {
+          planSlug: e.plan,
+          usedBytes: Number(usedBytes),
+          limitBytes: Number(limBytes),
+        }),
       );
     }
     if (limMb != null && usedMb >= limMb) {
@@ -72,7 +77,11 @@ function enforceStorageLimit(req, _res, next) {
       throw httpError(
         'STORAGE_LIMIT',
         429,
-        'Yaddaş limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
+        await storageLimitMessageForRequest(req, {
+          planSlug: e.plan,
+          usedBytes: Number(usedMb) * 1024 * 1024,
+          limitBytes: Number(limMb) * 1024 * 1024,
+        }),
       );
     }
     next();

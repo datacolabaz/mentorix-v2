@@ -6,6 +6,7 @@
 const db = require('../utils/db');
 const { resolveEntitlements } = require('../services/billingEntitlements');
 const { createNotificationSafe } = require('../services/notificationService');
+const { TOP_PLAN_SLUG, supportPhoneDisplay } = require('../lib/storageLimitCopy');
 
 const WARN_RATIO = 0.8;
 
@@ -26,6 +27,15 @@ function storageAlertLevel(usedBytes, limitBytes) {
   return null;
 }
 
+/** Premium (50 GB) is the top plan: no upgrade hint, only "delete old files or contact support". */
+function storageReachedExtras(planSlug, supportPhone) {
+  const slug = String(planSlug || '').toLowerCase();
+  return {
+    supportPhone: supportPhone || '',
+    nextPlan: slug === TOP_PLAN_SLUG ? '' : 'PREMIUM (50 GB)',
+  };
+}
+
 function bakuMonth(now = new Date()) {
   return new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString().slice(0, 7);
 }
@@ -39,6 +49,7 @@ async function runStorageLimitAlerts({ now = new Date() } = {}) {
   );
   const month = bakuMonth(now);
   const stats = { checked: rows.length, warning: 0, reached: 0 };
+  const supportPhone = rows.length ? await supportPhoneDisplay() : '';
   for (const r of rows) {
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -58,6 +69,7 @@ async function runStorageLimitAlerts({ now = new Date() } = {}) {
           percent: String(Math.min(100, Math.floor((Number(used) / Number(cap)) * 100))),
           used: formatBytes(used),
           limit: formatBytes(cap),
+          ...(level === 'reached' ? storageReachedExtras(ent?.plan, supportPhone) : {}),
         },
         meta: { href: '/instructor/settings#billing-plans' },
         providerWorkspaceId: r.user_id,
@@ -72,4 +84,4 @@ async function runStorageLimitAlerts({ now = new Date() } = {}) {
   return stats;
 }
 
-module.exports = { runStorageLimitAlerts, storageAlertLevel, formatBytes };
+module.exports = { runStorageLimitAlerts, storageAlertLevel, storageReachedExtras, formatBytes };

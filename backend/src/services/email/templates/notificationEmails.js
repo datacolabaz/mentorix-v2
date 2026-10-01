@@ -324,9 +324,9 @@ const EMAIL_FIRST_TEMPLATES = {
     ru: { subject: 'Хранилище почти заполнено', eyebrow: 'Лимит', lines: ['Облачное хранилище заполнено на {{percent}}% ({{used}} / {{limit}}).', 'При достижении лимита загрузка новых файлов останавливается; файлы не удаляются.'], cta: STORAGE_CTA.ru },
   }),
   storage_limit_reached: compact({
-    az: { subject: 'Yaddaş limiti doldu', eyebrow: 'Limit', lines: ['Bulud yaddaşınız doldu ({{used}} / {{limit}}).', 'Yeni fayl yükləmək üçün köhnə faylları silin və ya daha yüksək paketə keçin. Mövcud fayllar silinmir.'], cta: STORAGE_CTA.az },
-    en: { subject: 'Storage limit reached', eyebrow: 'Limit', lines: ['Your cloud storage is full ({{used}} / {{limit}}).', 'Delete old files or upgrade to upload new ones. Existing files are not deleted.'], cta: STORAGE_CTA.en },
-    ru: { subject: 'Хранилище заполнено', eyebrow: 'Лимит', lines: ['Облачное хранилище заполнено ({{used}} / {{limit}}).', 'Удалите старые файлы или перейдите на тариф выше. Существующие файлы не удаляются.'], cta: STORAGE_CTA.ru },
+    az: { subject: 'Yaddaş limiti doldu', eyebrow: 'Limit', lines: ['Bulud yaddaşınız doldu ({{used}} / {{limit}}). Mövcud fayllar silinmir.', 'Yeni fayl yükləmək üçün köhnə faylları silin və ya dəstək ilə əlaqə saxlayın[[: {{supportPhone}}]].', '[[Daha geniş paketə də keçə bilərsiniz: {{nextPlan}}.]]'], cta: STORAGE_CTA.az },
+    en: { subject: 'Storage limit reached', eyebrow: 'Limit', lines: ['Your cloud storage is full ({{used}} / {{limit}}). Existing files are kept.', 'To upload new files, delete old files or contact support[[: {{supportPhone}}]].', '[[You can also upgrade to {{nextPlan}}.]]'], cta: STORAGE_CTA.en },
+    ru: { subject: 'Хранилище заполнено', eyebrow: 'Лимит', lines: ['Облачное хранилище заполнено ({{used}} / {{limit}}). Существующие файлы сохраняются.', 'Чтобы загрузить новые файлы, удалите старые или свяжитесь с поддержкой[[: {{supportPhone}}]].', '[[Также можно перейти на тариф {{nextPlan}}.]]'], cta: STORAGE_CTA.ru },
   }),
 };
 

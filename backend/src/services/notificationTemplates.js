@@ -500,15 +500,15 @@ const TEMPLATES = Object.freeze({
   storage_limit_reached: {
     az: {
       title: 'Yaddaş limiti doldu',
-      body: 'Bulud yaddaşınız doldu ({{used}} / {{limit}}). Yeni fayl yükləmək üçün köhnə faylları silin və ya daha yüksək paketə keçin. Mövcud fayllar silinmir.',
+      body: 'Bulud yaddaşınız doldu ({{used}} / {{limit}}). Mövcud fayllar silinmir. Yeni fayl yükləmək üçün köhnə faylları silin və ya dəstək ilə əlaqə saxlayın[[ ({{supportPhone}})]].[[ Daha geniş paketə də keçə bilərsiniz: {{nextPlan}}.]]',
     },
     en: {
       title: 'Storage limit reached',
-      body: 'Your cloud storage is full ({{used}} / {{limit}}). Delete old files or upgrade to upload new ones. Existing files are not deleted.',
+      body: 'Your cloud storage is full ({{used}} / {{limit}}). Existing files are kept. To upload new files, delete old files or contact support[[ ({{supportPhone}})]].[[ You can also upgrade to {{nextPlan}}.]]',
     },
     ru: {
       title: 'Хранилище заполнено',
-      body: 'Облачное хранилище заполнено ({{used}} / {{limit}}). Удалите старые файлы или перейдите на тариф выше, чтобы загружать новые. Существующие файлы не удаляются.',
+      body: 'Облачное хранилище заполнено ({{used}} / {{limit}}). Существующие файлы сохраняются. Чтобы загрузить новые файлы, удалите старые или свяжитесь с поддержкой[[ ({{supportPhone}})]].[[ Также можно перейти на тариф {{nextPlan}}.]]',
     },
   },
 });
