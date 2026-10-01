@@ -1869,6 +1869,121 @@
     "examApproveSmsLabel": "SMS / WhatsApp da göndər",
     "examApproveSmsHint": "Yalnız tələbənin profilində telefon varsa. Gmail qeydiyyatlı tələbələrə əvvəlcə email kifayətdir."
   },
+  "notificationCenter": {
+    "title": "Bildirişlər",
+    "untitled": "Bildiriş",
+    "unread": "Oxunmamış",
+    "loading": "Yüklənir…",
+    "summaryUnread": "Oxunmamış: {{count}}",
+    "summaryAllRead": "Bütün bildirişlər oxunub",
+    "bell": {
+      "label": "Bildirişlər",
+      "labelUnread": "Bildirişlər, {{count}} oxunmamış"
+    },
+    "actions": {
+      "markAllRead": "Hamısını oxunmuş et",
+      "markCategoryRead": "Kateqoriyanı oxunmuş et",
+      "markRead": "Oxunmuş et",
+      "markReadNamed": "«{{title}}» bildirişini oxunmuş et",
+      "viewAll": "Bütün bildirişlərə bax",
+      "settings": "Bildiriş tənzimləmələri",
+      "retry": "Yenidən cəhd et",
+      "loadMore": "Daha çox yüklə"
+    },
+    "filters": {
+      "category": "Kateqoriya",
+      "allCategories": "Bütün kateqoriyalar",
+      "unreadOnly": "Yalnız oxunmamışlar"
+    },
+    "empty": {
+      "all": "Hələ bildiriş yoxdur",
+      "unread": "Oxunmamış bildiriş yoxdur",
+      "category": "Bu kateqoriyada bildiriş yoxdur",
+      "hint": "Qruplarınız, tapşırıqlarınız və imtahanlarınızla bağlı yeniliklər burada görünəcək."
+    },
+    "errors": {
+      "load": "Bildirişləri yükləmək alınmadı.",
+      "markRead": "Bildirişi oxunmuş etmək alınmadı.",
+      "markAll": "Bildirişləri oxunmuş etmək alınmadı."
+    },
+    "open": {
+      "forbidden": "Bu məzmuna artıq girişiniz yoxdur.",
+      "not_found": "Bu məzmun artıq mövcud deyil.",
+      "error": "Bildirişi açmaq alınmadı. Yenidən cəhd edin."
+    },
+    "priority": {
+      "high": "Vacib",
+      "critical": "Kritik"
+    },
+    "categories": {
+      "security": "Təhlükəsizlik",
+      "assessment": "İmtahanlar",
+      "assignment": "Tapşırıqlar",
+      "material": "Materiallar",
+      "group": "Qruplar",
+      "grading": "Qiymətləndirmə",
+      "partner": "Partner proqramı",
+      "billing": "Ödənişlər",
+      "system": "Sistem"
+    },
+    "categoryHelp": {
+      "assessment": "İmtahana giriş sorğuları, nəticələr və xatırlatmalar",
+      "assignment": "Yeni, təslim edilmiş və gecikmiş tapşırıqlar",
+      "material": "Yeni və yenilənmiş tədris materialları",
+      "group": "Qoşulma sorğuları və qrup dəyişiklikləri",
+      "grading": "Yoxlanış gözləyən cavablar və dərc olunan qiymətlər",
+      "partner": "Referal və ödəniş yenilikləri",
+      "billing": "Ödənişlər, planlar və limitlər",
+      "system": "Məhsul yenilikləri və hesab tövsiyələri"
+    },
+    "frequency": {
+      "immediate": "Dərhal",
+      "daily": "Gündəlik xülasə",
+      "weekly": "Həftəlik xülasə",
+      "off": "Söndürülüb"
+    },
+    "settings": {
+      "title": "Bildiriş tənzimləmələri",
+      "subtitle": "Hansı yenilikləri və necə alacağınızı seçin.",
+      "emailNotice": "E-poçt bildirişləri hələ hazırlanır. E-poçt seçimləriniz indi yadda saxlanılır və e-poçt göndərişi aktiv olduqda tətbiq ediləcək.",
+      "columns": {
+        "category": "Kateqoriya",
+        "inApp": "Tətbiqdə",
+        "email": "E-poçt"
+      },
+      "lockedBadge": "Həmişə aktiv",
+      "lockedHelp": "Hesabınızla bağlı təhlükəsizlik xəbərdarlıqlarını söndürmək olmaz.",
+      "inAppFor": "Tətbiqdaxili bildirişlər: {{category}}",
+      "emailFor": "E-poçt: {{category}}",
+      "save": "Dəyişiklikləri yadda saxla",
+      "saved": "Tənzimləmələr yadda saxlanıldı.",
+      "saveError": "Tənzimləmələri yadda saxlamaq alınmadı. Yenidən cəhd edin.",
+      "loadError": "Bildiriş tənzimləmələrini yükləmək alınmadı.",
+      "resetDefaults": "Tövsiyə olunana qaytar"
+    },
+    "events": {
+      "join_request": {
+        "title": "Yeni qoşulma sorğusu",
+        "body": "{{studentName}} «{{groupName}}» qrupunuza qoşulmaq istəyir. Təsdiqləyin."
+      },
+      "exam_access_request": {
+        "title": "İmtahana giriş sorğusu",
+        "body": "{{studentName}} «{{examTitle}}» imtahanına qoşulmaq istəyir. Təsdiqləyin."
+      },
+      "task_access_request": {
+        "title": "Tapşırıq giriş sorğusu",
+        "body": "{{studentName}} «{{assignmentTitle}}» tapşırığına qoşulmaq istəyir. Təsdiqləyin."
+      },
+      "assignment_submitted": {
+        "title": "Tapşırıq təslim edildi",
+        "body": "{{studentName}} «{{assignmentTitle}}» tapşırığını təslim etdi."
+      },
+      "open_grading_pending": {
+        "title": "Açıq sual qiymətləndirməsi",
+        "body": "{{count}} tələbənin cavabı təsdiqinizi gözləyir — «{{examTitle}}»."
+      }
+    }
+  },
   "notifications": {
     "title": "Bildirişlər",
     "subtitle": "SMS və saxlama limitləri",

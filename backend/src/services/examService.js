@@ -832,10 +832,11 @@ async function insertStudentExamInAppNotification(studentId, exam, examLink) {
 
 async function enqueueExamPlacedEmails(exam, assignments, examLink) {
   const { enqueueNotification } = require('./notificationQueueService');
+  const brand = require('../config/brand').getBrand().name;
   const when = formatExamScheduleAz(exam);
   const mins = Number(exam.duration_minutes) || 60;
   const title = String(exam.title || 'İmtahan').trim();
-  const subject = `Mentorix — Yeni imtahan: ${title}`;
+  const subject = `${brand} — Yeni imtahan: ${title}`;
   let queued = 0;
 
   for (const s of assignments) {
@@ -849,8 +850,8 @@ async function enqueueExamPlacedEmails(exam, assignments, examLink) {
       `Müddət: ${mins} dəqiqə\n\n` +
       (examLink
         ? `İmtahana keçid (giriş tələb olunur):\n${examLink}\n\n`
-        : `Mentorix tətbiqində «İmtahanlar» bölməsinə daxil olun.\n\n`) +
-      `Hörmətlə,\nMentorix`;
+        : `${brand} tətbiqində «İmtahanlar» bölməsinə daxil olun.\n\n`) +
+      `Hörmətlə,\n${brand}`;
 
     try {
       await enqueueNotification({

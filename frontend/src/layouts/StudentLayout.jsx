@@ -18,6 +18,7 @@ import {
   peekPendingStudentDeepLink,
 } from '../lib/pendingStudentDeepLink'
 import StudentAssignmentAlertModal from '../components/student/StudentAssignmentAlertModal'
+import NotificationBell from '../components/notifications/NotificationBell'
 import {
   isPartnerPersona,
   shouldRedirectPartnerToCabinet,
@@ -63,7 +64,7 @@ const NAV_GROUP_DEFS = [
     labelKey: 'nav.sections.communication',
     label: 'COMMUNICATION',
     items: [
-      { to: '/student/notifications', key: 'notifications', labelKey: 'nav.student.notifications', label: 'Bildirişlər', icon: 'notifications', badgeKey: 'notifications' },
+      { to: '/notifications', key: 'notifications', labelKey: 'nav.student.notifications', label: 'Bildirişlər', icon: 'notifications', badgeKey: 'notifications' },
     ],
   },
 ]
@@ -207,7 +208,7 @@ function StudentLayoutInner() {
             <div className="flex justify-center min-w-0 overflow-hidden justify-self-center px-1">
               <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
             </div>
-            <div className="w-11 shrink-0 justify-self-end" aria-hidden />
+            <NotificationBell className="justify-self-end" />
           </header>
         )}
 
@@ -250,10 +251,13 @@ function StudentLayoutInner() {
               </div>
               <div
                 className={[
-                  'mt-4 p-3 rounded-xl border',
+                  'relative mt-4 p-3 rounded-xl border',
                   theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/70 border-black/[0.06]',
                 ].join(' ')}
               >
+                <div className="absolute top-2 right-2">
+                  <NotificationBell />
+                </div>
                 <div
                   className={[
                     'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border',

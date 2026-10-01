@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { sendRenewalReminderEmail } = require('../services/emailService');
 const { enqueueNotification } = require('../services/notificationQueueService');
+const { getBrand } = require('../config/brand');
 
 async function expireAbandonedBillingPayments() {
   // Mark old pending payments as expired to keep DB clean.
@@ -50,14 +51,14 @@ async function markPastDueSubscriptions() {
         skipped: false,
         error: true,
       }));
-      if (direct?.skipped || direct?.error) {
+      if ((direct?.skipped && direct.reason !== 'dry_run') || direct?.error) {
         await enqueueNotification({
           channel: 'email',
           event_type: 'subscription_past_due',
           unique_key: `subscription_past_due_${r.user_id}_${period}`,
           user_id: r.user_id,
           to_addr: '__resolve__',
-          subject: `Mentorix — Abunə bitdi`,
+          subject: `${getBrand().name} — Abunə bitdi`,
           body: `Abunənizin müddəti bitib.\nBitmə tarixi: ${iso || '—'}\nPanel → Upgrade/Ödəniş ilə yeniləyin.\n`,
           context: { periodEnd: iso },
         }).catch(() => {});

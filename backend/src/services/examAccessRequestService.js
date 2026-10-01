@@ -1,5 +1,4 @@
 const db = require('../utils/db');
-const { sendEmail, userEmail } = require('./emailService');
 const {
   canonicalStudentPhone,
   STUDENT_CONTACT_PHONE_SQL,
@@ -21,34 +20,26 @@ async function insertUserNotification(userId, title, body, type, meta = {}) {
 const { assertStudentProfileComplete } = require('../controllers/studentProfileController');
 const { ensureLightInstructorEnrollment } = require('./lightEnrollmentService');
 
-async function notifyInstructorExamAccessRequest(instructorId, studentName, examTitle, examId) {
+async function notifyInstructorExamAccessRequest({ instructorId, studentId, studentName, examTitle, examId, requestId }) {
+  const { createNotificationSafe } = require('./notificationService');
   const title = 'İmtahana giriş sorğusu';
   const body = `${studentName} «${examTitle}» imtahanına qoşulmaq istəyir. Təsdiqləyin.`;
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, 'exam_access_request', FALSE, $4::jsonb)`,
-      [
-        instructorId,
-        title,
-        body,
-        JSON.stringify({ exam_id: examId, kind: 'exam_access_request' }),
-      ],
-    )
-    .catch((e) => console.error('notifyInstructorExamAccessRequest', e.message));
-
-  try {
-    const to = await userEmail(instructorId);
-    if (to) {
-      await sendEmail({
-        to,
-        subject: `Mentorix — ${title}`,
-        text: `${body}\n\nMentorix → Sorğular və ya İmtahanlar bölməsindən təsdiqləyin.`,
-      });
-    }
-  } catch (e) {
-    console.error('exam access request email', e.message);
-  }
+  await createNotificationSafe({
+    recipientId: instructorId,
+    category: 'assessment',
+    eventType: 'exam_access_request',
+    priority: 'HIGH',
+    title,
+    body,
+    params: { studentName, examTitle },
+    meta: { exam_id: examId, kind: 'exam_access_request' },
+    relatedEntityType: 'exam_access_request',
+    relatedEntityId: requestId,
+    actorUserId: studentId,
+    providerWorkspaceId: instructorId,
+    dedupeKey: requestId ? `exam_access_request:${requestId}` : null,
+    email: true,
+  });
 }
 
 async function getExamForStudentRequest(examId) {
@@ -171,12 +162,14 @@ async function createExamAccessRequest(studentId, examId) {
     await trackInstructorStudentLink(exam.instructor_id, studentId, { skipLimitCheck: true }, client);
   });
 
-  await notifyInstructorExamAccessRequest(
-    exam.instructor_id,
+  await notifyInstructorExamAccessRequest({
+    instructorId: exam.instructor_id,
+    studentId,
     studentName,
-    exam.title,
-    exam.id,
-  );
+    examTitle: exam.title,
+    examId: exam.id,
+    requestId: requestRow?.id,
+  });
 
   return {
     request_id: requestRow.id,

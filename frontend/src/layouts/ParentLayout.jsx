@@ -9,6 +9,7 @@ import { FIXED_MOBILE_TOP_BAR } from '../lib/stickyTopBar'
 import useUiStore from '../hooks/useUi'
 import NavIcon from '../components/common/NavIcon'
 import SidebarPreferences from '../components/common/SidebarPreferences'
+import NotificationBell from '../components/notifications/NotificationBell'
 
 const NAV_DEFS = [
   { to: '/parent', key: 'children', labelKey: 'nav.parent.children', label: 'Uşaqlarım', icon: 'children', end: true },
@@ -64,7 +65,7 @@ export default function ParentLayout() {
         <div className="flex-1 flex justify-center min-w-0 overflow-visible">
           <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
         </div>
-        <div className="w-11 shrink-0" />
+        <NotificationBell />
       </header>
 
       {navOpen && (
@@ -90,7 +91,10 @@ export default function ParentLayout() {
           <div className="flex justify-center">
             <Brand size="sidebar" tone={theme === 'dark' ? 'dark' : 'light'} />
           </div>
-          <div className={['mt-4 p-3 rounded-xl border', theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/70 border-black/[0.06]'].join(' ')}>
+          <div className={['relative mt-4 p-3 rounded-xl border', theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/70 border-black/[0.06]'].join(' ')}>
+            <div className="absolute top-2 right-2 hidden md:block">
+              <NotificationBell />
+            </div>
             <div className={['w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-2 border', theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-900/5 border-black/[0.06] text-slate-900'].join(' ')}>
               {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>

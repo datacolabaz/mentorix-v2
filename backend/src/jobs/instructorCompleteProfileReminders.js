@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { normalizeLocale } = require('../lib/userLocale');
 const { sendCompleteProfileEmail } = require('../services/instructorCompleteProfileEmail');
+const { maskEmail } = require('../services/email/emailTransport');
 
 const RESEND_AFTER = "INTERVAL '7 days'";
 const MAX_SENDS = 2;
@@ -81,7 +82,7 @@ async function runInstructorCompleteProfileReminders() {
             }
             break;
           }
-          console.warn('instructor complete-profile email failed', to, errMsg || 'unknown');
+          console.warn('instructor complete-profile email failed', maskEmail(to), errMsg || 'unknown');
         }
         continue;
       }

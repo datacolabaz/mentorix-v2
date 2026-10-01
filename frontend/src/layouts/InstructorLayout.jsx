@@ -25,6 +25,7 @@ import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
 import { buildMentorNavSections } from '../constants/instructorNav'
 import { FEATURE_FLAGS, filterNavSectionsByFlags, useFeatureFlags } from '../lib/featureFlags'
 import InstructorAvatar from '../components/common/InstructorAvatar'
+import NotificationBell from '../components/notifications/NotificationBell'
 import {
   localizeDiscoverProfileAlert,
   shouldShowDiscoverSubjectsModal,
@@ -386,7 +387,7 @@ export default function InstructorLayout() {
         <div className="flex justify-center min-w-0 overflow-hidden justify-self-center px-1">
           <Brand size="md" tone={theme === 'dark' ? 'dark' : 'light'} />
         </div>
-        <div className="w-11 shrink-0 justify-self-end" aria-hidden />
+        <NotificationBell className="justify-self-end" />
       </header>
 
       {navOpen && (
@@ -436,12 +437,15 @@ export default function InstructorLayout() {
             </div>
             <div
               className={[
-                'mt-4 p-3 rounded-xl border',
+                'relative mt-4 p-3 rounded-xl border',
                 theme === 'dark'
                   ? 'bg-token-surfaceCard/55 border-[color:var(--border-subtle)]'
                   : 'bg-white/70 border-black/[0.06]',
               ].join(' ')}
             >
+              <div className="absolute top-2 right-2">
+                <NotificationBell />
+              </div>
               <InstructorAvatar
                 fullName={user?.full_name}
                 avatarUrl={user?.avatar_url}

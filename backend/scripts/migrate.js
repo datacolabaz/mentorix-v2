@@ -8,15 +8,22 @@ const path = require('path');
 
 const envBackend = path.join(__dirname, '../.env');
 const envRoot = path.join(__dirname, '../../.env');
-/** Lokalda köhnə `export DATABASE_URL` .env-i kölgələyirdi — migrate həmişə fayldakı dəyəri istifadə etsin */
-require('dotenv').config({ path: envBackend, override: true });
-if (!process.env.DATABASE_URL) {
-  require('dotenv').config({ path: envRoot, override: true });
-}
-
-const { Client } = require('pg');
 
 const MIGRATIONS_DIR = path.join(__dirname, '../src/models/migrations');
+
+/**
+ * Yalnız "up" migrasiyaları: `NNN_ad.sql`. `*.down.sql` (rollback) və nümunəyə uyğun gəlməyən
+ * fayllar heç vaxt avtomatik işlədilmir — əks halda prod-da cədvəllər silinə bilər.
+ */
+const UP_MIGRATION_RE = /^\d{3,}_[A-Za-z0-9_-]+\.sql$/;
+
+function isUpMigrationFile(filename) {
+  return UP_MIGRATION_RE.test(String(filename || ''));
+}
+
+function listUpMigrations(filenames) {
+  return filenames.filter(isUpMigrationFile).sort();
+}
 
 /** .env bəzən dırnaq və ya boşluq saxlayır — pg üçün URI təmizlənməlidir */
 function normalizeDatabaseUrl(raw) {
@@ -77,6 +84,13 @@ function logDatabaseUrlHints(url) {
 }
 
 async function main() {
+  /** Lokalda köhnə `export DATABASE_URL` .env-i kölgələyirdi — migrate həmişə fayldakı dəyəri istifadə etsin */
+  require('dotenv').config({ path: envBackend, override: true });
+  if (!process.env.DATABASE_URL) {
+    require('dotenv').config({ path: envRoot, override: true });
+  }
+  const { Client } = require('pg');
+
   const url = normalizeDatabaseUrl(process.env.DATABASE_URL);
   if (!url) {
     console.error('DATABASE_URL boşdur.');
@@ -120,10 +134,7 @@ async function main() {
   const { rows: applied } = await client.query('SELECT filename FROM schema_migrations');
   const done = new Set(applied.map((r) => r.filename));
 
-  const files = fs
-    .readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
+  const files = listUpMigrations(fs.readdirSync(MIGRATIONS_DIR));
 
   for (const filename of files) {
     if (done.has(filename)) continue;
@@ -148,12 +159,16 @@ async function main() {
   console.log('Migrations OK');
 }
 
-main().catch((e) => {
-  if (e && (e.code === 'ERR_INVALID_URL' || /invalid url/i.test(String(e.message || '')))) {
-    console.error('DATABASE_URL etibarlı URI deyil.');
-    console.error('Parolda xüsusi simvollar varsa encode edin; .env dəyərini dırnaqsız və tək sətirdə saxlayın.');
-  } else {
-    console.error(e);
-  }
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    if (e && (e.code === 'ERR_INVALID_URL' || /invalid url/i.test(String(e.message || '')))) {
+      console.error('DATABASE_URL etibarlı URI deyil.');
+      console.error('Parolda xüsusi simvollar varsa encode edin; .env dəyərini dırnaqsız və tək sətirdə saxlayın.');
+    } else {
+      console.error(e);
+    }
+    process.exit(1);
+  });
+}
+
+module.exports = { isUpMigrationFile, listUpMigrations, MIGRATIONS_DIR };

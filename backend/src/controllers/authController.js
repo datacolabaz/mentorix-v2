@@ -29,6 +29,11 @@ const {
   findUserForVerification,
   isVerificationExpired,
 } = require('../services/emailVerificationIssue');
+const {
+  issuePasswordResetToken,
+  findPasswordResetToken,
+  consumePasswordResetToken,
+} = require('../services/passwordResetTokenService');
 const { resolveLoginUserOrError, resolveSmsBillingInstructorId: resolveSmsBillingForLogin } = require('../services/authService');
 const { guardEmailVerifiedBeforeToken } = require('../services/emailVerificationGuard');
 const {
@@ -110,12 +115,6 @@ function normalizeEmailInput(email) {
   return e;
 }
 
-const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
-
-function generatePasswordResetToken() {
-  return require('crypto').randomBytes(24).toString('hex');
-}
-
 /** Email əsaslı parol bərpası: email göndər. (Privacy: email tapılmasa da success qaytarır.) */
 const requestPasswordReset = async (req, res) => {
   try {
@@ -137,15 +136,7 @@ const requestPasswordReset = async (req, res) => {
       return res.json({ success: true, message: 'Əgər bu email hesabınıza bağlıdırsa, bərpa linki göndərildi.' });
     }
 
-    const token = generatePasswordResetToken();
-    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
-
-    await db.query(
-      `INSERT INTO password_reset_tokens (user_id, token, expires_at)
-       VALUES ($1, $2, $3)`,
-      [user.id, token, expiresAt],
-    );
-
+    const { token } = await issuePasswordResetToken(user.id);
     const mail = await sendPasswordResetEmail({ email: user.email, token });
     if (!mail?.ok) {
       // Still return 200, but with a hint for admins/devs.
@@ -172,14 +163,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Şifrə ən azı 8 simvol olmalıdır' });
     }
 
-    const { rows } = await db.query(
-      `SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at
-       FROM password_reset_tokens prt
-       WHERE prt.token = $1
-       LIMIT 1`,
-      [token],
-    );
-    const row = rows[0] || null;
+    const row = await findPasswordResetToken(token);
     if (!row) return res.status(400).json({ success: false, message: 'Token tapılmadı' });
     if (row.used_at) return res.status(400).json({ success: false, message: 'Bu link artıq istifadə olunub' });
     const exp = row.expires_at ? new Date(row.expires_at).getTime() : 0;
@@ -188,10 +172,12 @@ const resetPassword = async (req, res) => {
     }
 
     const hash = await bcrypt.hash(newPassword, 12);
-    await db.transaction(async (client) => {
+    const consumed = await db.transaction(async (client) => {
+      if (!(await consumePasswordResetToken(client, row.id))) return false;
       await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, row.user_id]);
-      await client.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1', [row.id]);
+      return true;
     });
+    if (!consumed) return res.status(400).json({ success: false, message: 'Bu link artıq istifadə olunub' });
 
     return res.json({ success: true, message: 'Şifrə yeniləndi. İndi daxil ola bilərsiniz.' });
   } catch (err) {

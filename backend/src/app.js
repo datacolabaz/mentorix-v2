@@ -17,6 +17,7 @@ const { runBillingNotifications } = require('./jobs/billingNotifications');
 const { runPackReminders } = require('./jobs/packReminders');
 const { expireAbandonedBillingPayments, markPastDueSubscriptions } = require('./jobs/billingPaymentsReaper');
 const { runNotificationQueueOnce } = require('./jobs/notificationQueueWorker');
+const { describeEmailConfig } = require('./services/email/emailConfig');
 const { runAssignmentNotifications } = require('./jobs/assignmentNotifications');
 const { runExamActivitySweep } = require('./jobs/examActivitySweep');
 const { reconcileStorageUsage } = require('./jobs/storageUsageReconciler');
@@ -127,6 +128,7 @@ async function boot() {
 
   app.listen(PORT, () => {
     console.log('Mentorix API running on port', PORT);
+    console.log('[email] config', JSON.stringify(describeEmailConfig()));
     ensureCertificateIssueWorker();
     ensureOpenExamGradingWorker();
     processExamNotificationJobs().catch((e) => console.error('exam notification jobs startup', e.message));

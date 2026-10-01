@@ -90,6 +90,13 @@ export default function NavIcon({ name, className = 'w-5 h-5' }) {
           <path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </IconBase>
       )
+    case 'shield':
+      return (
+        <IconBase className={className}>
+          <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </IconBase>
+      )
     case 'settings':
       return (
         <IconBase className={className}>

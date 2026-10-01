@@ -1,35 +1,21 @@
-const { Resend } = require('resend');
-const { sendEmail } = require('./emailService');
+const { getBrand } = require('../config/brand');
+const { frontendPublicUrl } = require('./email/emailConfig');
+const { sendMail } = require('./email/emailTransport');
+const { escapeHtml } = require('./email/emailLayout');
 
-function frontendBaseUrl() {
-  const base = String(
-    process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'https://mentorix.io',
-  )
-    .trim()
-    .replace(/\/+$/, '');
-  return base || 'https://mentorix.io';
-}
-
-const RESEND_API_KEY = String(process.env.RESEND_API_KEY || '').trim();
-// Prefer dedicated override, then shared Resend sender (same as verify/password emails).
-// Default matches product brand; Resend still requires the domain to be verified in dashboard.
-const EMAIL_FROM = String(
-  process.env.INSTRUCTOR_COMPLETE_PROFILE_FROM ||
-    process.env.VERIFY_EMAIL_FROM ||
-    process.env.EMAIL_FROM ||
-    'Mentorix <notifications@mentorix.io>',
-).trim();
-
-function escapeHtml(s) {
-  return String(s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+/** Optional dedicated sender; otherwise the shared sender from emailConfig (EMAIL_FROM → VERIFY_EMAIL_FROM → brand default). */
+function senderOverride() {
+  return String(process.env.INSTRUCTOR_COMPLETE_PROFILE_FROM || '').trim() || undefined;
 }
 
 function settingsUrl() {
-  return `${frontendBaseUrl()}/instructor/settings#discover-profile`;
+  return `${frontendPublicUrl()}/instructor/settings#discover-profile`;
+}
+
+/** COPY is written with the legacy product name; the public name comes from config/brand.js. */
+function brandify(s) {
+  const name = getBrand().name;
+  return name === 'Mentorix' ? s : String(s).replace(/Mentorix/g, name);
 }
 
 function greetingName(fullName) {
@@ -92,9 +78,13 @@ const COPY = {
 };
 
 function copyFor(locale) {
-  if (locale === 'ru') return COPY.ru;
-  if (locale === 'en') return COPY.en;
-  return COPY.az;
+  const c = locale === 'ru' ? COPY.ru : locale === 'en' ? COPY.en : COPY.az;
+  return {
+    ...c,
+    subject: brandify(c.subject),
+    intro: brandify(c.intro),
+    sign: brandify(c.sign),
+  };
 }
 
 function buildCompleteProfileEmail({ locale = 'az', fullName }) {
@@ -125,32 +115,22 @@ function buildCompleteProfileEmail({ locale = 'az', fullName }) {
   return { subject: c.subject, text, html, lang, link };
 }
 
-function resendReady() {
-  return Boolean(RESEND_API_KEY && EMAIL_FROM);
-}
-
 async function sendCompleteProfileEmail({ to, locale, fullName }) {
   const payload = buildCompleteProfileEmail({ locale, fullName });
-  if (resendReady()) {
-    const client = new Resend(RESEND_API_KEY);
-    const { data, error } = await client.emails.send({
-      from: EMAIL_FROM,
-      to,
-      subject: payload.subject,
-      text: payload.text,
-      html: payload.html,
-    });
-    if (error) return { ok: false, error: error?.message || 'Resend xətası', ...payload };
-    return { ok: true, provider: 'resend', messageId: data?.id || null, ...payload };
-  }
-  const r = await sendEmail({
+  const r = await sendMail({
+    stream: 'transactional',
     to,
+    from: senderOverride(),
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
+    templateKey: 'instructor_complete_profile',
+    locale: payload.lang,
   });
-  if (r?.skipped) return { ok: false, skipped: true, reason: 'email_not_configured', ...payload };
-  return { ok: true, provider: 'smtp', messageId: r?.messageId || null, ...payload };
+  if (r.ok) return { ok: true, provider: r.provider, messageId: r.messageId || null, ...payload };
+  if (r.status === 'dry_run') return { ok: false, skipped: true, reason: 'dry_run', ...payload };
+  if (r.status === 'skipped') return { ok: false, skipped: true, reason: 'email_not_configured', ...payload };
+  return { ok: false, error: r.error || 'Email xətası', ...payload };
 }
 
 module.exports = {
