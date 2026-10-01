@@ -106,6 +106,10 @@ export default function UpgradeModal({ open, onClose, onSelectPlan, currentPlan 
       const pay = r?.payment
       setCheckout(null)
       onSelectPlan?.(checkout.planId)
+      if (pay?.status === 'paid') {
+        onClose?.()
+        return
+      }
       if (paymentMethod === 'cash') {
         onClose?.()
         const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))

@@ -2,6 +2,7 @@ const fs = require('fs');
 const db = require('../utils/db');
 const { bytesToMbInt } = require('../services/resourceUsageService');
 const { resolveEntitlements, bumpUsageCountersTx } = require('../services/billingEntitlements');
+const { storageLimitMessageForRequest } = require('../lib/storageLimitCopy');
 
 function safeUnlink(absPath) {
   try {
@@ -32,18 +33,14 @@ async function enforceStorageLimitAfterUpload(req, res, next) {
       usedBytes + addBytes > Number(limitBytes)
     ) {
       safeUnlink(req.file.path);
-      const planB = Number(ent?.limits?.storage_limit_bytes_plan);
-      const extraB = Number(ent?.limits?.extra_storage_bytes || 0) || 0;
-      const totalMb = Math.round(Number(limitBytes) / (1024 * 1024));
-      const usedMb = Math.round(usedBytes / (1024 * 1024));
-      const hint =
-        extraB > 0 || (Number.isFinite(planB) && planB > 0)
-          ? ` (paket + əlavə: ~${totalMb} MB, istifadə: ~${usedMb} MB)`
-          : '';
       return res.status(429).json({
         success: false,
         code: 'STORAGE_LIMIT',
-        message: `Yaddaş limitinə çatdınız${hint}. Tənzimləmələr → «Əlavə yaddaş al» və ya paketi yüksəldin.`,
+        message: await storageLimitMessageForRequest(req, {
+          planSlug: ent?.plan,
+          usedBytes,
+          limitBytes: Number(limitBytes),
+        }),
       });
     }
 
@@ -52,7 +49,11 @@ async function enforceStorageLimitAfterUpload(req, res, next) {
       return res.status(429).json({
         success: false,
         code: 'STORAGE_LIMIT',
-        message: `Yaddaş limitiniz dolub (${usedMb}/${Number(limitMb)} MB).`,
+        message: await storageLimitMessageForRequest(req, {
+          planSlug: ent?.plan,
+          usedBytes: usedMb * 1024 * 1024,
+          limitBytes: Number(limitMb) * 1024 * 1024,
+        }),
       });
     }
 

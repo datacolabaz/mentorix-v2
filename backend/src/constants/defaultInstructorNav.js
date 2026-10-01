@@ -4,7 +4,7 @@ const INSTRUCTOR_NAV_SLUG = 'instructor_nav';
 const INSTRUCTOR_NAV_ITEM_DEFS = {
   dashboard: { to: '/instructor', label: 'Dashboard', icon: 'dashboard', end: true },
   teaching_groups: { to: '/instructor/teaching-groups', label: 'Sahələr və qruplar', icon: 'courses' },
-  live_history: { to: '/instructor/live/history', label: 'Canlı dərslər', icon: 'live' },
+  live_history: { to: '/instructor/live-lessons', label: 'Canlı dərslər', icon: 'live' },
   students: { to: '/instructor/students', label: 'Tələbələrim', icon: 'students' },
   join_requests: {
     to: '/instructor/join-requests',
@@ -23,7 +23,7 @@ const INSTRUCTOR_NAV_ITEM_DEFS = {
   analytics: { to: '/instructor/analytics', label: 'Analitika', icon: 'analytics' },
   engagement: { to: '/instructor/engagement', label: 'Aktivlik', icon: 'progress' },
   payments: { to: '/instructor/payments', label: 'Ödənişlər', icon: 'payments' },
-  notifications: { to: '/instructor/notifications', label: 'Bildirişlər', icon: 'notifications' },
+  notifications: { to: '/notifications', label: 'Bildirişlər', icon: 'notifications' },
   settings: { to: '/instructor/settings', label: 'Tənzimləmələr', icon: 'settings' },
 };
 

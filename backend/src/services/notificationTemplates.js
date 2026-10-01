@@ -418,6 +418,141 @@ const TEMPLATES = Object.freeze({
       body: 'Неудачных попыток входа в админ-аккаунт {{account}} за последние {{minutes}} мин: {{count}}.',
     },
   },
+
+  /* ---------- Email-first: exams, live lessons (Meet/Zoom links), certificates, parent, digest, limits ---------- */
+  exam_starting_soon: {
+    az: { title: 'İmtahan tezliklə başlayır', body: '«{{examTitle}}» imtahanı {{startsAt}} tarixində başlayır.[[ Müddət: {{minutes}} dəqiqə.]]' },
+    en: { title: 'Assessment starts soon', body: '“{{examTitle}}” starts at {{startsAt}}.[[ Duration: {{minutes}} min.]]' },
+    ru: { title: 'Экзамен скоро начнётся', body: 'Экзамен «{{examTitle}}» начнётся {{startsAt}}.[[ Длительность: {{minutes}} мин.]]' },
+  },
+  live_lesson_created: {
+    az: {
+      title: 'Yeni canlı dərs',
+      body: '{{instructorName}} «{{lessonTitle}}» canlı dərsini planladı: {{startsAt}} ({{platformName}}).[[ Təkrarlanan seriya: {{recurrenceCount}} dərs.]]',
+    },
+    en: {
+      title: 'New live lesson',
+      body: '{{instructorName}} scheduled the live lesson “{{lessonTitle}}”: {{startsAt}} ({{platformName}}).[[ Recurring series: {{recurrenceCount}} lessons.]]',
+    },
+    ru: {
+      title: 'Новый онлайн-урок',
+      body: '{{instructorName}} запланировал(а) онлайн-урок «{{lessonTitle}}»: {{startsAt}} ({{platformName}}).[[ Серия занятий: {{recurrenceCount}}.]]',
+    },
+  },
+  live_lesson_updated: {
+    az: { title: 'Canlı dərs dəyişdi', body: '«{{lessonTitle}}» canlı dərsinin məlumatları yeniləndi. Yeni vaxt: {{startsAt}}.' },
+    en: { title: 'Live lesson changed', body: 'The live lesson “{{lessonTitle}}” was updated. New time: {{startsAt}}.' },
+    ru: { title: 'Онлайн-урок изменён', body: 'Онлайн-урок «{{lessonTitle}}» обновлён. Новое время: {{startsAt}}.' },
+  },
+  live_lesson_cancelled: {
+    az: { title: 'Canlı dərs ləğv edildi', body: '{{startsAt}} tarixinə planlanan «{{lessonTitle}}» canlı dərsi ləğv edildi.' },
+    en: { title: 'Live lesson cancelled', body: 'The live lesson “{{lessonTitle}}” scheduled for {{startsAt}} was cancelled.' },
+    ru: { title: 'Онлайн-урок отменён', body: 'Онлайн-урок «{{lessonTitle}}», запланированный на {{startsAt}}, отменён.' },
+  },
+  live_lesson_reminder: {
+    az: { title: 'Canlı dərs xatırlatması', body: '«{{lessonTitle}}» canlı dərsi {{startsAt}} tarixində başlayır ({{platformName}}).' },
+    en: { title: 'Live lesson reminder', body: 'The live lesson “{{lessonTitle}}” starts at {{startsAt}} ({{platformName}}).' },
+    ru: { title: 'Напоминание об онлайн-уроке', body: 'Онлайн-урок «{{lessonTitle}}» начнётся {{startsAt}} ({{platformName}}).' },
+  },
+  certificate_issued: {
+    az: { title: 'Sertifikat hazırdır', body: '«{{courseTitle}}» üzrə sertifikatınız yaradıldı.' },
+    en: { title: 'Certificate ready', body: 'Your certificate for “{{courseTitle}}” has been issued.' },
+    ru: { title: 'Сертификат готов', body: 'Ваш сертификат по «{{courseTitle}}» выдан.' },
+  },
+  certificate_status_changed: {
+    az: {
+      title: 'Sertifikatın statusu dəyişdi',
+      body: '«{{courseTitle}}» üzrə əvvəlki sertifikatınız artıq etibarlı deyil ({{statusLabel}}). Aktual sertifikatı panelinizdə görə bilərsiniz.',
+    },
+    en: {
+      title: 'Certificate status changed',
+      body: 'Your previous certificate for “{{courseTitle}}” is no longer valid ({{statusLabel}}). See the current certificate in your dashboard.',
+    },
+    ru: {
+      title: 'Статус сертификата изменён',
+      body: 'Ваш предыдущий сертификат по «{{courseTitle}}» больше не действителен ({{statusLabel}}). Актуальный сертификат — в вашем кабинете.',
+    },
+  },
+  certificate_reinstated: {
+    az: {
+      title: 'Sertifikatınız yenidən aktivdir',
+      body: '«{{courseTitle}}» üzrə sertifikatınız yenidən etibarlıdır. Onu və doğrulama səhifəsini panelinizdə görə bilərsiniz.',
+    },
+    en: {
+      title: 'Your certificate is active again',
+      body: 'Your certificate for “{{courseTitle}}” is valid again. See it and its verification page in your dashboard.',
+    },
+    ru: {
+      title: 'Ваш сертификат снова действителен',
+      body: 'Ваш сертификат по «{{courseTitle}}» снова действителен. Он и страница проверки — в вашем кабинете.',
+    },
+  },
+  parent_result_summary: {
+    az: { title: 'Övladınızın nəticəsi hazırdır', body: '{{studentName}} «{{examTitle}}» imtahanını tamamladı. Nəticəni panelinizdə görə bilərsiniz.' },
+    en: { title: 'Your child’s result is ready', body: '{{studentName}} completed “{{examTitle}}”. You can see the result in your dashboard.' },
+    ru: { title: 'Результат вашего ребёнка готов', body: '{{studentName}} завершил(а) «{{examTitle}}». Результат доступен в вашем кабинете.' },
+  },
+  weekly_teacher_digest: {
+    az: {
+      title: 'Həftəlik xülasə',
+      body: '{{periodLabel}}: {{activeStudents}} aktiv tələbə, {{examSubmissions}} imtahan təqdimatı, {{assignmentSubmissions}} tapşırıq təqdimatı, {{pendingReviews}} yoxlama gözləyən iş, {{liveLessons}} canlı dərs.',
+    },
+    en: {
+      title: 'Weekly summary',
+      body: '{{periodLabel}}: {{activeStudents}} active students, {{examSubmissions}} assessment submissions, {{assignmentSubmissions}} assignment submissions, {{pendingReviews}} items awaiting review, {{liveLessons}} live lessons.',
+    },
+    ru: {
+      title: 'Итоги недели',
+      body: '{{periodLabel}}: активных учеников — {{activeStudents}}, сдано экзаменов — {{examSubmissions}}, сдано заданий — {{assignmentSubmissions}}, ждут проверки — {{pendingReviews}}, онлайн-уроков — {{liveLessons}}.',
+    },
+  },
+  storage_limit_warning: {
+    az: { title: 'Yaddaş limitinin {{percent}}%-i doldu', body: 'Bulud yaddaşınızın {{used}} / {{limit}} hissəsi istifadə olunub. Limitə çatdıqda yeni fayl yükləmək dayanır.' },
+    en: { title: '{{percent}}% of your storage is used', body: 'You are using {{used}} of {{limit}} cloud storage. New uploads stop when the limit is reached.' },
+    ru: { title: 'Хранилище заполнено на {{percent}}%', body: 'Использовано {{used}} из {{limit}} облачного хранилища. При достижении лимита загрузка новых файлов останавливается.' },
+  },
+  storage_limit_reached: {
+    az: {
+      title: 'Yaddaş limiti doldu',
+      body: 'Bulud yaddaşınız doldu ({{used}} / {{limit}}). Mövcud fayllar silinmir. Yeni fayl yükləmək üçün köhnə faylları silin və ya dəstək ilə əlaqə saxlayın[[ ({{supportPhone}})]].[[ Daha geniş paketə də keçə bilərsiniz: {{nextPlan}}.]]',
+    },
+    en: {
+      title: 'Storage limit reached',
+      body: 'Your cloud storage is full ({{used}} / {{limit}}). Existing files are kept. To upload new files, delete old files or contact support[[ ({{supportPhone}})]].[[ You can also upgrade to {{nextPlan}}.]]',
+    },
+    ru: {
+      title: 'Хранилище заполнено',
+      body: 'Облачное хранилище заполнено ({{used}} / {{limit}}). Существующие файлы сохраняются. Чтобы загрузить новые файлы, удалите старые или свяжитесь с поддержкой[[ ({{supportPhone}})]].[[ Также можно перейти на тариф {{nextPlan}}.]]',
+    },
+  },
+  legacy_recordings_retiring: {
+    az: {
+      title: 'Köhnə video yazılarınız {{deleteAfter}} tarixindən sonra silinəcək',
+      body: 'Mentorix-in daxili video otağı dayandırılıb. Sizin {{count}} dərs yazınız ({{size}}) hələ saxlanılır. Onları {{deleteAfter}} tarixinədək yükləyə bilərsiniz: Canlı dərslər → Köhnə dərs yazıları → «Yüklə». Bu tarixdən sonra yazılar silinə bilər. Sualınız varsa dəstək ilə əlaqə saxlayın.',
+    },
+    en: {
+      title: 'Your old video recordings will be deleted after {{deleteAfter}}',
+      body: 'The Mentorix internal video room has been retired. {{count}} of your lesson recordings ({{size}}) are still stored. You can download them until {{deleteAfter}}: Live lessons → Old lesson recordings → “Download”. After that date the recordings may be deleted. Contact support if you have questions.',
+    },
+    ru: {
+      title: 'Ваши старые видеозаписи будут удалены после {{deleteAfter}}',
+      body: 'Встроенная видеокомната Mentorix закрыта. У вас ещё хранится {{count}} записей уроков ({{size}}). Их можно скачать до {{deleteAfter}}: Живые уроки → Старые записи уроков → «Скачать». После этой даты записи могут быть удалены. Если есть вопросы, свяжитесь с поддержкой.',
+    },
+  },
+  legacy_plan_migration_notice: {
+    az: {
+      title: 'STANDART paketi PROFESSIONAL ilə əvəz olunur',
+      body: 'Köhnə STANDART paketi ({{oldPrice}}/ay) artıq təklif olunmur. Cari ödənişli dövrünüz dəyişmir[[ ({{periodEnd}} tarixinədək)]]. [[{{effectiveDate}} tarixindən sonrakı yeniləməniz {{newPlan}} paketi ilə olacaq ({{newPrice}}/ay: 50 tələbə, 20 GB yaddaş).]][[Dövrün bitməsinə {{daysLeft}} gün qaldığı üçün növbəti yeniləməni bir dəfə də {{oldPrice}}-ə (aylıq) edə bilərsiniz; ondan sonrakı yeniləmə {{newPlan}} ({{newPrice}}/ay) olacaq və 14 gün əvvəl yenidən xəbər verəcəyik.]] Avtomatik ödəniş yoxdur — yeniləmə yalnız siz ödəniş etdikdə baş verir.',
+    },
+    en: {
+      title: 'STANDART is being replaced by PROFESSIONAL',
+      body: 'The old STANDART plan ({{oldPrice}}/month) is no longer offered. Your current paid period does not change[[ (until {{periodEnd}})]]. [[Your renewal after {{effectiveDate}} will be on the {{newPlan}} plan ({{newPrice}}/month: 50 students, 20 GB storage).]][[Because your period ends in {{daysLeft}} days, you can renew once more at {{oldPrice}} (monthly); the renewal after that will be {{newPlan}} ({{newPrice}}/month) and we will remind you 14 days before.]] There is no automatic charge — a renewal only happens when you make a payment.',
+    },
+    ru: {
+      title: 'Тариф STANDART заменяется на PROFESSIONAL',
+      body: 'Старый тариф STANDART ({{oldPrice}}/мес.) больше не предлагается. Текущий оплаченный период не меняется[[ (до {{periodEnd}})]]. [[Продление после {{effectiveDate}} будет на тарифе {{newPlan}} ({{newPrice}}/мес.: 50 учеников, 20 ГБ хранилища).]][[Так как до конца периода осталось {{daysLeft}} дн., вы можете ещё один раз продлить за {{oldPrice}} (помесячно); следующее продление будет на {{newPlan}} ({{newPrice}}/мес.), и мы напомним за 14 дней.]] Автоматического списания нет — продление происходит только когда вы сами оплачиваете.',
+    },
+  },
 });
 
 const LOCALES = ['az', 'en', 'ru'];

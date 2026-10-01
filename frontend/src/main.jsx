@@ -14,7 +14,6 @@ import ErrorBoundary from './components/common/ErrorBoundary'
 import { installChunkReloadHandler } from './lib/chunkReload'
 import { BRAND } from './lib/brand'
 import './index.css'
-import './styles/livekit-override.css'
 import 'leaflet/dist/leaflet.css'
 
 // Some WebViews/devices can ignore static viewport; enforce on runtime too.

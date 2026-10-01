@@ -15,7 +15,6 @@ async function createLiveLesson(
     provider: providerRaw = 'mentorix_live',
     groupId = null,
     title = null,
-    notifySms = false,
     notifyEmail = false,
     scheduledAt = null,
     durationMinutes = 60,
@@ -55,7 +54,6 @@ async function createLiveLesson(
   const { room, notifications } = await createLiveRoom(instructorId, {
     groupId,
     title,
-    notifySms,
     notifyEmail,
     scheduledAt,
     provider: providerId,

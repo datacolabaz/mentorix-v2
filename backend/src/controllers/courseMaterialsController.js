@@ -1,4 +1,5 @@
 const path = require('path');
+const { localeFromReq } = require('../lib/userLocale');
 const {
   getMaterialsQuota,
   assertMaterialsUploadAllowed,
@@ -113,7 +114,7 @@ const postMaterial = async (req, res) => {
       });
     }
 
-    await assertMaterialsUploadAllowed(req.user.id, fileSize);
+    await assertMaterialsUploadAllowed(req.user.id, fileSize, { locale: localeFromReq(req) });
 
     const title = String(req.body.title || req.file.originalname || 'Material').trim().slice(0, 200);
     const rel = `/api/materials/file/${req.file.filename}`;

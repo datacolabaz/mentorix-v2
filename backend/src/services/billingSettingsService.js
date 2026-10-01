@@ -160,15 +160,15 @@ function isPayriffConfigured() {
 }
 
 async function getBillingConfig() {
-  const [manual_transfer_account, sms_packs, storage_packs, operator] = await Promise.all([
+  const [manual_transfer_account, storage_packs, operator] = await Promise.all([
     getManualTransferAccount(),
-    getSmsPacks(),
     getStoragePacks(),
     getOperatorInventoryFromSettings(),
   ]);
   return {
     manual_transfer_account,
-    sms_packs,
+    // SMS retired: no SMS packs are offered (kept as an empty list for older clients).
+    sms_packs: [],
     storage_packs,
     payriff_enabled: isPayriffConfigured(),
     ...operator,

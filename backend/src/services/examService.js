@@ -759,7 +759,7 @@ const isExamActive = (exam) => {
   return now >= start && now <= end;
 };
 
-const REMINDER_MINUTES_BEFORE = 5;
+const REMINDER_MINUTES_BEFORE = 60;
 
 function buildStudentExamUrl(examId) {
   const base = String(process.env.FRONTEND_URL || process.env.FRONTEND_BASE_URL || '').replace(/\/+$/, '');
@@ -843,16 +843,11 @@ async function notifyStudentExamAssigned(studentId, exam, { email = true } = {})
 }
 
 /**
- * İmtahan təyinatı: əvvəl Gmail (email növbəsi) + panel bildirişi.
- * SMS/WhatsApp yalnız options.sendSms === true olduqda (müəllim təsdiqi ilə).
+ * İmtahan təyinatı: panel bildirişi + e-poçt (bildiriş servisi; seçimlərə tabedir).
  */
 const sendExamPlacedNotifications = async (examId, options = {}) => {
-  const sendSms = options.sendSms === true;
   const skipPlacementEmail = options.skipPlacementEmail === true;
   const skipPlacementInApp = options.skipPlacementInApp === true;
-  const { sendStudentWhatsAppOrSms, pickStudentNotifyPhone } = require('./studentMessagingService');
-  const { getWhatsAppConfig } = require('./whatsappService');
-  const waCfg = sendSms ? getWhatsAppConfig() : { examTemplateName: null };
   const filterIds = Array.isArray(options.studentIds)
     ? new Set(options.studentIds.map((x) => String(x)))
     : null;
@@ -872,15 +867,7 @@ const sendExamPlacedNotifications = async (examId, options = {}) => {
   }
   if (!assignments.length) return { sent: 0, skipped: 0, emails: 0 };
 
-  const when = formatExamScheduleAz(exam);
-  const mins = Number(exam.duration_minutes) || 60;
-  const title = String(exam.title || 'İmtahan').trim();
-  const examLink = buildStudentExamUrl(exam.id);
-  const linkHint = examLink ? `\nLink: ${examLink}` : '';
-
   let emails = 0;
-  let sent = 0;
-  let skipped = 0;
 
   if (!skipPlacementInApp) {
     for (const s of assignments) {
@@ -889,59 +876,35 @@ const sendExamPlacedNotifications = async (examId, options = {}) => {
     }
   }
 
-  if (sendSms) {
-    for (const s of assignments) {
-      const targetPhone = pickStudentNotifyPhone(s);
-      if (!targetPhone) {
-        skipped += 1;
-        continue;
-      }
-      const firstName = String(s.full_name || 'Tələbə').trim().split(/\s+/)[0] || 'Tələbə';
-      const msg =
-        `Mentorix: Salam, ${firstName}! "${title}" imtahanı sizin üçün planlaşdırılıb.\n` +
-        `Aktivlik: ${when}\n` +
-        `Müddət: ${mins} dəqiqə.${linkHint}\n` +
-        `Giriş edib imtahana başlayın.`;
-
-      const examTpl = waCfg.examTemplateName;
-      const r = await sendStudentWhatsAppOrSms({
-        instructorId: exam.instructor_id,
-        studentId: s.student_id,
-        phone: targetPhone,
-        message: msg,
-        logType: 'exam_placed',
-        templateNameOverride: examTpl,
-        templateBodyParams: examTpl ? [firstName, title, when, String(mins)] : null,
-      });
-      if (r?.success) sent += 1;
-      else {
-        skipped += 1;
-        console.error('exam placed notify failed', s.student_id, r?.error || r?.whatsapp_error);
-      }
-    }
-  }
-
-  return { sent, skipped, emails, sendSms };
+  return { sent: 0, skipped: 0, emails };
 };
 
-/** İmtahan başlamasına ~5 dəq qalmış: əvvəlcə tələbə nömrəsi, yoxdursa valideyn. */
+/** İmtahan başlamazdan əvvəl xatırlatma: panel + e-poçt (bildiriş servisi, dedupe başlama vaxtına bağlı). */
 const sendExamStartReminderForExam = async (exam) => {
-  const { sendStudentWhatsAppOrSms, pickStudentNotifyPhone } = require('./studentMessagingService');
+  const { createNotificationSafe } = require('./notificationService');
   const assignments = await loadExamAssignmentContacts(exam.id);
-  const startTime = formatExamScheduleAz(exam);
+  const startsAt = formatExamScheduleAz(exam);
+  const startMs = new Date(exam.start_time).getTime();
+  const examTitle = String(exam.title || 'İmtahan').trim();
 
   for (const s of assignments) {
-    const targetPhone = pickStudentNotifyPhone(s);
-    if (!targetPhone) continue;
-
-    const r = await sendStudentWhatsAppOrSms({
-      instructorId: exam.instructor_id,
-      studentId: s.student_id,
-      phone: targetPhone,
-      message: `Mentorix: "${exam.title}" imtahanı ${startTime} tarixində başlayacaq (~${REMINDER_MINUTES_BEFORE} dəq qalıb). Hazır olun!`,
-      logType: 'exam_reminder',
+    await createNotificationSafe({
+      recipientId: s.student_id,
+      category: 'assessment',
+      eventType: 'exam_starting_soon',
+      priority: 'HIGH',
+      params: {
+        examTitle,
+        startsAt: startsAt === '—' ? '' : startsAt,
+        minutes: Number(exam.duration_minutes) || '',
+      },
+      meta: { exam_id: exam.id, href: '/student/exams' },
+      relatedEntityType: 'exam',
+      relatedEntityId: exam.id,
+      providerWorkspaceId: exam.instructor_id || null,
+      dedupeKey: `exam_starting_soon:${exam.id}:${Number.isFinite(startMs) ? startMs : 'na'}`,
+      email: true,
     });
-    if (!r?.success) console.error('exam reminder notify failed', targetPhone, r?.error);
   }
 };
 
@@ -950,7 +913,7 @@ const sendExamStartReminderForExam = async (exam) => {
  */
 const processExamNotificationJobs = async () => {
   const { rows } = await db.query(
-    `SELECT nj.id AS job_id, e.id AS exam_id, e.instructor_id, e.title, e.start_time,
+    `SELECT nj.id AS job_id, e.id AS exam_id, e.instructor_id, e.title, e.start_time, e.duration_minutes,
             e.notify_students, e.notify_enabled, e.status
      FROM notification_jobs nj
      INNER JOIN exams e ON e.id = nj.exam_id
@@ -975,19 +938,20 @@ const processExamNotificationJobs = async () => {
       instructor_id: row.instructor_id,
       title: row.title,
       start_time: row.start_time,
+      duration_minutes: row.duration_minutes,
     };
     try {
       await sendExamStartReminderForExam(exam);
     } catch (err) {
-      console.error('exam reminder SMS', row.job_id, err.message);
+      console.error('exam reminder notify', row.job_id, err.message);
     }
     await db.query('UPDATE notification_jobs SET processed_at = NOW() WHERE id = $1', [row.job_id]);
   }
 };
 
 /**
- * Yeni / yenilənmiş imtahan üçün tək exam_reminder job-u (başlamadan 5 dəq əvvəl).
- * İmtahan <5 dəq sonraya planlanıbsa, dərhal SMS (cron gözləmədən).
+ * Yeni / yenilənmiş imtahan üçün tək exam_reminder job-u (başlamadan REMINDER_MINUTES_BEFORE dəq əvvəl).
+ * İmtahan daha tez başlayırsa, xatırlatma dərhal göndərilir (cron gözləmədən).
  */
 const syncExamReminderJob = async (examId) => {
   await db.query(
@@ -1020,40 +984,63 @@ const syncExamReminderJob = async (examId) => {
   }
 };
 
-/** Tələbə təqdimetdikdən sonra valideynə (əvvəlcə profil valideyn nömrəsi, sonra valideyn user, sonra tələbə). */
-const notifyParentExamResultAfterSubmit = async (examId, studentId, score) => {
-  const { sendStudentWhatsAppOrSms } = require('./studentMessagingService');
+/**
+ * Tələbə təqdim etdikdən sonra bağlı valideyn hesabına (student_profiles.parent_id) nəticə xülasəsi:
+ * panel + e-poçt, "parent" kateqoriyası. Bal/cavab mətnə yazılmır — valideyn panelində görünür.
+ * Profildəki valideyn emailinə (student_profiles.parent_email) ayrıca qısa email gedir; ünvan hesabın
+ * emaili ilə eynidirsə yalnız hesab bildirişi göndərilir.
+ */
+const notifyParentExamResultAfterSubmit = async (examId, studentId) => {
+  const { createNotificationSafe } = require('./notificationService');
+  const { planParentResultDelivery, queueParentContactResultEmail } = require('./parentContactEmailService');
   const { rows: [row] } = await db.query(
-    `SELECT e.title, e.show_results, e.notify_students, e.notify_enabled, e.instructor_id, u.full_name AS student_name,
-            COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone, u.phone) AS notify_phone
+    `SELECT e.title, e.notify_students, e.notify_enabled, e.instructor_id, u.full_name AS student_name,
+            u.locale AS student_locale, pu.id AS parent_id, pu.email AS parent_account_email,
+            sp.parent_email, sp.parent_email_opt_out_at
      FROM exams e
      JOIN exam_assignments ea ON ea.exam_id = e.id AND ea.student_id = $2
      JOIN users u ON u.id = $2
-     LEFT JOIN student_profiles sp ON sp.user_id = u.id
-     LEFT JOIN users pu ON pu.id = sp.parent_id
+     JOIN student_profiles sp ON sp.user_id = u.id
+     LEFT JOIN users pu ON pu.id = sp.parent_id AND pu.deleted_at IS NULL AND COALESCE(pu.is_active, TRUE) = TRUE
      WHERE e.id = $1`,
     [examId, studentId]
   );
-  if (!row?.notify_students || !row?.notify_enabled) return;
-  if (!row?.notify_phone) return;
-
-  const clean = String(row.notify_phone).replace(/\D/g, '');
-  if (clean.length < 9) return;
-
-  const name = row.student_name || 'Tələbə';
-  const pts = Math.round(Number(score) * 100) / 100;
-  const safePts = Number.isFinite(pts) ? pts : 0;
-  const title = String(row.title || 'İmtahan').trim();
-  const msg = `Mentorix: Salam, ${name}! "${title}" imtahanında ${safePts} bal toplayıb.`;
-
-  const r = await sendStudentWhatsAppOrSms({
-    instructorId: row.instructor_id,
-    studentId,
-    phone: row.notify_phone,
-    message: msg,
-    logType: 'exam_result',
+  if (!row || !row.notify_students || !row.notify_enabled) return;
+  const plan = planParentResultDelivery({
+    parentAccountId: row.parent_id,
+    parentAccountEmail: row.parent_account_email,
+    parentEmail: row.parent_email,
+    parentEmailOptedOut: Boolean(row.parent_email_opt_out_at),
   });
-  if (!r?.success) console.error('exam result notify failed', r?.error);
+  const params = {
+    studentName: String(row.student_name || 'Tələbə').trim(),
+    examTitle: String(row.title || 'İmtahan').trim(),
+  };
+
+  if (plan.account) {
+    await createNotificationSafe({
+      recipientId: row.parent_id,
+      category: 'parent',
+      eventType: 'parent_result_summary',
+      params,
+      meta: { exam_id: examId, student_id: studentId, href: '/parent' },
+      relatedEntityType: 'exam',
+      relatedEntityId: examId,
+      providerWorkspaceId: row.instructor_id || null,
+      dedupeKey: `parent_result_summary:${examId}:${studentId}`,
+      email: true,
+    });
+  }
+  if (plan.contact) {
+    await queueParentContactResultEmail({
+      examId,
+      studentId,
+      instructorId: row.instructor_id,
+      parentEmail: row.parent_email,
+      locale: row.student_locale,
+      params,
+    }).catch((e) => console.warn('[parent-contact] queue failed', String(examId).slice(0, 8), e?.code || 'error'));
+  }
 };
 
 module.exports = {
@@ -1075,5 +1062,6 @@ module.exports = {
   syncExamReminderJob,
   buildStudentExamUrl,
   sendExamPlacedNotifications,
+  sendExamStartReminderForExam,
   notifyParentExamResultAfterSubmit,
 };

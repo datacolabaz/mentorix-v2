@@ -1,9 +1,7 @@
 const db = require('../utils/db');
 const { recomputeInstructorUsage } = require('../services/resourceUsageService');
-const { sendSms } = require('../services/smsService');
-const { ensureSmsPeriodUpToDate, logBillingEvent, resolveEntitlements } = require('../services/billingEntitlements');
+const { logBillingEvent, resolveEntitlements } = require('../services/billingEntitlements');
 const {
-  smsUsageLine,
   storageUsageLine,
   pickLimitCta,
   isHighestTierPlan,
@@ -35,29 +33,11 @@ const getAdminNotifications = async (req, res) => {
         const plansMap = await getActivePlansMap();
         const plan = ent?.plan || 'basic';
         const alerts = [];
-        const smsLine = smsUsageLine(used.sms_monthly, lim);
-        if (smsLine && smsLine.pct >= 80) {
-          const cta = pickLimitCta({
-            plan,
-            plansMap,
-            reachedSms: smsLine.pct >= 100,
-            reachedStorage: false,
-            reachedStudents: false,
-          });
-          alerts.push({
-            type: 'sms',
-            message: smsLine.pct >= 100 ? smsLine.message : smsLine.warnMessage,
-            level: smsLine.pct >= 100 ? 'critical' : 'warning',
-            cta,
-          });
-        }
-
         const stLine = storageUsageLine(used, lim);
         if (stLine && stLine.pct >= 80) {
           const cta = pickLimitCta({
             plan,
             plansMap,
-            reachedSms: false,
             reachedStorage: stLine.pct >= 100,
             reachedStudents: false,
           });
@@ -100,32 +80,6 @@ const getInstructorNotifications = async (req, res) => {
     if (messages?.suppress_limit_bar) {
       /* InstructorLayout BillingBanner göstərir; təkrar qırmızı zolaq yox */
     } else {
-      const smsLine = smsUsageLine(used.sms_monthly, lim);
-      if (smsLine && smsLine.pct >= 80) {
-        const highest = isHighestTierPlan(plan, plansMap);
-        const cta =
-          smsLine.pct >= 100 && highest
-            ? { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' }
-            : pickLimitCta({
-                plan,
-                plansMap,
-                reachedSms: smsLine.pct >= 100,
-                reachedStorage: false,
-                reachedStudents: false,
-              });
-        alerts.push({
-          type: 'sms',
-          message:
-            smsLine.pct >= 100 && highest
-              ? 'Aylıq SMS limitinizə çatdınız. İstifadəyə davam etmək üçün əlavə SMS paketi əldə edə bilərsiniz.'
-              : smsLine.pct >= 100
-                ? smsLine.message
-                : smsLine.warnMessage,
-          level: smsLine.pct >= 100 ? 'critical' : 'warning',
-          cta,
-        });
-      }
-
       const stLine = storageUsageLine(used, lim);
       if (stLine && stLine.pct >= 80) {
         const highest = isHighestTierPlan(plan, plansMap);
@@ -135,7 +89,6 @@ const getInstructorNotifications = async (req, res) => {
             : pickLimitCta({
                 plan,
                 plansMap,
-                reachedSms: false,
                 reachedStorage: stLine.pct >= 100,
                 reachedStudents: false,
               });
@@ -157,8 +110,6 @@ const getInstructorNotifications = async (req, res) => {
     const discoverAlert = buildDiscoverProfileAlert(discoverCompleteness);
     if (discoverAlert) alerts.unshift(discoverAlert);
 
-    const smsLim = lim.sms_monthly;
-    const smsUsed = Number(used.sms_monthly || 0) || 0;
     const stLimMb = lim.storage_mb ?? null;
     const stLimBytes = stLimMb != null ? Number(stLimMb) * 1024 * 1024 : null;
     const stUsedBytes = Number(used.storage_bytes ?? 0) || 0;
@@ -170,9 +121,6 @@ const getInstructorNotifications = async (req, res) => {
       billing_messages: messages,
       pending_topup: pendingTopup,
       profile: {
-        sms_limit: smsLim,
-        sms_limit_plan: lim.sms_monthly_plan ?? null,
-        sms_used_monthly: smsUsed,
         plan,
         storage_limit_mb: stLimMb,
         storage_limit_bytes: stLimBytes,
@@ -359,8 +307,14 @@ const quickInstructorNotification = async (req, res) => {
     }
 
     const rawMethod = String(method || 'internal').trim().toLowerCase();
-    const safeMethod =
-      rawMethod === 'sms' ? 'sms' : rawMethod === 'whatsapp' ? 'whatsapp' : 'internal';
+    if (rawMethod === 'sms') {
+      return res.status(410).json({
+        success: false,
+        code: 'SMS_RETIRED',
+        message: 'SMS bildirişləri dayandırılıb. Bildiriş platforma daxilində və e-poçtla göndərilir.',
+      });
+    }
+    const safeMethod = rawMethod === 'whatsapp' ? 'whatsapp' : 'internal';
     const title = 'Sürətli Bildiriş';
 
     if (safeMethod === 'internal') {
@@ -385,11 +339,10 @@ const quickInstructorNotification = async (req, res) => {
       return res.json({ success: true, method: 'internal', sent });
     }
 
-    if (safeMethod === 'sms' || safeMethod === 'whatsapp') {
-      const { getInstructorPhoneVerificationBlock } = require('../utils/instructorPhone');
-      const block = await getInstructorPhoneVerificationBlock(db, instructorId);
-      if (block) return res.status(block.statusCode).json(block.body);
-    }
+    // WhatsApp (the only phone channel left; SMS retired).
+    const { getInstructorPhoneVerificationBlock } = require('../utils/instructorPhone');
+    const block = await getInstructorPhoneVerificationBlock(db, instructorId);
+    if (block) return res.status(block.statusCode).json(block.body);
 
     const studentsWithPhones = allowedStudents.filter((s) => {
       const p = String(s.phone ?? '').trim();
@@ -402,96 +355,39 @@ const quickInstructorNotification = async (req, res) => {
       });
     }
 
-    if (safeMethod === 'whatsapp') {
-      if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
-        return res.status(503).json({
-          success: false,
-          message:
-            'WhatsApp API konfiqurasiya olunmayıb (WHATSAPP_ACCESS_TOKEN və WHATSAPP_PHONE_NUMBER_ID).',
-        });
-      }
-
-      const { sendStudentWhatsAppOrSms } = require('../services/studentMessagingService');
-      let sent = 0;
-      let failed = 0;
-      const errors = [];
-
-      for (const s of studentsWithPhones) {
-        const r = await sendStudentWhatsAppOrSms({
-          instructorId,
-          studentId: s.id,
-          phone: s.phone,
-          message: msg,
-          logType: 'instructor_whatsapp',
-          whatsappOnly: true,
-        });
-        if (r?.success) sent += 1;
-        else {
-          failed += 1;
-          if (errors.length < 5) errors.push({ student_id: s.id, error: r?.error || 'failed' });
-        }
-      }
-
-      if (!sent) {
-        return res.status(502).json({
-          success: false,
-          message:
-            'Heç bir tələbəyə WhatsApp göndərilmədi. Test rejimində recipient siyahısı və ya təsdiqlənmiş WHATSAPP_TEMPLATE_NAME şablonu lazımdır.',
-          failed,
-          errors,
-        });
-      }
-
-      return res.json({
-        success: true,
-        method: 'whatsapp',
-        sent,
-        failed,
-        ...(errors.length ? { errors } : {}),
+    if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
+      return res.status(503).json({
+        success: false,
+        message:
+          'WhatsApp API konfiqurasiya olunmayıb (WHATSAPP_ACCESS_TOKEN və WHATSAPP_PHONE_NUMBER_ID).',
       });
     }
 
-    // SMS method (hard-enforced by usage_counters + entitlements; UI disable is not security).
-    // Ensure monthly period source-of-truth is up to date (request-time, not cron).
-    await ensureSmsPeriodUpToDate(db, instructorId).catch(() => {});
-
-    const ent = await resolveEntitlements(instructorId);
-    const smsLimit = ent?.limits?.sms_monthly;
-    let smsUsed = Number(ent?.usage?.sms_monthly || 0) || 0;
-
+    const { sendStudentWhatsApp } = require('../services/studentMessagingService');
     let sent = 0;
     let failed = 0;
     const errors = [];
 
     for (const s of studentsWithPhones) {
-      if (smsLimit != null && smsUsed >= Number(smsLimit)) {
-        errors.push({ phone: s.phone, error: 'SMS limiti dolub' });
+      const r = await sendStudentWhatsApp({
+        instructorId,
+        studentId: s.id,
+        phone: s.phone,
+        message: msg,
+        logType: 'instructor_whatsapp',
+      });
+      if (r?.success) sent += 1;
+      else {
         failed += 1;
-        continue;
-      }
-      const r = await sendSms({ instructorId, phone: s.phone, message: msg });
-      if (r.code === 'PHONE_VERIFICATION_REQUIRED') {
-        return res.status(403).json({
-          success: false,
-          message: r.error,
-          code: r.code,
-          needs_instructor_phone: true,
-        });
-      }
-      if (r.success) {
-        sent += 1;
-        smsUsed += 1;
-      } else {
-        failed += 1;
-        errors.push({ phone: s.phone, error: r.error || 'göndərilmədi' });
+        if (errors.length < 5) errors.push({ student_id: s.id, error: r?.error || 'failed' });
       }
     }
 
     if (!sent) {
       return res.status(502).json({
         success: false,
-        message: 'Heç bir tələbəyə SMS göndərilmədi.',
-        sent: 0,
+        message:
+          'Heç bir tələbəyə WhatsApp göndərilmədi. Test rejimində recipient siyahısı və ya təsdiqlənmiş WHATSAPP_TEMPLATE_NAME şablonu lazımdır.',
         failed,
         errors,
       });
@@ -499,7 +395,7 @@ const quickInstructorNotification = async (req, res) => {
 
     return res.json({
       success: true,
-      method: 'sms',
+      method: 'whatsapp',
       sent,
       failed,
       ...(errors.length ? { errors } : {}),

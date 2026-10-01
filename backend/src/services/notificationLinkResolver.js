@@ -45,6 +45,8 @@ function targetFor(notification) {
   if (type.startsWith('billing_') || type === 'payment' || type === 'payment_confirmed' || type === 'student_limit_block') {
     return { kind: 'billing' };
   }
+  if (type.startsWith('storage_limit_')) return { kind: 'storage' };
+  if (type === 'weekly_teacher_digest') return { kind: 'digest' };
   if (uuidOrNull(meta.assignment_id)) return { kind: 'assignment', id: uuidOrNull(meta.assignment_id) };
   if (uuidOrNull(meta.material_id)) return { kind: 'material', id: uuidOrNull(meta.material_id) };
   if (uuidOrNull(meta.exam_id)) return { kind: 'exam', id: uuidOrNull(meta.exam_id) };
@@ -130,6 +132,34 @@ async function resolveExam(q, id, user) {
     );
     return mine ? ok('/student/exams') : FORBIDDEN;
   }
+  if (user.role === 'parent') {
+    const child = await exists(
+      q,
+      `SELECT 1 FROM exam_assignments ea
+       JOIN student_profiles sp ON sp.user_id = ea.student_id
+       WHERE ea.exam_id = $1 AND sp.parent_id = $2
+       LIMIT 1`,
+      [id, user.id],
+    );
+    return child ? ok('/parent') : FORBIDDEN;
+  }
+  return FORBIDDEN;
+}
+
+async function resolveLiveLesson(q, id, user) {
+  const { rows } = await q.query(`SELECT * FROM live_rooms WHERE id = $1 LIMIT 1`, [id]);
+  const room = rows[0];
+  if (!room) return NOT_FOUND;
+  const { canViewLesson } = require('./liveLessonService');
+  return (await canViewLesson(user, room, { client: q })) ? ok(`/live/${encodeURIComponent(room.room_code)}`) : FORBIDDEN;
+}
+
+async function resolveCertificate(q, id, user) {
+  const { rows } = await q.query(`SELECT student_id, instructor_id FROM certificates WHERE id = $1 LIMIT 1`, [id]);
+  const c = rows[0];
+  if (!c) return NOT_FOUND;
+  if (user.role === 'student' && String(c.student_id) === String(user.id)) return ok('/student/certificates');
+  if (user.role === 'instructor' && String(c.instructor_id) === String(user.id)) return ok('/instructor/certificates');
   return FORBIDDEN;
 }
 
@@ -228,6 +258,14 @@ async function resolveNotificationLink(notification, user, opts = {}) {
       return resolvePartner(q, user);
     case 'billing':
       return resolveBilling(user);
+    case 'storage':
+      return user.role === 'instructor' ? ok('/instructor/settings#billing-plans') : NONE;
+    case 'digest':
+      return user.role === 'instructor' ? ok('/instructor/analytics') : NONE;
+    case 'live_lesson':
+      return resolveLiveLesson(q, target.id, user);
+    case 'certificate':
+      return resolveCertificate(q, target.id, user);
     case 'href': {
       const href = safeLegacyHref(target.href, user.role);
       return href ? ok(href) : FORBIDDEN;

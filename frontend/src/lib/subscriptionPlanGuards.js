@@ -15,13 +15,6 @@ export function planStorageByteLimit(p) {
   return null
 }
 
-export function planSmsMonthlyLimit(p) {
-  const n = p?.limits?.sms_monthly
-  if (n == null || n === '') return null
-  const v = Number(n)
-  return Number.isFinite(v) ? Math.max(0, Math.round(v)) : null
-}
-
 export function planExamsMonthlyLimit(p) {
   const n = p?.limits?.exams_monthly
   if (n == null || n === '') return null
@@ -41,7 +34,6 @@ export function usageFromBilling(billing) {
   return {
     students: Number(u.students) || 0,
     storage_bytes: Number(u.storage_bytes) || 0,
-    sms_monthly: Number(u.sms_monthly) || 0,
     exams_monthly: Number(u.exams_monthly) || 0,
     homeworks_monthly: Number(u.homeworks_monthly) || 0,
   }
@@ -67,15 +59,6 @@ export function downgradeBlockedByUsage(billing, targetPlan) {
       blocked: true,
       reason: 'storage',
       tooltip: 'Cari yaddaş istifadəniz bu paketin limitindən çoxdur.',
-    }
-  }
-
-  const maxSms = planSmsMonthlyLimit(targetPlan)
-  if (maxSms != null && used.sms_monthly > maxSms) {
-    return {
-      blocked: true,
-      reason: 'sms',
-      tooltip: 'Bu ay göndərilmiş SMS sayınız hədəf paketin aylıq limitindən çoxdur.',
     }
   }
 
@@ -124,7 +107,7 @@ export function downgradeBlockedByPeriod(billing) {
   return { blocked: false, reason: null, tooltip: null }
 }
 
-/** Aşağı paket: 1 ay + tələbə/SMS/yaddaş hər üçü hədəf paketə uyğun olmalıdır */
+/** Aşağı paket: 1 ay + tələbə və yaddaş hədəf paketə uyğun olmalıdır */
 export function planDowngradeGuard(billing, currentPlanId, targetPlan) {
   const to = planRank(targetPlan?.id)
   const from = planRank(currentPlanId)
@@ -140,28 +123,6 @@ export function planRank(id) {
   if (s === 'growth') return 3
   if (s === 'pro') return 2
   return 1
-}
-
-function pendingSmsQuantity(billing) {
-  const n = Number(billing?.pending_topup?.pending_sms_quantity)
-  if (Number.isFinite(n) && n > 0) return Math.round(n)
-  const items = billing?.pending_topup?.items
-  if (!Array.isArray(items)) return 0
-  return items.reduce((sum, r) => {
-    if (String(r?.product_type || '') !== 'sms') return sum
-    return sum + Math.max(0, Math.round(Number(r.sms_quantity) || 0))
-  }, 0)
-}
-
-/** Effektiv limit dolub (gözləyən SMS təsdiqi ilə bağlanacaqsa, hələ «dolub» sayılmır) */
-export function isSmsMonthlyLimitReached(billing) {
-  const lim = billing?.limits?.sms_monthly
-  if (lim == null) return false
-  const used = Number(billing?.usage?.sms_monthly) || 0
-  const pending = pendingSmsQuantity(billing)
-  const effective = Number(lim)
-  if (pending > 0 && used < effective + pending) return false
-  return used >= effective
 }
 
 export function isExamsMonthlyLimitReached(billing) {
@@ -183,10 +144,6 @@ export const EXAM_MONTHLY_LIMIT_MESSAGE =
 
 export const HOMEWORK_MONTHLY_LIMIT_MESSAGE =
   'Aylıq tapşırıq limitinizə çatdınız. Zəhmət olmasa paketinizi yeniləyin.'
-
-export function hasPendingSmsTopup(billing) {
-  return pendingSmsQuantity(billing) > 0
-}
 
 export function isStorageLimitReached(billing) {
   const limB = billing?.limits?.storage_limit_bytes
@@ -239,14 +196,7 @@ export function isInstructorBillingBlocked(billing) {
   return false
 }
 
-/** Əlavə SMS/yaddaş yalnız ödənişli paketlərdə (SADƏ-də yox). */
-export function canBuySmsOnCurrentPlan(billing, smsPacksCount = 0) {
-  if (isBasicPlan(billing)) return false
-  if (billing?.can_buy_addons === false) return false
-  if (String(billing?.status || '') === 'expired') return false
-  return smsPacksCount > 0
-}
-
+/** Əlavə yaddaş yalnız ödənişli paketlərdə (pulsuz sınaqda yox). */
 export function canBuyStorageOnCurrentPlan(billing, storagePacksCount = 0) {
   if (isBasicPlan(billing)) return false
   if (billing?.can_buy_addons === false) return false
@@ -254,14 +204,9 @@ export function canBuyStorageOnCurrentPlan(billing, storagePacksCount = 0) {
   return storagePacksCount > 0
 }
 
-/** Cari paketdə limit dolubsa — əlavə SMS və ya (aşağı deyilsə) yüksək paket */
-export function shouldOfferLimitTopUpChoice(
-  billing,
-  { smsPacksCount = 0, storagePacksCount = 0 } = {},
-) {
-  const sms = isSmsMonthlyLimitReached(billing) && canBuySmsOnCurrentPlan(billing, smsPacksCount)
-  const storage = isStorageLimitReached(billing) && canBuyStorageOnCurrentPlan(billing, storagePacksCount)
-  return sms || storage
+/** Cari paketdə yaddaş dolubsa — əlavə yaddaş və ya yüksək paket */
+export function shouldOfferLimitTopUpChoice(billing, { storagePacksCount = 0 } = {}) {
+  return isStorageLimitReached(billing) && canBuyStorageOnCurrentPlan(billing, storagePacksCount)
 }
 
 export function planTitleOrSlug(plan, slugFallback = '') {
@@ -287,7 +232,7 @@ export function mapSearchUpgradePlansLabel(plans, aboveSlug = 'pro') {
   return joinAzOr(names)
 }
 
-export const PLAN_TITLES_SEO_FALLBACK = 'SADƏ, STANDART, PROFESSIONAL və PREMIUM'
+export const PLAN_TITLES_SEO_FALLBACK = 'Pulsuz sınaq, PROFESSIONAL və PREMIUM'
 
 export function allActivePlanTitlesList(plans) {
   const names = (plans || [])
@@ -349,15 +294,14 @@ export function higherPaidPlansSuffix(plans, currentSlug = 'basic') {
 }
 
 export function basicTrialExpiredMessage(plans) {
-  return `21 günlük SADƏ sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plans, 'basic')} seçin.`
+  return `21 günlük pulsuz sınaq müddəti bitib. Davam etmək üçün ${higherPaidPlansLabel(plans, 'basic')} seçin.`
 }
 
 /** Fərdi çat üçün minimum paket adı (admin `title`: STANDART və s.). */
 export function directChatMinimumPlanLabel(plans) {
   const next = nextPlanInList(plans, 'basic')
   if (next) return planTitleOrSlug(next)
-  const pro = (plans || []).find((p) => String(p?.id || '').toLowerCase() === 'pro')
-  return planTitleOrSlug(pro, 'pro')
+  return 'PROFESSIONAL'
 }
 
 /** Cari pulsuz paketin göstərilən adı (admin `title`: SADƏ). */

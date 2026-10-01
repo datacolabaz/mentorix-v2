@@ -4,7 +4,7 @@ const { normalizePlanSlug, planRank } = require('../config/plans');
 function assertAddonsAllowed(planSlug, plansMap) {
   if (normalizePlanSlug(planSlug) === 'basic') {
     const hint = higherPaidPlansLabel(plansMap, 'basic');
-    const err = new Error(`SADƏ paketində əlavə SMS və yaddaş alına bilməz. ${hint} seçin.`);
+    const err = new Error(`Pulsuz sınaqda əlavə yaddaş alına bilməz. ${hint} seçin.`);
     err.code = 'ADDON_NOT_ON_BASIC';
     err.statusCode = 403;
     throw err;
@@ -16,8 +16,6 @@ const { higherPaidPlansLabel } = require('./billingAlertHelpers');
 const { createOrder } = require('./payriffService');
 const {
   getManualTransferAccount,
-  getSmsPacks,
-  findSmsPack,
   getStoragePacks,
   findStoragePack,
 } = require('./billingSettingsService');
@@ -25,6 +23,19 @@ const { normalizeBillingInterval } = require('./billingActivationService');
 const { logBillingEvent, assertDowngradeAllowed } = require('./billingEntitlements');
 const { getCheckoutDiscountForUser } = require('./partner/partnerCommissionService');
 const { applyDiscountCents } = require('./partner/partnerMath');
+const { LEGACY_PLAN, assertLegacyRenewalAllowed } = require('./legacyPlanMigrationService');
+const { reserveCreditForPayment } = require('./billingCreditService');
+
+/** Account credit covered the whole amount: no card/cash step, activate right away. */
+async function completeWithCredit(paymentId) {
+  await db.query(
+    `UPDATE billing_payments SET provider = 'credit', payment_method = 'credit', expires_at = NULL, updated_at = NOW()
+     WHERE id = $1`,
+    [paymentId]
+  );
+  const { fulfillBillingPayment } = require('./billingActivationService');
+  await fulfillBillingPayment(paymentId);
+}
 
 function yearlyTotalFromMonthly(monthlyAzn, discountPct = 0.2) {
   const m = Number(monthlyAzn || 0) || 0;
@@ -57,6 +68,14 @@ async function createPlanCheckout({
   const toRank = planRank(plan);
   const fromRank = planRank(from);
 
+  // Legacy (non-public) plans can only be renewed by their current subscribers.
+  if (picked?.is_public === false && plan !== from) {
+    const err = new Error('Bu paket artıq yeni abunəlik üçün təklif olunmur.');
+    err.code = 'PLAN_NOT_AVAILABLE';
+    err.statusCode = 400;
+    throw err;
+  }
+
   if (toRank < fromRank) {
     await assertDowngradeAllowed(db, userId, plan);
   } else if (toRank > fromRank) {
@@ -68,7 +87,7 @@ async function createPlanCheckout({
     throw err;
   } else if (normalizePlanSlug(plan) === 'basic') {
     const err = new Error(
-      `SADƏ paketi yenilənmir — yalnız 21 günlük sınaqdır. ${higherPaidPlansLabel(plansMap, 'basic')} seçin.`,
+      `Pulsuz sınaq yenilənmir — yalnız 21 günlükdür. ${higherPaidPlansLabel(plansMap, 'basic')} seçin.`,
     );
     err.code = 'BASIC_NOT_RENEWABLE';
     err.statusCode = 400;
@@ -85,6 +104,9 @@ async function createPlanCheckout({
   }
 
   const billingInterval = normalizeBillingInterval(intervalRaw);
+  if (picked?.is_public === false && plan === from && plan === LEGACY_PLAN) {
+    await assertLegacyRenewalAllowed(db, { userId, subscriptionStatus: cur.status, billingInterval });
+  }
   let finalPriceAzn = billingInterval === 'yearly' ? yearlyTotalFromMonthly(priceAzn, 0.2) : priceAzn;
 
   if (
@@ -148,6 +170,26 @@ async function createPlanCheckout({
   );
   const paymentId = ins[0]?.id;
 
+  const credit = await reserveCreditForPayment({ userId, paymentId, amountCents });
+  amountCents = credit.amountCents;
+  const creditAppliedCents = credit.appliedCents;
+  if (creditAppliedCents > 0 && amountCents === 0) {
+    await completeWithCredit(paymentId);
+    return {
+      id: paymentId,
+      provider: 'credit',
+      payment_method: 'credit',
+      product_type: 'plan',
+      plan,
+      amount_cents: 0,
+      credit_applied_cents: creditAppliedCents,
+      currency: 'AZN',
+      status: 'paid',
+      billing_interval: billingInterval,
+      partner_discount: partnerDiscount,
+    };
+  }
+
   if (paymentMethod === 'cash') {
     await db.query(
       `UPDATE billing_payments
@@ -179,6 +221,7 @@ async function createPlanCheckout({
       manual_transfer_account: manualAccount,
       description: `Mentorix — ${String(picked?.title || plan).trim()} (${periodLabel})`,
       partner_discount: partnerDiscount,
+      credit_applied_cents: creditAppliedCents,
     };
   }
 
@@ -234,121 +277,16 @@ async function createPlanCheckout({
     payment_url: paymentUrl,
     billing_interval: billingInterval,
     partner_discount: partnerDiscount,
+    credit_applied_cents: creditAppliedCents,
   };
 }
 
-async function createSmsCheckout({ userId, smsQuantity, paymentMethod: paymentMethodRaw, callbackUrl }) {
-  const paymentMethod = normalizePaymentMethod(paymentMethodRaw);
-  const packs = await getSmsPacks();
-  const pack = findSmsPack(packs, smsQuantity);
-  if (!pack) {
-    const err = new Error('SMS paketi tapılmadı');
-    err.code = 'SMS_PACK_INVALID';
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const cur = await getCurrentPlan(db, userId);
-  const planSlug = normalizePlanSlug(cur.plan);
-  const plansMap = await getActivePlansMap();
-  assertAddonsAllowed(planSlug, plansMap);
-
-  const finalPriceAzn = Number(pack.price_azn) || 0;
-  const amountCents = Math.round(finalPriceAzn * 100);
-  const provider = paymentMethod === 'cash' ? 'manual' : 'payriff';
-
-  const { rows: ins } = await db.query(
-    `INSERT INTO billing_payments (
-       user_id, provider, plan, amount_cents, currency, status,
-       payment_method, product_type, sms_quantity
-     )
-     VALUES ($1, $2, $3, $4, 'AZN', 'pending', $5, 'sms', $6)
-     RETURNING id`,
-    [userId, provider, planSlug, amountCents, paymentMethod, pack.quantity]
-  );
-  const paymentId = ins[0]?.id;
-
-  if (paymentMethod === 'cash') {
-    await db.query(
-      `UPDATE billing_payments SET expires_at = NOW() + interval '7 days', updated_at = NOW() WHERE id = $1`,
-      [paymentId]
-    );
-    const manualAccount = await getManualTransferAccount();
-    await db.query(
-      `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
-       VALUES ($1, 'sms_topup', NULL, $2, $3, 'AZN', 'pending', 'manual', $4)`,
-      [userId, `+${pack.quantity} SMS`, amountCents, String(paymentId)]
-    );
-    return {
-      id: paymentId,
-      provider: 'manual',
-      payment_method: 'cash',
-      product_type: 'sms',
-      sms_quantity: pack.quantity,
-      plan: planSlug,
-      amount_cents: amountCents,
-      currency: 'AZN',
-      status: 'pending',
-      manual_transfer_account: manualAccount,
-      description: `Mentorix — ${pack.label}`,
-    };
-  }
-
-  if (!callbackUrl) {
-    const err = new Error('CALLBACK_URL_MISSING');
-    err.code = 'CALLBACK_URL_MISSING';
-    err.statusCode = 500;
-    throw err;
-  }
-
-  await db.query(
-    `UPDATE billing_payments SET expires_at = NOW() + interval '30 minutes' WHERE id = $1`,
-    [paymentId]
-  );
-
-  const order = await createOrder({
-    amount: finalPriceAzn,
-    currency: 'AZN',
-    language: 'AZ',
-    description: `Mentorix — ${pack.label}`,
-    callbackUrl,
-    metadata: {
-      payment_id: paymentId,
-      user_id: userId,
-      product_type: 'sms',
-      sms_quantity: pack.quantity,
-    },
-  });
-
-  const orderId = order?.payload?.orderId || null;
-  const paymentUrl = order?.payload?.paymentUrl || null;
-
-  await db.query(
-    `UPDATE billing_payments
-     SET external_order_id = $2, payment_url = $3, raw_create_response = $4::jsonb, updated_at = NOW()
-     WHERE id = $1`,
-    [paymentId, orderId, paymentUrl, JSON.stringify(order)]
-  );
-
-  await db.query(
-    `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
-     VALUES ($1, 'sms_topup', NULL, $2, $3, 'AZN', 'pending', 'payriff', $4)`,
-    [userId, `+${pack.quantity} SMS`, amountCents, orderId]
-  );
-
-  return {
-    id: paymentId,
-    provider: 'payriff',
-    payment_method: 'card',
-    product_type: 'sms',
-    sms_quantity: pack.quantity,
-    plan: planSlug,
-    amount_cents: amountCents,
-    currency: 'AZN',
-    status: 'pending',
-    external_order_id: orderId,
-    payment_url: paymentUrl,
-  };
+/** SMS top-ups are no longer sold. Historical sms payments stay in billing_payments untouched. */
+async function createSmsCheckout() {
+  const err = new Error('SMS xidməti dayandırılıb; SMS paketi alına bilməz.');
+  err.code = 'SMS_RETIRED';
+  err.statusCode = 410;
+  throw err;
 }
 
 async function createStorageCheckout({ userId, storageMb, paymentMethod: paymentMethodRaw, callbackUrl }) {
@@ -368,7 +306,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
   assertAddonsAllowed(planSlug, plansMap);
 
   const finalPriceAzn = Number(pack.price_azn) || 0;
-  const amountCents = Math.round(finalPriceAzn * 100);
+  let amountCents = Math.round(finalPriceAzn * 100);
   const provider = paymentMethod === 'cash' ? 'manual' : 'payriff';
 
   const { rows: ins } = await db.query(
@@ -381,6 +319,25 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
     [userId, provider, planSlug, amountCents, paymentMethod, pack.quantity_mb]
   );
   const paymentId = ins[0]?.id;
+
+  const credit = await reserveCreditForPayment({ userId, paymentId, amountCents });
+  amountCents = credit.amountCents;
+  const creditAppliedCents = credit.appliedCents;
+  if (creditAppliedCents > 0 && amountCents === 0) {
+    await completeWithCredit(paymentId);
+    return {
+      id: paymentId,
+      provider: 'credit',
+      payment_method: 'credit',
+      product_type: 'storage',
+      storage_mb: pack.quantity_mb,
+      plan: planSlug,
+      amount_cents: 0,
+      credit_applied_cents: creditAppliedCents,
+      currency: 'AZN',
+      status: 'paid',
+    };
+  }
 
   if (paymentMethod === 'cash') {
     await db.query(
@@ -405,6 +362,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
       status: 'pending',
       manual_transfer_account: manualAccount,
       description: `Mentorix — ${pack.label}`,
+      credit_applied_cents: creditAppliedCents,
     };
   }
 
@@ -421,7 +379,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
   );
 
   const order = await createOrder({
-    amount: finalPriceAzn,
+    amount: amountCents / 100,
     currency: 'AZN',
     language: 'AZ',
     description: `Mentorix — ${pack.label}`,
@@ -462,6 +420,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
     status: 'pending',
     external_order_id: orderId,
     payment_url: paymentUrl,
+    credit_applied_cents: creditAppliedCents,
   };
 }
 

@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const db = require('../utils/db');
 const { resolveGroupStudentIds } = require('./assignmentHomeworkService');
-const { sendSms } = require('./smsService');
 const { sendLiveClassStartedEmail, frontendBaseUrl } = require('./studentNotificationEmailService');
 const getCurrentPlan = require('./billingGetCurrentPlan');
 const {
@@ -112,7 +111,6 @@ async function createLiveRoom(
   {
     groupId,
     title,
-    notifySms = false,
     notifyEmail = false,
     scheduledAt = null,
     provider = 'mentorix_live',
@@ -186,16 +184,14 @@ async function createLiveRoom(
   );
   const room = rows[0];
 
-  const wantsNotify = Boolean(notifySms || notifyEmail) && !isFuture;
-  const notifications = wantsNotify
-    ? await notifyGroupForLiveClass(instructorId, room, { notifySms, notifyEmail })
-    : { sms: 0, email: 0 };
+  const wantsNotify = Boolean(notifyEmail) && !isFuture;
+  const notifications = wantsNotify ? await notifyGroupForLiveClass(instructorId, room, { notifyEmail }) : { email: 0 };
 
   return { room, notifications };
 }
 
-async function notifyGroupForLiveClass(instructorId, room, { notifySms = false, notifyEmail = false } = {}) {
-  if (!room?.group_id || (!notifySms && !notifyEmail)) return { sms: 0, email: 0 };
+async function notifyGroupForLiveClass(instructorId, room, { notifyEmail = false } = {}) {
+  if (!room?.group_id || !notifyEmail) return { email: 0 };
 
   const { rows: instructorRows } = await db.query(
     `SELECT full_name FROM users WHERE id = $1 LIMIT 1`,
@@ -205,43 +201,25 @@ async function notifyGroupForLiveClass(instructorId, room, { notifySms = false, 
   const appBase = String(process.env.APP_URL || process.env.FRONTEND_URL || frontendBaseUrl()).replace(/\/$/, '');
   const externalJoin = room.join_url && String(room.join_url).trim();
   const link = externalJoin || `${appBase}/live/${room.room_code}`;
-  const message = `${instructorName} müəllim canlı dərsi başlatdı!\nQoşulmaq üçün: ${link}`;
   const roomTitle = String(room.title || 'Canlı dərs').trim();
 
   const studentIds = await resolveGroupStudentIds(instructorId, room.group_id);
-  if (!studentIds.length) return { sms: 0, email: 0 };
+  if (!studentIds.length) return { email: 0 };
 
-  const { rows: students } = await db.query(
-    `SELECT id, phone, email FROM users WHERE id = ANY($1::uuid[])`,
-    [studentIds],
-  );
+  const { rows: students } = await db.query(`SELECT id FROM users WHERE id = ANY($1::uuid[])`, [studentIds]);
 
-  let sms = 0;
   let email = 0;
   for (const student of students) {
-    if (notifySms && student.phone && String(student.phone).trim()) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await sendSms({
-        instructorId,
-        phone: student.phone,
-        message,
-        logType: 'live_class',
-        studentId: student.id,
-      });
-      if (result?.success) sms += 1;
-    }
-    if (notifyEmail) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await sendLiveClassStartedEmail({
-        userId: student.id,
-        instructorName,
-        roomTitle,
-        liveLink: link,
-      });
-      if (result?.ok) email += 1;
-    }
+    // eslint-disable-next-line no-await-in-loop
+    const result = await sendLiveClassStartedEmail({
+      userId: student.id,
+      instructorName,
+      roomTitle,
+      liveLink: link,
+    });
+    if (result?.ok) email += 1;
   }
-  return { sms, email };
+  return { email };
 }
 
 async function getLiveRoomForRecordingUpload(roomCode, user) {
@@ -411,13 +389,14 @@ async function listInstructorLiveHistory(instructorId, { limit = 50 } = {}) {
             lrec.filename AS recording_filename,
             lrec.duration_sec AS recording_duration_sec,
             lrec.share_token AS recording_share_token,
+            lrec.retirement_notice_sent_at AS recording_retirement_notice_sent_at,
             uploader.full_name AS recorded_by_name,
             tpc.account_email AS connection_account_email,
             (SELECT COUNT(DISTINCT ls.user_id)::int FROM live_sessions ls WHERE ls.room_id = lr.id) AS total_participants,
             (SELECT COALESCE(SUM(ls.duration_minutes), 0)::int FROM live_sessions ls WHERE ls.room_id = lr.id AND ls.duration_minutes IS NOT NULL) AS total_minutes
      FROM live_rooms lr
      LEFT JOIN instructor_groups ig ON ig.id = lr.group_id
-     LEFT JOIN live_recordings lrec ON lrec.room_id = lr.id AND lrec.deleted_at IS NULL AND (lrec.expires_at IS NULL OR lrec.expires_at > NOW())
+     LEFT JOIN live_recordings lrec ON lrec.room_id = lr.id AND lrec.deleted_at IS NULL
      LEFT JOIN users uploader ON uploader.id = lrec.uploaded_by_user_id
      LEFT JOIN teacher_provider_connections tpc ON tpc.id = lr.connection_id AND tpc.provider = lr.provider
      WHERE lr.instructor_id = $1

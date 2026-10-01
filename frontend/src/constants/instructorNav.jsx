@@ -4,7 +4,7 @@ import NavIcon from '../components/common/NavIcon'
 export const INSTRUCTOR_NAV_ITEM_DEFS = {
   dashboard: { to: '/instructor', labelKey: 'nav.instructor.dashboard', label: 'Dashboard', icon: 'dashboard', end: true },
   teaching_groups: { to: '/instructor/teaching-groups', labelKey: 'nav.instructor.teaching_groups', label: 'Sahələr və qruplar', icon: 'courses' },
-  live_history: { to: '/instructor/live/history', labelKey: 'nav.instructor.live_history', label: 'Canlı dərslər', icon: 'live' },
+  live_history: { to: '/instructor/live-lessons', labelKey: 'nav.instructor.live_history', label: 'Canlı dərslər', icon: 'live' },
   students: { to: '/instructor/students', labelKey: 'nav.instructor.students', label: 'Tələbələrim', icon: 'students' },
   join_requests: {
     to: '/instructor/join-requests',
@@ -25,7 +25,7 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   analytics: { to: '/instructor/analytics', labelKey: 'nav.instructor.analytics', label: 'Analitika', icon: 'analytics' },
   engagement: { to: '/instructor/engagement', labelKey: 'nav.instructor.engagement', label: 'Aktivlik', icon: 'progress' },
   payments: { to: '/instructor/payments', labelKey: 'nav.instructor.payments', label: 'Ödənişlər', icon: 'payments' },
-  notifications: { to: '/instructor/notifications', labelKey: 'nav.instructor.notifications', label: 'Bildirişlər', icon: 'notifications' },
+  notifications: { to: '/notifications', labelKey: 'nav.instructor.notifications', label: 'Bildirişlər', icon: 'notifications' },
   settings: { to: '/instructor/settings', labelKey: 'nav.instructor.settings', label: 'Tənzimləmələr', icon: 'settings' },
 
   // Mentor Workspace spesifik linklər (EMCC / Beynəlxalq Standart)

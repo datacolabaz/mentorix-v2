@@ -12,13 +12,12 @@ const TITLE_KEYS = {
 
 const CTA_KEYS = {
   OPEN_SETTINGS_PLANS: 'billing.cta.viewPlans',
-  OPEN_SMS_TOPUP: 'billing.cta.smsTopup',
   OPEN_STORAGE_TOPUP: 'billing.cta.storageTopup',
 }
 
 const NEXT_PLAN_SLUG = {
-  basic: 'pro',
-  pro: 'growth',
+  basic: 'growth',
+  pro: 'premium',
   growth: 'premium',
   premium: 'premium',
 }
@@ -68,7 +67,7 @@ function stylesByStatus(theme) {
 
 function nextPlanName(t, plan) {
   const slug = String(plan || 'basic').toLowerCase()
-  const next = NEXT_PLAN_SLUG[slug] || 'pro'
+  const next = NEXT_PLAN_SLUG[slug] || 'growth'
   return t(`billing.planName.${next}`)
 }
 

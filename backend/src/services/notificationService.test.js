@@ -295,11 +295,11 @@ test('unknown / inactive recipient is skipped', async () => {
 test('input validation rejects bad category / event type / ids', async () => {
   reset();
   seedUsers();
-  await assert.rejects(() => createNotification({ ...baseInput(), category: 'marketing' }), /unknown category/);
+  await assert.rejects(() => createNotification({ ...baseInput(), category: 'sms' }), /unknown category/);
   await assert.rejects(() => createNotification({ ...baseInput(), eventType: 'Bad Type!' }), /snake_case/);
   await assert.rejects(() => createNotification({ ...baseInput(), recipientId: 'nope' }), /uuid/);
   await assert.rejects(() => createNotification({ ...baseInput(), groupId: '1; drop' }), /uuid/);
-  const safe = await createNotificationSafe({ ...baseInput(), category: 'marketing' });
+  const safe = await createNotificationSafe({ ...baseInput(), category: 'sms' });
   assert.equal(safe.created, false);
 });
 

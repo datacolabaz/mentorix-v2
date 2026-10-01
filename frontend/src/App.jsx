@@ -34,10 +34,10 @@ const PublicInstructorProfile = lazy(() => import('./pages/public/PublicInstruct
 const LibraryInvite = lazy(() => import('./pages/public/LibraryInvite'))
 const MaterialInvite = lazy(() => import('./pages/public/MaterialInvite'))
 const MaterialPublicPreview = lazy(() => import('./pages/public/MaterialPublicPreview'))
-const MentorixLive = lazy(() => import('./pages/live/MentorixLive'))
-const LiveGuestJoin = lazy(() => import('./pages/live/LiveGuestJoin'))
-const LiveRecordingShare = lazy(() => import('./pages/live/LiveRecordingShare'))
-const InstructorLiveHistory = lazy(() => import('./pages/instructor/LiveHistory'))
+const LiveLessons = lazy(() => import('./pages/live/LiveLessons'))
+const LiveLessonPage = lazy(() => import('./pages/live/LiveLessonPage'))
+const LiveRetiredNotice = lazy(() => import('./pages/live/LiveRetiredNotice'))
+const EmailUnsubscribe = lazy(() => import('./pages/public/EmailUnsubscribe'))
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
 const InstructorLayout = lazy(() => import('./layouts/InstructorLayout'))
 const StudentLayout = lazy(() => import('./layouts/StudentLayout'))
@@ -83,7 +83,6 @@ const InstructorExams = lazy(() => import('./pages/instructor/Exams'))
 const InstructorAttendance = lazy(() => import('./pages/instructor/Attendance'))
 const InstructorAnalytics = lazy(() => import('./pages/instructor/Analytics'))
 const InstructorPayments = lazy(() => import('./pages/instructor/Payments'))
-const InstructorNotifications = lazy(() => import('./pages/instructor/Notifications'))
 const InstructorSettings = lazy(() => import('./pages/instructor/Settings'))
 const InstructorTeachingGroups = lazy(() => import('./pages/instructor/TeachingGroups'))
 const InstructorJoinRequests = lazy(() => import('./pages/instructor/JoinRequests'))
@@ -239,6 +238,12 @@ function ScrollToTop() {
   return null
 }
 
+/** Redirect that keeps ?query (OAuth callbacks append meet_connected / zoom_error). */
+function NavigateKeepSearch({ to }) {
+  const { search } = useLocation()
+  return <Navigate to={`${to}${search}`} replace />
+}
+
 function InstructorOrMentorDashboard() {
   const isMentor = useIsMentorWorkspace()
   return isMentor ? <MentorDashboard key="mentor" /> : <InstructorDashboard key="instructor" />
@@ -343,22 +348,13 @@ export default function App() {
       <Route path="/task/:taskId" element={<StudentTaskInvite />} />
       <Route path="/library/material/:materialId" element={<MaterialInvite />} />
       <Route path="/m/:shareToken" element={<MaterialPublicPreview />} />
-      <Route path="/lr/:shareToken" element={<LiveRecordingShare />} />
-      <Route path="/live/join/:token" element={<FeatureRoute flag={FEATURE_FLAGS.LIVE_ROOM}><LiveGuestJoin /></FeatureRoute>} />
+      <Route path="/lr/:shareToken" element={<LiveRetiredNotice />} />
+      <Route path="/live/join/:token" element={<LiveRetiredNotice />} />
+      <Route path="/unsubscribe" element={<EmailUnsubscribe />} />
       <Route path="/c/:token" element={<CertificateVerify />} />
       <Route path="/sertifikatli-imtahanlar" element={<CertifiedExamsCatalog />} />
       <Route path="/sertifikatli-imtahanlar/:categorySlug/:examSlug" element={<CertifiedExamDetailPage />} />
       <Route path="/sertifikatli-imtahanlar/:slug" element={<CertifiedExamCategoryPage />} />
-      <Route
-        path="/live/:roomCode"
-        element={
-          <ProtectedRoute roles={['instructor', 'student']}>
-            <FeatureRoute flag={FEATURE_FLAGS.LIVE_ROOM}>
-              <MentorixLive />
-            </FeatureRoute>
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/instructor/presentations/:id/present"
         element={
@@ -419,14 +415,15 @@ export default function App() {
         <Route path="materials" element={<MentorOrInstructorPage mentor={MentorResources} instructor={InstructorMaterialsLibrary} />} />
         <Route path="presentations" element={<InstructorPresentations />} />
         <Route path="presentations/:id" element={<InstructorPresentationViewer />} />
-        <Route path="live/history" element={<InstructorLiveHistory />} />
+        <Route path="live-lessons" element={<LiveLessons />} />
+        <Route path="live/history" element={<NavigateKeepSearch to="/instructor/live-lessons" />} />
         <Route path="roadmap" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorGoals /></FeatureRoute>} />
         <Route path="university-programs" element={<FeatureRoute flag={FEATURE_FLAGS.UNIVERSITY_SEARCH}><InstructorUniversityPrograms /></FeatureRoute>} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
         <Route path="assignments" element={<InstructorTasks />} />
         <Route path="payments" element={<InstructorPayments />} />
-        <Route path="notifications" element={<InstructorNotifications />} />
+        <Route path="notifications" element={<Navigate to="/notifications" replace />} />
         <Route path="settings" element={<InstructorSettings />} />
       </Route>
 
@@ -442,6 +439,7 @@ export default function App() {
         <Route path="groups" element={<StudentMyGroups />} />
         <Route path="join" element={<StudentJoinRedirect />} />
         <Route path="schedule" element={<StudentSchedule />} />
+        <Route path="live-lessons" element={<LiveLessons />} />
         <Route path="chat" element={<GroupChatPage role="student" basePath="/student/chat" />} />
         <Route path="direct-chat" element={<DirectChatPage role="student" />} />
         <Route path="assignment-chat" element={<AssignmentChatPage role="student" />} />
@@ -460,6 +458,7 @@ export default function App() {
       <Route element={<ProtectedRoute roles={['admin', 'instructor', 'student', 'parent', 'course']}><RoleLayout /></ProtectedRoute>}>
         <Route path="/notifications" element={<NotificationCenter />} />
         <Route path="/settings/notifications" element={<NotificationSettings />} />
+        <Route path="/live/:roomCode" element={<LiveLessonPage />} />
       </Route>
 
       <Route path="/parent" element={<ProtectedRoute roles={['parent']}><ParentLayout /></ProtectedRoute>}>

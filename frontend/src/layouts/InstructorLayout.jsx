@@ -15,7 +15,7 @@ import UpgradeModal from '../components/instructor/UpgradeModal'
 import LimitReachedModal from '../components/instructor/LimitReachedModal'
 import BillingLimitTopUpModal from '../components/instructor/BillingLimitTopUpModal'
 import { useSubscriptionPlans } from '../hooks/useSubscriptionPlans'
-import { isSmsMonthlyLimitReached, isStorageLimitReached } from '../lib/subscriptionPlanGuards'
+import { isStorageLimitReached } from '../lib/subscriptionPlanGuards'
 import { useQueryClient } from '@tanstack/react-query'
 import { BILLING_STATUS_QUERY_KEY } from '../hooks/useBillingStatus'
 import { useToast } from '../components/common/Toast'
@@ -45,7 +45,6 @@ const DISCOVER_MODAL_SESSION_PREFIX = 'mx_discover_modal_v1_'
 export default function InstructorLayout() {
   const { t, i18n } = useTranslation()
   const viewPlansLabel = t('billing.cta.viewPlans')
-  const smsTopupLabel = t('billing.cta.smsTopup')
   const { user, logout, updateUser } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -176,10 +175,6 @@ export default function InstructorLayout() {
       setUpgradeOpen(true)
       return
     }
-    if (act === 'OPEN_SMS_TOPUP') {
-      navigate('/instructor/settings', { state: { scrollTo: 'billing-sms-addons' } })
-      return
-    }
     if (act === 'OPEN_STORAGE_TOPUP') {
       navigate('/instructor/settings', { state: { openStorageAddon: true } })
       return
@@ -291,38 +286,37 @@ export default function InstructorLayout() {
     }
   }, [billing?.status])
 
-  const smsLimitReached = Boolean(billing && isSmsMonthlyLimitReached(billing))
   const storageLimitReached = Boolean(billing && isStorageLimitReached(billing))
 
   useEffect(() => {
     if (!billing?.is_highest_tier) return
-    if (!smsLimitReached && !storageLimitReached) return
+    if (!storageLimitReached) return
     const st = String(billing?.status || '')
     if (st !== 'blocked' && st !== 'warning') return
-    const sig = `${billing.plan}:${st}:${smsLimitReached}:${storageLimitReached}`
+    const sig = `${billing.plan}:${st}:${storageLimitReached}`
     if (topUpPromptSigRef.current === sig) return
     topUpPromptSigRef.current = sig
     setTopUpModalOpen(true)
-  }, [billing, smsLimitReached, storageLimitReached])
+  }, [billing, storageLimitReached])
 
   useEffect(() => {
     const onUsageLimit = (ev) => {
       const code = ev?.detail?.code
       const message = ev?.detail?.message || ''
-      if (billing?.is_highest_tier && (code === 'SMS_LIMIT' || code === 'STORAGE_LIMIT')) {
+      if (billing?.is_highest_tier && code === 'STORAGE_LIMIT') {
         setTopUpModalOpen(true)
         return
       }
       setLimitModal({
         open: true,
         message,
-        primaryLabel: code === 'SMS_LIMIT' ? smsTopupLabel : viewPlansLabel,
-        action: code === 'SMS_LIMIT' ? 'OPEN_SMS_TOPUP' : 'OPEN_SETTINGS_PLANS',
+        primaryLabel: viewPlansLabel,
+        action: 'OPEN_SETTINGS_PLANS',
       })
     }
     window.addEventListener('mx:usage-limit', onUsageLimit)
     return () => window.removeEventListener('mx:usage-limit', onUsageLimit)
-  }, [billing?.is_highest_tier, smsTopupLabel, viewPlansLabel])
+  }, [billing?.is_highest_tier, viewPlansLabel])
 
   useEffect(() => {
     const onSubscriptionInactive = (ev) => {
@@ -683,12 +677,6 @@ export default function InstructorLayout() {
         open={topUpModalOpen}
         onClose={() => setTopUpModalOpen(false)}
         planTitle={currentPlanTitle}
-        smsReached={smsLimitReached}
-        storageReached={storageLimitReached}
-        onBuySms={() => {
-          setTopUpModalOpen(false)
-          navigate('/instructor/settings', { state: { scrollTo: 'billing-sms-addons' } })
-        }}
         onManageStorage={() => {
           setTopUpModalOpen(false)
           navigate('/instructor/settings', { state: { openStorageAddon: true } })

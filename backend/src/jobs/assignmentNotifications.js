@@ -64,7 +64,7 @@ async function runAssignmentNotifications({ now = new Date() } = {}) {
           relatedEntityId: row.assignment_id,
           providerWorkspaceId: row.instructor_id || null,
           dedupeKey: `assignment_reminder:auto:${row.student_assignment_id}:${dueYmd}`,
-          email: false,
+          email: true,
         });
         if (settled(out)) {
           await db.query(`UPDATE student_assignments SET reminder_sent_at = NOW() WHERE id = $1`, [row.student_assignment_id]);

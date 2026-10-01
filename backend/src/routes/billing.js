@@ -15,12 +15,14 @@ const { enqueueNotification } = require('../services/notificationQueueService');
 const { getBrand } = require('../config/brand');
 const {
   createPlanCheckout,
-  createSmsCheckout,
   createStorageCheckout,
   normalizePaymentMethod,
 } = require('../services/billingCheckoutService');
 const { fulfillBillingPayment } = require('../services/billingActivationService');
 const { getBillingConfig } = require('../services/billingSettingsService');
+const { getActivePlansMap } = require('../services/subscriptionPlansService');
+const { legacyMigrationStatus } = require('../services/legacyPlanMigrationService');
+const { creditBalanceCents } = require('../services/billingCreditService');
 
 function callbackUrlFromReq(req) {
   const env = String(process.env.PAYRIFF_CALLBACK_URL || '').trim();
@@ -55,8 +57,12 @@ function callbackTokenOk(req) {
 router.get('/status', authenticate, authorize('instructor'), async (req, res) => {
   try {
     const out = await resolveEntitlements(req.user.id, { locale: localeFromReq(req) });
+    const planRow = (await getActivePlansMap())[out.plan] || null;
     res.json({
       plan: out.plan,
+      plan_title: planRow?.title || null,
+      plan_price_azn: planRow ? planRow.price_azn : null,
+      plan_is_public: planRow ? planRow.is_public !== false : true,
       can_buy_addons: out.can_buy_addons,
       can_renew_basic: out.can_renew_basic,
       basic_trial_ip_denied: out.basic_trial_ip_denied,
@@ -74,6 +80,9 @@ router.get('/status', authenticate, authorize('instructor'), async (req, res) =>
       timezone: out.timezone,
       requirements: out.requirements,
       can_direct_chat: planRank(out.plan) >= planRank('pro'),
+      legacy_migration:
+        planRow?.is_public === false ? await legacyMigrationStatus(db, req.user.id).catch(() => null) : null,
+      credit_balance_cents: await creditBalanceCents(db, req.user.id).catch(() => 0),
     });
   } catch (err) {
     res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
@@ -241,21 +250,10 @@ router.post(
   }
 });
 
-router.post('/create-sms-payment', authenticate, authorize('instructor'), async (req, res) => {
-  try {
-    const paymentMethod = normalizePaymentMethod(req.body?.payment_method ?? req.body?.paymentMethod ?? 'card');
-    const callbackUrl = paymentMethod === 'cash' ? null : callbackUrlFromReq(req);
-    const payment = await createSmsCheckout({
-      userId: req.user.id,
-      smsQuantity: req.body?.quantity ?? req.body?.sms_quantity,
-      paymentMethod,
-      callbackUrl,
-    });
-    return res.json({ success: true, payment });
-  } catch (err) {
-    return res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
-  }
-});
+// SMS packages are no longer sold (SMS retired). Historical SMS payments stay in billing history.
+router.post('/create-sms-payment', authenticate, authorize('instructor'), (_req, res) =>
+  res.status(410).json({ success: false, code: 'SMS_RETIRED', message: 'SMS paketləri artıq satılmır.' }),
+);
 
 router.post('/create-storage-payment', authenticate, authorize('instructor'), async (req, res) => {
   try {

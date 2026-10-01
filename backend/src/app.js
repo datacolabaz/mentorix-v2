@@ -28,7 +28,11 @@ const { ensureStarted: ensureCertificateIssueWorker } = require('./jobs/certific
 const { ensureStarted: ensureOpenExamGradingWorker } = require('./jobs/openExamGradingWorker');
 const { runOpenGradingInstructorNotifications } = require('./jobs/openGradingInstructorNotifications');
 const { runInstructorCompleteProfileReminders } = require('./jobs/instructorCompleteProfileReminders');
-const { cleanupExpiredLiveRecordings } = require('./jobs/liveRecordingCleanup');
+const { runLiveLessonReminders } = require('./services/liveLessonService');
+const { runWeeklyTeacherDigest } = require('./jobs/weeklyTeacherDigest');
+const { runStorageLimitAlerts } = require('./jobs/storageLimitAlerts');
+const { runLegacyPlanMigrationNotices } = require('./services/legacyPlanMigrationService');
+const { sendRecordingRetirementNotices, purgeNoticedLegacyRecordings } = require('./jobs/liveRecordingRetirement');
 const { ensureCertificateFontsReady } = require('./services/certificatePdfFonts');
 
 const { ensureAssignmentsUploadDir } = require('./services/assignmentFileStorage');
@@ -240,9 +244,34 @@ cron.schedule('10 */2 * * *', () => {
   );
 });
 
-// Expired live recordings soft-delete + file cleanup: hourly
-cron.schedule('40 * * * *', () => {
-  cleanupExpiredLiveRecordings().catch((e) => console.error('live recording cleanup cron', e.message));
+// Internal-video recordings: the old plan-retention cleanup (jobs/liveRecordingCleanup.js) stays paused.
+// Owner decision: notify each teacher once (export link), delete 30 days after the notice, and only when
+// LIVE_RECORDING_PURGE_ENABLED=true — otherwise the purge is a dry run that logs candidates.
+cron.schedule('0 7 * * *', () => {
+  sendRecordingRetirementNotices().catch((e) => console.error('recording retirement notices cron', e.message));
+});
+cron.schedule('45 3 * * *', () => {
+  purgeNoticedLegacyRecordings().catch((e) => console.error('recording retirement purge cron', e.message));
+});
+
+// Live lesson (Meet/Zoom link) reminders: every minute; rows are claimed with SKIP LOCKED
+cron.schedule('* * * * *', () => {
+  runLiveLessonReminders().catch((e) => console.error('live lesson reminders cron', e.message));
+});
+
+// Weekly teacher digest: Monday 09:00 Baku (05:00 UTC); dedupe key per teacher per week
+cron.schedule('0 5 * * 1', () => {
+  runWeeklyTeacherDigest().catch((e) => console.error('weekly teacher digest cron', e.message));
+});
+
+// Cloud storage 80% / 100% alerts: hourly
+cron.schedule('50 * * * *', () => {
+  runStorageLimitAlerts().catch((e) => console.error('storage limit alerts cron', e.message));
+});
+
+// Legacy STANDART (5 AZN) -> PROFESSIONAL advance notices (14-15 days before renewal): daily 10:00 Baku
+cron.schedule('0 6 * * *', () => {
+  runLegacyPlanMigrationNotices().catch((e) => console.error('legacy plan migration notices cron', e.message));
 });
 
 module.exports = app;

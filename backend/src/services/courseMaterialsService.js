@@ -18,6 +18,7 @@ const {
   STORAGE_LIMIT_MESSAGE,
   MATERIALS_MAX_SINGLE_FILE_BYTES,
 } = require('../constants/materialsPlanLimits');
+const { supportPhoneDisplay } = require('../lib/storageLimitCopy');
 
 async function getInstructorMaterialsUsage(instructorId) {
   try {
@@ -82,7 +83,7 @@ async function getMaterialsQuota(instructorId) {
   };
 }
 
-async function assertMaterialsUploadAllowed(instructorId, addBytes) {
+async function assertMaterialsUploadAllowed(instructorId, addBytes, { locale } = {}) {
   const plan = await getCurrentPlan(db, instructorId);
   const usage = await getInstructorMaterialsUsage(instructorId);
   const verdict = evaluateMaterialsUpload({
@@ -90,6 +91,8 @@ async function assertMaterialsUploadAllowed(instructorId, addBytes) {
     usedBytes: usage.used_bytes,
     fileCount: usage.file_count,
     addBytes,
+    locale,
+    supportPhone: await supportPhoneDisplay(),
   });
   if (!verdict.allowed) {
     const err = new Error(verdict.message || STORAGE_LIMIT_MESSAGE);

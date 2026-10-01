@@ -9,13 +9,12 @@ function isGoogleAccountUser(user) {
   return String(user.auth_provider || '').toLowerCase() === 'google';
 }
 
-/** Müəllim telefonu təsdiqlənməyibsə ciddi əməliyyatlar bloklanır. */
-function userNeedsPhoneVerification(user) {
-  // Google-only giriş: telefon təsdiqi yalnız keçid dövrünün köhnə rejimində tələb olunur.
-  if (!require('../lib/googleOnlyAuth').legacyAuthEnabled()) return false;
-  if (!user || !PHONE_VERIFY_ROLES.has(user.role)) return false;
-  const phone = canonicalStudentPhone(user.phone);
-  return !phone || !Boolean(user.phone_verified);
+/**
+ * Telefon OTP təsdiqi SMS ilə gedirdi; SMS dayandırıldığı üçün heç bir əməliyyat telefon təsdiqi tələb etmir
+ * (əks halda köhnə giriş rejimində müəllim heç vaxt açılmayan bloka düşərdi).
+ */
+function userNeedsPhoneVerification() {
+  return false;
 }
 
 function instructorNeedsPhoneBinding(user) {
@@ -24,8 +23,6 @@ function instructorNeedsPhoneBinding(user) {
 
 function blockMessageForTrigger(trigger) {
   switch (trigger) {
-    case 'sms':
-      return 'SMS göndərmək üçün mobil nömrənizi bir dəfə OTP ilə təsdiqləyin.';
     case 'group':
       return 'Qrup yaratmaq üçün mobil nömrənizi OTP ilə təsdiqləyin.';
     case 'exam':
@@ -66,7 +63,7 @@ async function getPhoneVerificationBlock(dbConn, userId, opts = {}) {
 }
 
 async function getInstructorPhoneVerificationBlock(dbConn, instructorId) {
-  return getPhoneVerificationBlock(dbConn, instructorId, { trigger: 'sms' });
+  return getPhoneVerificationBlock(dbConn, instructorId);
 }
 
 function phoneVerificationHttpError(block) {

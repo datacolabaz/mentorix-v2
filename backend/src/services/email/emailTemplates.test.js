@@ -60,7 +60,9 @@ test('subjects never carry scores, codes or tokens', () => {
     for (const locale of SUPPORTED_EMAIL_LOCALES) {
       const out = renderEmail(key, locale, { score: '95', percent: '87%', answerKey: 'KEY_B' }, { ctaUrl: CTA, env: ENV });
       assert.doesNotMatch(out.subject, /95|87%|KEY_B/, `${key}/${locale}`);
-      assert.doesNotMatch(out.text, /95|87%|KEY_B/, `${key}/${locale}: unknown params are ignored`);
+      // storage_limit_warning legitimately shows the storage percentage in the body (never in the subject).
+      const unknown = key === 'storage_limit_warning' ? /95|KEY_B/ : /95|87%|KEY_B/;
+      assert.doesNotMatch(out.text, unknown, `${key}/${locale}: unknown params are ignored`);
     }
   }
 });

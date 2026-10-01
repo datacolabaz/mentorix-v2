@@ -35,7 +35,6 @@ export default function InstructorJoinRequests() {
   const [loading, setLoading] = useState(true)
   const [actingId, setActingId] = useState(null)
   const [examApproveModal, setExamApproveModal] = useState(null)
-  const [examApproveSendSms, setExamApproveSendSms] = useState(false)
   const [profileIncompleteModal, setProfileIncompleteModal] = useState(null)
   const [rejectTarget, setRejectTarget] = useState(null)
 
@@ -58,11 +57,10 @@ export default function InstructorJoinRequests() {
     void load()
   }, [load])
 
-  const approve = async (requestId, kind = 'group_join', opts = {}) => {
+  const approve = async (requestId, kind = 'group_join') => {
     setActingId(requestId)
     try {
       const body = { kind }
-      if (kind === 'exam_access') body.send_sms = Boolean(opts.sendSms)
       const r = await api.post(`/instructor/join-requests/${encodeURIComponent(requestId)}/approve`, body)
       toast(r?.message || t('joinRequests.approved'), 'success')
       await load()
@@ -92,7 +90,6 @@ export default function InstructorJoinRequests() {
       })
       return
     }
-    setExamApproveSendSms(false)
     setExamApproveModal(req)
   }
 
@@ -284,27 +281,13 @@ export default function InstructorJoinRequests() {
               {examApproveModal.exam_title ? ` — «${examApproveModal.exam_title}»` : ''}
             </p>
             <p className="text-xs text-emerald-200/90">{t('joinRequests.examApproveEmailHint')}</p>
-            <label className="flex items-start gap-3 rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 cursor-pointer">
-              <input
-                type="checkbox"
-                className="mt-1 w-4 h-4 accent-blue-500 shrink-0"
-                checked={examApproveSendSms}
-                onChange={(e) => setExamApproveSendSms(e.target.checked)}
-              />
-              <span>
-                <span className="font-semibold text-white block">{t('joinRequests.examApproveSmsLabel')}</span>
-                <span className="text-xs text-gray-400">{t('joinRequests.examApproveSmsHint')}</span>
-              </span>
-            </label>
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
               <Button variant="secondary" onClick={() => setExamApproveModal(null)}>
                 {t('common.cancel')}
               </Button>
               <Button
                 loading={actingId === examApproveModal.request_id}
-                onClick={() =>
-                  approve(examApproveModal.request_id, 'exam_access', { sendSms: examApproveSendSms })
-                }
+                onClick={() => approve(examApproveModal.request_id, 'exam_access')}
               >
                 {t('joinRequests.approve')}
               </Button>

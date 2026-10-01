@@ -167,9 +167,9 @@ export const FAQ = [
   {
     q: { az: 'telefon sms otp google qeydiyyat', ru: 'телефон смс otp google регистрация', en: 'phone sms otp google signup' },
     a: {
-      az: 'Müəllim Google ilə qeydiyyatda SMS almır. Telefon qrup/imtahan/tələbə əlavə edəndə OTP ilə təsdiqlənir.',
-      ru: 'При Google-регистрации SMS не уходит. Телефон подтверждается OTP при группе, экзамене или добавлении ученика.',
-      en: 'Google signup does not send SMS. Phone OTP is required when creating a group, exam or adding a student.',
+      az: 'Mentorix telefona kod və ya mesaj göndərmir. Qeydiyyat Google və ya e-poçtla olur, bildirişlər panelə və e-poçta gəlir.',
+      ru: 'Mentorix не отправляет коды или сообщения на телефон. Регистрация через Google или e-mail, уведомления приходят в панель и на почту.',
+      en: 'Mentorix does not send codes or messages to your phone. Sign up with Google or email; notifications arrive in the panel and by email.',
     },
   },
   {

@@ -2,7 +2,7 @@ const db = require('../utils/db');
 const policy = require('../config/notificationPolicy');
 const { claimDue, recordOutcome, MAX_RETRIES, isNotificationRow } = require('../services/notificationQueueService');
 const { userEmail } = require('../services/emailService');
-const { sendSms } = require('../services/smsService');
+const { unsubscribeUrl } = require('../services/emailUnsubscribe');
 const { sendMail, safeMessage } = require('../services/email/emailTransport');
 const { renderEmail, notificationTemplateKey, emailLocale, GENERIC_NOTIFICATION_KEY } = require('../services/email/emailTemplates');
 const { appLink } = require('../services/email/emailConfig');
@@ -10,6 +10,7 @@ const { resolveNotificationLink } = require('../services/notificationLinkResolve
 const { emitNotificationEvent, NOTIFICATION_EVENTS } = require('../services/notificationEvents');
 const { formatDateTime } = require('../utils/formatDateTime');
 const { getBrand } = require('../config/brand');
+const { isParentContactRow, processParentContactEmail } = require('../services/parentContactEmailService');
 
 const shortId = (id) => String(id || '').slice(0, 8);
 
@@ -75,7 +76,8 @@ async function processNotificationEmail(row) {
   }
 
   const eventType = String(n.type || '');
-  if (!policy.isMandatory({ category: n.category, eventType })) {
+  const mandatory = policy.isMandatory({ category: n.category, eventType });
+  if (!mandatory) {
     const decision = policy.resolveDelivery({
       role: n.role,
       category: n.category,
@@ -101,7 +103,10 @@ async function processNotificationEmail(row) {
       : { ...(meta.i18n && typeof meta.i18n.params === 'object' ? meta.i18n.params : {}) };
   params.when = formatDateTime(n.created_at, locale);
 
-  const email = renderEmail(key, locale, params, { ctaUrl: appLink(`/notifications?open=${n.id}`) });
+  const email = renderEmail(key, locale, params, {
+    ctaUrl: appLink(`/notifications?open=${n.id}`),
+    unsubscribeUrl: mandatory ? null : unsubscribeUrl(n.user_id, n.category),
+  });
   const r = await sendMail(
     {
       stream: 'notification',
@@ -142,16 +147,16 @@ async function processLegacyEmail(row) {
   return fromSendResult(r);
 }
 
-async function processSms(row) {
-  const r = await sendSms({ instructorId: row.instructor_id || null, phone: row.to_addr, message: row.body });
-  if (r?.success) return { kind: 'sent', provider: 'sms' };
-  return { kind: 'retry', errorCode: 'sms_failed', errorMessageSafe: safeMessage(r?.error || 'SMS failed') };
+/** SMS is retired: old queued rows are closed without any provider call (history stays). */
+function processSms() {
+  return { kind: 'skipped', errorCode: 'sms_retired', errorMessageSafe: 'SMS channel retired' };
 }
 
 async function processRow(row) {
   if (Number(row.retry_count || 0) >= MAX_RETRIES) {
     return { kind: 'failed', transient: false, errorCode: 'max_attempts', errorMessageSafe: 'Too many attempts' };
   }
+  if (isParentContactRow(row)) return processParentContactEmail(row);
   if (row.channel === 'email') {
     return isNotificationRow(row) ? processNotificationEmail(row) : processLegacyEmail(row);
   }

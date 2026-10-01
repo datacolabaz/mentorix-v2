@@ -975,6 +975,24 @@ function StudentFormFields({
               onChange={(e) => setData((p) => ({ ...p, parent_phone: e.target.value }))}
             />
           </div>
+          {mode === 'edit' && (
+            <div className="col-span-2">
+              <label htmlFor="student-parent-email" className="block text-xs text-gray-500 mb-1">
+                {t('students.form.parentEmail')}
+              </label>
+              <input
+                id="student-parent-email"
+                type="email"
+                autoComplete="off"
+                maxLength={254}
+                className={inp}
+                placeholder={t('students.form.parentEmailPh')}
+                value={data.parent_email || ''}
+                onChange={(e) => setData((p) => ({ ...p, parent_email: e.target.value }))}
+              />
+              <p className="mt-1 text-[11px] text-gray-500">{t('students.form.parentEmailHint')}</p>
+            </div>
+          )}
         </div>
       </div>
       </>
@@ -1356,6 +1374,7 @@ export default function InstructorStudents() {
       lesson_end_times: normalizeLessonEndTimes(s.lesson_end_times, normalizeLessonTimes(s.lesson_times)),
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
+      parent_email: s.parent_email || '',
       notifications_enabled: s.notifications_enabled !== false,
     })
     const editNames = splitFullName(s.full_name)
@@ -1386,6 +1405,7 @@ export default function InstructorStudents() {
       lesson_end_times: normalizeLessonEndTimes(s.lesson_end_times, normalizeLessonTimes(s.lesson_times)),
       parent_name: s.parent_name || '',
       parent_phone: s.parent_phone || '',
+      parent_email: s.parent_email || '',
       notifications_enabled: s.notifications_enabled !== false,
     })
     setEditModal(true)
@@ -1924,9 +1944,16 @@ export default function InstructorStudents() {
       }
     }
 
+    const parentEmailTrim = String(editForm.parent_email || '').trim().toLowerCase()
+    const parentEmailChanged = parentEmailTrim !== String(original.parent_email || '').trim().toLowerCase()
+    if (parentEmailChanged && parentEmailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmailTrim)) {
+      toast(t('students.toasts.invalidParentEmail'), 'error')
+      return
+    }
+
     const enrollmentPatch = effectiveFirstLesson || effectiveEnrollment
 
-    if (emailTrim !== origEmailTrim) {
+    if (emailTrim !== origEmailTrim || parentEmailChanged) {
       if (!editStudentId) {
         toast(t('students.toasts.studentIdMissing'), 'error')
         return
@@ -1937,6 +1964,11 @@ export default function InstructorStudents() {
     try {
       if (emailTrim !== origEmailTrim) {
         await api.patch(`/students/${encodeURIComponent(editStudentId)}/email`, { email: emailTrim || null })
+      }
+      if (parentEmailChanged) {
+        await api.patch(`/students/${encodeURIComponent(editStudentId)}/parent-email`, {
+          parent_email: parentEmailTrim || null,
+        })
       }
 
       // Yalnız dəyişən sahələri göndər (telefon update-də tarix validasiyası trigger olmasın).

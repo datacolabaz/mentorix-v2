@@ -160,7 +160,7 @@ export const PUBLIC_SEO_LANDINGS = [
     path: '/qiymetler',
     title: 'Qiymətlər — Mentorix paketləri',
     description:
-      `Mentorix qiymətləri: ${PLAN_TITLES_SEO_FALLBACK}. Müəllim / təlimçi və təşkilat paketləri — iştirakçı limiti, SMS və xəritədə görünmə.`,
+      `Mentorix qiymətləri: ${PLAN_TITLES_SEO_FALLBACK}. 21 günlük pulsuz sınaq, aylıq paketlər, bulud yaddaşı, AI limitləri və Google Meet / Zoom link dəstəyi ilə canlı dərs planlama.`,
     h1: 'Qiymətlər',
     intro: [
       'Paketlər auditoriyaya görə qruplaşdırılıb: müəllim / təlimçi və təşkilat. İştirakçı hesabları pulsuzdur.',
@@ -228,7 +228,7 @@ export const PUBLIC_SEO_LANDINGS = [
     bullets: [
       'Tapşırıq və imtahan idarəetməsi',
       'Çat, davamiyyət və analitika',
-      'Ödəniş izləmə və SMS bildirişləri',
+      'Ödəniş izləmə və e-poçt bildirişləri',
       'İctimai müəllim axtarış xəritəsi',
     ],
     ctaHref: '/muellimler-ucun',

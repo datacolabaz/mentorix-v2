@@ -3,74 +3,49 @@
 import { AI_PLAN_LIMITS } from '../constants/aiPlanLimits'
 import { planPricingLimitLines } from './subscriptionPlanCopy'
 
+const LIVE_LESSON_LINE = 'Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama'
+
 const BASIC_TRIAL_LANDING_LINES = [
-  'Bütün funksiyaları 21 gün tam sına',
   'Kredit kartı tələb olunmur',
-  'İstənilən vaxt ləğv et',
+  'Sınaq bitdikdə avtomatik ödəniş tutulmur',
+  'İstənilən vaxt dayandıra bilərsiniz',
+  '5 tələbə',
+  '3 imtahan',
+  '5 tapşırıq',
   `${AI_PLAN_LIMITS.basic.questions} AI sual`,
-  `${AI_PLAN_LIMITS.basic.gradings} AI Tapşırıq yoxlama`,
-  'Limitsiz canlı dərslər · 5 iştirakçı',
+  `${AI_PLAN_LIMITS.basic.gradings} AI ilə yoxlanılan açıq-cavab işi`,
+  '1 GB bulud yaddaşı',
+  'Google Meet və Zoom linki ilə canlı dərs planlama',
+  'Məhdud e-poçt bildirişləri',
 ]
 
+const PAID_COMMON = ['Ödəniş izləmə', 'Valideyn e-poçt bildirişləri', 'Ətraflı hesabatlar']
+
 const FALLBACK_MARKETING_BY_SLUG = {
-  basic: [
-    'Ödəniş izləmə',
-    'Valideyn bildirişləri',
-    'Xəritədə görünmə',
-    `${AI_PLAN_LIMITS.basic.questions} AI sual`,
-    `${AI_PLAN_LIMITS.basic.gradings} AI Tapşırıq yoxlama`,
-    'Limitsiz canlı dərslər · 5 iştirakçı',
-  ],
-  pro: [
-    'Ödəniş izləmə',
-    'Valideyn bildirişləri',
-    'Xəritədə görünmə',
-    `${AI_PLAN_LIMITS.pro.questions} AI sual / ay`,
-    `${AI_PLAN_LIMITS.pro.gradings} AI Tapşırıq yoxlama / ay`,
-    'Limitsiz canlı dərslər · 20 iştirakçı',
-    'Yazı: 5 saat/ay',
-  ],
-  growth: [
-    'Ödəniş izləmə',
-    'Valideyn bildirişləri',
-    'Xəritədə görünmə',
-    'Ətraflı hesabatlar',
-    `${AI_PLAN_LIMITS.growth.questions} AI sual / ay`,
-    `${AI_PLAN_LIMITS.growth.gradings} AI Tapşırıq yoxlama / ay`,
-    'Limitsiz canlı dərslər · 50 iştirakçı',
-    'Yazı: 20 saat/ay',
-  ],
-  premium: [
-    'Ödəniş izləmə',
-    'Valideyn bildirişləri',
-    'Xəritədə görünmə',
-    'Ətraflı hesabatlar',
-    'Prioritet texniki dəstək',
-    `${AI_PLAN_LIMITS.premium.questions} AI sual / ay`,
-    `${AI_PLAN_LIMITS.premium.gradings} AI Tapşırıq yoxlama / ay`,
-    'Limitsiz canlı dərslər · Limitsiz iştirakçı',
-    'Yazı: 50 saat/ay',
-  ],
+  basic: ['Google Meet və Zoom linki ilə canlı dərs planlama', 'Məhdud e-poçt bildirişləri'],
+  pro: ['Ödəniş izləmə', 'Valideyn e-poçt bildirişləri', LIVE_LESSON_LINE],
+  growth: [...PAID_COMMON, 'Qrup və fərdi çat', LIVE_LESSON_LINE, 'QR ilə doğrulana bilən sertifikat'],
+  premium: [...PAID_COMMON, 'Prioritet dəstək', LIVE_LESSON_LINE, 'QR ilə doğrulana bilən sertifikat'],
 }
 
 const FALLBACK_META_BY_SLUG = {
   basic: {
-    subtitle: 'Müəllimlər üçün — 21 günlük pulsuz sınaq',
+    subtitle: 'Mentorix-in əsas imkanlarını 21 gün ödənişsiz yoxlayın.',
     popularLabel: null,
-    cta: '21 günlük sınağa başla',
+    cta: 'Pulsuz başla',
   },
   pro: {
-    subtitle: 'Fərdi müəllimlər üçün',
-    popularLabel: '⭐ Ən populyar',
+    subtitle: 'Köhnə paket — mövcud abunəçilər üçün',
+    popularLabel: null,
     cta: 'Planı seç',
   },
   growth: {
-    subtitle: 'Böyüyən müəllimlər üçün',
+    subtitle: 'Böyüyən qrupları idarə edən müəllimlər üçün.',
     popularLabel: null,
     cta: 'Planı seç',
   },
   premium: {
-    subtitle: 'Aktiv müəllimlər üçün',
+    subtitle: 'Aktiv müəllimlər və daha böyük tədris qrupları üçün.',
     popularLabel: null,
     cta: 'Planı seç',
   },
@@ -81,13 +56,17 @@ export function normalizePlanId(p) {
     .trim()
     .toLowerCase()
   if (id === 'business' || id === 'biznes') return 'premium'
+  if (id === 'professional') return 'growth'
   return id || 'basic'
 }
+
+/** Admin-edited marketing lines, minus anything that describes retired SMS or internal-video features. */
+const RETIRED_FEATURE_RE = /\bSMS\b|iştirakçı|participant|участник|\bYazı:|recording|запис/i
 
 export function planMarketingFeatures(p) {
   const fromApi = Array.isArray(p?.marketing_features) ? p.marketing_features : null
   if (fromApi?.length) {
-    return fromApi.map((x) => String(x || '').trim()).filter(Boolean)
+    return fromApi.map((x) => String(x || '').trim()).filter((x) => x && !RETIRED_FEATURE_RE.test(x))
   }
   const id = normalizePlanId(p)
   return FALLBACK_MARKETING_BY_SLUG[id] || FALLBACK_MARKETING_BY_SLUG.basic
@@ -114,17 +93,15 @@ export function landingPlanFeatureLines(p) {
   if (normalizePlanId(p) === 'basic') {
     return BASIC_TRIAL_LANDING_LINES
   }
-  // Marketing bullets from admin may omit AI; always keep quota lines from plan limits.
   const limits = planPricingLimitLines(p)
   const marketing = planMarketingFeatures(p).filter(
-    (line) => !/\b(AI\s*sual|AI\s*Tapşırıq|AI\s*question|AI\s*grading|ИИ-)/i.test(String(line)),
+    (line) => !/\b(AI\s*sual|AI\s*Tapşırıq|AI\s*ilə|AI\s*question|AI\s*grading|ИИ-)/i.test(String(line)) && line !== LIVE_LESSON_LINE,
   )
-  // Prefer limit-derived AI lines (already inside planPricingLimitLines).
   return [...limits, ...marketing]
 }
 
 export function landingPlanPriceLabel(p) {
   const v = Number(p?.price_azn)
-  if (!Number.isFinite(v) || v <= 0) return 'Pulsuz'
+  if (!Number.isFinite(v) || v <= 0) return '0 AZN / 21 gün'
   return `${v} AZN / ay`
 }

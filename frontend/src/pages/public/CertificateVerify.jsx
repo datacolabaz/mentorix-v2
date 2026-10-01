@@ -150,6 +150,19 @@ export default function CertificateVerify() {
                 </p>
               ) : null}
 
+              {cert.status === 'revoked' ? (
+                <p
+                  className="text-red-800 text-xs rounded-lg border border-red-300 bg-red-50 px-3 py-2"
+                  data-testid="certificate-revoked-note"
+                >
+                  {cert.revoked_at
+                    ? t('certificates.verify.revokedOn', {
+                        date: formatNamedDate(cert.revoked_at, i18n.language, { month: 'long', padDay: true }),
+                      })
+                    : t('certificates.verify.revokedNote')}
+                </p>
+              ) : null}
+
               <p className="text-[11px] text-gray-500 pt-2 border-t border-gray-200">
                 {t('certificates.verify.disclaimer', 'Bu rəsmi dövlət akkreditasiyası deyil.')}
               </p>

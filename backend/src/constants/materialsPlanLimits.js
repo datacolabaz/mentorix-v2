@@ -1,4 +1,5 @@
 const { normalizePlanSlug } = require('../config/plans');
+const { storageLimitMessage } = require('../lib/storageLimitCopy');
 
 /** Tək fayl üçün maksimum ölçü (25 MB) */
 const MATERIALS_MAX_SINGLE_FILE_BYTES = 25 * 1024 * 1024;
@@ -7,8 +8,8 @@ const MATERIALS_MAX_SINGLE_FILE_BYTES = 25 * 1024 * 1024;
 const MATERIALS_PLAN_LIMITS = {
   basic: { storageBytes: 50 * 1024 * 1024, maxFiles: 5 },
   pro: { storageBytes: 2 * 1024 * 1024 * 1024, maxFiles: null },
-  growth: { storageBytes: 5 * 1024 * 1024 * 1024, maxFiles: null },
-  premium: { storageBytes: 20 * 1024 * 1024 * 1024, maxFiles: null },
+  growth: { storageBytes: 20 * 1024 * 1024 * 1024, maxFiles: null },
+  premium: { storageBytes: 50 * 1024 * 1024 * 1024, maxFiles: null },
 };
 
 const STORAGE_LIMIT_MESSAGE =
@@ -30,7 +31,7 @@ function formatBytesLabel(bytes) {
 /**
  * @returns {{ allowed: boolean, code?: string, message?: string }}
  */
-function evaluateMaterialsUpload({ planSlug, usedBytes, fileCount, addBytes }) {
+function evaluateMaterialsUpload({ planSlug, usedBytes, fileCount, addBytes, locale, supportPhone }) {
   const size = Number(addBytes) || 0;
   if (size > MATERIALS_MAX_SINGLE_FILE_BYTES) {
     return {
@@ -46,7 +47,13 @@ function evaluateMaterialsUpload({ planSlug, usedBytes, fileCount, addBytes }) {
     return {
       allowed: false,
       code: 'MATERIALS_STORAGE_LIMIT',
-      message: STORAGE_LIMIT_MESSAGE,
+      message: storageLimitMessage({
+        locale,
+        planSlug: normalizePlanSlug(planSlug),
+        usedBytes,
+        limitBytes: limits.storageBytes,
+        supportPhone,
+      }),
     };
   }
 

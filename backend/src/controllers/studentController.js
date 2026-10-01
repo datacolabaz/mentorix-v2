@@ -111,6 +111,7 @@ const listStudents = async (req, res) => {
               e.instructor_id, iu.full_name AS instructor_name,
               rs.name AS referral_source,
               sp.notes AS teacher_notes,
+              sp.parent_email,
               ROUND(AVG(a.session_score)) AS avg_score,
               CASE
                 WHEN e.group_id IS NOT NULL AND COALESCE(ig.is_system, FALSE) = FALSE THEN TRUE
@@ -129,7 +130,7 @@ const listStudents = async (req, res) => {
 
     const group = `GROUP BY u.id, u.full_name, u.email, u.phone, u.last_activity_at, sp.phone_number, sp.parent_id, sp.grade,
                 sp.monthly_fee,
-                sp.parent_name, sp.parent_phone, pu.full_name, pu.phone,
+                sp.parent_name, sp.parent_phone, sp.parent_email, pu.full_name, pu.phone,
                 e.id, e.billing_type, e.lesson_count, e.billing_cycle, e.lesson_weekdays, e.lesson_times, e.lesson_end_times, e.enrollment_start_date, e.billing_timing, e.payment_plan, e.status, e.enrollment_source,
                 e.referral_notes, e.referral_source_id, e.instructor_id, e.subject_id, e.group_id,
                 e.enrolled_at, e.configured_at, e.initial_payment_status, e.payment_due_date, e.discount_percent,

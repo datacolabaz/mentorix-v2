@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import OptionalBetaBadge from '../../components/live/OptionalBetaBadge'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import { planTitleOrSlug, nextPlanInList } from '../../lib/subscriptionPlanGuards'
@@ -24,28 +25,17 @@ import { formatAzn, yearlyTotalAzn, YEARLY_DISCOUNT } from '../../lib/pricing'
 import { planDetailLines, planLimitsHeadline } from '../../lib/subscriptionPlanCopy'
 import { normalizePlanId } from '../../lib/subscriptionPlanMarketing'
 import {
-  canBuySmsOnCurrentPlan,
   canBuyStorageOnCurrentPlan,
   canRenewBasicPlan,
-  hasPendingSmsTopup,
   isBasicTrialActive,
   isBasicTrialExpired,
-  isSmsMonthlyLimitReached,
   isStorageLimitReached,
   planDowngradeGuard,
   planRank,
   shouldOfferLimitTopUpChoice,
   nextPlanId,
 } from '../../lib/subscriptionPlanGuards'
-import {
-  extraSmsBalance,
-  extraStorageBytes,
-  pendingSmsQuantity,
-  pendingStorageMb,
-  planSmsMonthlyLimit,
-  smsUsageDisplay,
-  storageUsageDisplay,
-} from '../../lib/billingUsageDisplay'
+import { extraStorageBytes, pendingStorageMb, storageUsageDisplay } from '../../lib/billingUsageDisplay'
 import Tooltip from '../../components/common/Tooltip'
 import PaymentMethodModal from '../../components/instructor/PaymentMethodModal'
 import StorageAddonModal from '../../components/instructor/StorageAddonModal'
@@ -59,7 +49,7 @@ import { DISCOVER_SUBJECT_INPUT_ID, scheduleScrollToId } from '../../lib/scrollI
 import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
 function billingPaymentTitleLocalized(p, t) {
-  if (p?.product_type === 'sms') return t('settings.billingTitle.sms', { count: p.sms_quantity || 0 })
+  if (p?.product_type === 'sms') return t('settings.billingTitle.legacyAddon')
   if (p?.product_type === 'storage') {
     const mb = Math.round(Number(p.storage_mb) || 0)
     if (mb >= 1024 && mb % 1024 === 0) {
@@ -79,26 +69,10 @@ function billingPaymentTitleLocalized(p, t) {
 
 function billingStatusLocalized(status, t) {
   const s = String(status || '').toLowerCase()
-  if (['pending', 'paid', 'rejected', 'failed', 'expired'].includes(s)) {
+  if (['pending', 'paid', 'rejected', 'failed', 'expired', 'refunded', 'credited'].includes(s)) {
     return t(`settings.billingStatus.${s}`)
   }
   return status || '—'
-}
-
-function buildSmsUsageDetail(billing, t) {
-  const info = smsUsageDisplay(billing)
-  const parts = []
-  if (info.planBase != null) parts.push(t('settings.smsUsage.plan', { count: info.planBase }))
-  if (info.extra > 0) parts.push(t('settings.smsUsage.extra', { count: info.extra }))
-  if (info.pending > 0) parts.push(t('settings.smsUsage.pending', { count: info.pending }))
-  let detail = parts.length ? parts.join(', ') : null
-  if (info.pending > 0 && info.effective != null) {
-    const after = info.effective + info.pending
-    detail = detail
-      ? t('settings.smsUsage.limitAfter', { detail, count: after })
-      : t('settings.smsUsage.afterConfirm', { count: after })
-  }
-  return detail
 }
 
 function buildStorageUsageDetail(billing, t) {
@@ -160,7 +134,6 @@ export default function InstructorSettings() {
   const billingConfigQ = useBillingConfig()
   const manualAccount = billingConfigQ.data?.manual_transfer_account || ''
   const payriffEnabled = Boolean(billingConfigQ.data?.payriff_enabled)
-  const smsPacks = Array.isArray(billingConfigQ.data?.sms_packs) ? billingConfigQ.data.sms_packs : []
   const storagePacks = Array.isArray(billingConfigQ.data?.storage_packs)
     ? billingConfigQ.data.storage_packs
     : []
@@ -170,6 +143,27 @@ export default function InstructorSettings() {
   const [storageAddonOpen, setStorageAddonOpen] = useState(false)
   const [billingPayments, setBillingPayments] = useState([])
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
+  const planCards = useMemo(() => {
+    const slug = String(billing?.plan || '').toLowerCase()
+    if (!slug || plans.some((p) => String(p?.id || '').toLowerCase() === slug)) return plans
+    if (billing?.plan_is_public !== false) return plans
+    const legacy = {
+      id: slug,
+      title: billing?.plan_title || slug.toUpperCase(),
+      price_azn: Number(billing?.plan_price_azn) || 0,
+      limits: billing?.limits || {},
+      legacy: true,
+    }
+    return [...plans, legacy].sort((a, b) => planRank(a.id) - planRank(b.id))
+  }, [billing?.limits, billing?.plan, billing?.plan_is_public, billing?.plan_price_azn, billing?.plan_title, plans])
+  const legacyMigration = billing?.plan_is_public === false ? billing?.legacy_migration || null : null
+  function legacyRenewTarget(card) {
+    return card?.legacy && legacyMigration?.renewal_blocked ? legacyMigration.to_plan || 'growth' : card.id
+  }
+  function formatLegacyDate(iso) {
+    const d = iso ? new Date(iso) : null
+    return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString(i18n.language || 'az') : '—'
+  }
   const [savingLabel, setSavingLabel] = useState(false)
   const [publicLabel, setPublicLabel] = useState('instructor')
   const [mapRegion, setMapRegion] = useState('')
@@ -543,9 +537,9 @@ export default function InstructorSettings() {
 
   const roleWord = publicLabel === 'trainer' ? t('settings.trainer') : t('settings.teacher')
   const currentPlanId = String(billing?.plan || 'basic').toLowerCase()
-  const currentPlanObj = plans.find((p) => String(p?.id || '').toLowerCase() === currentPlanId) || null
+  const currentPlanObj = planCards.find((p) => String(p?.id || '').toLowerCase() === currentPlanId) || null
   const currentPlanTitle = currentPlanObj?.title || String(currentPlanId || '').toUpperCase()
-  const basicUpgradePlanId = useMemo(() => nextPlanId(plans, 'basic') || 'pro', [plans])
+  const basicUpgradePlanId = useMemo(() => nextPlanId(plans, 'basic') || 'growth', [plans])
   const basicUpgradeBtnLabel = useMemo(() => {
     const next = nextPlanInList(plans, 'basic')
     const switchLabel = next ? t('settings.switchToPlan', { plan: planTitleOrSlug(next) }) : null
@@ -598,9 +592,7 @@ export default function InstructorSettings() {
     [billingInterval, t],
   )
 
-  const smsUsageInfo = useMemo(() => smsUsageDisplay(billing), [billing])
   const storageUsageInfo = useMemo(() => storageUsageDisplay(billing), [billing])
-  const localizedSmsDetail = useMemo(() => buildSmsUsageDetail(billing, t), [billing, t])
   const localizedStorageDetail = useMemo(() => buildStorageUsageDetail(billing, t), [billing, t])
 
   const currentPlanPricingLine = useMemo(() => {
@@ -630,20 +622,12 @@ export default function InstructorSettings() {
   }, [planBusy])
 
   function openPlanCheckout(planId) {
-    const p = plans.find((x) => x && String(x.id).toLowerCase() === String(planId).toLowerCase())
+    const p = planCards.find((x) => x && String(x.id).toLowerCase() === String(planId).toLowerCase())
     const monthly = Number(p?.price_azn || 0)
-    const amountAzn =
-      billingInterval === 'yearly' ? yearlyTotalAzn(monthly, YEARLY_DISCOUNT) : monthly
-    setCheckout({ type: 'plan', planId, amountAzn, title: p?.title || planId })
-  }
-
-  function openSmsCheckout(pack) {
-    setCheckout({
-      type: 'sms',
-      quantity: pack.quantity,
-      amountAzn: pack.price_azn,
-      title: pack.label,
-    })
+    // Legacy plans renew monthly only (server enforces LEGACY_PLAN_MONTHLY_ONLY).
+    const interval = p?.legacy ? 'monthly' : billingInterval
+    const amountAzn = interval === 'yearly' ? yearlyTotalAzn(monthly, YEARLY_DISCOUNT) : monthly
+    setCheckout({ type: 'plan', planId, amountAzn, title: p?.title || planId, interval })
   }
 
   function openStorageCheckout(pack) {
@@ -663,11 +647,16 @@ export default function InstructorSettings() {
       if (checkout.type === 'plan') {
         const r = await api.post('/billing/create-payment', {
           plan: checkout.planId,
-          interval: billingInterval,
+          interval: checkout.interval || billingInterval,
           payment_method: paymentMethod,
         })
         const pay = r?.payment
         setCheckout(null)
+        if (pay?.status === 'paid') {
+          toast(t('settings.credit.paidWithCredit'), 'success')
+          void billingQ.refetch?.()
+          return
+        }
         if (paymentMethod === 'cash') {
           const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
           const qs = new URLSearchParams({
@@ -691,6 +680,11 @@ export default function InstructorSettings() {
         })
         const pay = r?.payment
         setCheckout(null)
+        if (pay?.status === 'paid') {
+          toast(t('settings.credit.paidWithCredit'), 'success')
+          void billingQ.refetch?.()
+          return
+        }
         if (paymentMethod === 'cash') {
           const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
           const qs = new URLSearchParams({
@@ -705,35 +699,18 @@ export default function InstructorSettings() {
         const url = pay?.payment_url
         if (!url) throw new Error(t('settings.toasts.paymentLinkFailed'))
         window.location.href = url
-        return
       }
-      const r = await api.post('/billing/create-sms-payment', {
-        quantity: checkout.quantity,
-        payment_method: paymentMethod,
-      })
-      const pay = r?.payment
-      setCheckout(null)
-      if (paymentMethod === 'cash') {
-        const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
-        const qs = new URLSearchParams({
-          account: pay?.manual_transfer_account || manualAccount,
-          amount,
-          product: 'sms',
-        })
-        navigate(`/payment/pending?${qs}`)
-        openBillingReceiptWhatsApp({ amountAzn: amount, product: 'sms' })
-        return
-      }
-      const url = pay?.payment_url
-      if (!url) throw new Error(t('settings.toasts.paymentLinkFailed'))
-      window.location.href = url
     } catch (e) {
       const msg =
         e?.code === 'PLAN_USAGE_EXCEEDS' || /limitini aşır/i.test(String(e?.message || ''))
           ? e?.message || t('settings.toasts.usageExceeds')
           : e?.code === 'PLAN_NOT_UPGRADE'
             ? t('settings.toasts.notUpgrade')
-            : e?.message || t('settings.toasts.paymentFailed')
+            : e?.code === 'LEGACY_PLAN_MIGRATED'
+              ? t('settings.legacyMigration.renewBlocked')
+              : e?.code === 'LEGACY_PLAN_MONTHLY_ONLY'
+                ? t('settings.legacyMigration.monthlyOnly')
+                : e?.message || t('settings.toasts.paymentFailed')
       setPlanErr(msg)
     } finally {
       setPlanBusy(false)
@@ -809,10 +786,14 @@ export default function InstructorSettings() {
       <PersonaSettingsCard />
 
       <Card id="google-meet-settings" className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Google Meet</h2>
+        <h2 className={cardTitleCls}>
+          Google Meet
+          <OptionalBetaBadge />
+        </h2>
         <p className={cardTextCls}>
           Canlı dərslər üçün Google Meet hesabınızı bağlayın
         </p>
+        <p className="mb-3 text-xs text-token-textMuted">{t('live.optionalBetaHint')}</p>
         <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
           {loadingMeetConnections ? (
             <span className="text-token-textMuted">{t('live.loading')}</span>
@@ -846,10 +827,14 @@ export default function InstructorSettings() {
       </Card>
 
       <Card id="zoom-settings" className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Zoom</h2>
+        <h2 className={cardTitleCls}>
+          Zoom
+          <OptionalBetaBadge />
+        </h2>
         <p className={cardTextCls}>
           {t('live.zoomSettingsDescription')}
         </p>
+        <p className="mb-3 text-xs text-token-textMuted">{t('live.optionalBetaHint')}</p>
         <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
           {loadingMeetConnections ? (
             <span className="text-token-textMuted">{t('live.loading')}</span>
@@ -904,28 +889,12 @@ export default function InstructorSettings() {
         ) : null}
         {billing ? (
           <div className="space-y-2">
-            {smsUsageInfo.effective != null ? (
-              <p className="text-[11px] text-token-textMuted leading-relaxed">
-                {t('settings.smsLimitLine', {
-                  label: smsUsageInfo.label,
-                  detail: localizedSmsDetail ? ` — ${localizedSmsDetail}` : '',
-                  plan: currentPlanTitle,
-                })}
-              </p>
-            ) : null}
-            {smsUsageInfo.smsShortfall > 0 ? (
-              <p className="text-[11px] text-amber-300/95 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 leading-relaxed">
-                {t('settings.smsShortfall', {
-                  used: smsUsageInfo.used,
-                  effective: smsUsageInfo.effective,
-                  plan: currentPlanTitle,
-                  shortfall: smsUsageInfo.smsShortfall,
-                })}
-              </p>
-            ) : null}
-            {hasPendingSmsTopup(billing) ? (
-              <p className="text-[11px] text-sky-300/95 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 leading-relaxed">
-                {t('settings.pendingSmsPayment', { plan: currentPlanTitle })}
+            {Number(billing?.credit_balance_cents) > 0 ? (
+              <p
+                className="text-[11px] text-token-textMain rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 leading-relaxed"
+                data-testid="billing-credit-balance"
+              >
+                {t('settings.credit.balance', { amount: (Number(billing.credit_balance_cents) / 100).toFixed(2) })}
               </p>
             ) : null}
             {pendingPlanSlug && pendingPlanSlug !== currentPlanId ? (
@@ -935,10 +904,7 @@ export default function InstructorSettings() {
                 })}
               </p>
             ) : null}
-            {shouldOfferLimitTopUpChoice(billing, {
-              smsPacksCount: smsPacks.length,
-              storagePacksCount: storagePacks.length,
-            }) ? (
+            {shouldOfferLimitTopUpChoice(billing, { storagePacksCount: storagePacks.length }) ? (
               <p className="text-[11px] text-indigo-300/90 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-2 leading-relaxed">
                 {currentPlanId === 'basic' ? (
                   t('settings.basicLimitHint', { plans: basicHigherPlansHint })
@@ -955,25 +921,25 @@ export default function InstructorSettings() {
             {planErr}
           </div>
         ) : null}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
-          {plans.filter(Boolean).map((p) => {
+        <div
+          className={[
+            'grid grid-cols-1 gap-6 items-stretch',
+            planCards.length > 3 ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3',
+          ].join(' ')}
+        >
+          {planCards.filter(Boolean).map((p) => {
             const pid = String(p?.id || '').toLowerCase()
             const isCurrent = pid && pid === currentPlanId
             const isUpgrade = planRank(pid) > planRank(currentPlanId)
             const isDowngrade = planRank(pid) < planRank(currentPlanId)
             const isFree = pid === 'basic'
-            const isProHighlight = pid === 'pro' && Boolean(p.highlight)
+            const isProHighlight = !p.legacy && Boolean(p.highlight)
             const isPendingPlan = Boolean(pendingPlanSlug && pid === pendingPlanSlug && !isCurrent)
             const usageGuard =
               !isCurrent && (isDowngrade || isFree)
                 ? planDowngradeGuard(billing, currentPlanId, p)
                 : { blocked: false, tooltip: null }
-            const smsLimitReached = isSmsMonthlyLimitReached(billing)
-            const storageLimitReached = isStorageLimitReached(billing)
-            const limitChoiceOffer = shouldOfferLimitTopUpChoice(billing, {
-              smsPacksCount: smsPacks.length,
-              storagePacksCount: storagePacks.length,
-            })
+            const limitChoiceOffer = shouldOfferLimitTopUpChoice(billing, { storagePacksCount: storagePacks.length })
             const basicTrialActive = isCurrent && isFree && isBasicTrialActive(billing)
             const basicTrialExpired = isCurrent && isFree && isBasicTrialExpired(billing)
 
@@ -983,11 +949,7 @@ export default function InstructorSettings() {
                 btnLabel = basicTrialExpired ? basicUpgradeBtnLabel : t('settings.btnActivePlan')
               } else if (limitChoiceOffer) {
                 btnLabel = t('settings.btnLimitSolution')
-              } else if (
-                (canBuySmsOnCurrentPlan(billing, smsPacks.length) ||
-                  canBuyStorageOnCurrentPlan(billing, storagePacks.length)) &&
-                (smsPacks.length || storagePacks.length)
-              )
+              } else if (canBuyStorageOnCurrentPlan(billing, storagePacks.length))
                 btnLabel = t('settings.btnBuyExtra')
               else if (canRenewBasicPlan(billing)) btnLabel = t('settings.btnRenew')
               else btnLabel = t('settings.btnCurrent')
@@ -1054,11 +1016,7 @@ export default function InstructorSettings() {
                   setStorageAddonOpen(true)
                   return
                 }
-                if (smsPacks.length) {
-                  document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  return
-                }
-                return openPlanCheckout(p.id)
+                return openPlanCheckout(legacyRenewTarget(p))
               }
               if (isUpgrade) {
                 return openPlanCheckout(p.id)
@@ -1090,7 +1048,7 @@ export default function InstructorSettings() {
                   basicTrialExpired
                     ? 'primary'
                     : isCurrent
-                      ? limitChoiceOffer || (smsLimitReached && smsPacks.length)
+                      ? limitChoiceOffer
                         ? 'primary'
                         : 'secondary'
                       : p.highlight
@@ -1169,6 +1127,23 @@ export default function InstructorSettings() {
                 ) : null}
 
                 <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
+                  {p.legacy ? (
+                    <p className="text-[11px] leading-relaxed text-token-textMuted">{t('settings.legacyPlanNote')}</p>
+                  ) : null}
+                  {p.legacy && legacyMigration ? (
+                    <p
+                      className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-2.5 py-2 text-[11px] leading-relaxed text-token-textMain"
+                      data-testid="legacy-migration-note"
+                    >
+                      {legacyMigration.renewal_blocked
+                        ? t('settings.legacyMigration.noteBlocked')
+                        : legacyMigration.pro_renewals_left > 0
+                          ? t('settings.legacyMigration.noteExtraRenewal')
+                          : t('settings.legacyMigration.noteScheduled', {
+                              date: formatLegacyDate(legacyMigration.effective_at),
+                            })}
+                    </p>
+                  ) : null}
                   <p className="text-[11px] font-medium leading-relaxed text-token-textMain/90">{limitsNote}</p>
                   <p className="whitespace-pre-line text-[11px] leading-relaxed text-token-textMain/85">
                     {detailLines.join('\n')}
@@ -1189,49 +1164,6 @@ export default function InstructorSettings() {
           })}
         </div>
       </Card>
-
-      {smsPacks.length && canBuySmsOnCurrentPlan(billing, smsPacks.length) ? (
-        <Card id="billing-sms-addons" className={settingsCardCls}>
-          <h2 className={cardTitleCls}>{t('settings.buySmsTitle')}</h2>
-          <p className={cardTextCls}>
-            {t('settings.buySmsDesc')}
-          </p>
-          {extraSmsBalance(billing) > 0 ? (
-            <p className="text-xs text-emerald-400/90">
-              {t('settings.confirmedExtraSms', {
-                count: extraSmsBalance(billing),
-                base: planSmsMonthlyLimit(billing) ?? '—',
-                limit: billing?.limits?.sms_monthly ?? '—',
-              })}
-            </p>
-          ) : null}
-          {pendingSmsQuantity(billing) > 0 ? (
-            <p className="text-xs text-sky-400/90">
-              {t('settings.pendingExtraSms', { count: pendingSmsQuantity(billing) })}
-            </p>
-          ) : null}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {smsPacks.filter(Boolean).map((pack) => (
-              <div
-                key={pack?.quantity ?? pack?.label}
-                className="rounded-2xl border border-[color:var(--border-subtle)] p-4 flex flex-col gap-3"
-              >
-                <div className="font-display font-bold text-token-textMain">{pack?.label ?? '—'}</div>
-                <div className="text-lg font-bold text-token-textMain">{formatAzn(pack.price_azn)} AZN</div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full justify-center mt-auto"
-                  disabled={planBusy}
-                  onClick={() => openSmsCheckout(pack)}
-                >
-                  {t('settings.buy')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : null}
 
       {storagePacks.length && canBuyStorageOnCurrentPlan(billing, storagePacks.length) ? (
         <Card id="billing-storage-addons" className={settingsCardCls}>
@@ -1607,20 +1539,20 @@ export default function InstructorSettings() {
                 ? t('settings.limitModalBasic', { plans: basicHigherPlansHint })
                 : t('settings.limitModalPaid', { plan: currentPlanTitle })}
             </p>
-            {localizedSmsDetail ? (
-              <p className="text-xs text-gray-500 rounded-lg bg-white/5 px-3 py-2">{localizedSmsDetail}</p>
+            {localizedStorageDetail ? (
+              <p className="text-xs text-gray-500 rounded-lg bg-white/5 px-3 py-2">{localizedStorageDetail}</p>
             ) : null}
             <div className="flex flex-col gap-2">
-              {canBuySmsOnCurrentPlan(billing, smsPacks.length) ? (
+              {canBuyStorageOnCurrentPlan(billing, storagePacks.length) ? (
                 <Button
                   variant="primary"
                   className="w-full justify-center"
                   onClick={() => {
                     setLimitChoice(null)
-                    document.getElementById('billing-sms-addons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    setStorageAddonOpen(true)
                   }}
                 >
-                  {t('settings.buyExtraSms')}
+                  {t('settings.buyExtraStorage')}
                 </Button>
               ) : null}
               <Button
@@ -1680,18 +1612,12 @@ export default function InstructorSettings() {
       <PaymentMethodModal
         open={Boolean(checkout)}
         onClose={() => setCheckout(null)}
-        title={
-          checkout?.type === 'sms'
-            ? t('settings.checkoutSms')
-            : checkout?.type === 'storage'
-              ? t('settings.checkoutStorage')
-              : t('settings.checkoutPlan')
-        }
+        title={checkout?.type === 'storage' ? t('settings.checkoutStorage') : t('settings.checkoutPlan')}
         subtitle={checkout?.title ? t('settings.checkoutChoice', { title: checkout.title }) : undefined}
         amountAzn={checkout?.amountAzn}
         manualAccount={manualAccount}
         payriffEnabled={payriffEnabled}
-        product={checkout?.type === 'sms' ? 'sms' : checkout?.type === 'storage' ? 'storage' : 'plan'}
+        product={checkout?.type === 'storage' ? 'storage' : 'plan'}
         busy={planBusy}
         onConfirm={confirmCheckout}
       />

@@ -11,11 +11,9 @@ export default function PaymentPending() {
   const product = params.get('product') || 'plan'
 
   const pendingMessage =
-    product === 'sms'
-      ? 'SMS paketi üçün köçürmə qeydə alındı. Qəbzi WhatsApp ilə göndərdikdən sonra admin yoxlayacaq və SMS balansınıza əlavə olunacaq.'
-      : product === 'storage'
-        ? 'Yaddaş paketi üçün köçürmə qeydə alındı. Qəbzi WhatsApp ilə göndərdikdən sonra admin yoxlayacaq və yaddaş limitiniz artırılacaq.'
-        : 'Paket üçün köçürmə qeydə alındı. Qəbzi WhatsApp ilə göndərdikdən sonra admin yoxlayacaq və paketiniz aktivləşdiriləcək.'
+    product === 'storage'
+      ? 'Yaddaş paketi üçün köçürmə qeydə alındı. Qəbzi WhatsApp ilə göndərdikdən sonra admin yoxlayacaq və yaddaş limitiniz artırılacaq.'
+      : 'Paket üçün köçürmə qeydə alındı. Qəbzi WhatsApp ilə göndərdikdən sonra admin yoxlayacaq və paketiniz aktivləşdiriləcək.'
 
   return (
     <div className="p-6 max-w-lg mx-auto">

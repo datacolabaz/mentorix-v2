@@ -31,7 +31,7 @@ export function defaultLoginMarketingPayload() {
       col1_value: '24',
       col2_label: 'Bu ay',
       col2_value: 'Ödənişlər',
-      col3_label: 'SMS',
+      col3_label: 'E-poçt',
       col3_value: 'Aktiv',
       calendar_title: 'Bu həftə — dərs qrafiki',
       calendar_days: ['Pn', 'Ç', 'Çr', 'Ca', 'Cm'],
@@ -62,7 +62,7 @@ export function defaultLoginMarketingPayload() {
         {
           card_enabled: true,
           title: 'Manual işləri avtomatlaşdırır',
-          body: 'Paket bitməsi, ödəniş təsdiqi və SMS xatırlatmaları üçün təkrarlanan əməliyyatlar avtomatlaşır.',
+          body: 'Paket bitməsi, ödəniş təsdiqi və e-poçt xatırlatmaları üçün təkrarlanan əməliyyatlar avtomatlaşır.',
         },
       ],
     },
@@ -98,7 +98,7 @@ export function defaultLoginMarketingPayload() {
           item_enabled: true,
           step: '3',
           title: 'Avtomatik xatırlat',
-          body: 'Paket sonu və vacib hadisələr üçün SMS ilə valideyn/tələbəni xəbərdar et, əlavə manual izləmə azalsın.',
+          body: 'Paket sonu və vacib hadisələr üçün e-poçtla valideyn/tələbəni xəbərdar et, əlavə manual izləmə azalsın.',
         },
         {
           item_enabled: true,
@@ -134,7 +134,7 @@ export function defaultLoginMarketingPayload() {
         {
           item_enabled: true,
           title: 'Ödəniş və valideyn bildirişləri',
-          body: 'Ödəniş tarixlərini idarə edin; avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.',
+          body: 'Ödəniş tarixlərini idarə edin; e-poçt xatırlatmaları və valideynlə nəticə paylaşımı.',
           accent: 'from-amber-500/15',
         },
         {
@@ -152,7 +152,7 @@ export function defaultLoginMarketingPayload() {
       bullets: [
         {
           lead: 'Səhər 5 dəqiqə:',
-          rest: 'bu günün dərsləri, gecikən ödənişlər və “paket az qaldı” SMS-ləri gözləyir.',
+          rest: 'bu günün dərsləri, gecikən ödənişlər və “paket az qaldı” xatırlatmaları gözləyir.',
         },
         {
           lead: 'Dərslər bitəndə:',
@@ -177,7 +177,7 @@ export function defaultLoginMarketingPayload() {
         {
           item_enabled: true,
           q: 'Mobiltelefonda rahatdırmı?',
-          a: 'Əksər müəllimlər telefondan işləyir: qısa süzmə ilə dərslərə baxıb qeydləri təsdiqləyib SMS xatırlatmasını aktiv saxlayırlar.',
+          a: 'Əksər müəllimlər telefondan işləyir: qısa süzmə ilə dərslərə baxıb qeydləri təsdiqləyib e-poçt xatırlatmalarını aktiv saxlayırlar.',
         },
         {
           item_enabled: true,

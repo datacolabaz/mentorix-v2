@@ -1,6 +1,30 @@
 const db = require('../utils/db');
-const { sendSms } = require('../services/smsService');
 const { assertEnrollmentReadAccess } = require('../utils/enrollmentAccessGuard');
+const { notifyBillingOnce } = require('../services/billingNotifications');
+
+const PACK_LAST_LESSON_MESSAGE = 'Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.';
+
+/** Student payment reminder (in-app + email; SMS retired). Same dedupe key as the billing jobs. */
+async function notifyPackLastLesson(enrollmentId) {
+  const { rows: [e] } = await db.query(
+    `SELECT id, instructor_id, student_id, COALESCE(billing_cycle, 1) AS billing_cycle FROM enrollments WHERE id = $1`,
+    [enrollmentId]
+  );
+  if (!e?.student_id) return;
+  const cycle = Number(e.billing_cycle) || 1;
+  await notifyBillingOnce({
+    userId: e.student_id,
+    type: 'billing_pkg_last_lesson_student',
+    title: 'Paket bitir',
+    body: PACK_LAST_LESSON_MESSAGE,
+    priority: 'HIGH',
+    meta: { enrollment_id: e.id, billing_cycle: cycle },
+    providerWorkspaceId: e.instructor_id || null,
+    dedupeKey: `billing_pkg_last_lesson:${e.id}:${cycle}`,
+    email: true,
+  });
+  await db.query(`UPDATE enrollments SET pack_reminder_sent_cycle = billing_cycle WHERE id = $1`, [e.id]);
+}
 
 function normUuid(id) {
   return String(id || '').trim().toLowerCase().replace(/-/g, '');
@@ -51,8 +75,6 @@ function packTriggerAt(limit) {
   if (limit === 12) return 11;
   return null;
 }
-
-const { notifyBillingOnce } = require('../services/billingNotifications');
 
 const markAttendance = async (req, res) => {
   try {
@@ -118,7 +140,6 @@ const markAttendance = async (req, res) => {
     const alreadySent = Number(enrollment.pack_reminder_sent_cycle || 0) >= (Number(enrollment.billing_cycle) || 1);
 
     if (attended && limit && triggerAt && !alreadySent && lessonNum === triggerAt) {
-      const targetPhone = enrollment.student_phone || enrollment.parent_phone;
       const cyc = Number(enrollment.billing_cycle || 1) || 1;
       const pkgLabel = `Paket #${cyc}`;
       const studentBody = `Mentorix: ${pkgLabel} paketinizin bitməsinə 1 dərs qalıb. Davam etmək üçün ödənişi nəzərə alın.`;
@@ -134,6 +155,7 @@ const markAttendance = async (req, res) => {
         meta: { enrollment_id: enrollment.id, billing_cycle: cyc },
         providerWorkspaceId: enrollment.instructor_id,
         dedupeKey: packKey,
+        email: true,
       });
       await notifyBillingOnce({
         userId: enrollment.instructor_id,
@@ -144,21 +166,12 @@ const markAttendance = async (req, res) => {
         providerWorkspaceId: enrollment.instructor_id,
         dedupeKey: packKey,
       });
-
-      if (targetPhone) {
-        await sendSms({
-          instructorId: enrollment.instructor_id,
-          phone: targetPhone,
-          message:
-            'Mentorix: Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.',
-        });
-        await db.query(
-          `UPDATE enrollments
-           SET pack_reminder_sent_cycle = billing_cycle
-           WHERE id = $1`,
-          [enrollment_id]
-        );
-      }
+      await db.query(
+        `UPDATE enrollments
+         SET pack_reminder_sent_cycle = billing_cycle
+         WHERE id = $1`,
+        [enrollment_id]
+      );
     }
 
     // 8/12 paketi bitəndə növbəti billing period açılsın
@@ -308,32 +321,7 @@ const upsertAttendanceLesson = async (req, res) => {
 
     // Pack reminder: 8-pack at 7 completed lessons, 12-pack at 11 completed lessons (once per cycle).
     if (attended && limit && triggerAt && !alreadySent && beforeN < triggerAt && n >= triggerAt) {
-      const { rows: [info] } = await db.query(
-        `SELECT e.instructor_id,               u.full_name AS student_name,
-              COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(u.phone), '')) AS student_phone,
-              COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
-         FROM enrollments e
-         JOIN users u ON u.id = e.student_id
-         LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-         LEFT JOIN users pu ON pu.id = sp.parent_id
-         WHERE e.id = $1`,
-        [enrollment_id]
-      );
-      const targetPhone = info?.student_phone || info?.parent_phone;
-      if (targetPhone) {
-        await sendSms({
-          instructorId: info.instructor_id,
-          phone: targetPhone,
-          message:
-            'Mentorix: Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.',
-        });
-        await db.query(
-          `UPDATE enrollments
-           SET pack_reminder_sent_cycle = billing_cycle
-           WHERE id = $1`,
-          [enrollment_id]
-        );
-      }
+      await notifyPackLastLesson(enrollment_id);
     }
 
     // Paket bitəndə avtomatik növbəti cycle-a KEÇMİRİK.
@@ -490,32 +478,7 @@ const bulkFillAttendancePeriod = async (req, res) => {
     const alreadySent = Number(enInfo?.pack_reminder_sent_cycle || 0) >= cycleNow;
 
     if (attended && limit && triggerAt && !alreadySent && beforeN < triggerAt && afterN >= triggerAt) {
-      const { rows: [info] } = await db.query(
-        `SELECT e.instructor_id,               u.full_name AS student_name,
-              COALESCE(NULLIF(TRIM(sp.phone_number), ''), NULLIF(TRIM(u.phone), '')) AS student_phone,
-              COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone
-         FROM enrollments e
-         JOIN users u ON u.id = e.student_id
-         LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-         LEFT JOIN users pu ON pu.id = sp.parent_id
-         WHERE e.id = $1`,
-        [enrollment_id]
-      );
-      const targetPhone = info?.student_phone || info?.parent_phone;
-      if (targetPhone) {
-        await sendSms({
-          instructorId: info.instructor_id,
-          phone: targetPhone,
-          message:
-            'Mentorix: Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.',
-        });
-        await db.query(
-          `UPDATE enrollments
-           SET pack_reminder_sent_cycle = billing_cycle
-           WHERE id = $1`,
-          [enrollment_id]
-        );
-      }
+      await notifyPackLastLesson(enrollment_id);
     }
 
     res.json({ success: true, updated: toUpsert.length });

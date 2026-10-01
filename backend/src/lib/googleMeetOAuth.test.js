@@ -73,7 +73,7 @@ describe('googleMeetOAuth helpers', () => {
       success: true,
       returnPath: 'https://evil.example/phish',
     });
-    assert.match(url, /^https:\/\/app\.example\/instructor\/live\/history/);
+    assert.equal(url, 'https://app.example/instructor/live-lessons?meet_connected=1');
     if (prev === undefined) delete process.env.FRONTEND_BASE_URL;
     else process.env.FRONTEND_BASE_URL = prev;
   });

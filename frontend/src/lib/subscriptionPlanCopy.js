@@ -6,7 +6,10 @@ import { normalizePlanId } from './subscriptionPlanMarketing'
 
 /** Matches AI quota lines so static/API feature lists do not duplicate them. */
 export const AI_LIMIT_LINE_RE =
-  /\b(AI\s*sual|AI\s*question|ИИ-вопрос|AI\s*Tapşırıq|AI\s*qiymət|AI\s*grading|AI\s*assignment\s*review|ИИ-оцен|ИИ-проверк)/i
+  /\b(AI\s*sual|AI\s*question|ИИ-вопрос|AI\s*Tapşırıq|AI\s*ilə\s*yoxlan|AI\s*qiymət|AI\s*grading|AI-checked|AI\s*assignment\s*review|ИИ-оцен|ИИ-проверк|проверенн\S*\s+ИИ)/i
+
+/** Live lessons run on the teacher's own Google Meet / Zoom / other link; Mentorix only schedules them. */
+const LIVE_LESSON_LINE_FALLBACK = 'Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama'
 
 function pickT(opts) {
   return typeof opts?.t === 'function' ? opts.t : null
@@ -32,278 +35,80 @@ function pt(opts, key, params, fallback) {
   return val === `planCopy.${key}` ? fallback : val
 }
 
-function documentLineFromLimits(lim, opts) {
-  if (!lim) return null
-  const docs = lim.documents ?? lim.document_limit
-  if (docs == null) return pt(opts, 'limits.documentsUnlimited', {}, 'Limitsiz sənəd')
-  return pt(opts, 'limits.documents', { count: fmtNum(docs, opts) }, `${fmtNum(docs, opts)} sənəd`)
-}
-
-/** Marketing cards: cloud storage (recording_storage) instead of document counts. */
-function cloudStorageLineFromPlan(p, lim, planId, opts) {
-  const id = String(planId || '').toLowerCase()
-  const normId = id === 'business' ? 'premium' : id
-  const rec = resolveRecordingFromPlan(p, lim, normId)
-  const gb = Number(formatRecordingStorageGb(rec.storageBytes, opts))
-  if (Number.isFinite(gb) && gb > 0) {
-    return pt(opts, 'limits.cloudStorageGb', { size: gb }, `${gb} GB Bulud Yaddaşı`)
-  }
-  return documentLineFromLimits(lim, opts)
-}
-
-/**
- * Compare-table cell for cloud storage (same source as package cards: recording_storage_bytes).
- * Returns null when the plan has no cloud quota (e.g. SADƏ) — caller shows "—".
- */
-export function cloudStorageCompareValue(p, opts = {}) {
-  const id = normalizePlanId(p)
-  const lim = p?.limits
-  const rec = resolveRecordingFromPlan(p, lim, id)
-  const gb = Number(formatRecordingStorageGb(rec.storageBytes, opts))
-  if (!Number.isFinite(gb) || gb <= 0) return null
-  return pt(opts, 'limits.cloudStorageGbShort', { size: gb }, `${gb} GB`)
-}
-
-function storageLabelFromBytes(bytes, opts) {
+function storageSize(bytes) {
   const b = Number(bytes)
   if (!Number.isFinite(b) || b <= 0) return null
-  if (b === 5 * 1024 * 1024) return pt(opts, 'limits.storage5mb', {}, '5 MB Sənəd Yaddaşı')
-  if (b === 256 * 1024 * 1024) return pt(opts, 'limits.storage256mb', {}, '256 MB Sənəd Yaddaşı')
-  if (b === 1024 * 1024 * 1024) return pt(opts, 'limits.storage1gb', {}, '1 GB Sənəd Yaddaşı')
-  if (b === 2048 * 1024 * 1024) return pt(opts, 'limits.storage2gb', {}, '2 GB Sənəd Yaddaşı')
-  if (b < 1024 * 1024) {
-    const kb = Math.max(1, Math.round(b / 1024))
-    return pt(opts, 'limits.storageKb', { size: kb }, `${kb} KB Sənəd Yaddaşı`)
-  }
+  const gb = b / (1024 * 1024 * 1024)
+  if (gb >= 1) return { value: gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10, unit: 'GB' }
   const mb = b / (1024 * 1024)
-  if (mb >= 1024) {
-    const gb = mb / 1024
-    const size = gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10
-    return pt(opts, 'limits.storageGb', { size }, `${size} GB Sənəd Yaddaşı`)
-  }
-  const size = mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10
-  return pt(opts, 'limits.storageMb', { size }, `${size} MB Sənəd Yaddaşı`)
+  return { value: mb >= 10 ? Math.round(mb) : Math.max(1, Math.round(mb * 10) / 10), unit: 'MB' }
 }
 
-function formatStorageFromLimits(lim, opts) {
+/** Cloud storage line from limits.storage_limit_bytes (null = unlimited, legacy plans only). */
+function cloudStorageLine(lim, opts) {
   if (!lim) return null
-  const bytes = lim.storage_limit_bytes
-  if (bytes != null && Number.isFinite(Number(bytes))) {
-    return storageLabelFromBytes(bytes, opts)
+  if (lim.storage_limit_bytes === null && (lim.storage_mb === null || lim.storage_mb === undefined)) {
+    return pt(opts, 'limits.cloudStorageUnlimited', {}, 'Limitsiz bulud yaddaşı')
   }
-  const mb = lim.storage_mb
-  if (mb != null && Number.isFinite(Number(mb))) {
-    const gb = Number(mb) / 1024
-    if (gb >= 1) {
-      const size = gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10
-      return pt(opts, 'limits.storageGb', { size }, `${size} GB Sənəd Yaddaşı`)
-    }
-    return pt(opts, 'limits.storageMb', { size: Math.round(Number(mb)) }, `${Math.round(Number(mb))} MB Sənəd Yaddaşı`)
-  }
-  if (lim.storage_mb === null && lim.storage_limit_bytes === null) {
-    return pt(opts, 'limits.storageUnlimited', {}, 'Limitsiz Sənəd Yaddaşı')
-  }
-  return null
+  const bytes = lim.storage_limit_bytes ?? (lim.storage_mb != null ? Number(lim.storage_mb) * 1024 * 1024 : null)
+  const size = storageSize(bytes)
+  if (!size) return null
+  return size.unit === 'GB'
+    ? pt(opts, 'limits.cloudStorageGb', { size: size.value }, `${size.value} GB bulud yaddaşı`)
+    : pt(opts, 'limits.cloudStorageMb', { size: size.value }, `${size.value} MB bulud yaddaşı`)
 }
 
-function smsEffectiveLineForCurrentUser({ billing, planId, baseSms }, opts) {
-  const effective = billing?.limits?.sms_monthly
-  if (effective == null || effective === '') return null
-  const e = Math.max(0, Math.round(Number(effective)))
-  if (!Number.isFinite(e)) return null
-  const billingBase = billing?.limits?.sms_monthly_plan
-  const base = billingBase == null || billingBase === '' ? baseSms : Number(billingBase)
-  const b = Math.max(0, Math.round(Number(base || baseSms || 0)))
-  const extra = Math.max(0, e - b)
-  if (!extra) {
-    return pt(opts, 'limits.smsMonthly', { count: fmtNum(e, opts) }, `${fmtNum(e, opts)} SMS / ay`)
+/** Compare-table cell for cloud storage. */
+export function cloudStorageCompareValue(p, opts = {}) {
+  const lim = p?.limits || {}
+  if (lim.storage_limit_bytes === null && (lim.storage_mb === null || lim.storage_mb === undefined)) {
+    return pt(opts, 'limits.unlimitedShort', {}, 'Limitsiz')
   }
-  return pt(
-    opts,
-    'limits.smsEffective',
-    { effective: fmtNum(e, opts), base: fmtNum(b, opts), extra: fmtNum(extra, opts) },
-    `${fmtNum(e, opts)} SMS / ay (baza ${fmtNum(b, opts)} + əlavə ${fmtNum(extra, opts)})`,
-  )
+  const size = storageSize(lim.storage_limit_bytes ?? (lim.storage_mb != null ? Number(lim.storage_mb) * 1024 * 1024 : null))
+  if (!size) return null
+  return `${size.value} ${size.unit}`
+}
+
+export function liveLessonPlanLine(opts = {}) {
+  return pt(opts, 'limits.liveLessonLinks', {}, LIVE_LESSON_LINE_FALLBACK)
 }
 
 const CONTENT_LIMIT_RE = /\b(imtahan|tapşırıq|sənəd|экзамен|задани|документ)\b/i
+const LIVE_LINE_RE = /\b(canlı|live|живы|запись|record|yazı|iştirakçı|участник|participant)\b/i
 
-/** Fallback when API/plan row omits recording columns (matches migration 196 + config/plans). */
-const RECORDING_FALLBACK_BY_PLAN = {
-  basic: {
-    recording_hours_monthly: 0,
-    recording_storage_bytes: 0,
-    recording_retention_days: 0,
-    recording_max_duration_sec: 0,
-    recording_max_quality: null,
-  },
-  pro: {
-    recording_hours_monthly: 5,
-    recording_storage_bytes: 5 * 1024 * 1024 * 1024,
-    recording_retention_days: 30,
-    recording_max_duration_sec: 7200,
-    recording_max_quality: '720p',
-  },
-  growth: {
-    recording_hours_monthly: 20,
-    recording_storage_bytes: 20 * 1024 * 1024 * 1024,
-    recording_retention_days: 90,
-    recording_max_duration_sec: 7200,
-    recording_max_quality: '720p',
-  },
-  premium: {
-    recording_hours_monthly: 50,
-    recording_storage_bytes: 50 * 1024 * 1024 * 1024,
-    recording_retention_days: 180,
-    recording_max_duration_sec: 10800,
-    recording_max_quality: '1080p',
-  },
-}
-
-function liveParticipantFallback(planId) {
-  const id = String(planId || '').toLowerCase()
-  if (id === 'premium' || id === 'business') return null
-  if (id === 'growth') return 50
-  if (id === 'pro') return 20
-  return 5
-}
-
-function resolveRecordingFromPlan(p, lim, planId) {
-  const nested = p?.recording_limits || {}
-  const fb = RECORDING_FALLBACK_BY_PLAN[planId] || RECORDING_FALLBACK_BY_PLAN.basic
-  const hours =
-    lim?.recording_hours_monthly ?? nested.hours_monthly ?? fb.recording_hours_monthly
-  const storage =
-    lim?.recording_storage_bytes ?? nested.storage_bytes ?? fb.recording_storage_bytes
-  const retention =
-    lim?.recording_retention_days ?? nested.retention_days ?? fb.recording_retention_days
-  const maxDur =
-    lim?.recording_max_duration_sec ?? nested.max_duration_sec ?? fb.recording_max_duration_sec
-  const quality =
-    lim?.recording_max_quality ?? nested.max_quality ?? fb.recording_max_quality
-  return {
-    hours: hours == null ? 0 : Number(hours),
-    storageBytes: storage == null ? 0 : Number(storage),
-    retentionDays: retention == null ? 0 : Number(retention),
-    maxDurationSec: maxDur == null ? 0 : Number(maxDur),
-    quality: quality == null || String(quality).trim() === '' ? null : String(quality).trim(),
-  }
-}
-
-function formatRecordingStorageGb(bytes, opts) {
-  const b = Number(bytes)
-  if (!Number.isFinite(b) || b <= 0) return '0'
-  const gb = b / (1024 * 1024 * 1024)
-  return gb % 1 === 0 ? String(Math.round(gb)) : String(Math.round(gb * 10) / 10)
-}
-
-function formatRecordingMaxMinutes(sec, opts) {
-  const s = Math.max(0, Math.round(Number(sec) || 0))
-  return fmtNum(Math.round(s / 60), opts)
-}
-
-/** Live lesson COUNT is unlimited on all packages; participants + recording are plan-gated. */
-function liveAndRecordingLinesFromPlan(p, lim, planId = '', opts = {}) {
-  const id = String(planId || '').toLowerCase()
-  const lines = []
-  lines.push(pt(opts, 'limits.liveLessonsUnlimited', {}, 'Limitsiz canlı dərslər'))
-
-  const raw = lim?.live_participants !== undefined ? lim.live_participants : liveParticipantFallback(id)
-  if (raw == null) {
-    lines.push(pt(opts, 'limits.liveParticipantsUnlimited', {}, 'Limitsiz iştirakçı'))
-  } else {
-    lines.push(
-      pt(
-        opts,
-        'limits.liveParticipantsOnly',
-        { count: fmtNum(raw, opts) },
-        `${fmtNum(raw, opts)} iştirakçı / canlı dərs`,
-      ),
-    )
-  }
-
-  const rec = resolveRecordingFromPlan(p, lim, id === 'business' ? 'premium' : id)
-  if (!rec.hours || rec.hours <= 0 || !rec.storageBytes || rec.storageBytes <= 0) {
-    lines.push(pt(opts, 'limits.recordingNone', {}, 'Dərs yazısı yoxdur (SADƏ)'))
-    return lines
-  }
-
-  const hoursLabel = Number.isInteger(rec.hours) ? String(rec.hours) : String(rec.hours)
-  const storageGb = formatRecordingStorageGb(rec.storageBytes, opts)
-  const maxMin = formatRecordingMaxMinutes(rec.maxDurationSec, opts)
-  const quality = rec.quality || '720p'
-  lines.push(
-    pt(
-      opts,
-      'limits.recordingQuota',
-      {
-        hours: hoursLabel,
-        storage: storageGb,
-        retention: fmtNum(rec.retentionDays, opts),
-        maxMin,
-        quality,
-      },
-      `Yazı: ${hoursLabel} saat/ay · ${storageGb} GB · ${fmtNum(rec.retentionDays, opts)} gün saxlama · max ${maxMin} dəq · ${quality}`,
-    ),
-  )
-  return lines
+function studentLine(lim, opts) {
+  if (lim.students == null) return pt(opts, 'limits.studentsUnlimited', {}, 'Limitsiz tələbə')
+  return pt(opts, 'limits.students', { count: fmtNum(lim.students, opts) }, `${fmtNum(lim.students, opts)} tələbə`)
 }
 
 function monthlyContentLimitLines(lim, planId = '', opts = {}) {
   if (!lim) return []
-  const isTrial = String(planId).toLowerCase() === 'basic'
+  const id = String(planId).toLowerCase()
+  const isTrial = id === 'basic'
   const lines = []
   if (lim.exams_monthly == null) {
-    lines.push(
-      isTrial || String(planId).toLowerCase() === 'premium'
-        ? pt(opts, 'limits.examsUnlimited', {}, 'Limitsiz imtahan')
-        : pt(opts, 'limits.examsUnlimitedMonthly', {}, 'Limitsiz imtahan / ay'),
-    )
+    lines.push(pt(opts, 'limits.examsUnlimited', {}, 'Limitsiz imtahan'))
   } else if (isTrial) {
-    lines.push(
-      pt(opts, 'limits.examsTrial', { count: fmtNum(lim.exams_monthly, opts) }, `${fmtNum(lim.exams_monthly, opts)} imtahan`),
-    )
+    lines.push(pt(opts, 'limits.examsTrial', { count: fmtNum(lim.exams_monthly, opts) }, `${fmtNum(lim.exams_monthly, opts)} imtahan`))
   } else {
-    lines.push(
-      pt(
-        opts,
-        'limits.examsMonthly',
-        { count: fmtNum(lim.exams_monthly, opts) },
-        `${fmtNum(lim.exams_monthly, opts)} imtahan / ay`,
-      ),
-    )
+    lines.push(pt(opts, 'limits.examsMonthly', { count: fmtNum(lim.exams_monthly, opts) }, `${fmtNum(lim.exams_monthly, opts)} imtahan / ay`))
   }
   if (lim.homeworks_monthly == null) {
-    lines.push(
-      isTrial || String(planId).toLowerCase() === 'premium'
-        ? pt(opts, 'limits.homeworksUnlimited', {}, 'Limitsiz tapşırıq')
-        : pt(opts, 'limits.homeworksUnlimitedMonthly', {}, 'Limitsiz tapşırıq / ay'),
-    )
+    lines.push(pt(opts, 'limits.homeworksUnlimited', {}, 'Limitsiz tapşırıq'))
   } else if (isTrial) {
     lines.push(
-      pt(
-        opts,
-        'limits.homeworksTrial',
-        { count: fmtNum(lim.homeworks_monthly, opts) },
-        `${fmtNum(lim.homeworks_monthly, opts)} tapşırıq`,
-      ),
+      pt(opts, 'limits.homeworksTrial', { count: fmtNum(lim.homeworks_monthly, opts) }, `${fmtNum(lim.homeworks_monthly, opts)} tapşırıq`),
     )
   } else {
     lines.push(
-      pt(
-        opts,
-        'limits.homeworksMonthly',
-        { count: fmtNum(lim.homeworks_monthly, opts) },
-        `${fmtNum(lim.homeworks_monthly, opts)} tapşırıq / ay`,
-      ),
+      pt(opts, 'limits.homeworksMonthly', { count: fmtNum(lim.homeworks_monthly, opts) }, `${fmtNum(lim.homeworks_monthly, opts)} tapşırıq / ay`),
     )
   }
-
   lines.push(...planAiLimitLines({ limits: lim, id: planId, slug: planId }, opts))
   return lines
 }
 
-/** AI question + assignment-review lines for any package card (always resolved via shared quotas). */
+/** AI question + AI-checked open-answer lines for any package card (always resolved via shared quotas). */
 export function planAiLimitLines(p, opts = {}) {
   const { questions, gradings, isTrial } = resolveAiPlanLimits(p)
   const q = fmtNum(questions, opts)
@@ -313,8 +118,8 @@ export function planAiLimitLines(p, opts = {}) {
       ? pt(opts, 'limits.aiQuestionsTrial', { count: q }, `${q} AI sual`)
       : pt(opts, 'limits.aiQuestionsMonthly', { count: q }, `${q} AI sual / ay`),
     isTrial
-      ? pt(opts, 'limits.aiGradingsTrial', { count: g }, `${g} AI Tapşırıq yoxlama`)
-      : pt(opts, 'limits.aiGradingsMonthly', { count: g }, `${g} AI Tapşırıq yoxlama / ay`),
+      ? pt(opts, 'limits.aiGradingsTrial', { count: g }, `${g} AI ilə yoxlanılan açıq-cavab işi`)
+      : pt(opts, 'limits.aiGradingsMonthly', { count: g }, `${g} AI ilə yoxlanılan açıq-cavab işi / ay`),
   ]
 }
 
@@ -323,19 +128,13 @@ export function ensureAiLimitLinesInBullets(bullets, p, opts = {}) {
   const list = Array.isArray(bullets) ? bullets.map((x) => String(x || '').trim()).filter(Boolean) : []
   const ai = planAiLimitLines(p, opts)
   const withoutAi = list.filter((line) => !AI_LIMIT_LINE_RE.test(line))
-  const hwIdx = withoutAi.findIndex((line) =>
-    /\b(tapşırıq|assignment|задани|imtahan|exam|экзамен)\b/i.test(line),
-  )
-  // Prefer after the last homework/exam-ish content line.
   let insertAt = -1
   for (let i = 0; i < withoutAi.length; i += 1) {
     if (/\b(tapşırıq|assignment|задани|imtahan|exam|экзамен)\b/i.test(withoutAi[i])) insertAt = i
   }
-  if (insertAt < 0 && hwIdx >= 0) insertAt = hwIdx
   if (insertAt >= 0) {
     return [...withoutAi.slice(0, insertAt + 1), ...ai, ...withoutAi.slice(insertAt + 1)]
   }
-  // Trial marketing lines: append AI near the end (before live if present).
   const liveIdx = withoutAi.findIndex((line) => /\b(canlı|live|живы)\b/i.test(line))
   if (liveIdx >= 0) {
     return [...withoutAi.slice(0, liveIdx), ...ai, ...withoutAi.slice(liveIdx)]
@@ -343,129 +142,47 @@ export function ensureAiLimitLinesInBullets(bullets, p, opts = {}) {
   return [...withoutAi, ...ai]
 }
 
-/** Landing qiymət kartları üçün limit sətirləri (istifadəçi spec). */
+/** Pricing card limit lines (students, storage, content, AI, live lesson links). */
 export function planPricingLimitLines(p, opts = {}) {
   const lim = p?.limits
   if (!lim) return []
-  const id = String(p?.id || p?.slug || '').toLowerCase()
-  const isTrial = id === 'basic'
-  const lines = []
-
-  if (lim.students == null) lines.push(pt(opts, 'limits.studentsUnlimited', {}, 'Limitsiz tələbə'))
-  else lines.push(pt(opts, 'limits.students', { count: fmtNum(lim.students, opts) }, `${fmtNum(lim.students, opts)} tələbə`))
-
-  const cloudLine = cloudStorageLineFromPlan(p, lim, id, opts)
-  if (cloudLine) lines.push(cloudLine)
-
-  if (lim.sms_monthly == null) lines.push(pt(opts, 'limits.smsUnlimited', {}, 'Limitsiz SMS / ay'))
-  else if (isTrial) {
-    lines.push(pt(opts, 'limits.smsTrial', { count: fmtNum(lim.sms_monthly, opts) }, `${fmtNum(lim.sms_monthly, opts)} SMS`))
-  } else {
-    lines.push(
-      pt(opts, 'limits.smsMonthly', { count: fmtNum(lim.sms_monthly, opts) }, `${fmtNum(lim.sms_monthly, opts)} SMS / ay`),
-    )
-  }
-
+  const id = normalizePlanId(p)
+  const lines = [studentLine(lim, opts)]
+  const storage = cloudStorageLine(lim, opts)
+  if (storage) lines.push(storage)
   lines.push(...monthlyContentLimitLines(lim, id, opts))
-  lines.push(...liveAndRecordingLinesFromPlan(p, lim, id, opts))
+  lines.push(liveLessonPlanLine(opts))
   return lines
 }
 
 export function planLimitFeatureLines(p, opts = {}) {
-  const billing = opts?.billing || null
-  const isCurrent = Boolean(opts?.isCurrent)
-  const planId = String(p?.id || p?.slug || '').toLowerCase()
-  const items = Array.isArray(p?.items)
-    ? p.items.map((x) => String(x || '').trim()).filter(Boolean)
-    : []
-  const contentLimits = monthlyContentLimitLines(p?.limits, planId, opts)
-  const liveRecLines = liveAndRecordingLinesFromPlan(p, p?.limits, planId, opts)
+  const planId = normalizePlanId(p)
+  const items = Array.isArray(p?.items) ? p.items.map((x) => String(x || '').trim()).filter(Boolean) : []
   if (items.length) {
-    const LIVE_OR_RECORD_RE = /\b(canlı|live|запись|record|yazı|iştirakçı|участник)\b/i
     const base = items.filter(
-      (line) =>
-        !CONTENT_LIMIT_RE.test(String(line)) &&
-        !LIVE_OR_RECORD_RE.test(String(line)) &&
-        !AI_LIMIT_LINE_RE.test(String(line)),
+      (line) => !CONTENT_LIMIT_RE.test(line) && !LIVE_LINE_RE.test(line) && !AI_LIMIT_LINE_RE.test(line) && !/\bSMS\b/i.test(line),
     )
-    return [...base, ...contentLimits, ...liveRecLines]
+    return [...base, ...monthlyContentLimitLines(p?.limits, planId, opts), liveLessonPlanLine(opts)]
   }
-
-  const lim = p?.limits
-  if (!lim) return []
-
-  const id = planId
-  const lines = []
-  if (lim.students == null) lines.push(pt(opts, 'limits.studentsUnlimited', {}, 'Limitsiz tələbə'))
-  else lines.push(pt(opts, 'limits.students', { count: fmtNum(lim.students, opts) }, `${fmtNum(lim.students, opts)} tələbə`))
-
-  const docLine = documentLineFromLimits(lim, opts)
-  if (docLine) lines.push(docLine)
-  else {
-    const storage = formatStorageFromLimits(lim, opts)
-    if (storage) lines.push(storage)
-    else if (lim.storage_mb == null && lim.storage_limit_bytes === null) {
-      lines.push(pt(opts, 'limits.documentsUnlimited', {}, 'Limitsiz sənəd'))
-    }
-  }
-
-  if (lim.sms_monthly == null) lines.push(pt(opts, 'limits.smsUnlimited', {}, 'Limitsiz SMS / ay'))
-  else if (id === 'premium' || id === 'business') {
-    const baseSms = Math.max(0, Math.round(Number(lim.sms_monthly)))
-    if (isCurrent) {
-      const effectiveLine = smsEffectiveLineForCurrentUser({ billing, planId: id, baseSms }, opts)
-      if (effectiveLine) lines.push(effectiveLine)
-      else {
-        lines.push(
-          pt(
-            opts,
-            'limits.smsPremiumCurrent',
-            { count: fmtNum(baseSms, opts) },
-            `${fmtNum(baseSms, opts)} SMS / ay (əlavə balans alına bilər)`,
-          ),
-        )
-      }
-    } else {
-      lines.push(
-        pt(
-          opts,
-          'limits.smsPremiumOther',
-          { count: fmtNum(baseSms, opts) },
-          `${fmtNum(baseSms, opts)} SMS / Əlavə balans imkanı`,
-        ),
-      )
-    }
-  } else {
-    lines.push(
-      pt(opts, 'limits.smsMonthly', { count: fmtNum(lim.sms_monthly, opts) }, `${fmtNum(lim.sms_monthly, opts)} SMS / ay`),
-    )
-  }
-
-  lines.push(...monthlyContentLimitLines(lim, id, opts))
-  lines.push(...liveAndRecordingLinesFromPlan(p, lim, id, opts))
-  return lines
+  return planPricingLimitLines(p, opts)
 }
 
 function mapFeatureForPlan(p, opts = {}) {
-  const id = String(p?.id || '')
-    .trim()
-    .toLowerCase()
-  const normId = id === 'business' ? 'premium' : id
+  const id = normalizePlanId(p)
   const fallbacks = {
     basic: '📍 Xəritədə görünür',
     pro: '📍 Xəritədə görünür',
     growth: '⭐ Axtarışda önə çıxır',
     premium: '🔥 Axtarışda həmişə ən yuxarıda (TOP)',
   }
-  return pt(opts, `map.${normId}`, {}, fallbacks[normId] || fallbacks.basic)
+  return pt(opts, `map.${id}`, {}, fallbacks[id] || fallbacks.basic)
 }
 
 /** Qısa başlıq (kartın üstündəki birinci sətir). */
 export function planLimitsHeadline(p, opts = {}) {
   const lines = planLimitFeatureLines(p, opts)
   const mapLine = mapFeatureForPlan(p, opts)
-  const merged = lines.length ? [...lines, mapLine] : [mapLine]
-  return merged.join(' · ')
+  return (lines.length ? [...lines, mapLine] : [mapLine]).join(' · ')
 }
 
 function planDescription(p, opts = {}) {
@@ -473,85 +190,44 @@ function planDescription(p, opts = {}) {
   if (custom != null && String(custom).trim() !== '') return String(custom).trim()
   const id = normalizePlanId(p)
   const title = opts.planTitle || planTitleOrSlug(p, id)
-  if (id === 'basic') {
-    return pt(opts, 'desc.basic', {}, '21 günlük pulsuz sınaq — platformanı risksiz sınayın.')
-  }
-  if (id === 'pro') {
-    return pt(opts, 'desc.pro', { title }, `Kiçik və orta qruplar üçün ən populyar ${title} paket.`)
-  }
-  if (id === 'growth') {
-    return pt(opts, 'desc.growth', { title }, `${title} paket — böyüyən tədris biznesi və ətraflı hesabatlar.`)
-  }
-  if (id === 'premium') {
-    return pt(opts, 'desc.premium', { title }, `${title} paket — limitsiz tələbə, 50 GB bulud yaddaşı və prioritet dəstək.`)
-  }
+  if (id === 'basic') return pt(opts, 'desc.basic', {}, 'Mentorix-in əsas imkanlarını 21 gün ödənişsiz yoxlayın.')
+  if (id === 'pro') return pt(opts, 'desc.pro', { title }, `${title} — köhnə paket, mövcud abunəçilər üçün saxlanılır.`)
+  if (id === 'growth') return pt(opts, 'desc.growth', { title }, 'Böyüyən qrupları idarə edən müəllimlər üçün.')
+  if (id === 'premium') return pt(opts, 'desc.premium', { title }, 'Aktiv müəllimlər və daha böyük tədris qrupları üçün.')
   return null
 }
 
 /** Kartda tam izah (bütün paketlər). */
 export function planDetailLines(p, opts = {}) {
-  const billing = opts?.billing || null
-  const isCurrent = Boolean(opts?.isCurrent)
-  const id = String(p?.id || '').toLowerCase()
-  const normId = id === 'business' ? 'premium' : id
-  const features = planLimitFeatureLines(p, { ...opts, billing, isCurrent })
+  const id = normalizePlanId(p)
+  const features = planLimitFeatureLines(p, opts)
   const limitsText = features.length ? features.join(', ') : null
   const price = Number(p?.price_azn)
-  const isPaid = normId !== 'basic' && Number.isFinite(price) && price > 0
+  const isPaid = id !== 'basic' && Number.isFinite(price) && price > 0
   const desc = planDescription(p, opts)
   const mapLine = mapFeatureForPlan(p, opts)
 
-  if (normId === 'basic') {
+  if (id === 'basic') {
     return [
-      desc || pt(opts, 'detail.basic.trial', {}, '21 günlük pulsuz sınaq paketi.'),
+      desc,
       mapLine,
       limitsText
         ? pt(opts, 'detail.basic.limitsPeriod', { limits: limitsText }, `Sınaq müddətində: ${limitsText}.`)
-        : pt(opts, 'detail.basic.limitsFallback', {}, 'Limitlər Başlanğıc paketinə uyğun tətbiq olunur.'),
-      pt(opts, 'detail.basic.noExtraSms', {}, 'Əlavə SMS və yaddaş alına bilməz — limit dolanda Standart və ya daha yüksək paket seçin.'),
-      pt(opts, 'detail.basic.noRenew', {}, 'Başlanğıc paketi yenilənmir; 21 gün bitəndən sonra ödənişli paket tələb olunur.'),
+        : pt(opts, 'detail.basic.limitsFallback', {}, 'Limitlər sınaq paketinə uyğun tətbiq olunur.'),
+      pt(opts, 'detail.basic.noAutoCharge', {}, 'Sınaq bitdikdə avtomatik ödəniş tutulmur — davam etmək üçün paketi özünüz seçirsiniz.'),
+      pt(opts, 'detail.basic.noRenew', {}, 'Sınaq paketi yenilənmir; 21 gün bitəndən sonra ödənişli paket tələb olunur.'),
       pt(opts, 'detail.basic.oneTrialPerIp', {}, 'Hər cihazdan (IP) yalnız bir dəfə pulsuz sınaq verilir.'),
-    ]
+    ].filter(Boolean)
   }
 
   if (isPaid) {
     const lines = [
       desc ||
-        pt(
-          opts,
-          'detail.paid.subscription',
-          {},
-          'Aylıq və ya illik ödənişlə aktiv abunədir; ödəniş təsdiqlənəndən sonra limitlər dərhal tətbiq olunur.',
-        ),
+        pt(opts, 'detail.paid.subscription', {}, 'Aylıq və ya illik ödənişlə aktiv abunədir; ödəniş təsdiqlənəndən sonra limitlər dərhal tətbiq olunur.'),
       mapLine,
     ]
-    if (limitsText) {
-      lines.push(pt(opts, 'detail.paid.includes', { limits: limitsText }, `Paketə daxildir: ${limitsText}.`))
-    }
-    if (normId === 'premium') {
-      if (isCurrent) {
-        const baseSms = Number(p?.limits?.sms_monthly ?? 200)
-        const effectiveLine = smsEffectiveLineForCurrentUser({ billing, planId: normId, baseSms }, opts)
-        if (effectiveLine) {
-          const smsPart = effectiveLine.replace(/ SMS \/ ay.*$/i, '').replace(/ \/ мес\..*$/i, '')
-          lines.push(
-            pt(opts, 'detail.paid.premiumSmsEffective', { sms: smsPart }, `Limitsiz tələbə — SMS limiti ${smsPart}.`),
-          )
-        } else {
-          lines.push(
-            pt(opts, 'detail.paid.premiumSmsDefault', {}, 'Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).'),
-          )
-        }
-      } else {
-        lines.push(
-          pt(opts, 'detail.paid.premiumSmsDefault', {}, 'Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).'),
-        )
-      }
-    } else {
-      lines.push(
-        pt(opts, 'detail.paid.upgradeHint', {}, 'Limitlərə çatdıqda paketi yüksəldin və ya əlavə SMS/yaddaş alın.'),
-      )
-    }
+    if (limitsText) lines.push(pt(opts, 'detail.paid.includes', { limits: limitsText }, `Paketə daxildir: ${limitsText}.`))
+    lines.push(pt(opts, 'detail.paid.upgradeHint', {}, 'Limitlərə çatdıqda paketi yüksəldin və ya əlavə yaddaş alın.'))
     return lines
   }
 

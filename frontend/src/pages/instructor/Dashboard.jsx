@@ -53,10 +53,9 @@ export default function InstructorDashboard() {
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickMessage, setQuickMessage] = useState('')
   const [quickSelectedIds, setQuickSelectedIds] = useState([])
-  const [quickMethod, setQuickMethod] = useState('internal') // internal | sms
+  const [quickMethod, setQuickMethod] = useState('internal') // internal | whatsapp
   const [quickBusy, setQuickBusy] = useState(false)
-  const [smsProfile, setSmsProfile] = useState(null)
-  const [smsProfileLoading, setSmsProfileLoading] = useState(false)
+  const [notifyProfile, setNotifyProfile] = useState(null)
   const queryClient = useQueryClient()
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
@@ -113,28 +112,21 @@ export default function InstructorDashboard() {
   useEffect(() => {
     if (!quickOpen) return
     let cancelled = false
-    setSmsProfileLoading(true)
     api
       .get('/notifications/instructor')
       .then((d) => {
-        if (!cancelled) setSmsProfile(d.profile || null)
+        if (!cancelled) setNotifyProfile(d.profile || null)
       })
       .catch(() => {
-        if (!cancelled) setSmsProfile(null)
-      })
-      .finally(() => {
-        if (!cancelled) setSmsProfileLoading(false)
+        if (!cancelled) setNotifyProfile(null)
       })
     return () => {
       cancelled = true
     }
   }, [quickOpen])
 
-  const smsLimit = Number(smsProfile?.sms_limit ?? 0)
-  const smsUsed = Number(smsProfile?.sms_used ?? 0)
-  const smsDisabled = smsLimit <= 0 || smsUsed >= smsLimit
-  const whatsappConfigured = Boolean(smsProfile?.whatsapp_configured)
-  const whatsappProductionStyle = Boolean(smsProfile?.whatsapp_production_style)
+  const whatsappConfigured = Boolean(notifyProfile?.whatsapp_configured)
+  const whatsappProductionStyle = Boolean(notifyProfile?.whatsapp_production_style)
 
   function toggleSelected(id) {
     setQuickSelectedIds((prev) => {
@@ -157,7 +149,6 @@ export default function InstructorDashboard() {
     setQuickMessage('')
     setQuickSelectedIds([])
     setQuickMethod('internal')
-    // smsProfile is fetched by effect (only once)
   }
 
   useEffect(() => {
@@ -181,10 +172,6 @@ export default function InstructorDashboard() {
       return toast(billing?.messages?.banner || t('dashboard.notify.blocked'), 'error')
     }
 
-    if (quickMethod === 'sms' && smsDisabled) {
-      return toast(t('dashboard.notify.smsLimit'), 'error')
-    }
-
     if (quickMethod === 'whatsapp' && !whatsappConfigured) {
       return toast(t('dashboard.notify.whatsappApiNotConfigured'), 'error')
     }
@@ -196,20 +183,7 @@ export default function InstructorDashboard() {
         student_ids: quickSelectedIds,
         method: quickMethod,
       }
-      const sentCount = quickSelectedIds.length
       const d = await api.post('/notifications/quick', payload)
-
-      if (quickMethod === 'sms') {
-        // Optimistic UI update, then refresh from backend for consistency.
-        setSmsProfile((prev) => {
-          if (!prev) return prev
-          return { ...prev, sms_used: Number(prev.sms_used || 0) + sentCount }
-        })
-        api
-          .get('/notifications/instructor')
-          .then((x) => setSmsProfile(x.profile || null))
-          .catch(() => {})
-      }
 
       if (quickMethod === 'whatsapp') {
         const sent = Number(d?.sent ?? 0)
@@ -220,13 +194,12 @@ export default function InstructorDashboard() {
           toast(t('dashboard.notify.whatsappSent', { n: sent }), 'success')
         }
       } else {
-        toast(quickMethod === 'sms' ? t('dashboard.notify.sentSms') : t('dashboard.notify.sent'), 'success')
+        toast(t('dashboard.notify.sent'), 'success')
       }
       queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY })
       closeQuick()
       setQuickMessage('')
       setQuickSelectedIds([])
-      // Keep smsProfile; next opening will use same cached value
     } catch (err) {
       toast(err?.message || t('dashboard.notify.sendFailed'), 'error')
     } finally {
@@ -738,33 +711,6 @@ export default function InstructorDashboard() {
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-white/90">{t('dashboard.notify.internalTitle')}</div>
                     <div className="text-xs text-gray-500">{t('dashboard.notify.free')}</div>
-                  </div>
-                </div>
-              </label>
-
-              <label
-                className={`flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-indigo-500/10 ${
-                  smsDisabled ? 'opacity-60' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <input
-                    type="radio"
-                    value="sms"
-                    checked={quickMethod === 'sms'}
-                    disabled={smsDisabled}
-                    onChange={() => setQuickMethod('sms')}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white/90">{t('dashboard.notify.smsTitle')}</div>
-                    {smsDisabled ? (
-                      <div className="text-xs text-amber-300">{t('dashboard.notify.smsLimit')}</div>
-                    ) : (
-                      <div className="text-xs text-gray-500">
-                        {t('dashboard.notify.smsRemaining')}{' '}
-                        <span className="text-white/80 font-semibold">{Math.max(0, smsLimit - smsUsed)}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </label>

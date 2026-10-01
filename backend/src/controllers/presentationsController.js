@@ -1,4 +1,5 @@
 const path = require('path');
+const { localeFromReq } = require('../lib/userLocale');
 const {
   mapPresentationRow,
   countPdfPages,
@@ -61,7 +62,7 @@ const create = async (req, res) => {
       });
     }
 
-    await assertMaterialsUploadAllowed(req.user.id, fileSize);
+    await assertMaterialsUploadAllowed(req.user.id, fileSize, { locale: localeFromReq(req) });
 
     const hit = await readPresentationBuffer(req.file.filename);
     const slideCount = await countPdfPages(hit?.buffer);

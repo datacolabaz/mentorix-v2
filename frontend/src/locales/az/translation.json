@@ -145,7 +145,8 @@
       "materials": "Materiallar",
       "universities": "Universitetlər",
       "payments": "Ödəniş",
-      "notifications": "Bildirişlər"
+      "notifications": "Bildirişlər",
+      "live_lessons": "Canlı dərslər"
     },
     "parent": {
       "children": "Uşaqlarım",
@@ -161,7 +162,7 @@
       "groups": "Qruplar / Siniflər",
       "schedule": "Ümumi Cədvəl",
       "finance": "Ödənişlər",
-      "notifications": "SMS / Bildirişlər",
+      "notifications": "Bildirişlər",
       "settings": "Parametrlər"
     },
     "admin": {
@@ -171,7 +172,7 @@
       "students": "Tələbələr",
       "classes": "Kurslar / Qruplar",
       "payments": "Ödənişlər",
-      "inventory": "SMS & Ehtiyat",
+      "inventory": "Ehtiyat",
       "billing": "Platform ödənişləri",
       "partners": "Partner proqramı",
       "notifications": "Bildirişlər",
@@ -580,9 +581,6 @@
       "methodTitle": "Göndərmə metodu",
       "internalTitle": "Yalnız Panel Daxili",
       "free": "Pulsuz",
-      "smsTitle": "SMS olaraq göndər",
-      "smsLimit": "Limitiniz bitib, artırmaq üçün adminlə əlaqə saxlayın",
-      "smsRemaining": "Qalıq:",
       "whatsappTitle": "WhatsApp olaraq göndər",
       "whatsappNotConfigured": "Serverdə WHATSAPP_* dəyişənləri təyin edilməyib",
       "whatsappProduction": "Təsdiqlənmiş şablon ilə bütün tələbə nömrələrinə (recipient siyahısı lazım deyil)",
@@ -590,7 +588,6 @@
       "send": "Göndər",
       "selectStudents": "Tələbələr seçilməlidir",
       "whatsappSent": "WhatsApp: {{n}} tələbəyə göndərildi",
-      "sentSms": "SMS göndərildi",
       "sent": "Bildiriş göndərildi",
       "sendFailed": "Göndərilmədi",
       "messageRequired": "Mesaj tələb olunur",
@@ -619,7 +616,6 @@
     },
     "cta": {
       "viewPlans": "Paketlərə bax",
-      "smsTopup": "SMS Balansı Artır",
       "storageTopup": "Yaddaş al"
     },
     "planChip": "{{plan}} Paket",
@@ -633,14 +629,11 @@
     },
     "usage": {
       "students": "Tələbələr",
-      "storage": "Sənəd yaddaşı",
-      "sms": "SMS",
+      "storage": "Bulud yaddaşı",
       "aiQuestions": "AI suallar",
-      "aiGradings": "AI Tapşırıq yoxlama",
+      "aiGradings": "AI ilə yoxlanılan işlər",
       "usedOf": "{{used}} / {{limit}} istifadə olunur",
       "usedUnlimited": "{{used}} / ∞ istifadə olunur",
-      "smsLeft": "{{used}} / {{limit}} qalıb",
-      "smsUnlimited": "{{used}} / ∞ qalıb",
       "aiNearLimit": "AI limitinizə yaxınlaşırsınız",
       "aiBlocked": "Aylıq AI limitiniz bitdi.",
       "aiBlockedTrial": "Sınaq AI limitiniz bitdi.",
@@ -648,28 +641,17 @@
     }
   },
   "live": {
-    "historyTitle": "Canlı dərslər",
-    "historySubtitle": "Canlı dərslər",
-    "startFromGroup": "Qrupdan başlat",
-    "createLessonCta": "＋ Canlı dərs yarat",
-    "createLessonTitle": "Canlı dərs yarat",
-    "pickPlatform": "Platform seçin",
-    "comingSoon": "Tezliklə",
-    "providerBack": "Geri",
-    "selectedProvider": "Platforma: {{name}}",
     "connectGoogleMeet": "Google hesabını bağla",
     "disconnectAccount": "Bağlantını kəs",
     "meetDisconnectConfirmTitle": "Google Meet bağlantısını kəsin?",
     "meetDisconnectConfirmMessage": "Hesab kəsiləcək. Yenidən Meet dərsi yaratmaq üçün Google-u birləşdirməli olacaqsınız.",
-    "createMeetLesson": "Meet dərsi yarat",
-    "meetConnectedAs": "Bağlı: {{email}}",
     "meetNeedsConnect": "Google Meet üçün hesabınızı bağlayın",
+    "optionalBeta": "İstəyə bağlı · beta",
+    "optionalBetaHint": "Hesab bağlantısı istəyə bağlıdır və beta mərhələsindədir. Google Meet, Zoom və ya digər linki dərsə əl ilə əlavə etmək həmişə işləyir.",
     "meetConnectSuccess": "Google Meet bağlandı",
     "meetConnectFailed": "Google Meet bağlana bilmədi",
     "connectedAs": "Bağlı: {{email}}",
     "connectZoom": "Zoom hesabını bağla",
-    "createZoomLesson": "Zoom dərsi yarat",
-    "zoomConnectedAs": "Bağlı: {{email}}",
     "zoomNeedsConnect": "Zoom üçün hesabınızı bağlayın",
     "zoomSettingsDescription": "Canlı dərslər üçün Zoom hesabınızı bağlayın",
     "zoomConnectSuccess": "Zoom bağlandı",
@@ -679,146 +661,11 @@
     "zoomDisconnectConfirmTitle": "Zoom bağlantısını kəsin?",
     "zoomDisconnectConfirmMessage": "Hesab kəsiləcək. Yenidən Zoom dərsi yaratmaq üçün Zoom-u birləşdirməli olacaqsınız.",
     "meetCalendarScopeRequired": "Təqvim (Calendar) icazəsi seçilməyib. Bağlantını kəsin, yenidən bağlayın və «View and edit events on all your calendars» işarəsini mütləq seçin.",
-    "meetNeedsReauth": "Google Meet yenidən bağlanmalıdır — hesabı kəsib təqvim icazəsi ilə yenidən bağlayın.",
     "meetDisconnected": "Google Meet bağlantısı kəsildi",
     "meetDisconnectFailed": "Bağlantı kəsilmədi",
-    "meetLessonCreated": "Google Meet dərsi yaradıldı",
-    "zoomLessonCreated": "Zoom dərsi yaradıldı",
-    "meetLinkCopied": "Meet linki kopyalandı",
-    "openExternal": "Dərsə keç",
-    "openGoogleMeet": "Meet-ə keç",
-    "openZoom": "Zoom-a keç",
-    "meetAccountWarningTitle": "Google Meet hesabı diqqəti",
-    "meetAccountWarningText": "Bu dərs {{ownerEmail}} hesabı ilə yaradılıb. Google Meet açılanda həmin hesab ilə daxil olmağınız tövsiyyə olunur.",
-    "meetAccountWarningHint": "Əgər fərqli Google hesabı ilə daxil olunursunuzsa, meeting owner statusunuz ola bilməz.",
-    "meetAccountWarningProceed": "Yenə də davam et",
-    "meetAccountWarningDontShow": "Bu mesajı bir daha göstərmə",
-    "providers": {
-      "mentorix_live": "Mentorix Live",
-      "mentorix_liveHint": "Platformanın öz video otağı (LiveKit)",
-      "google_meet": "Google Meet",
-      "google_meetHint": "Sizin Google hesabınızda Meet yaradılır — təqvim (Calendar) icazəsini seçin",
-      "zoom": "Zoom",
-      "zoomHint": "Sizin Zoom hesabınızda dərs yaradılır",
-      "teams": "Microsoft Teams"
-    },
-    "noSessions": "Hələ canlı dərs yoxdur",
-    "selectAll": "Hamısını seç",
-    "deleteSelected": "Seçilənləri sil",
-    "noRecording": "Yazı yoxdur",
-    "downloadRecording": "Yazı",
-    "share": "Paylaş",
-    "notifyTitle": "Canlı dərs — bildiriş",
-    "notifyQuestion": "qrupundakı tələbələrə bildiriş göndərilsin?",
-    "notifySkipHint": "Heç birini seçməsəniz, dərs birbaşa başlayacaq — bildiriş getməyəcək.",
-    "notifySms": "SMS bildiriş",
-    "notifySmsHint": "Tələbənin telefonuna SMS — SMS balansınızdan çıxır.",
-    "notifyEmail": "Gmail / e-poçt",
-    "notifyEmailHint": "Qeydiyyat e-poçtuna (adətən Gmail) — SMS balansından çıxmır.",
-    "notifyBothHint": "Hər iki kanal seçildi — hər tələbəyə SMS və e-poçt gedə bilər.",
-    "startLesson": "Dərsi başlat",
-    "liveLesson": "Canlı Dərs",
-    "starting": "Başlanır…",
     "minuteShort": "dəq",
     "hourShort": "saat",
-    "hourFormat": "{{h}}:{{m}}",
-    "participants": "iştirakçı",
-    "general": "Ümumi",
-    "recordingBy": "Yazı:",
-    "loading": "Yüklənir…",
-    "deletedOne": "Dərs silindi",
-    "deleteFailed": "Silinmədi",
-    "shareNoRecording": "Bu dərsin yazısı yoxdur",
-    "shareCopied": "Paylaşım linki kopyalandı",
-    "shareLinkCreateFailed": "Paylaşım linki yaradıla bilmədi",
-    "copySharePrompt": "Paylaşım linkini kopyalayın:",
-    "shareFailed": "Paylaşım alınmadı",
-    "downloadOk": "Yazı yükləndi",
-    "downloadFailed": "Yazı yüklənmədi",
-    "bulkDeleted": "{{n}} dərs silindi",
-    "bulkPartial": "{{ok}} silindi, {{fail}} silinmədi",
-    "bulkNone": "Heç biri silinmədi",
-    "confirmDeleteOne": "«{{title}}» dərsini silmək istəyirsiniz? Yazı da silinəcək.",
-    "confirmDeleteMany": "{{n}} dərsi silmək istəyirsiniz? Yazılar da silinəcək.",
-    "guestLabel": "Qonaq",
-    "guestParticipants": "Qonaq iştirakçılar",
-    "reactions": "Reaksiya",
-    "reactionsAria": "Emoji reaksiya göndər",
-    "chatTitle": "Çat",
-    "presentation": {
-      "button": "Təqdimat",
-      "pickTitle": "Təqdimat seç",
-      "empty": "Hələ təqdimat yoxdur. Əvvəl Təqdimatlar bölməsində PDF yükləyin.",
-      "ask": "Sual ver",
-      "askTitle": "Tələbələrə sual",
-      "questionPh": "Məsələn, bu kodun output-u nə olacaq?",
-      "optionPh": "Variant {{n}}",
-      "addOption": "Variant əlavə et",
-      "poll": "Poll",
-      "quiz": "Quiz",
-      "correct": "Düzgün cavab",
-      "sendQuestion": "Göndər",
-      "closePoll": "Nəticəni göstər",
-      "stop": "Dayandır",
-      "liveBadge": "Canlı slayd"
-    },
-    "chatPlaceholder": "Mesaj yazın…",
-    "chatEmpty": "Hələ mesaj yoxdur",
-    "chatSend": "Göndər",
-    "chatYou": "Siz",
-    "startOpen": "Yeni dərs",
-    "startOpenTitle": "Qrupsuz canlı dərs",
-    "startOpenHint": "Qrup yaratmadan dərs açın. Linki, QR kodu və ya paylaş düyməsi ilə göndərin.",
-    "lessonTitle": "Dərsin adı",
-    "lessonTitlePlaceholder": "Məs: Sınaq dərs, müsahibə",
-    "createAndShare": "Link və QR yarat",
-    "creating": "Hazırlanır…",
-    "shareJoinTitle": "Dərsə qoşul",
-    "shareJoinHint": "Link dərs saatına qədər və ondan 1 gün sonra etibarlıdır (ən çox 14 gün). Qonaqlar qeydiyyatsız qoşula bilər.",
-    "copyLink": "Linki kopyala",
-    "shareNative": "Paylaş",
-    "downloadQr": "QR yüklə",
-    "enterLive": "Dərsə keç",
-    "revokeLink": "Linki ləğv et",
-    "linkRevokedHint": "Link ləğv edilib — yeni qonaqlar qoşula bilməz.",
-    "linkCopied": "Link kopyalandı",
-    "copyFailed": "Kopyalanmadı",
-    "guestLinkCreated": "Paylaşım linki hazırdır",
-    "roomCreateFailed": "Otaq yaradılmadı",
-    "startFailed": "Dərs başlamadı",
-    "openLive": "Dərsə keç",
-    "shareGuest": "Link / QR",
-    "waitingForTeacher": "Müəllim təsdiqini gözləyirsiniz…",
-    "waitingForTeacherHint": "Dərsə qoşulmaq üçün müəllim sizi təsdiqləməlidir.",
-    "joinDenied": "Qoşulma rədd edildi",
-    "joinDeniedHint": "Müəllim bu dəfə sizi dərsə buraxmadı.",
-    "leaveWaiting": "Geri qayıt",
-    "approveJoin": "Təsdiqlə",
-    "denyJoin": "Rədd et",
-    "admissionPendingTitle": "Yeni qoşulma",
-    "studentJoin": "Tələbə",
-    "micOn": "Mikrofon açıq",
-    "micOff": "Mikrofon bağlı",
-    "cameraOn": "Kamera açıq",
-    "cameraOff": "Kamera bağlı",
-    "youLabel": "Siz",
-    "participant": "İştirakçı",
-    "presenting": "Paylaşılır",
-    "youPresenting": "Siz paylaşır",
-    "chatAttach": "Fayl əlavə et",
-    "chatFileTooLarge": "Fayl 5 MB-dan böyük ola bilməz",
-    "chatFileType": "PDF, şəkil, Office, mətn və kod faylları olar (xlsx, txt, py, js…). Exe göndərmək olmaz.",
-    "chatFileFailed": "Fayl göndərilmədi",
-    "chatUploading": "Yüklənir…",
-    "scheduleWhen": "Təyin olunmuş vaxt (istəyə bağlı)",
-    "scheduleWhenHint": "Boş buraxsanız dərs indi açılır. Gələcək tarix seçsəniz, linki indi paylaşa bilərsiniz.",
-    "scheduledAt": "Təyin olunub:",
-    "scheduledBadge": "Planlaşdırılıb — link hazırdır",
-    "connectionLost": "Bağlantı kəsildi",
-    "connectionLostHint": "İnternet zəif ola bilər. Dərs açıq qalır — eyni linkdən yenidən qoşula bilərsiniz.",
-    "rejoinLive": "Yenidən qoşul",
-    "rejoinFailed": "Yenidən qoşulmaq alınmadı",
-    "leaveLiveKeepOpen": "Dərsdən çıx"
+    "loading": "Yüklənir…"
   },
   "students": {
     "title": "Tələbələrim",
@@ -943,7 +790,7 @@
       "phone": "Tələbə telefonu *",
       "phoneLocked": "Telefon tələbənin özü link vasitəsilə təsdiqləməlidir — müəllim daxil edə bilməz. Gmail ünvanına tamamlama linki göndərin; tələbə ad, soyad və telefonu doldurduqdan sonra quraşdırmanı davam edə bilərsiniz.",
       "sendProfileLink": "Profil tamamlama linki göndər (email)",
-      "phoneHint": "Ödəniş xatırlatması və qrup kodları bu nömrəyə SMS/WhatsApp ilə göndərilir (müəllim hesabından ayrıdır).",
+      "phoneHint": "Tələbə ilə əlaqə nömrəsi — WhatsApp ilə sürətli mesaj üçün istifadə olunur (müəllim hesabından ayrıdır). Mentorix bu nömrəyə avtomatik mesaj göndərmir.",
       "emailOptional": "Email (istəyə bağlı)",
       "emailPh": "student@gmail.com",
       "optionalLabel": "İstəyə bağlı:",
@@ -1014,6 +861,9 @@
       "parentNamePh": "Valideyn adi",
       "parentPhone": "Telefon",
       "parentPhonePh": "+994XXXXXXXXX",
+      "parentEmail": "Valideyn emaili",
+      "parentEmailPh": "valideyn@example.com",
+      "parentEmailHint": "İstəyə bağlı. İmtahan nəticəsinin qısa xülasəsi bu ünvana göndərilir; digər tələbələr görmür.",
       "weekdays": {
         "1": {
           "short": "B.e.",
@@ -1078,6 +928,7 @@
       "lessonDayRequired": "Ən azı bir dərs günü seçin",
       "firstLessonRequired": "Paket üçün ilk dərs tarixini seçin",
       "invalidEmail": "Email formatı düzgün deyil",
+      "invalidParentEmail": "Valideyn emailinin formatı düzgün deyil",
       "studentIdMissing": "Tələbə ID tapılmadı — səhifəni yeniləyib yenidən cəhd edin",
       "noChanges": "Dəyişiklik yoxdur",
       "updated": "Melumatlari yenilendi!",
@@ -1335,80 +1186,83 @@
       "pricePerMonth": "{{price}} AZN / ay",
       "unlimited": "Limitsiz",
       "basic": {
-        "title": "SADƏ",
-        "subtitle": "21 günlük pulsuz sınaq",
+        "title": "21 günlük pulsuz sınaq",
+        "subtitle": "Mentorix-in əsas imkanlarını 21 gün ödənişsiz yoxlayın.",
         "cta": "Pulsuz başla",
         "trialLines": [
-          "21 gün ərzində platformanı sınayın",
           "Kredit kartı tələb olunmur",
+          "Sınaq bitdikdə avtomatik ödəniş tutulmur",
           "İstənilən vaxt dayandıra bilərsiniz",
+          "5 iştirakçı",
+          "3 imtahan",
+          "5 tapşırıq",
           "20 AI sual",
-          "10 AI Tapşırıq yoxlama",
-          "Limitsiz canlı dərslər · 5 iştirakçı"
+          "10 AI tapşırıq yoxlama",
+          "1 GB bulud yaddaşı",
+          "Google Meet və Zoom linki ilə canlı dərs planlama",
+          "Məhdud e-poçt bildirişləri"
         ]
       },
       "pro": {
         "title": "STANDART",
-        "subtitle": "Fərdi müəllimlər üçün",
+        "subtitle": "Köhnə paket — mövcud abunəçilər üçün",
         "cta": "Planı seç",
         "bullets": [
           "20 tələbə",
-          "5 GB Bulud Yaddaşı",
-          "20 SMS / ay",
           "20 imtahan / ay",
           "40 tapşırıq / ay",
           "100 AI sual / ay",
-          "30 AI Tapşırıq yoxlama / ay",
+          "30 AI ilə yoxlanılan açıq-cavab işi / ay",
           "Ödəniş izləmə",
-          "Valideyn bildirişləri",
-          "Qrup və fərdi çat",
-          "Limitsiz canlı dərslər · 20 iştirakçı"
+          "Valideyn e-poçt bildirişləri",
+          "Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama"
         ]
       },
       "growth": {
-        "title": "PROFESSİONAL",
-        "subtitle": "Böyüyən qruplar üçün",
+        "title": "PROFESSIONAL",
+        "subtitle": "Böyüyən qrupları idarə edən müəllimlər üçün.",
         "cta": "Planı seç",
         "bullets": [
           "50 tələbə",
-          "20 GB Bulud Yaddaşı",
-          "50 SMS / ay",
+          "20 GB bulud yaddaşı",
           "50 imtahan / ay",
           "120 tapşırıq / ay",
           "300 AI sual / ay",
-          "100 AI Tapşırıq yoxlama / ay",
+          "100 AI ilə yoxlanılan açıq-cavab işi / ay",
           "Ödəniş izləmə",
-          "Valideyn bildirişləri",
+          "Valideyn e-poçt bildirişləri",
           "Ətraflı hesabatlar",
           "Qrup və fərdi çat",
-          "Limitsiz canlı dərslər · 50 iştirakçı"
+          "Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama",
+          "QR ilə doğrulana bilən sertifikat"
         ]
       },
       "premium": {
-        "title": "PREMİUM",
-        "subtitle": "Aktiv müəllimlər üçün",
+        "title": "PREMIUM",
+        "subtitle": "Aktiv müəllimlər və daha böyük tədris qrupları üçün.",
         "cta": "Planı seç",
         "bullets": [
           "Limitsiz tələbə",
-          "50 GB Bulud Yaddaşı",
-          "200 SMS / ay",
+          "50 GB bulud yaddaşı",
           "Limitsiz imtahan",
           "Limitsiz tapşırıq",
           "800 AI sual / ay",
-          "300 AI Tapşırıq yoxlama / ay",
+          "300 AI ilə yoxlanılan açıq-cavab işi / ay",
           "Ödəniş izləmə",
-          "Valideyn bildirişləri",
+          "Valideyn e-poçt bildirişləri",
           "Ətraflı hesabatlar",
           "Prioritet dəstək",
-          "Limitsiz canlı dərslər · Limitsiz iştirakçı"
+          "Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama",
+          "QR ilə doğrulana bilən sertifikat"
         ]
-      }
+      },
+      "trialPrice": "0 AZN / 21 gün"
     },
     "pricingPage": {
       "heading": "Qiymətlər",
       "intro": "Əvvəlcə məhsulu tanıyın, sonra sizə uyğun paketi seçin. Paketlər auditoriyaya görə qruplaşdırılıb.",
       "compareHeading": "Limitləri müqayisə edin",
-      "trialNote": "SADƏ plan 21 günlük sınaqdır. Kredit kartı tələb olunmur.",
+      "trialNote": "Pulsuz sınaq 21 gündür. Kredit kartı tələb olunmur və sınaq bitdikdə avtomatik ödəniş tutulmur.",
       "yearlyNote": "İllik ödəniş seçəndə aylıq məbləğin 12 qatı üzrə 20% endirim tətbiq olunur.",
       "cta": "Pulsuz başla",
       "backHome": "Ana səhifəyə qayıt",
@@ -1435,17 +1289,52 @@
         "cloudStorage": "Bulud Yaddaşı",
         "exams": "İmtahan / ay",
         "assignments": "Tapşırıq / ay",
-        "sms": "SMS / ay",
         "liveLessons": "Canlı dərslər",
-        "live": "Canlı dərs iştirakçısı",
-        "recording": "Dərs yazısı",
         "aiQuestions": "AI sual",
-        "aiGradings": "AI Tapşırıq yoxlama"
+        "aiGradings": "AI ilə yoxlanılan açıq-cavab işi",
+        "emailNotifications": "E-poçt bildirişləri"
       },
       "dash": "—",
-      "recordingNone": "—",
-      "recordingHours": "{{hours}} saat/ay",
-      "perMonth": "{{count}} / ay"
+      "perMonth": "{{count}} / ay",
+      "liveNote": "Canlı dərslər Google Meet, Zoom və ya müəllimin seçdiyi digər platforma linki ilə keçirilir. İştirakçı limiti həmin hesabın planından asılıdır.",
+      "liveLessonsCell": "Meet / Zoom linki ilə planlama",
+      "emailLimited": "Məhdud",
+      "emailFull": "Valideyn bildirişləri daxil",
+      "faqHeading": "Tez-tez verilən suallar",
+      "faq": [
+        {
+          "q": "Pulsuz sınaq bitəndə kartımdan avtomatik ödəniş tutulur?",
+          "a": "Xeyr. Sınaq üçün kart tələb olunmur və 21 gün bitdikdə avtomatik ödəniş tutulmur. Davam etmək istəsəniz, paketi özünüz seçib ödəyirsiniz."
+        },
+        {
+          "q": "Canlı dərslər Mentorix üzərindən keçirilir?",
+          "a": "Xeyr. Mentorix canlı dərsləri planlamağa və iştirakçılarla paylaşmağa kömək edir. Dərslər Google Meet, Zoom və ya müəllimin seçdiyi digər video platforma linki vasitəsilə keçirilir."
+        },
+        {
+          "q": "Google Meet və Zoom iştirakçı limiti Mentorix paketindən asılıdır?",
+          "a": "Xeyr. İştirakçı limiti istifadə etdiyiniz Google Meet və ya Zoom hesabının planına bağlıdır."
+        },
+        {
+          "q": "Valideynlər bildirişləri necə alır?",
+          "a": "Valideyn tələbənin profilinə bağlanmış valideyn hesabı ilə panel və e-poçt bildirişləri alır (məsələn, imtahan nəticəsi xülasəsi). Ödənişli paketlərdə valideyn e-poçt bildirişləri daxildir; valideyn istənilən vaxt e-poçtdan imtina edə bilər."
+        },
+        {
+          "q": "AI limiti necə hesablanır?",
+          "a": "Hər AI ilə yaradılan sual və hər AI ilə yoxlanılan açıq-cavab işi limitdən bir vahid çıxır. Ödənişli paketlərdə limit hər ay yenilənir; sınaqda limit 21 gün üçündür. Limitə çatdıqda AI funksiyası növbəti aya qədər dayanır, qalan funksiyalar işləməyə davam edir."
+        },
+        {
+          "q": "Tələbə limiti nəyi əhatə edir?",
+          "a": "Limit «Tələbələrim» siyahınızdakı aktiv tələbələri sayır. Bir tələbə bir neçə qrupda olsa da bir dəfə sayılır. Tələbəni siyahıdan çıxardıqda yer boşalır."
+        },
+        {
+          "q": "Bulud yaddaşı dolduqda nə olur?",
+          "a": "Yaddaşın 80% və 100%-ində e-poçt və panel bildirişi alırsınız. Limit dolanda yeni fayl yükləmək dayanır, mövcud fayllar isə əlçatan qalır. Faylları silib yer aça, paketi yüksəldə və ya ödənişli paketdə əlavə yaddaş ala bilərsiniz."
+        },
+        {
+          "q": "Sertifikatlar necə yoxlanılır?",
+          "a": "İmtahan sertifikatında QR kod var. QR kodu skan edən hər kəs Mentorix-in yoxlama səhifəsində sertifikatın həqiqi olduğunu görə bilər."
+        }
+      ]
     },
     "demo": {
       "title": "Nümunə — müəllim paneli",
@@ -1465,7 +1354,7 @@
         "students": "Aktiv tələbə",
         "lessons": "Bu həftə dərs",
         "pendingPay": "Gözləyən ödəniş",
-        "sms": "SMS (ay)"
+        "sms": "E-poçt (ay)"
       },
       "schedule": [
         {
@@ -1600,7 +1489,7 @@
           "paragraphs": [
             "Mentorix-dən Google Meet linki yaratmaq istəyən müəllimlər öz Google hesablarını bağlaya bilərlər. Mentorix məhdud OAuth icazəsi istəyir (adətən OpenID profil/e-poçt kimliyi və Google Calendar hadisələri sahəsi) ki, müəllimin Google hesabında Google Meet konfrans linki olan təqvim hadisələri yarada bilək.",
             "Bu bağlantını reklam satmaq, poçt qutunuzu oxumaq və ya Mentorix-də başlatdığınız Meet dərsləri üçün lazım olandan kənar Google xidmətlərinə giriş üçün istifadə etmirik.",
-            "OAuth giriş və yeniləmə tokenləri serverlərimizdə şifrələnmiş saxlanılır və yalnız canlı dərs inteqrasiyası üçün istifadə olunur. Müəllim Mentorix ayarlarından Google-u istənilən vaxt ayıra bilər; ayırdıqdan sonra həmin tokenlərdən istifadəni dayandırırıq və saxlanılan bağlantı məlumatlarını silirik."
+            "OAuth giriş və yeniləmə tokenləri serverlərimizdə şifrələnmiş saxlanılır və yalnız canlı dərs linklərinin yaradılması üçün istifadə olunur. Müəllim Mentorix ayarlarından Google-u istənilən vaxt ayıra bilər; ayırdıqdan sonra həmin tokenlərdən istifadəni dayandırırıq və saxlanılan bağlantı məlumatlarını silirik."
           ]
         },
         {
@@ -1643,7 +1532,7 @@
     },
     "terms": {
       "seoTitle": "İstifadə şərtləri — Mentorix",
-      "seoDesc": "Mentorix istifadəsi, abunəliklər və müəllimin Google Meet / Zoom / Teams hesabında video dərslər haqqında şərtlər.",
+      "seoDesc": "Mentorix istifadəsi, abunəliklər və Google Meet, Zoom və ya digər platforma linkləri ilə canlı dərslər haqqında şərtlər.",
       "title": "İstifadə şərtləri",
       "updated": "Son yenilənmə: 15 sentyabr 2026",
       "sections": [
@@ -1668,14 +1557,14 @@
         {
           "heading": "Abunəliklər və ödənişlər",
           "paragraphs": [
-            "Pullu planlar, SMS kreditləri və digər ödənişli funksiyalar qiymət səhifələrində və məhsulda təsvir olunur. Seçdiyiniz plana və səlahiyyət verdiyiniz ödəniş üsuluna görə haqq tutulur. Müəllim və tələbə arasındakı dərs paketləri həmin tərəflər arasındakı razılaşmadır; Mentorix alətlər və (aktiv olduqda) ödəniş axınları təqdim edir, lakin tədrisin keyfiyyəti və çatdırılması — açıq şəkildə başqa cür bildirmədiyimiz hallar istisna olmaqla — müəllimin məsuliyyətidir."
+            "Pullu planlar, əlavə yaddaş paketləri və digər ödənişli funksiyalar qiymət səhifələrində və məhsulda təsvir olunur. Seçdiyiniz plana və səlahiyyət verdiyiniz ödəniş üsuluna görə haqq tutulur. Müəllim və tələbə arasındakı dərs paketləri həmin tərəflər arasındakı razılaşmadır; Mentorix alətlər və (aktiv olduqda) ödəniş axınları təqdim edir, lakin tədrisin keyfiyyəti və çatdırılması — açıq şəkildə başqa cür bildirmədiyimiz hallar istisna olmaqla — müəllimin məsuliyyətidir."
           ]
         },
         {
-          "heading": "Canlı video (Google Meet, Zoom, Microsoft Teams)",
+          "heading": "Canlı dərslər (Google Meet, Zoom və digər linklər)",
           "paragraphs": [
-            "Mentorix müəllimlərə canlı dərslər yaratmağa və idarə etməyə kömək edə bilər, o cümlədən müəllimin bağlı Google, Zoom və ya Microsoft hesabında görüş linkləri yaratmaqla.",
-            "Vacib: video konfrans müəllimin öz provayder hesabında işləyir. Mentorix Zoom Pro, Google Workspace və ya Microsoft 365 lisenziyası satmır və paketə daxil etmir. Pulsuz limitlər (məsələn, Zoom Basic görüş müddəti) həmin provayderlər tərəfindən müəyyən olunur, Mentorix tərəfindən deyil. Mentorix paketlərindəki «limitsiz canlı dərslər» Mentorix-də dərslərin idarə olunmasına aiddir; sizin adınıza üçüncü tərəf video tutumunun limitsiz alınmasına aid deyil."
+            "Mentorix müəllimlərə canlı dərsləri planlamağa və idarə etməyə kömək edir: müəllim Google Meet, Zoom və ya digər platformanın görüş linkini dərsə əlavə edir. Müəllim istəsə, öz Google və ya Zoom hesabını bağlayaraq linki avtomatik yarada bilər. Mentorix özü video yayım xidməti göstərmir.",
+            "Vacib: video konfrans müəllimin öz provayder hesabında işləyir. Mentorix Zoom Pro, Google Workspace və ya Microsoft 365 lisenziyası satmır və paketə daxil etmir. Pulsuz limitlər (məsələn, Zoom Basic görüş müddəti) həmin provayderlər tərəfindən müəyyən olunur, Mentorix tərəfindən deyil. Mentorix paketlərindəki «limitsiz canlı dərs planlama» Mentorix-də dərslərin planlanmasına və idarə olunmasına aiddir; sizin adınıza üçüncü tərəf video tutumunun limitsiz alınmasına aid deyil."
           ]
         },
         {
@@ -1730,7 +1619,6 @@
     "codeLabel": "Kod:",
     "chat": "Çat",
     "liveClass": "🔴 Canlı Dərs",
-    "liveStarting": "Başlanır…",
     "package": "Paket",
     "code": "Kod",
     "copyLink": "Linki kopyala",
@@ -1742,20 +1630,6 @@
     "groupPlusPackage": "Qrup + paket",
     "defaultSubject": "Sahə",
     "defaultGroup": "Qrup",
-    "liveModal": {
-      "title": "Canlı dərs — bildiriş",
-      "choosePrompt": "«{{name}}» üçün canlı dərsə necə başlamaq istəyirsiniz?",
-      "startWithGroup": "Qrup üzvləri ilə başla",
-      "createGuestLink": "Qonaq linki yarat",
-      "notifyPrompt": "«{{name}}» qrupundakı tələbələrə bildiriş göndərilsin?",
-      "noNotifyHint": "Heç birini seçməsəniz, dərs birbaşa başlayacaq — bildiriş getməyəcək.",
-      "smsLabel": "SMS bildiriş",
-      "smsHint": "Tələbənin telefonuna SMS — SMS balansınızdan çıxır.",
-      "emailLabel": "Gmail / e-poçt",
-      "emailHint": "Qeydiyyat e-poçtuna (adətən Gmail) — SMS balansından çıxmır.",
-      "bothChannels": "Hər iki kanal seçildi — hər tələbəyə SMS və e-poçt gedə bilər.",
-      "startLesson": "Dərsi başlat"
-    },
     "guestLinkModal": {
       "title": "Qonaq dəvət linki",
       "validHint": "Link 24 saat etibarlıdır. Kənar şəxslər qeydiyyatsız qoşula bilər.",
@@ -1814,20 +1688,11 @@
       "feeRequired": "Paket qiyməti (₼) tələb olunur",
       "groupCreated": "Qrup və paket tənzimləri yaradıldı",
       "groupUpdated": "Qrup paketi yeniləndi",
-      "roomCreateFailed": "Otaq yaradılmadı",
-      "liveStartedBoth": "Canlı dərs başladı — {{sms}} SMS, {{email}} e-poçt göndərildi",
-      "liveStartedSms": "Canlı dərs başladı — {{sms}} SMS göndərildi",
-      "liveStartedEmail": "Canlı dərs başladı — {{email}} e-poçt göndərildi",
-      "liveStarted": "Canlı dərs başladı",
-      "liveStartFailed": "Canlı dərs başlatmaq alınmadı",
       "codeCopied": "Kod kopyalandı",
       "copyFailed": "Kopyalanmadı",
       "groupLinkCopied": "Qrup linki kopyalandı",
       "linkCopied": "Link kopyalandı",
-      "linkCopyFailed": "Link kopyalanmadı",
-      "guestLinkCreated": "Qonaq linki yaradıldı",
-      "guestLinkCopied": "Qonaq linki kopyalandı",
-      "guestLinkRevoked": "Qonaq linki ləğv edildi"
+      "linkCopyFailed": "Link kopyalanmadı"
     }
   },
   "joinRequests": {
@@ -1863,9 +1728,7 @@
     "profileModalTitle": "Profil tam deyil",
     "ok": "Tamam",
     "examApproveTitle": "İmtahan sorğusunu təsdiqlə",
-    "examApproveEmailHint": "Təsdiqdən sonra tələbəyə Gmail-ə «Müraciətiniz təsdiqləndi» mesajı gedəcək (tətbiqdə olmasa da görəcək). Paneldə də bildiriş olacaq.",
-    "examApproveSmsLabel": "SMS / WhatsApp da göndər",
-    "examApproveSmsHint": "Yalnız tələbənin profilində telefon varsa. Gmail qeydiyyatlı tələbələrə əvvəlcə email kifayətdir."
+    "examApproveEmailHint": "Təsdiqdən sonra tələbəyə Gmail-ə «Müraciətiniz təsdiqləndi» mesajı gedəcək (tətbiqdə olmasa da görəcək). Paneldə də bildiriş olacaq."
   },
   "notificationCenter": {
     "title": "Bildirişlər",
@@ -1922,7 +1785,11 @@
       "grading": "Qiymətləndirmə",
       "partner": "Partner proqramı",
       "billing": "Ödənişlər",
-      "system": "Sistem"
+      "system": "Sistem",
+      "live_lesson": "Canlı dərslər",
+      "parent": "Valideyn bildirişləri",
+      "digest": "Həftəlik xülasə",
+      "marketing": "Yeniliklər və təkliflər"
     },
     "categoryHelp": {
       "assessment": "İmtahana giriş sorğuları, nəticələr və xatırlatmalar",
@@ -1932,7 +1799,11 @@
       "grading": "Yoxlanış gözləyən cavablar və dərc olunan qiymətlər",
       "partner": "Referal və ödəniş yenilikləri",
       "billing": "Ödənişlər, planlar və limitlər",
-      "system": "Məhsul yenilikləri və hesab tövsiyələri"
+      "system": "Məhsul yenilikləri və hesab tövsiyələri",
+      "live_lesson": "Planlanan, dəyişən və ləğv olunan dərslər və xatırlatmalar",
+      "parent": "Övladınızın nəticələri və vacib yenilikləri",
+      "digest": "Həftəlik fəaliyyət xülasəsi",
+      "marketing": "Mentorix yenilikləri (istəyə bağlı)"
     },
     "frequency": {
       "immediate": "Dərhal",
@@ -1943,7 +1814,7 @@
     "settings": {
       "title": "Bildiriş tənzimləmələri",
       "subtitle": "Hansı yenilikləri və necə alacağınızı seçin.",
-      "emailNotice": "E-poçt bildirişləri hələ hazırlanır. E-poçt seçimləriniz indi yadda saxlanılır və e-poçt göndərişi aktiv olduqda tətbiq ediləcək.",
+      "emailNotice": "E-poçt bildirişləri seçimlərinizə uyğun göndərilir. Hər e-poçtun altındakı linklə həmin növ bildirişlərdən imtina edə bilərsiniz; təhlükəsizlik xəbərdarlıqları həmişə göndərilir.",
       "columns": {
         "category": "Kateqoriya",
         "inApp": "Tətbiqdə",
@@ -2100,167 +1971,6 @@
         "title": "Admin girişində uğursuz cəhdlər",
         "body": "{{account}} admin hesabına son {{minutes}} dəqiqədə {{count}} uğursuz giriş cəhdi olub."
       }
-    }
-  },
-  "notifications": {
-    "title": "Bildirişlər",
-    "subtitle": "SMS və saxlama limitləri",
-    "systemStatus": "Sistem vəziyyəti",
-    "attention": "Diqqət",
-    "stable": "Stabil",
-    "monthlySms": "Aylıq SMS",
-    "storage": "Storage",
-    "alerts": "Bildirişlər",
-    "activeCount": "{{count}} aktiv",
-    "tabAll": "Bütün bildirişlər",
-    "tabSms": "SMS tarixçəsi",
-    "smsHistory": "SMS tarixçəsi",
-    "smsHistoryDesc": "Real SMS göndərişləri, sistem qeydləri və planlaşdırılmış xatırlatmalar — audit üçün metadata ilə.",
-    "historyLoading": "Tarixçə yüklənir…",
-    "thisMonth": "Bu ay ({{month}})",
-    "sentCount": "{{count}} SMS göndərilib",
-    "sentQuotaNote": "(paket limitinə daxil)",
-    "loggedCount": "{{count}} sistem qeydi",
-    "loggedQuotaNote": "(SMS göndərilməyib)",
-    "whatsappCount": "{{count}} WhatsApp",
-    "failedCount": "{{count}} uğursuz SMS",
-    "scheduledCount": "{{count}} planlaşdırılıb",
-    "debugTitle": "Debug: API-dən gələn data (filterdən əvvəl, ilk 2)",
-    "totalHistory": "Ümumi tarixçə:",
-    "packageLimit": "Paket limiti (bu ay):",
-    "packageUsed": "{{used}}/{{limit}} istifadə",
-    "csvExport": "CSV export",
-    "searchPh": "Ad və ya telefon (məs: Gözel / 559815866)",
-    "searchAria": "SMS tarixçəsində axtarış",
-    "filterAll": "Hamısı",
-    "filterToday": "Bu gün",
-    "filterWeek": "Bu həftə",
-    "filterMonth": "Bu ay",
-    "statusSent": "Göndərildi",
-    "statusLogged": "Yalnız qeyd",
-    "statusFailed": "Uğursuz",
-    "statusScheduled": "Planlaşdırılıb",
-    "historyLoadFailed": "SMS tarixçəsi yüklənmədi",
-    "historyUnavailable": "SMS tarixçəsi hazırda əlçatan deyil{{status}}",
-    "noSearchResults": "Axtarışa uyğun SMS tapılmadı",
-    "noFilterResults": "Bu filter üçün SMS yoxdur",
-    "retryLater": "Bir az sonra yenidən yoxlayın.",
-    "searchHint": "Ad və ya telefonu yoxlayın (ən azı 2 simvol).",
-    "filterHint": "Filtrləri dəyişin və ya yeni SMS göndərin.",
-    "showing": "Göstərilir:",
-    "showMore": "Daha çox göstər",
-    "detailsTitle": "SMS detalları",
-    "loggedDetailDefault": "Bu qeyd SMS provayderinə göndərilməyib və paket limitinizdən çıxılmır.",
-    "loggedSystemNote": "Müəllim «Bildirişlər»dən əl ilə göndərməyib — sistem avtomatik qeyd edib.",
-    "examAutoNote": "Bu SMS imtahan yaradılanda və ya tələbə imtahana təyin ediləndə avtomatik göndərilib. İmtahan silinsə belə, tarixçədə qala bilər.",
-    "failureReason": "Uğursuzluq səbəbi",
-    "detailSource": "Mənbə",
-    "detailStatus": "Status",
-    "detailSentAt": "Göndərilmə vaxtı",
-    "detailRecipient": "Alıcı",
-    "detailPhone": "Telefon",
-    "detailLength": "Mesaj uzunluğu",
-    "detailParts": "SMS hissə",
-    "detailProvider": "SMS provayder",
-    "detailMessageId": "Message ID",
-    "detailHttpStatus": "HTTP status",
-    "detailQuotaImpact": "Limitə təsir",
-    "quotaYes": "Bəli — paketdən çıxır",
-    "quotaNo": "Xeyr — yalnız qeyd",
-    "messageText": "Mesaj mətni",
-    "exportRow": "Bu sətiri export et",
-    "close": "Bağla",
-    "loading": "Yüklənir...",
-    "allGoodTitle": "Hər şey qaydasındadır",
-    "allGoodDesc": "Limitləriniz 80%-dən çox dolmayıb",
-    "critical": "Kritik",
-    "warning": "Xəbərdarlıq",
-    "alertSms": "📱 SMS",
-    "alertStorage": "💾 Storage",
-    "alertDiscover": "🔍 Axtarış profili",
-    "alertSystem": "⚙️ Sistem",
-    "lastSmsNone": "Son SMS: hələ göndərilməyib",
-    "lastSms": "Son SMS: {{relative}} · {{datetime}}",
-    "lastActivity": "Son aktivlik: {{relative}}",
-    "chars": "{{count}} simvol",
-    "smsStatus": {
-      "sent": "Göndərildi",
-      "logged": "Yalnız qeyd",
-      "whatsapp": "WhatsApp",
-      "failed": "Uğursuz",
-      "scheduled": "Planlaşdırılıb",
-      "pending": "Gözləyir"
-    },
-    "relative": {
-      "seconds": "{{count}} saniyə əvvəl",
-      "minutes": "{{count}} dəqiqə əvvəl",
-      "hours": "{{count}} saat əvvəl",
-      "days": "{{count}} gün əvvəl"
-    },
-    "dateToday": "Bu gün • {{time}}",
-    "dateYesterday": "Dünən • {{time}}",
-    "smsFailure": {
-      "unknown": "Səbəb qeyd olunmayıb",
-      "quota": "SMS limiti bitib",
-      "phone": "Nömrə yanlışdır və ya format uyğun deyil",
-      "credentials": "SMS provayder giriş məlumatları səhvdir",
-      "provider": "SMS provayder xətası",
-      "network": "Şəbəkə və ya server xətası"
-    },
-    "months": {
-      "0": "Yanvar",
-      "1": "Fevral",
-      "2": "Mart",
-      "3": "Aprel",
-      "4": "May",
-      "5": "İyun",
-      "6": "İyul",
-      "7": "Avqust",
-      "8": "Sentyabr",
-      "9": "Oktyabr",
-      "10": "Noyabr",
-      "11": "Dekabr"
-    },
-    "card": {
-      "paymentReminder": "Ödəniş xatırlatması",
-      "loggedNoSms": "SMS göndərilməyib · müəllim əl ilə göndərməyib",
-      "paymentRecord": "Ödəniş qeydi",
-      "noQuota": "SMS göndərilməyib · limitdən çıxılmır",
-      "systemNote": "Sistem qeydi",
-      "whatsappMessage": "WhatsApp mesajı",
-      "examNotify": "İmtahan bildirişi · SMS limitindən çıxılmır",
-      "noSmsQuota": "SMS limitindən çıxılmır",
-      "examAutoSent": "İmtahan yaradılanda sistem göndərib — Bildirişlər səhifəsindən əl ilə deyil.",
-      "smsSent": "SMS göndərildi",
-      "inPackage": "Paket limitinə daxildir",
-      "scheduledSms": "Planlaşdırılmış SMS",
-      "notSentYet": "Hələ göndərilməyib",
-      "pending": "Gözləyir",
-      "providerPending": "Provayder təsdiqi gözlənilir",
-      "smsFailed": "SMS göndərilmədi",
-      "morePhones": "· +{{count}} nömrə",
-      "parts": "Hissə:",
-      "approxTime": "{{time}} (təxmini)",
-      "viewDetails": "Ətraflı bax",
-      "pack8": "8 dərs",
-      "pack12": "12 dərs",
-      "examAutoLog": "Avtomatik imtahan qeydi",
-      "examAutoSms": "Avtomatik imtahan SMS-i",
-      "otpPin": "PIN kod SMS-i",
-      "phone": "Telefon:",
-      "length": "Uzunluq:",
-      "charsShort": "simvol"
-    },
-    "csvHeaders": {
-      "date": "Tarix",
-      "status": "Status",
-      "type": "Növ",
-      "student": "Tələbə",
-      "phone": "Telefon",
-      "chars": "Simvol",
-      "parts": "Hissə",
-      "reason": "Səbəb",
-      "message": "Mesaj"
     }
   },
   "materials": {
@@ -2431,10 +2141,10 @@
       "availableUntil": "Son giriş vaxtı",
       "allowFinishAfterUntil": "Son giriş vaxtı bitəndə yeni giriş bağlansın, amma daxil olan tələbə müddətini tamamlaya bilsin",
       "duration": "Müddət (dəq)",
-      "notifySms": "Xatırlatma / nəticə SMS",
       "showResults": "Nəticəni tələbəyə göstər",
       "wrongPenalty": "Səhv düzü aparsın (0.25 cərimə)",
-      "wrongPenaltyHint": "Yalnız qapalı (ABCDE) suallarda səhv cavab üçün 0.25 bal çıxılır. Digər sual tipləri cəriməsizdir."
+      "wrongPenaltyHint": "Yalnız qapalı (ABCDE) suallarda səhv cavab üçün 0.25 bal çıxılır. Digər sual tipləri cəriməsizdir.",
+      "notifyEmail": "E-poçt xatırlatması"
     },
     "questions": {
       "title": "Suallar və ballar",
@@ -3033,15 +2743,11 @@
     "jumpPlan": "Paket",
     "changePlan": "Paketini dəyiş",
     "activePlan": "Aktiv paket:",
-    "downgradeNote": "Aşağı paketə keçid yalnız cari paket dövrü ən azı 1 ay tamamlandıqdan sonra mümkündür və yalnız tələbə sayı, SMS və yaddaş hər üçü hədəf paket limitinə uyğun olduqda icazə verilir. Limit dolubsa cari paketdə əlavə SMS alın və ya yaddaşı idarə edin.",
+    "downgradeNote": "Aşağı paketə keçid yalnız cari paket dövrü ən azı 1 ay tamamlandıqdan sonra mümkündür və yalnız tələbə sayı və yaddaş hədəf paket limitinə uyğun olduqda icazə verilir. Limit dolubsa cari paketdə əlavə yaddaş alın və ya faylları idarə edin.",
     "downgradeInDays": "Aşağı paketə keçid təxminən {{days}} gün sonra açıla bilər.",
-    "smsLimitLine": "SMS limiti: {{label}}{{detail}}. {{plan}} paketində qalmaq üçün effektiv limit (paket + təsdiqlənmiş əlavə SMS) istifadənizdən böyük və ya bərabər olmalıdır.",
-    "smsShortfall": "Bu ay {{used}} SMS istifadə olunub, cari effektiv limit {{effective}}. {{plan}} paketində qalmaq üçün ən azı +{{shortfall}} SMS əlavə paketi lazımdır.",
-    "pendingSmsPayment": "Gözləyən SMS ödənişi təsdiqlənənə qədər limit artmayıb görünə bilər. Təsdiqdən sonra effektiv limit artır və {{plan}} paketində qalırsınız.",
     "pendingPlan": "{{plan}} paketi üçün ödəniş admin təsdiqi gözləyir. Təsdiqdən sonra aktiv paket və limitlər yenilənəcək.",
-    "basicLimitHint": "SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa {{plans}} seçin.",
-    "paidLimitHint": "Limit dolubsa: cari paketdə əlavə SMS və ya əlavə yaddaş ala bilərsiniz. Aşağı paketə keçid yalnız 1 ay sonra və istifadə uyğun olduqda mümkündür.",
-    "extraSms": "Əlavə SMS",
+    "basicLimitHint": "Pulsuz sınaqda əlavə yaddaş alına bilməz. Limit dolubsa {{plans}} seçin.",
+    "paidLimitHint": "Limit dolubsa: cari paketdə əlavə yaddaş ala bilərsiniz. Aşağı paketə keçid yalnız 1 ay sonra və istifadə uyğun olduqda mümkündür.",
     "extraStorage": "Əlavə yaddaş",
     "badgeActive": "Aktiv paket",
     "badgePending": "Təsdiq gözləyir",
@@ -3068,10 +2774,6 @@
     "btnPending": "Təsdiq gözləyir",
     "btnUpgrade": "Upgrade et",
     "btnSwitchPlan": "Paketə keç",
-    "buySmsTitle": "Əlavə SMS al",
-    "buySmsDesc": "Paket limitinizə əlavə SMS balansı. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.",
-    "confirmedExtraSms": "Təsdiqlənmiş əlavə SMS: +{{count}} (paket {{base}} + əlavə = {{limit}} limit)",
-    "pendingExtraSms": "Gözləyən əlavə SMS: +{{count}} (admin təsdiqindən sonra limitə əlavə olunacaq)",
     "buy": "Al",
     "storageTitle": "Əlavə yaddaş",
     "storageDesc": "+1 GB, +5 GB və ya +15 GB paketləri — aylıq ödənişlə paket limitinizə əlavə olunur. Kartla dərhal, köçürmə ilə admin təsdiqindən sonra aktivləşir.",
@@ -3148,12 +2850,10 @@
     "previewSearch": "Axtarış səhifəsinə bax",
     "viewLiveSearch": "→ Canlı axtarışda bax",
     "limitModalTitle": "{{plan}} — limit həlli",
-    "limitModalBasic": "SADƏ paketində əlavə SMS/yaddaş alına bilməz. Limit dolubsa {{plans}} seçin.",
+    "limitModalBasic": "Pulsuz sınaqda əlavə yaddaş alına bilməz. Limit dolubsa {{plans}} seçin.",
     "limitModalPaid": "Hansı limitə ehtiyacınız var? Aşağı paketə keçmək lazım deyil — cari {{plan}} paketində qalın.",
-    "buyExtraSms": "Əlavə SMS al",
     "manageStorage": "Yaddaşı idarə et (faylları azalt)",
     "renewPlan": "Paketi yenilə",
-    "checkoutSms": "SMS ödənişi",
     "checkoutStorage": "Əlavə yaddaş ödənişi",
     "checkoutPlan": "Paket ödənişi",
     "checkoutChoice": "Seçim: {{title}}",
@@ -3167,24 +2867,19 @@
       "paid": "Ödənilib",
       "rejected": "Rədd edilib",
       "failed": "Uğursuz",
-      "expired": "Tamamlanmayıb"
+      "expired": "Tamamlanmayıb",
+      "refunded": "Geri qaytarılıb",
+      "credited": "Hesab kreditinə çevrilib"
     },
     "billingTitle": {
-      "sms": "+{{count}} SMS",
       "storageGb": "+{{size}} GB Sənəd Yaddaşı",
       "storageMb": "+{{size}} MB Sənəd Yaddaşı",
-      "plan": "Paket: {{plan}}{{interval}}"
+      "plan": "Paket: {{plan}}{{interval}}",
+      "legacyAddon": "Köhnə bildiriş paketi"
     },
     "billingInterval": {
       "yearly": " (illik)",
       "monthly": " (aylıq)"
-    },
-    "smsUsage": {
-      "plan": "paket {{count}}",
-      "extra": "+{{count}} əlavə",
-      "pending": "+{{count}} gözləyir",
-      "limitAfter": "{{detail}} → limit {{count}} olacaq",
-      "afterConfirm": "Təsdiqdən sonra limit {{count}} olacaq"
     },
     "storageUsage": {
       "plan": "paket {{size}}",
@@ -3199,8 +2894,8 @@
       "perMonth": "/ay",
       "perYear": "/il",
       "yearlyHint": "≈ {{monthly}} AZN/ay qarşılığında (12 ay, −{{pct}}%)",
-      "trialDaysLeft": "21 günlük pulsuz sınaq — {{days}} gün qalıb (əlavə SMS/yaddaş yalnız ödənişli paketlərdə)",
-      "trialExpired": "SADƏ sınaq müddəti bitib — davam üçün ödənişli paket seçin",
+      "trialDaysLeft": "21 günlük pulsuz sınaq — {{days}} gün qalıb (əlavə yaddaş yalnız ödənişli paketlərdə)",
+      "trialExpired": "Pulsuz sınaq müddəti bitib — davam üçün ödənişli paket seçin",
       "trialExtraOnly": "21 günlük pulsuz sınaq — əlavə limit yalnız {{plans}}",
       "monthly": "{{amount}} AZN/ay",
       "yearly": "{{amount}} AZN/il (təxm. {{monthly}} AZN/ay)"
@@ -3285,6 +2980,19 @@
       "errSize": "Fayl çox böyükdür — maksimum 5 MB",
       "errUpload": "Şəkil yüklənmədi",
       "errRemove": "Silinmədi"
+    },
+    "buyExtraStorage": "Əlavə yaddaş al",
+    "legacyPlanNote": "Köhnə paket — sizin üçün eyni şərtlərlə saxlanılır, yeni abunəliklər üçün təklif olunmur.",
+    "credit": {
+      "balance": "Hesab krediti: {{amount}} AZN — növbəti paket və ya yaddaş ödənişinizə avtomatik tətbiq olunur.",
+      "paidWithCredit": "Ödəniş hesab krediti ilə tam qarşılandı — aktivləşdirildi."
+    },
+    "legacyMigration": {
+      "noteScheduled": "STANDART paketi PROFESSIONAL ilə əvəz olunur. Cari dövr dəyişmir; {{date}} tarixindən sonrakı yeniləmə PROFESSIONAL (10 AZN/ay) olacaq. Avtomatik ödəniş yoxdur.",
+      "noteExtraRenewal": "STANDART paketi PROFESSIONAL ilə əvəz olunur. Bildiriş müddəti 14 gündən az olduğu üçün növbəti yeniləməni bir dəfə də 5 AZN-ə (aylıq) edə bilərsiniz; ondan sonra PROFESSIONAL (10 AZN/ay).",
+      "noteBlocked": "Əvvəlcədən bildirildiyi kimi STANDART paketi artıq yenilənmir. Yeniləmə PROFESSIONAL (10 AZN/ay) ilə olur — ödənişi yalnız siz başladırsınız.",
+      "renewBlocked": "STANDART paketi artıq yenilənmir — PROFESSIONAL (10 AZN/ay) seçin.",
+      "monthlyOnly": "STANDART paketi yalnız aylıq yenilənir. İllik ödəniş üçün PROFESSIONAL seçin."
     }
   },
   "assignmentAnalytics": {
@@ -3437,9 +3145,9 @@
       "students": "{{count}} tələbə",
       "documentsUnlimited": "Limitsiz sənəd",
       "documents": "{{count}} sənəd",
-      "cloudStorageGb": "{{size}} GB Bulud Yaddaşı",
+      "cloudStorageGb": "{{size}} GB bulud yaddaşı",
       "cloudStorageGbShort": "{{size}} GB",
-      "cloudStorageUnlimited": "Limitsiz Yaddaş",
+      "cloudStorageUnlimited": "Limitsiz bulud yaddaşı",
       "storage5mb": "5 MB Sənəd Yaddaşı",
       "storage256mb": "256 MB Sənəd Yaddaşı",
       "storage1gb": "1 GB Sənəd Yaddaşı",
@@ -3448,12 +3156,6 @@
       "storageMb": "{{size}} MB Sənəd Yaddaşı",
       "storageGb": "{{size}} GB Sənəd Yaddaşı",
       "storageUnlimited": "Limitsiz Sənəd Yaddaşı",
-      "smsUnlimited": "Limitsiz SMS / ay",
-      "smsTrial": "{{count}} SMS",
-      "smsMonthly": "{{count}} SMS / ay",
-      "smsEffective": "{{effective}} SMS / ay (baza {{base}} + əlavə {{extra}})",
-      "smsPremiumCurrent": "{{count}} SMS / ay (əlavə balans alına bilər)",
-      "smsPremiumOther": "{{count}} SMS / Əlavə balans imkanı",
       "examsUnlimited": "Limitsiz imtahan",
       "examsUnlimitedMonthly": "Limitsiz imtahan / ay",
       "examsTrial": "{{count}} imtahan",
@@ -3464,15 +3166,11 @@
       "homeworksMonthly": "{{count}} tapşırıq / ay",
       "aiQuestionsTrial": "{{count}} AI sual",
       "aiQuestionsMonthly": "{{count}} AI sual / ay",
-      "aiGradingsTrial": "{{count}} AI Tapşırıq yoxlama",
-      "aiGradingsMonthly": "{{count}} AI Tapşırıq yoxlama / ay",
-      "liveUnlimited": "Limitsiz canlı dərslər · Limitsiz iştirakçı",
-      "liveLessonsUnlimited": "Limitsiz canlı dərslər",
-      "liveParticipantsUnlimited": "Limitsiz iştirakçı",
-      "liveParticipantsOnly": "{{count}} iştirakçı / canlı dərs",
-      "recordingNone": "Dərs yazısı yoxdur (SADƏ)",
-      "recordingQuota": "Yazı: {{hours}} saat/ay · {{storage}} GB · {{retention}} gün saxlama · max {{maxMin}} dəq · {{quality}}",
-      "liveParticipants": "{{count}} iştirakçı / canlı dərs"
+      "aiGradingsTrial": "{{count}} AI ilə yoxlanılan açıq-cavab işi",
+      "aiGradingsMonthly": "{{count}} AI ilə yoxlanılan açıq-cavab işi / ay",
+      "cloudStorageMb": "{{size}} MB bulud yaddaşı",
+      "unlimitedShort": "Limitsiz",
+      "liveLessonLinks": "Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama"
     },
     "map": {
       "basic": "📍 Xəritədə görünür",
@@ -3481,26 +3179,24 @@
       "premium": "🔥 Axtarışda həmişə ən yuxarıda (TOP)"
     },
     "desc": {
-      "basic": "21 günlük pulsuz sınaq — platformanı risksiz sınayın.",
-      "pro": "Kiçik və orta qruplar üçün ən populyar {{title}} paket.",
-      "growth": "{{title}} paket — böyüyən tədris biznesi və ətraflı hesabatlar.",
-      "premium": "{{title}} paket — limitsiz tələbə, 50 GB bulud yaddaşı və prioritet dəstək."
+      "basic": "Mentorix-in əsas imkanlarını 21 gün ödənişsiz yoxlayın.",
+      "pro": "{{title}} — köhnə paket, mövcud abunəçilər üçün saxlanılır.",
+      "growth": "Böyüyən qrupları idarə edən müəllimlər üçün.",
+      "premium": "Aktiv müəllimlər və daha böyük tədris qrupları üçün."
     },
     "detail": {
       "basic": {
         "trial": "21 günlük pulsuz sınaq paketi.",
         "limitsPeriod": "Sınaq müddətində: {{limits}}.",
-        "limitsFallback": "Limitlər Başlanğıc paketinə uyğun tətbiq olunur.",
-        "noExtraSms": "Əlavə SMS və yaddaş alına bilməz — limit dolanda Standart və ya daha yüksək paket seçin.",
-        "noRenew": "Başlanğıc paketi yenilənmir; 21 gün bitəndən sonra ödənişli paket tələb olunur.",
-        "oneTrialPerIp": "Hər cihazdan (IP) yalnız bir dəfə pulsuz sınaq verilir."
+        "limitsFallback": "Limitlər sınaq paketinə uyğun tətbiq olunur.",
+        "noRenew": "Sınaq paketi yenilənmir; 21 gün bitəndən sonra ödənişli paket tələb olunur.",
+        "oneTrialPerIp": "Hər cihazdan (IP) yalnız bir dəfə pulsuz sınaq verilir.",
+        "noAutoCharge": "Sınaq bitdikdə avtomatik ödəniş tutulmur — davam etmək üçün paketi özünüz seçirsiniz."
       },
       "paid": {
         "subscription": "Aylıq və ya illik ödənişlə aktiv abunədir; ödəniş təsdiqlənəndən sonra limitlər dərhal tətbiq olunur.",
         "includes": "Paketə daxildir: {{limits}}.",
-        "premiumSmsEffective": "Limitsiz tələbə — SMS limiti {{sms}}.",
-        "premiumSmsDefault": "Limitsiz tələbə — SMS limiti 200/ay (əlavə balans alına bilər).",
-        "upgradeHint": "Limitlərə çatdıqda paketi yüksəldin və ya əlavə SMS/yaddaş alın."
+        "upgradeHint": "Limitlərə çatdıqda paketi yüksəldin və ya əlavə yaddaş alın."
       },
       "fallback": {
         "limits": "{{limits}}.",
@@ -3884,7 +3580,7 @@
       "experienceYears": "{{count}} il təcrübə",
       "ratePerHour": "{{rate}} AZN / saat",
       "trialCta": "⚡ Sınaq dərsi — müraciət",
-      "whatsappDisclaimer": "WhatsApp və müraciət üçün qeydiyyat tələb olunur. Müraciət SMS və panel bildirişi ilə çatdırılır.",
+      "whatsappDisclaimer": "WhatsApp və müraciət üçün qeydiyyat tələb olunur. Müraciət panel və e-poçt bildirişi ilə çatdırılır.",
       "lessonFormat": "Dərs formatı",
       "nextSlot": "Növbəti boş vaxt:",
       "about": "Haqqımda",
@@ -4007,6 +3703,8 @@
       "date": "Tarix",
       "certId": "Sertifikat ID",
       "supersededHint": "Bu sertifikat yenilənib. Ən son versiya üçün müəllim və ya tələbə ilə əlaqə saxlayın.",
+      "revokedOn": "Bu sertifikat {{date}} tarixində ləğv edilib və artıq etibarlı deyil.",
+      "revokedNote": "Bu sertifikat ləğv edilib və artıq etibarlı deyil.",
       "disclaimer": "Bu rəsmi dövlət akkreditasiyası deyil.",
       "backHome": "Ana səhifə"
     },
@@ -5072,5 +4770,181 @@
       "privacy_requests": "Məxfilik sorğuları: sistemdə belə sorğular üçün mənbə yoxdur.",
       "cross_workspace_attempts": "Başqa iş sahəsinə giriş cəhdləri: rədd edilən cəhdlər hələ jurnala yazılmır."
     }
+  },
+  "liveLessons": {
+    "title": "Canlı dərslər",
+    "subtitleInstructor": "Dərsləri Google Meet, Zoom və ya digər HTTPS linki ilə planlayın. Mentorix linki, xatırlatmaları və iştirakı idarə edir — video görüş həmin platformada keçir.",
+    "subtitleStudent": "Müəlliminizin planladığı canlı dərslər. «Dərsə qoşul» düyməsi Google Meet, Zoom və ya digər platformanı yeni tabda açır.",
+    "new": "Yeni canlı dərs",
+    "scopeTabs": {
+      "upcoming": "Qarşıdakı",
+      "past": "Keçmiş"
+    },
+    "emptyUpcoming": "Qarşıdakı canlı dərs yoxdur.",
+    "emptyPast": "Keçmiş canlı dərs yoxdur.",
+    "emptyHintInstructor": "Google Meet və ya Zoom linkini əlavə edib ilk dərsi planlayın — tələbələrə e-poçt və panel bildirişi gedəcək.",
+    "emptyHintStudent": "Müəlliminiz dərs planlayanda burada görünəcək və e-poçtla xəbər alacaqsınız.",
+    "retry": "Yenidən cəhd et",
+    "loadFailed": "Canlı dərslər yüklənmədi",
+    "saveFailed": "Yadda saxlanılmadı",
+    "loading": "Yüklənir…",
+    "createTitle": "Canlı dərs planla",
+    "editTitle": "Canlı dərsi redaktə et",
+    "create": "Planla",
+    "save": "Yadda saxla",
+    "created": "Canlı dərs planlandı",
+    "createdSeries": "{{n}} dərslik seriya planlandı",
+    "updated": "Canlı dərs yeniləndi",
+    "fields": {
+      "title": "Mövzu",
+      "titlePlaceholder": "Məs.: Riyaziyyat — kvadrat tənliklər",
+      "description": "Qısa təsvir (istəyə bağlı)",
+      "target": "Kimlər üçün",
+      "target_group": "Qrup",
+      "target_student": "Fərdi tələbə",
+      "pickGroup": "Qrup seçin",
+      "pickStudent": "Tələbə seçin",
+      "date": "Tarix",
+      "startTime": "Başlama",
+      "endTime": "Bitmə",
+      "bakuTime": "Vaxt Bakı vaxtı ilə (UTC+4) göstərilir.",
+      "platform": "Platforma",
+      "linkManual": "Linki özüm əlavə edirəm",
+      "linkOauth": "Qoşulmuş hesabla avtomatik yarat ({{email}})",
+      "meetingUrl": "Görüş linki",
+      "meetingUrlHint": "https:// ilə başlayan Google Meet, Zoom və ya digər təhlükəsiz link.",
+      "recurrence": "Təkrarlanma",
+      "reminder": "Xatırlatma",
+      "notifyEmail": "Tələbələrə e-poçt bildirişi göndər",
+      "materials": "Materiallar",
+      "linkTitle": "Link adı",
+      "fromLibrary": "Kitabxanadan əlavə et"
+    },
+    "platforms": {
+      "google_meet": "Google Meet",
+      "zoom": "Zoom",
+      "other": "Digər"
+    },
+    "recurrence": {
+      "none": "Təkrarlanmır",
+      "weekly": "Hər həftə",
+      "weekdays": "İş günləri",
+      "custom": "Seçilmiş günlər",
+      "every": "Hər",
+      "weeks": "həftədən bir",
+      "count": "Dərs sayı",
+      "until": "Bitmə tarixi",
+      "hint": "Dərs sayı və ya bitmə tarixindən birini seçin (maksimum 52 dərs)."
+    },
+    "weekdays": {
+      "1": "B.e.",
+      "2": "Ç.a.",
+      "3": "Ç.",
+      "4": "C.a.",
+      "5": "C.",
+      "6": "Ş.",
+      "7": "B."
+    },
+    "reminders": {
+      "15": "15 dəqiqə əvvəl",
+      "30": "30 dəqiqə əvvəl",
+      "60": "1 saat əvvəl",
+      "1440": "1 gün əvvəl"
+    },
+    "scope": {
+      "title": "Dəyişiklik tətbiq olunsun",
+      "single": "Yalnız bu dərsə",
+      "following": "Bu və sonrakı dərslərə"
+    },
+    "remove": "Sil",
+    "add": "Əlavə et",
+    "privacyNote": "Görüş linkini yalnız siz və təyin olunmuş tələbələr görür; ictimai səhifələrdə göstərilmir.",
+    "state": {
+      "upcoming": "Qarşıdadır",
+      "live": "İndi",
+      "ended": "Bitib",
+      "cancelled": "Ləğv olunub",
+      "legacy": "Köhnə otaq"
+    },
+    "recurring": "Təkrarlanan",
+    "cancelReason": "Səbəb: {{reason}}",
+    "myAttendance": "İştirakım",
+    "attendance": {
+      "attended": "İştirak edib",
+      "absent": "İştirak etməyib",
+      "late": "Gecikib",
+      "excused": "Üzrlü",
+      "unmarked": "Qeyd olunmayıb"
+    },
+    "material": "Material",
+    "join": "Dərsə qoşul",
+    "opensNewTab": "(yeni tabda açılır)",
+    "addToCalendar": "Təqvimə əlavə et",
+    "icsFailed": "Təqvim faylı yüklənmədi",
+    "edit": "Redaktə et",
+    "attendanceCta": "İştirak",
+    "cancel": "Ləğv et",
+    "externalNote": "Dərs {{platform}} üzərində keçirilir. Mentorix video yayımı etmir.",
+    "attendanceTitle": "İştirak — {{title}}",
+    "attendanceHint": "İştirakı özünüz qeyd edin. Mentorix Meet/Zoom-dan avtomatik iştirak məlumatı almır.",
+    "attendanceSaved": "İştirak yadda saxlanıldı",
+    "markAllAttended": "Hamısı iştirak edib",
+    "noStudents": "Bu dərsə təyin olunmuş tələbə yoxdur.",
+    "student": "Tələbə",
+    "attendanceFor": "{{name}} — iştirak",
+    "note": "Qeyd",
+    "cancelTitle": "Dərsi ləğv et",
+    "keep": "Saxla",
+    "cancelConfirm": "Ləğv et",
+    "cancelText": "«{{title}}» dərsi ləğv olunsun?",
+    "cancelReasonLabel": "Səbəb (tələbələrə göstərilir)",
+    "cancelNotifyHint": "Tələbələrə e-poçt və panel bildirişi göndəriləcək.",
+    "cancelled": "Dərs ləğv olundu",
+    "accounts": {
+      "title": "Qoşulmuş hesablar (istəyə bağlı)",
+      "hint": "Google və ya Zoom hesabınızı qoşsanız, linki Mentorix sizin adınıza yarada bilər. Qoşmadan da linki əl ilə əlavə edə bilərsiniz.",
+      "connected": "{{name}} hesabı qoşuldu",
+      "connectFailed": "Hesab qoşulmadı",
+      "disconnected": "Hesab ayrıldı",
+      "connectedShort": "Qoşulub",
+      "disconnect": "Ayır",
+      "connect": "Qoş",
+      "disconnectTitle": "Hesabı ayır",
+      "disconnectText": "Hesab ayrılsın? Artıq planlanmış dərslərin linkləri dəyişmir."
+    },
+    "legacy": {
+      "title": "Köhnə dərs yazıları",
+      "hint": "Əvvəlki daxili video otağında yazılmış dərslər. Yükləyib saxlayın — yeni yazı yaradılmır.",
+      "downloadFailed": "Yükləmə alınmadı",
+      "download": "Yüklə",
+      "delete": "Sil",
+      "deleteTitle": "Yazını sil",
+      "deleteText": "Bu yazı birdəfəlik silinsin?",
+      "deleteAfter": "Bu yazılar {{date}} tarixindən sonra silinəcək — saxlamaq istədiklərinizi indi yükləyin."
+    },
+    "untitled": "Adsız dərs",
+    "retired": {
+      "title": "Bu link artıq aktiv deyil",
+      "text": "Mentorix-in daxili video otağı dayandırılıb. Canlı dərslər indi Google Meet, Zoom və ya digər platforma linki ilə keçirilir.",
+      "cta": "Canlı dərslərə keç",
+      "publicText": "Bu video otaq və ya yazı linki artıq aktiv deyil. Dərs linkini müəlliminizdən soruşun.",
+      "home": "Ana səhifəyə qayıt"
+    },
+    "notFound": {
+      "title": "Dərs tapılmadı",
+      "text": "Dərs silinib və ya ona girişiniz yoxdur."
+    }
+  },
+  "emailUnsubscribe": {
+    "title": "E-poçt bildirişlərindən imtina",
+    "question": "Bu növ e-poçt bildirişlərini daha almaq istəmirsiniz?",
+    "confirm": "Bəli, imtina et",
+    "loading": "Göndərilir…",
+    "done": "Bu e-poçt bildirişləri artıq göndərilməyəcək.",
+    "doneCategory": "«{{category}}» e-poçt bildirişləri artıq göndərilməyəcək.",
+    "invalid": "Link etibarsızdır və ya müddəti bitib.",
+    "error": "Xəta baş verdi. Bir az sonra yenidən cəhd edin.",
+    "settingsHint": "Bütün seçimləri bildiriş tənzimləmələrində dəyişə bilərsiniz.",
+    "settingsCta": "Bildiriş tənzimləmələri"
   }
 }

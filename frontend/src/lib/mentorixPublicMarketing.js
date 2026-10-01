@@ -7,7 +7,7 @@ export const MENTORIX_SEO_DESCRIPTION =
   'Testlərinizi yaradın, imtahanları idarə edin və nəticələri bir platformadan izləyin. Müəllim, tələbə və valideyn — hamısı bir yerdə. Pulsuz başlayın.'
 
 export const MENTORIX_SEO_KEYWORDS =
-  'təhsil platforması, təhsil ekosistemi, müəllim paneli, tələbə kabineti, valideyn kabineti, imtahan sistemi, tapşırıq idarəetməsi, müəllim axtarışı, ödəniş izləmə, SMS bildirişləri, tədris qrupları, mentorix.io'
+  'təhsil platforması, təhsil ekosistemi, müəllim paneli, tələbə kabineti, valideyn kabineti, imtahan sistemi, tapşırıq idarəetməsi, müəllim axtarışı, ödəniş izləmə, e-poçt bildirişləri, tədris qrupları, mentorix.io'
 
 /** Ana səhifədə təbii formada — Google açar sözləri */
 export const MENTORIX_SEO_HOMEPAGE_LINE =
@@ -27,64 +27,51 @@ export const MENTORIX_CONTACT = {
 export const MENTORIX_PRICING_PLANS = [
   {
     id: 'basic',
-    title: 'SADƏ',
-    priceLabel: 'Pulsuz',
+    title: '21 günlük pulsuz sınaq',
+    priceLabel: '0 AZN / 21 gün',
     highlight: false,
     items: [
-      '21 günlük sınaq',
-      '5 tələbə',
-      '5 SMS / ay',
-      '2 imtahan / ay',
-      '5 tapşırıq / ay',
+      '5 iştirakçı',
+      '3 imtahan',
+      '5 tapşırıq',
       `${AI_PLAN_LIMITS.basic.questions} AI sual`,
-      `${AI_PLAN_LIMITS.basic.gradings} AI Tapşırıq yoxlama`,
-      'Limitsiz canlı dərslər · 5 iştirakçı',
-    ],
-    mapNote: null,
-  },
-  {
-    id: 'pro',
-    title: 'STANDART',
-    priceLabel: '5 AZN / ay',
-    highlight: false,
-    items: [
-      '20 tələbə',
-      '20 SMS / ay',
-      '20 imtahan / ay',
-      '40 tapşırıq / ay',
-      `${AI_PLAN_LIMITS.pro.questions} AI sual / ay`,
-      `${AI_PLAN_LIMITS.pro.gradings} AI Tapşırıq yoxlama / ay`,
+      `${AI_PLAN_LIMITS.basic.gradings} AI tapşırıq yoxlama`,
+      '1 GB bulud yaddaşı',
+      'Meet/Zoom linki ilə canlı dərs planlama',
+      'Məhdud email bildirişləri',
     ],
     mapNote: null,
   },
   {
     id: 'growth',
-    title: 'PROFESSİONAL',
+    title: 'PROFESSIONAL',
     priceLabel: '10 AZN / ay',
-    highlight: false,
+    highlight: true,
     items: [
       '50 tələbə',
-      '50 SMS / ay',
+      '20 GB bulud yaddaşı',
       '50 imtahan / ay',
       '120 tapşırıq / ay',
       `${AI_PLAN_LIMITS.growth.questions} AI sual / ay`,
-      `${AI_PLAN_LIMITS.growth.gradings} AI Tapşırıq yoxlama / ay`,
+      `${AI_PLAN_LIMITS.growth.gradings} AI ilə yoxlanılan açıq-cavab işi / ay`,
+      'Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama',
+      'Valideyn e-poçt bildirişləri',
     ],
     mapNote: null,
   },
   {
     id: 'premium',
-    title: 'PREMİUM',
+    title: 'PREMIUM',
     priceLabel: '19 AZN / ay',
     highlight: false,
     items: [
       'Limitsiz tələbə',
-      '50 GB Bulud Yaddaşı',
-      '200 SMS / ay',
+      '50 GB bulud yaddaşı',
       'Limitsiz imtahan',
       'Limitsiz tapşırıq',
       `${AI_PLAN_LIMITS.premium.questions} AI sual / ay`,
-      `${AI_PLAN_LIMITS.premium.gradings} AI Tapşırıq yoxlama / ay`,
+      `${AI_PLAN_LIMITS.premium.gradings} AI ilə yoxlanılan açıq-cavab işi / ay`,
+      'Prioritet dəstək',
     ],
     mapNote: null,
   },
@@ -110,11 +97,11 @@ export const MENTORIX_PRICING_AUDIENCE = {
     },
     {
       q: 'Kimlər paket almalıdır?',
-      a: 'Fərdi müəllimlər və təhsil xidməti təminatçıları: tələbə idarəetməsi, imtahan/tapşırıq yaratmaq, ödəniş izləmə, SMS və marketplace profili üçün abunəlik paketi seçirlər.',
+      a: 'Fərdi müəllimlər və təhsil xidməti təminatçıları: tələbə idarəetməsi, imtahan/tapşırıq yaratmaq, ödəniş izləmə, valideyn e-poçt bildirişləri və marketplace profili üçün abunəlik paketi seçirlər.',
     },
     {
       q: 'Niyə ödənişli paket?',
-      a: 'Daha çox tələbə limiti, SMS balansı, xəritədə görünmə, fərdi çat və prioritet dəstək kimi imkanlar paketdən asılıdır. Tələbə və valideyn tərəfi isə ödəniş tələb etmir.',
+      a: 'Daha çox tələbə limiti, bulud yaddaşı, xəritədə görünmə, fərdi çat və prioritet dəstək kimi imkanlar paketdən asılıdır. Tələbə və valideyn tərəfi isə ödəniş tələb etmir.',
     },
   ],
 }
@@ -128,7 +115,7 @@ export const MENTORIX_PLATFORM_BENEFITS = [
   'Dərs saatlarını və tələbə iştirakını izləyin',
   'Ödəniş tarixlərini idarə edin və avtomatik xatırlatmalar göndərin',
   'Valideynlərlə tələbənin nəticələrini paylaşın',
-  'Tələbələrə ödəniş və imtahan nəticələri barədə SMS bildirişləri göndərin',
+  'Tələbələrə və valideynlərə ödəniş və imtahan nəticələri barədə e-poçt bildirişləri göndərin',
 ]
 
 /** Qısa SEO blokları (kartlar) */
@@ -147,7 +134,7 @@ export const MENTORIX_PLATFORM_FEATURES = [
   },
   {
     title: 'Ödəniş və valideyn bildirişləri',
-    text: 'Ödəniş izləmə, avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.',
+    text: 'Ödəniş izləmə, e-poçt xatırlatmaları və valideynlə nəticə paylaşımı.',
   },
   {
     title: 'Müəllim marketplace',

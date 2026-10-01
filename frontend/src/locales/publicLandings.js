@@ -4,21 +4,21 @@ const featuresAz = [
   { title: 'Tapşırıq idarəetməsi', text: 'Ev işi təyini, onlayn təslim, müəllim rəyi və valideyn kabinetində nəticə görünüşü.' },
   { title: 'İmtahan sistemi', text: 'Onlayn testlər: QR kod və ya linklə paylaşın, avtomatik qiymətləndirmə və analitika.' },
   { title: 'Çat və ünsiyyət', text: 'Qrup və fərdi çat — müəllim, tələbə və valideyn arasında sürətli ünsiyyət.' },
-  { title: 'Ödəniş və valideyn bildirişləri', text: 'Ödəniş izləmə, avtomatik SMS xatırlatmaları və valideynlə nəticə paylaşımı.' },
+  { title: 'Ödəniş və valideyn bildirişləri', text: 'Ödəniş izləmə, e-poçt xatırlatmaları və valideynlə nəticə paylaşımı.' },
   { title: 'Müəllim marketplace', text: 'Müəllim və təlimçi profilləri ictimai xəritədə — tələbələr və valideynlər üçün axtarış.' },
 ]
 const featuresRu = [
   { title: 'Задания', text: 'Домашние задания, онлайн-сдача, отзыв преподавателя и результаты в кабинете родителя.' },
   { title: 'Экзамены', text: 'Онлайн-тесты: делитесь QR-кодом или ссылкой, автоматическая оценка и аналитика.' },
   { title: 'Чат', text: 'Групповой и личный чат — быстрая связь преподавателя, ученика и родителя.' },
-  { title: 'Оплаты и уведомления', text: 'Учёт оплат, SMS-напоминания и отправка результатов родителям.' },
+  { title: 'Оплаты и уведомления', text: 'Учёт оплат, напоминания по e-mail и отправка результатов родителям.' },
   { title: 'Каталог преподавателей', text: 'Профили преподавателей на публичной карте — поиск для учеников и родителей.' },
 ]
 const featuresEn = [
   { title: 'Assignments', text: 'Set homework, collect online submissions, give feedback, and show results in the parent cabinet.' },
   { title: 'Exams', text: 'Online tests: share via QR or link, auto-grade, and review analytics.' },
   { title: 'Chat', text: 'Group and private chat between teacher, student, and parent.' },
-  { title: 'Payments and parent alerts', text: 'Track payments, send SMS reminders, and share results with parents.' },
+  { title: 'Payments and parent alerts', text: 'Track payments, send email reminders, and share results with parents.' },
   { title: 'Teacher marketplace', text: 'Teacher profiles on a public map for students and parents to search.' },
 ]
 
@@ -31,7 +31,7 @@ const benefitsAz = [
   'Dərs saatlarını və tələbə iştirakını izləyin',
   'Ödəniş tarixlərini idarə edin və avtomatik xatırlatmalar göndərin',
   'Valideynlərlə tələbənin nəticələrini paylaşın',
-  'Tələbələrə ödəniş və imtahan nəticələri barədə SMS bildirişləri göndərin',
+  'Tələbələrə və valideynlərə ödəniş və imtahan nəticələri barədə e-poçt bildirişləri göndərin',
 ]
 const benefitsRu = [
   'Управляйте учениками и учебными группами',
@@ -42,7 +42,7 @@ const benefitsRu = [
   'Отслеживайте уроки и посещаемость',
   'Ведите сроки оплаты и отправляйте напоминания',
   'Делитесь результатами с родителями',
-  'Отправляйте SMS об оплате и результатах экзаменов',
+  'Отправляйте e-mail уведомления об оплате и результатах экзаменов',
 ]
 const benefitsEn = [
   'Manage students and teaching groups',
@@ -53,7 +53,7 @@ const benefitsEn = [
   'Track lessons and attendance',
   'Manage payment dates and send reminders',
   'Share results with parents',
-  'Send SMS about payments and exam results',
+  'Send email notifications about payments and exam results',
 ]
 
 function pagesAz() {
@@ -133,7 +133,7 @@ function pagesAz() {
         'Mentorix sadəcə müəllim paneli deyil — müəllim, tələbə və valideynləri birləşdirən təhsil ekosistemidir.',
         'Müəllimlər tapşırıq və imtahan yaradır, ödənişləri izləyir, valideynlərə bildiriş göndərir; tələbələr və valideynlər isə pulsuz kabinet və marketplace-dən istifadə edir.',
       ],
-      bullets: ['Tapşırıq və imtahan idarəetməsi', 'Çat, davamiyyət və analitika', 'Ödəniş izləmə və SMS bildirişləri', 'İctimai müəllim axtarış xəritəsi'],
+      bullets: ['Tapşırıq və imtahan idarəetməsi', 'Çat, davamiyyət və analitika', 'Ödəniş izləmə və e-poçt bildirişləri', 'İctimai müəllim axtarış xəritəsi'],
       ctaLabel: 'Platformanı kəşf et',
     },
     elaqe: {
@@ -271,7 +271,7 @@ function pagesRu() {
         'Mentorix — не только панель преподавателя, а образовательная экосистема для преподавателя, ученика и родителя.',
         'Преподаватели создают задания и экзамены, ведут оплаты и уведомляют родителей; ученики и родители пользуются бесплатными кабинетами и каталогом.',
       ],
-      bullets: ['Задания и экзамены', 'Чат, посещаемость и аналитика', 'Оплаты и SMS', 'Публичная карта преподавателей'],
+      bullets: ['Задания и экзамены', 'Чат, посещаемость и аналитика', 'Оплаты и e-mail уведомления', 'Публичная карта преподавателей'],
       ctaLabel: 'Открыть платформу',
     },
     elaqe: {
@@ -409,7 +409,7 @@ function pagesEn() {
         'Mentorix is more than a teacher panel — it connects teachers, students, and parents.',
         'Teachers create assignments and exams, track payments, and notify parents; students and parents use free cabinets and the marketplace.',
       ],
-      bullets: ['Assignments and exams', 'Chat, attendance, and analytics', 'Payments and SMS', 'Public teacher map'],
+      bullets: ['Assignments and exams', 'Chat, attendance, and analytics', 'Payments and email notifications', 'Public teacher map'],
       ctaLabel: 'Explore the platform',
     },
     elaqe: {
