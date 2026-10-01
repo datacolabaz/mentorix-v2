@@ -6,7 +6,7 @@
 -- Additive + idempotent: re-running changes nothing. Nothing is dropped:
 --   * legacy_mentor_persona_backup keeps every touched users.persona / persona_profile (rollback source);
 --   * programs.source_type CHECK becomes a superset ('mentor' stays allowed, deprecated);
---   * mentorship_* tables keep their data (feature removed from product, tables marked LEGACY);
+--   * mentorship_* tables are only marked LEGACY here (migration 235 drops them);
 --   * the retired feature flag row stays (forced off) together with its audit history.
 -- Rollback (manual): backend/scripts/sql/rollback/234_retire_mentor_persona.rollback.sql
 

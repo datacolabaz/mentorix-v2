@@ -121,6 +121,33 @@ test('the retired mentorship modules are gone', () => {
   assert.equal(Object.values(FEATURE_FLAGS).some((k) => /mentor/i.test(k)), false);
 });
 
+const MENTORSHIP_TABLES = [
+  'mentorship_goals', 'mentorship_milestones', 'mentorship_sessions', 'mentorship_actions',
+  'mentorship_services', 'mentorship_resources', 'mentorship_agreements', 'mentorship_feedback_requests',
+];
+
+test('no code reads or writes the dropped mentorship tables', () => {
+  const tableRe = new RegExp(`\\b(?:${MENTORSHIP_TABLES.join('|')})\\b`);
+  const scriptsDir = path.join(SRC, '..', 'scripts');
+  const files = [...walk(SRC), ...walk(scriptsDir).filter((f) => !f.includes(`${path.sep}sql${path.sep}`))];
+  const hits = files.filter((f) => tableRe.test(fs.readFileSync(f, 'utf8'))).map(rel);
+  assert.deepEqual(hits, []);
+});
+
+test('migration 235 drops every mentorship table idempotently, without CASCADE', () => {
+  const sql = fs.readFileSync(path.join(SRC, 'models', 'migrations', '235_drop_mentorship_tables.sql'), 'utf8');
+  const code = sql.split(/\r?\n/).filter((l) => !l.trim().startsWith('--')).join('\n');
+  for (const t of MENTORSHIP_TABLES) assert.match(code, new RegExp(`DROP TABLE IF EXISTS ${t};`), t);
+  assert.doesNotMatch(code, /\bCASCADE\b/i);
+  assert.doesNotMatch(code, /DROP TABLE[^;]*legacy_mentor_persona_backup/i);
+  assert.match(code, /DELETE FROM platform_feature_flags WHERE key = 'feature\.mentor_services\.enabled'/);
+  assert.doesNotMatch(code, /DELETE FROM (?!platform_feature_flags\b)/i);
+  const order = MENTORSHIP_TABLES.map((t) => code.indexOf(`DROP TABLE IF EXISTS ${t};`));
+  assert.ok(order[7] < order[2] && order[3] < order[2] && order[1] < order[0] && order[2] < order[0], 'children before parents');
+  const rollback = fs.readFileSync(path.join(SRC, '..', 'scripts', 'sql', 'rollback', '235_drop_mentorship_tables.rollback.sql'), 'utf8');
+  assert.match(rollback, /CANNOT be restored/);
+});
+
 test('the public sitemap lists no mentor URL', () => {
   const sitemapSrc = fs.readFileSync(path.join(SRC, 'constants', 'publicSitemapUrls.js'), 'utf8');
   assert.doesNotMatch(sitemapSrc, TERM_RE);
