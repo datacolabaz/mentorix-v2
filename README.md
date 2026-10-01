@@ -61,7 +61,6 @@ Söndürülmüş modul menyudan, CTA-lardan və API-dən gizlədilir; məlumat s
 |---|---|
 | `feature.university_search.enabled` | söndürülüb |
 | `feature.marketplace.enabled` | söndürülüb |
-| `feature.mentor_services.enabled` | söndürülüb |
 | `feature.live_room.enabled` | söndürülüb (Zoom/Google Meet dərsləri açıqdır) |
 | `feature.exam_result_modes.enabled` | aktiv |
 | `feature.proctoring.enabled` | söndürülüb (hazır deyil) |
