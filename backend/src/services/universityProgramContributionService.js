@@ -6,10 +6,32 @@ async function getContributorDisplayName(userId) {
     `SELECT COALESCE(full_name, email) AS display_name FROM users WHERE id = $1`,
     [userId],
   );
-  return rows[0]?.display_name || 'Mentor';
+  return rows[0]?.display_name || 'Təlimçi';
 }
 
-async function submitMentorProgram(userId, body = {}) {
+/**
+ * Program row as returned to clients. The DB column is still `mentor_display_name`
+ * (legacy name, migration 158); clients only ever see `contributor_display_name`.
+ */
+function toClientProgramRow(row) {
+  if (!row || typeof row !== 'object') return row;
+  const { mentor_display_name: displayName, ...rest } = row;
+  const raw = rest.ai_raw_json;
+  let aiRaw = raw;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw) && 'mentor_notes' in raw) {
+    const { mentor_notes: notes, ...others } = raw;
+    aiRaw = { contributor_notes: notes ?? null, ...others };
+  }
+  return {
+    ...rest,
+    source_type: rest.source_type === 'mentor' ? 'instructor' : rest.source_type,
+    portal_source: rest.portal_source === 'mentor' ? 'instructor' : rest.portal_source,
+    contributor_display_name: displayName ?? rest.contributor_display_name ?? null,
+    ai_raw_json: aiRaw,
+  };
+}
+
+async function submitInstructorProgram(userId, body = {}) {
   const {
     university_name,
     country,
@@ -24,8 +46,9 @@ async function submitMentorProgram(userId, body = {}) {
     deadline_dates,
     requirements,
     apply_link,
-    mentor_notes,
   } = body;
+  // mentor_notes: field name sent by clients built before the trainer wording change.
+  const contributorNotes = body.contributor_notes ?? body.mentor_notes ?? null;
 
   if (!university_name?.trim() || !country?.trim() || !program_name?.trim()) {
     const err = new Error('Universitet adı, ölkə və proqram adı tələb olunur');
@@ -39,7 +62,7 @@ async function submitMentorProgram(userId, body = {}) {
     city: city?.trim() || null,
   });
 
-  const mentor_display_name = await getContributorDisplayName(userId);
+  const contributor_display_name = await getContributorDisplayName(userId);
   const program = await upsertProgram({
     uni_id: university.id,
     payload: {
@@ -55,28 +78,28 @@ async function submitMentorProgram(userId, body = {}) {
       requirements: requirements || {},
       apply_link,
     },
-    source_type: 'mentor',
+    source_type: 'instructor',
     review_status: 'pending',
     contributor_user_id: userId,
-    mentor_display_name,
-    ai_raw_json: { mentor_notes: mentor_notes || null },
+    contributor_display_name,
+    ai_raw_json: { contributor_notes: contributorNotes || null },
   });
 
-  return { university, program, mentor_display_name };
+  return { university, program: toClientProgramRow(program), contributor_display_name };
 }
 
-async function listMentorSubmissions(userId) {
+async function listInstructorSubmissions(userId) {
   const { rows } = await db.query(
     `
     SELECT p.*, u.name AS uni_name, u.country AS uni_country
     FROM programs p
     INNER JOIN universities u ON u.id = p.uni_id
-    WHERE p.contributor_user_id = $1 AND p.source_type = 'mentor'
+    WHERE p.contributor_user_id = $1 AND p.source_type = 'instructor'
     ORDER BY p.updated_at DESC
     `,
     [userId],
   );
-  return rows;
+  return rows.map(toClientProgramRow);
 }
 
 async function listPendingPrograms() {
@@ -90,7 +113,7 @@ async function listPendingPrograms() {
     LIMIT 200
     `,
   );
-  return rows;
+  return rows.map(toClientProgramRow);
 }
 
 async function reviewProgram(programId, { status, adminNotes }) {
@@ -117,13 +140,14 @@ async function reviewProgram(programId, { status, adminNotes }) {
     err.status = 404;
     throw err;
   }
-  return rows[0];
+  return toClientProgramRow(rows[0]);
 }
 
 module.exports = {
-  submitMentorProgram,
-  listMentorSubmissions,
+  submitInstructorProgram,
+  listInstructorSubmissions,
   listPendingPrograms,
   reviewProgram,
   getContributorDisplayName,
+  toClientProgramRow,
 };

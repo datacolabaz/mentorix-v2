@@ -36,7 +36,7 @@ const { getMarketplaceOpportunity } = require('../controllers/instructorMarketpl
 const {
   postContribution,
   getMyContributions,
-} = require('../controllers/universityProgramMentorController');
+} = require('../controllers/universityProgramContributionController');
 const { getInstructorNavSections } = require('../controllers/instructorNavController');
 const { requireFeature } = require('../middleware/requireFeature');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');

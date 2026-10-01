@@ -139,12 +139,12 @@ function mapProgramRow(row) {
       : null,
     requirements: row.requirements || {},
     apply_link: row.apply_link,
-    portal_source: row.portal_source,
-    source_type: row.source_type || 'seed',
-    mentor: row.contributor_user_id
+    portal_source: row.portal_source === 'mentor' ? 'instructor' : row.portal_source,
+    source_type: row.source_type === 'mentor' ? 'instructor' : row.source_type || 'seed',
+    contributor: row.contributor_user_id
       ? {
           user_id: row.contributor_user_id,
-          display_name: row.mentor_display_name || 'Mentor',
+          display_name: row.contributor_display_name || 'Təlimçi',
         }
       : null,
     university: {
@@ -298,7 +298,7 @@ async function queryProgramsFromDatabase(filters, rawQuery = {}) {
       p.portal_source,
       p.source_type,
       p.contributor_user_id,
-      p.mentor_display_name,
+      p.mentor_display_name AS contributor_display_name,
       u.name AS uni_name,
       u.country AS uni_country,
       u.city AS uni_city,
@@ -384,7 +384,7 @@ async function getProgramById(programId) {
       p.portal_source,
       p.source_type,
       p.contributor_user_id,
-      p.mentor_display_name,
+      p.mentor_display_name AS contributor_display_name,
       u.name AS uni_name,
       u.country AS uni_country,
       u.city AS uni_city,
