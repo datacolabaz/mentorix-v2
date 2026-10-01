@@ -9,6 +9,41 @@
       "source": "/cert/:slug",
       "destination": "/sertifikatli-imtahanlar/:slug",
       "permanent": true
+    },
+    {
+      "source": "/mentor",
+      "destination": "/instructor",
+      "statusCode": 301
+    },
+    {
+      "source": "/mentor/dashboard",
+      "destination": "/instructor",
+      "statusCode": 301
+    },
+    {
+      "source": "/mentor-dashboard",
+      "destination": "/instructor",
+      "statusCode": 301
+    },
+    {
+      "source": "/mentor-profile",
+      "destination": "/instructor/settings",
+      "statusCode": 301
+    },
+    {
+      "source": "/become-mentor",
+      "destination": "/muellimler-ucun",
+      "statusCode": 301
+    },
+    {
+      "source": "/become-a-mentor",
+      "destination": "/muellimler-ucun",
+      "statusCode": 301
+    },
+    {
+      "source": "/mentor-ol",
+      "destination": "/muellimler-ucun",
+      "statusCode": 301
     }
   ],
   "functions": {
@@ -17,12 +52,67 @@
     },
     "api/og.js": {
       "includeFiles": "node_modules/@fontsource/inter/files/inter-latin*-normal.woff"
+    },
+    "api/retired.js": {
+      "includeFiles": "dist/index.html"
     }
   },
   "rewrites": [
     {
       "source": "/sitemap.xml",
       "destination": "/api/sitemap.xml"
+    },
+    {
+      "source": "/mentorship",
+      "destination": "/api/retired?path=/mentorship"
+    },
+    {
+      "source": "/mentorship/:rest+",
+      "destination": "/api/retired?path=/mentorship"
+    },
+    {
+      "source": "/mentoring",
+      "destination": "/api/retired?path=/mentoring"
+    },
+    {
+      "source": "/mentorluq",
+      "destination": "/api/retired?path=/mentorluq"
+    },
+    {
+      "source": "/mentors",
+      "destination": "/api/retired?path=/mentors"
+    },
+    {
+      "source": "/mentor/:rest+",
+      "destination": "/api/retired?path=/mentor"
+    },
+    {
+      "source": "/find-mentor",
+      "destination": "/api/retired?path=/find-mentor"
+    },
+    {
+      "source": "/find-a-mentor",
+      "destination": "/api/retired?path=/find-a-mentor"
+    },
+    {
+      "source": "/mentor-tap",
+      "destination": "/api/retired?path=/mentor-tap"
+    },
+    {
+      "source": "/mentor-booking",
+      "destination": "/api/retired?path=/mentor-booking"
+    },
+    {
+      "source": "/mentor-sessions",
+      "destination": "/api/retired?path=/mentor-sessions"
+    },
+    {
+      "source": "/student/mentorship",
+      "destination": "/api/retired?path=/student/mentorship"
+    },
+    {
+      "source": "/instructor/roadmap",
+      "destination": "/api/retired?path=/instructor/roadmap"
     },
     {
       "source": "/sertifikatli-imtahanlar/:categorySlug/:examSlug",
