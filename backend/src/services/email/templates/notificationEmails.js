@@ -308,6 +308,11 @@ const EMAIL_FIRST_TEMPLATES = {
     en: { subject: 'Certificate status changed', eyebrow: 'Certificate', lines: ['Your previous certificate for “{{courseTitle}}” is no longer valid ({{statusLabel}}).', 'The current certificate and its verification page are in your dashboard.'], cta: CERT_CTA.en },
     ru: { subject: 'Статус сертификата изменён', eyebrow: 'Сертификат', lines: ['Ваш предыдущий сертификат по «{{courseTitle}}» больше не действителен ({{statusLabel}}).', 'Актуальный сертификат и страница проверки — в вашем кабинете.'], cta: CERT_CTA.ru },
   }),
+  certificate_reinstated: compact({
+    az: { subject: 'Sertifikatınız yenidən aktivdir', eyebrow: 'Sertifikat', lines: ['«{{courseTitle}}» üzrə sertifikatınız yenidən etibarlıdır.', 'Sertifikat və doğrulama səhifəsi panelinizdədir.'], cta: CERT_CTA.az },
+    en: { subject: 'Your certificate is active again', eyebrow: 'Certificate', lines: ['Your certificate for “{{courseTitle}}” is valid again.', 'The certificate and its verification page are in your dashboard.'], cta: CERT_CTA.en },
+    ru: { subject: 'Ваш сертификат снова действителен', eyebrow: 'Сертификат', lines: ['Ваш сертификат по «{{courseTitle}}» снова действителен.', 'Сертификат и страница проверки — в вашем кабинете.'], cta: CERT_CTA.ru },
+  }),
   parent_result_summary: compact({
     az: { subject: '{{studentName}}: imtahan nəticəsi hazırdır', eyebrow: 'Valideyn', lines: ['{{studentName}} «{{examTitle}}» imtahanını tamamladı.', 'Nəticəni və ətraflı xülasəni valideyn panelində görə bilərsiniz.'], cta: RESULT_CTA.az },
     en: { subject: '{{studentName}}: assessment result is ready', eyebrow: 'Parent', lines: ['{{studentName}} completed “{{examTitle}}”.', 'See the result and summary in your parent dashboard.'], cta: RESULT_CTA.en },

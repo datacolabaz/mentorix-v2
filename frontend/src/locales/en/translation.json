@@ -3693,6 +3693,8 @@
       "date": "Date",
       "certId": "Certificate ID",
       "supersededHint": "This certificate has been updated. Contact the teacher or student for the latest version.",
+      "revokedOn": "This certificate was revoked on {{date}} and is no longer valid.",
+      "revokedNote": "This certificate has been revoked and is no longer valid.",
       "disclaimer": "This is not official state accreditation.",
       "backHome": "Home"
     },

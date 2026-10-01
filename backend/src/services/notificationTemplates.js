@@ -473,6 +473,20 @@ const TEMPLATES = Object.freeze({
       body: 'Ваш предыдущий сертификат по «{{courseTitle}}» больше не действителен ({{statusLabel}}). Актуальный сертификат — в вашем кабинете.',
     },
   },
+  certificate_reinstated: {
+    az: {
+      title: 'Sertifikatınız yenidən aktivdir',
+      body: '«{{courseTitle}}» üzrə sertifikatınız yenidən etibarlıdır. Onu və doğrulama səhifəsini panelinizdə görə bilərsiniz.',
+    },
+    en: {
+      title: 'Your certificate is active again',
+      body: 'Your certificate for “{{courseTitle}}” is valid again. See it and its verification page in your dashboard.',
+    },
+    ru: {
+      title: 'Ваш сертификат снова действителен',
+      body: 'Ваш сертификат по «{{courseTitle}}» снова действителен. Он и страница проверки — в вашем кабинете.',
+    },
+  },
   parent_result_summary: {
     az: { title: 'Övladınızın nəticəsi hazırdır', body: '{{studentName}} «{{examTitle}}» imtahanını tamamladı. Nəticəni panelinizdə görə bilərsiniz.' },
     en: { title: 'Your child’s result is ready', body: '{{studentName}} completed “{{examTitle}}”. You can see the result in your dashboard.' },

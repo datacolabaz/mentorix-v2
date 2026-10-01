@@ -3703,6 +3703,8 @@
       "date": "Tarix",
       "certId": "Sertifikat ID",
       "supersededHint": "Bu sertifikat yenilənib. Ən son versiya üçün müəllim və ya tələbə ilə əlaqə saxlayın.",
+      "revokedOn": "Bu sertifikat {{date}} tarixində ləğv edilib və artıq etibarlı deyil.",
+      "revokedNote": "Bu sertifikat ləğv edilib və artıq etibarlı deyil.",
       "disclaimer": "Bu rəsmi dövlət akkreditasiyası deyil.",
       "backHome": "Ana səhifə"
     },

@@ -43,6 +43,11 @@ const {
   refundSmsTopup,
   convertSmsTopupToCredit,
 } = require('../controllers/adminSmsTopupController');
+const {
+  listCertificatesAdmin,
+  revokeCertificateAdmin,
+  reinstateCertificateAdmin,
+} = require('../controllers/adminCertificateController');
 const db = require('../utils/db');
 const { grantCourseRoleToUser } = require('../services/userRolesService');
 const { adminListPlans, adminUpsertPlan } = require('../services/subscriptionPlansService');
@@ -210,6 +215,9 @@ router.post('/billing/payments/:id/reject', authenticate, authorize('admin'), as
 router.get('/billing/sms-topups', authenticate, authorize('admin'), listSmsTopups);
 router.post('/billing/sms-topups/:id/refund', authenticate, authorize('admin'), refundSmsTopup);
 router.post('/billing/sms-topups/:id/convert-credit', authenticate, authorize('admin'), convertSmsTopupToCredit);
+router.get('/certificates', authenticate, authorize('admin'), listCertificatesAdmin);
+router.post('/certificates/:id/revoke', authenticate, authorize('admin'), revokeCertificateAdmin);
+router.post('/certificates/:id/reinstate', authenticate, authorize('admin'), reinstateCertificateAdmin);
 
 router.get('/billing/inventory', authenticate, authorize('admin'), async (_req, res) => {
   try {

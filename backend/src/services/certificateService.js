@@ -217,6 +217,11 @@ async function getOrIssueCertificateForStudentExam(studentId, examId) {
     };
   }
 
+  const { hasRevokedCertificate } = require('./certificateRevocationService');
+  if (await hasRevokedCertificate(db, { studentId, examId })) {
+    return { certificate: null, eligibility: { eligible: false, reason: 'revoked' }, newlyIssued: false };
+  }
+
   const { rows: results } = await db.query(
     `SELECT id, score FROM exam_results
      WHERE exam_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL
@@ -294,7 +299,7 @@ async function listPendingCertificatesForStudent(studentId) {
      WHERE er.student_id = $1 AND er.submitted_at IS NOT NULL
        AND NOT EXISTS (
          SELECT 1 FROM certificates c
-         WHERE c.exam_id = er.exam_id AND c.student_id = er.student_id AND c.status = 'issued'
+         WHERE c.exam_id = er.exam_id AND c.student_id = er.student_id AND c.status IN ('issued', 'revoked')
        )
      ORDER BY er.submitted_at DESC
      LIMIT 12`,
@@ -432,6 +437,9 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
     const instructorName = people[0]?.instructor_name || fallbacks.instructor;
     const studentEmail = people[0]?.student_email || null;
 
+    const { hasRevokedCertificate } = require('./certificateRevocationService');
+    if (await hasRevokedCertificate(client, { studentId, examId })) return null;
+
     const { rows: prev } = await client.query(
       `SELECT id FROM certificates
        WHERE exam_id = $1 AND student_id = $2 AND status = 'issued'
@@ -521,6 +529,7 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
       pdfFilename,
     };
   });
+  if (!issued) return null;
 
   setImmediate(() => {
     // The dedicated certificate email below already covers e-mail; this is the dashboard entry.
@@ -576,7 +585,7 @@ const CERTIFICATE_STATUS_LABELS = Object.freeze({
  * In-app (+ optional email) notice to the student when a certificate's status changes.
  * Re-issue (superseded) passes email:false because the new certificate's own email already goes out.
  */
-async function notifyCertificateStatusChanged(certificateId, status, { email = true } = {}) {
+async function notifyCertificateStatusChanged(certificateId, status, { email = true, dedupeSuffix = '' } = {}) {
   const { rows } = await db.query(
     `SELECT id, student_id, instructor_id, title FROM certificates WHERE id = $1`,
     [certificateId],
@@ -596,7 +605,7 @@ async function notifyCertificateStatusChanged(certificateId, status, { email = t
     relatedEntityType: 'certificate',
     relatedEntityId: cert.id,
     providerWorkspaceId: cert.instructor_id,
-    dedupeKey: `certificate_status_changed:${cert.id}:${status}`,
+    dedupeKey: `certificate_status_changed:${cert.id}:${status}${dedupeSuffix ? `:${dedupeSuffix}` : ''}`,
     email: email === true,
   });
 }
@@ -607,7 +616,7 @@ async function getPublicVerification(token) {
 
   const { rows } = await db.query(
     `SELECT c.id, c.certificate_no, c.verification_token, c.title, c.subject,
-            c.score_pct, c.pass_pct, c.status, c.issued_at, c.locale, c.snapshot_json,
+            c.score_pct, c.pass_pct, c.status, c.issued_at, c.revoked_at, c.locale, c.snapshot_json,
             us.full_name AS student_name,
             ui.full_name AS instructor_name,
             e.subject AS exam_subject, e.topic AS exam_topic,
@@ -664,6 +673,8 @@ async function getPublicVerification(token) {
     verify_url: verifyUrl(row.verification_token),
     superseded: row.status === 'superseded',
     superseded_by_id: row.superseded_by_id || null,
+    revoked: row.status === 'revoked',
+    revoked_at: row.status === 'revoked' ? row.revoked_at || null : null,
     issued_by: 'Mentorix',
   };
 }

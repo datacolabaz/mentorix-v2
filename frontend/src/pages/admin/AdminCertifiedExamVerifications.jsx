@@ -4,6 +4,7 @@ import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import { formatNamedDate } from '../../lib/azMonths'
+import CertificateRevocations from '../../components/admin/CertificateRevocations'
 
 function categoryLabel(exam) {
   if (exam.parent_category_name && exam.category_name) {
@@ -172,6 +173,8 @@ export default function AdminCertifiedExamVerifications() {
           Kateqoriya waitlist tələbləri və kataloq verifikasiya növbəsi.
         </p>
       </div>
+
+      <CertificateRevocations />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
