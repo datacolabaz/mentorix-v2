@@ -146,7 +146,8 @@
       "materials": "Materials",
       "universities": "Universities",
       "payments": "Payments",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "live_lessons": "Live lessons"
     },
     "parent": {
       "children": "My children",
@@ -162,7 +163,7 @@
       "groups": "Groups / Classes",
       "schedule": "Master schedule",
       "finance": "Payments",
-      "notifications": "SMS / Notifications",
+      "notifications": "Notifications",
       "settings": "Settings"
     },
     "admin": {
@@ -172,7 +173,7 @@
       "students": "Students",
       "classes": "Courses / Groups",
       "payments": "Payments",
-      "inventory": "SMS & inventory",
+      "inventory": "Inventory",
       "billing": "Platform billing",
       "notifications": "Notifications",
       "marketingLogin": "Landing content",
@@ -581,9 +582,6 @@
       "methodTitle": "Delivery method",
       "internalTitle": "In-app only",
       "free": "Free",
-      "smsTitle": "Send as SMS",
-      "smsLimit": "Your limit is used up — contact an admin to increase it",
-      "smsRemaining": "Remaining:",
       "whatsappTitle": "Send via WhatsApp",
       "whatsappNotConfigured": "WHATSAPP_* variables are not set on the server",
       "whatsappProduction": "Approved template to all student numbers (recipient list not required)",
@@ -591,7 +589,6 @@
       "send": "Send",
       "selectStudents": "Select students first",
       "whatsappSent": "WhatsApp: sent to {{n}} students",
-      "sentSms": "SMS sent",
       "sent": "Notification sent",
       "sendFailed": "Could not send",
       "messageRequired": "A message is required",
@@ -620,7 +617,6 @@
     },
     "cta": {
       "viewPlans": "View plans",
-      "smsTopup": "Add SMS credit",
       "storageTopup": "Buy storage"
     },
     "planChip": "{{plan}} plan",
@@ -634,14 +630,11 @@
     },
     "usage": {
       "students": "Students",
-      "storage": "Document storage",
-      "sms": "SMS",
+      "storage": "Cloud storage",
       "aiQuestions": "AI questions",
-      "aiGradings": "AI assignment reviews",
+      "aiGradings": "AI-checked answers",
       "usedOf": "{{used}} / {{limit}} used",
       "usedUnlimited": "{{used}} / ∞ used",
-      "smsLeft": "{{used}} / {{limit}} remaining",
-      "smsUnlimited": "{{used}} / ∞ remaining",
       "aiNearLimit": "You are nearing your AI limit",
       "aiBlocked": "Your monthly AI limit has been reached.",
       "aiBlockedTrial": "Your trial AI limit has been reached.",
@@ -649,156 +642,19 @@
     }
   },
   "live": {
-    "historyTitle": "Live lessons",
-    "historySubtitle": "Live lessons",
-    "startFromGroup": "Start from a group",
-    "createLessonCta": "＋ Create live lesson",
-    "createLessonTitle": "Create live lesson",
-    "pickPlatform": "Choose a platform",
-    "comingSoon": "Coming soon",
-    "providerBack": "Back",
-    "selectedProvider": "Platform: {{name}}",
     "connectGoogleMeet": "Connect Google account",
     "disconnectAccount": "Disconnect",
     "meetDisconnectConfirmTitle": "Disconnect Google Meet?",
     "meetDisconnectConfirmMessage": "Your Google account will be disconnected. You’ll need to reconnect before creating another Meet lesson.",
-    "createMeetLesson": "Create Meet lesson",
-    "meetConnectedAs": "Connected: {{email}}",
     "meetNeedsConnect": "Connect your Google account for Meet",
     "meetConnectSuccess": "Google Meet connected",
     "meetConnectFailed": "Could not connect Google Meet",
     "meetCalendarScopeRequired": "Calendar permission was not granted. Disconnect, reconnect, and tick “View and edit events on all your calendars”.",
-    "meetNeedsReauth": "Google Meet needs reconnecting — disconnect and reconnect with calendar permission.",
     "meetDisconnected": "Google Meet disconnected",
     "meetDisconnectFailed": "Could not disconnect",
-    "meetLessonCreated": "Google Meet lesson created",
-    "meetLinkCopied": "Meet link copied",
-    "openExternal": "Open Meet",
-    "providers": {
-      "mentorix_live": "Mentorix Live",
-      "mentorix_liveHint": "Built-in video room (LiveKit)",
-      "google_meet": "Google Meet",
-      "google_meetHint": "Creates Meet on your Google account — grant Calendar permission",
-      "zoom": "Zoom",
-      "teams": "Microsoft Teams"
-    },
-    "noSessions": "No live lessons yet",
-    "selectAll": "Select all",
-    "deleteSelected": "Delete selected",
-    "noRecording": "No recording",
-    "downloadRecording": "Recording",
-    "share": "Share",
-    "notifyTitle": "Live lesson — notification",
-    "notifyQuestion": "send a notification to students in the group?",
-    "notifySkipHint": "If you select none, the lesson starts immediately — no notification is sent.",
-    "notifySms": "SMS notification",
-    "notifySmsHint": "SMS to the student's phone — deducted from your SMS balance.",
-    "notifyEmail": "Gmail / email",
-    "notifyEmailHint": "To the registration email (usually Gmail) — does not use SMS credit.",
-    "notifyBothHint": "Both channels selected — each student may receive SMS and email.",
-    "startLesson": "Start lesson",
-    "liveLesson": "Live lesson",
-    "starting": "Starting…",
     "minuteShort": "min",
     "hourShort": "hr",
-    "hourFormat": "{{h}}:{{m}}",
-    "participants": "participants",
-    "general": "General",
-    "recordingBy": "Recording:",
-    "loading": "Loading…",
-    "deletedOne": "Lesson deleted",
-    "deleteFailed": "Could not delete",
-    "shareNoRecording": "This lesson has no recording",
-    "shareCopied": "Share link copied",
-    "shareLinkCreateFailed": "Could not create the share link",
-    "copySharePrompt": "Copy the share link:",
-    "shareFailed": "Could not share",
-    "downloadOk": "Recording downloaded",
-    "downloadFailed": "Could not download the recording",
-    "bulkDeleted": "{{n}} lessons deleted",
-    "bulkPartial": "{{ok}} deleted, {{fail}} could not be deleted",
-    "bulkNone": "None were deleted",
-    "confirmDeleteOne": "Delete the lesson «{{title}}»? The recording will also be deleted.",
-    "confirmDeleteMany": "Delete {{n}} lessons? Recordings will also be deleted.",
-    "guestLabel": "Guest",
-    "guestParticipants": "Guest participants",
-    "reactions": "Reaction",
-    "reactionsAria": "Send an emoji reaction",
-    "chatTitle": "Chat",
-    "presentation": {
-      "button": "Present",
-      "pickTitle": "Choose a presentation",
-      "empty": "No presentations yet. Upload a PDF in Presentations first.",
-      "ask": "Ask",
-      "askTitle": "Question for students",
-      "questionPh": "e.g. What will this code output?",
-      "optionPh": "Option {{n}}",
-      "addOption": "Add option",
-      "poll": "Poll",
-      "quiz": "Quiz",
-      "correct": "Correct answer",
-      "sendQuestion": "Send",
-      "closePoll": "Show results",
-      "stop": "Stop",
-      "liveBadge": "Live slide"
-    },
-    "chatPlaceholder": "Type a message…",
-    "chatEmpty": "No messages yet",
-    "chatSend": "Send",
-    "chatYou": "You",
-    "startOpen": "New lesson",
-    "startOpenTitle": "Live lesson without a group",
-    "startOpenHint": "Open a lesson without creating a group. Share the link, QR code, or use the share button.",
-    "lessonTitle": "Lesson title",
-    "lessonTitlePlaceholder": "e.g. Trial lesson, interview",
-    "createAndShare": "Create link and QR",
-    "creating": "Preparing…",
-    "shareJoinTitle": "Join the lesson",
-    "shareJoinHint": "The link stays valid until the lesson time and for 1 day after (up to 14 days). Guests can join without signing up.",
-    "copyLink": "Copy link",
-    "shareNative": "Share",
-    "downloadQr": "Download QR",
-    "enterLive": "Enter lesson",
-    "revokeLink": "Revoke link",
-    "linkRevokedHint": "The link has been revoked — new guests cannot join.",
-    "linkCopied": "Link copied",
-    "copyFailed": "Could not copy",
-    "guestLinkCreated": "Share link is ready",
-    "roomCreateFailed": "Could not create the room",
-    "startFailed": "Could not start the lesson",
-    "openLive": "Enter lesson",
-    "shareGuest": "Link / QR",
-    "waitingForTeacher": "Waiting for the teacher to admit you…",
-    "waitingForTeacherHint": "The teacher must approve you before you can join the lesson.",
-    "joinDenied": "Join request denied",
-    "joinDeniedHint": "The teacher did not admit you to this lesson.",
-    "leaveWaiting": "Go back",
-    "approveJoin": "Approve",
-    "denyJoin": "Deny",
-    "admissionPendingTitle": "New join request",
-    "studentJoin": "Student",
-    "micOn": "Microphone on",
-    "micOff": "Microphone off",
-    "cameraOn": "Camera on",
-    "cameraOff": "Camera off",
-    "youLabel": "You",
-    "participant": "Participant",
-    "presenting": "Presenting",
-    "youPresenting": "You are presenting",
-    "chatAttach": "Attach a file",
-    "chatFileTooLarge": "The file cannot be larger than 5 MB",
-    "chatFileType": "PDF, images, Office, text, and code files are allowed (xlsx, txt, py, js…). Executable files cannot be sent.",
-    "chatFileFailed": "Could not send the file",
-    "chatUploading": "Uploading…",
-    "scheduleWhen": "Scheduled time (optional)",
-    "scheduleWhenHint": "Leave empty to open the lesson now. If you pick a future date, you can share the link immediately.",
-    "scheduledAt": "Scheduled:",
-    "scheduledBadge": "Scheduled — link is ready",
-    "connectionLost": "Connection lost",
-    "connectionLostHint": "Your internet may be weak. The lesson stays open — you can rejoin with the same link.",
-    "rejoinLive": "Rejoin",
-    "rejoinFailed": "Could not rejoin",
-    "leaveLiveKeepOpen": "Leave lesson"
+    "loading": "Loading…"
   },
   "students": {
     "title": "My students",
@@ -923,7 +779,7 @@
       "phone": "Student phone *",
       "phoneLocked": "The student must confirm the phone via the link — the teacher cannot enter it. Send a completion link to their Gmail; after the student fills in first name, last name, and phone, you can continue setup.",
       "sendProfileLink": "Send profile completion link (email)",
-      "phoneHint": "Payment reminders and group codes are sent to this number by SMS/WhatsApp (separate from the teacher account).",
+      "phoneHint": "Student contact number — used for quick WhatsApp messages (separate from the teacher account). Mentorix does not send automatic messages to this number.",
       "emailOptional": "Email (optional)",
       "emailPh": "student@gmail.com",
       "optionalLabel": "Optional:",
@@ -1315,80 +1171,83 @@
       "pricePerMonth": "{{price}} AZN / mo.",
       "unlimited": "Unlimited",
       "basic": {
-        "title": "SIMPLE",
-        "subtitle": "21-day free trial",
+        "title": "21-day free trial",
+        "subtitle": "Try the core of Mentorix free for 21 days.",
         "cta": "Start free",
         "trialLines": [
-          "Try the platform for 21 days",
           "No credit card required",
-          "Stop whenever you want",
+          "No automatic charge when the trial ends",
+          "Stop at any time",
+          "5 participants",
+          "3 exams",
+          "5 assignments",
           "20 AI questions",
-          "10 AI assignment reviews",
-          "Unlimited live lessons · 5 participants"
+          "10 AI assignment checks",
+          "1 GB cloud storage",
+          "Live lesson scheduling with Google Meet and Zoom links",
+          "Limited email notifications"
         ]
       },
       "pro": {
         "title": "STANDARD",
-        "subtitle": "For private teachers",
+        "subtitle": "Legacy plan — for existing subscribers",
         "cta": "Choose plan",
         "bullets": [
           "20 students",
-          "5 GB cloud storage",
-          "20 SMS / mo.",
-          "20 exams / mo.",
-          "40 assignments / mo.",
+          "20 exams / month",
+          "40 assignments / month",
           "100 AI questions / month",
-          "30 AI assignment reviews / month",
+          "30 AI-checked open-ended answers / month",
           "Payment tracking",
-          "Parent notifications",
-          "Group and private chat",
-          "Unlimited live lessons · 20 participants"
+          "Parent email notifications",
+          "Unlimited live lesson scheduling with Google Meet and Zoom links"
         ]
       },
       "growth": {
         "title": "PROFESSIONAL",
-        "subtitle": "For growing groups",
+        "subtitle": "For teachers managing growing groups.",
         "cta": "Choose plan",
         "bullets": [
           "50 students",
           "20 GB cloud storage",
-          "50 SMS / mo.",
-          "50 exams / mo.",
-          "120 assignments / mo.",
+          "50 exams / month",
+          "120 assignments / month",
           "300 AI questions / month",
-          "100 AI assignment reviews / month",
+          "100 AI-checked open-ended answers / month",
           "Payment tracking",
-          "Parent notifications",
+          "Parent email notifications",
           "Detailed reports",
-          "Group and private chat",
-          "Unlimited live lessons · 50 participants"
+          "Group and direct chat",
+          "Unlimited live lesson scheduling with Google Meet and Zoom links",
+          "QR-verifiable certificates"
         ]
       },
       "premium": {
         "title": "PREMIUM",
-        "subtitle": "For active teachers",
+        "subtitle": "For active teachers and larger classes.",
         "cta": "Choose plan",
         "bullets": [
           "Unlimited students",
           "50 GB cloud storage",
-          "200 SMS / mo.",
           "Unlimited exams",
           "Unlimited assignments",
           "800 AI questions / month",
-          "300 AI assignment reviews / month",
+          "300 AI-checked open-ended answers / month",
           "Payment tracking",
-          "Parent notifications",
+          "Parent email notifications",
           "Detailed reports",
           "Priority support",
-          "Unlimited live lessons · Unlimited participants"
+          "Unlimited live lesson scheduling with Google Meet and Zoom links",
+          "QR-verifiable certificates"
         ]
-      }
+      },
+      "trialPrice": "0 AZN / 21 days"
     },
     "pricingPage": {
       "heading": "Pricing",
       "intro": "Learn what you can do first, then pick the package that fits. Plans are grouped by audience.",
       "compareHeading": "Compare limits",
-      "trialNote": "Simple is a 21-day trial. No credit card required.",
+      "trialNote": "The free trial lasts 21 days. No credit card is required and nothing is charged automatically when it ends.",
       "yearlyNote": "Yearly billing applies a 20% discount on twelve monthly payments.",
       "cta": "Start free",
       "backHome": "Back to homepage",
@@ -1415,17 +1274,52 @@
         "cloudStorage": "Cloud storage",
         "exams": "Exams / month",
         "assignments": "Assignments / month",
-        "sms": "SMS / month",
         "liveLessons": "Live lessons",
-        "live": "Live class participants",
-        "recording": "Lesson recording",
         "aiQuestions": "AI questions",
-        "aiGradings": "AI assignment reviews"
+        "aiGradings": "AI-checked open-ended answers",
+        "emailNotifications": "Email notifications"
       },
       "dash": "—",
-      "recordingNone": "—",
-      "recordingHours": "{{hours}} h/mo",
-      "perMonth": "{{count}} / month"
+      "perMonth": "{{count}} / month",
+      "liveNote": "Live lessons run on Google Meet, Zoom or another platform link chosen by the teacher. The participant limit depends on that account’s plan.",
+      "liveLessonsCell": "Scheduling with Meet / Zoom links",
+      "emailLimited": "Limited",
+      "emailFull": "Includes parent notifications",
+      "faqHeading": "Frequently asked questions",
+      "faq": [
+        {
+          "q": "Will my card be charged automatically when the free trial ends?",
+          "a": "No. The trial needs no card and nothing is charged when the 21 days end. If you want to continue, you choose and pay for a plan yourself."
+        },
+        {
+          "q": "Do live lessons run on Mentorix?",
+          "a": "No. Mentorix helps you schedule live lessons and share them with participants. Lessons take place through a Google Meet, Zoom or other video platform link chosen by the teacher."
+        },
+        {
+          "q": "Does the Mentorix plan set the Google Meet or Zoom participant limit?",
+          "a": "No. The participant limit depends on the plan of the Google Meet or Zoom account you use."
+        },
+        {
+          "q": "How do parents receive notifications?",
+          "a": "A parent receives in-app and email notifications (for example, an exam result summary) through the parent account linked to the student’s profile. Parent email notifications are included in paid plans, and parents can unsubscribe from emails at any time."
+        },
+        {
+          "q": "How is the AI limit counted?",
+          "a": "Each AI-generated question and each AI-checked open-ended answer uses one unit. On paid plans the limit resets every month; on the trial it covers the 21 days. When you reach the limit, AI features pause until next month while everything else keeps working."
+        },
+        {
+          "q": "What does the student limit cover?",
+          "a": "The limit counts the active students in your \"My students\" list. A student in several groups is counted once. Removing a student frees the slot."
+        },
+        {
+          "q": "What happens when cloud storage is full?",
+          "a": "You get an email and an in-app notification at 80% and 100%. When the limit is reached, new uploads stop while existing files stay available. You can delete files, upgrade, or buy extra storage on a paid plan."
+        },
+        {
+          "q": "How are certificates verified?",
+          "a": "Exam certificates carry a QR code. Anyone who scans it can confirm on the Mentorix verification page that the certificate is genuine."
+        }
+      ]
     },
     "demo": {
       "title": "Sample — teacher dashboard",
@@ -1445,7 +1339,7 @@
         "students": "Active students",
         "lessons": "Lessons this week",
         "pendingPay": "Pending payments",
-        "sms": "SMS (month)"
+        "sms": "Emails (month)"
       },
       "schedule": [
         {
@@ -1581,7 +1475,7 @@
           "paragraphs": [
             "Teachers who want to create Google Meet links from Mentorix can connect their own Google account. Mentorix requests limited OAuth access (typically OpenID profile/email identity and Google Calendar events scope) so we can create calendar events with Google Meet conference links on the teacher’s Google account.",
             "We do not use this connection to sell advertising, scrape your full mailbox, or access unrelated Google services beyond what is needed to create and manage Meet-backed lessons that you start from Mentorix.",
-            "OAuth access and refresh tokens are stored encrypted on our servers and are used only to provide the live-lesson integration. Teachers can disconnect Google at any time from Mentorix settings; after disconnect we stop using those tokens and delete the stored connection credentials."
+            "OAuth access and refresh tokens are stored encrypted on our servers and are used only to create live lesson links. Teachers can disconnect Google at any time from Mentorix settings; after disconnect we stop using those tokens and delete the stored connection credentials."
           ]
         },
         {
@@ -1624,7 +1518,7 @@
     },
     "terms": {
       "seoTitle": "Terms of Service — Mentorix",
-      "seoDesc": "Terms for using Mentorix, subscriptions, and live video on the teacher’s Google Meet, Zoom, or Teams account.",
+      "seoDesc": "Terms for using Mentorix, subscriptions, and live lessons with Google Meet, Zoom, or other platform links.",
       "title": "Terms of Service",
       "updated": "Last updated: 15 September 2026",
       "sections": [
@@ -1649,14 +1543,14 @@
         {
           "heading": "Subscriptions and payments",
           "paragraphs": [
-            "Paid plans, SMS credits, and other billable features are described on the pricing pages and in the product. Fees are charged according to the plan you select and the payment method you authorize. Lesson packages between teachers and students are agreements between those parties; Mentorix provides tooling and payment flows where enabled, but teaching quality and delivery remain the teacher’s responsibility unless we expressly state otherwise."
+            "Paid plans, extra storage packs, and other billable features are described on the pricing pages and in the product. Fees are charged according to the plan you select and the payment method you authorize. Lesson packages between teachers and students are agreements between those parties; Mentorix provides tooling and payment flows where enabled, but teaching quality and delivery remain the teacher’s responsibility unless we expressly state otherwise."
           ]
         },
         {
-          "heading": "Live video (Google Meet, Zoom, Microsoft Teams)",
+          "heading": "Live lessons (Google Meet, Zoom, and other links)",
           "paragraphs": [
-            "Mentorix can help teachers create and manage live lessons, including generating meeting links on a teacher’s connected Google, Zoom, or Microsoft account.",
-            "Important: video conferencing runs on the teacher’s own provider account. Mentorix does not sell or include Zoom Pro, Google Workspace, or Microsoft 365 licenses. Free-tier limits (for example Zoom Basic meeting length) are set by those providers, not by Mentorix. “Unlimited live lessons” in Mentorix packaging refers to managing lessons in Mentorix, not to unlimited third-party video capacity purchased by Mentorix on your behalf."
+            "Mentorix helps teachers schedule and manage live lessons: the teacher adds a Google Meet, Zoom, or other platform meeting link to the lesson. Optionally, the teacher can connect their own Google or Zoom account to create the link automatically. Mentorix itself does not provide video streaming.",
+            "Important: video conferencing runs on the teacher’s own provider account. Mentorix does not sell or include Zoom Pro, Google Workspace, or Microsoft 365 licenses. Free-tier limits (for example Zoom Basic meeting length) are set by those providers, not by Mentorix. “Unlimited live lesson scheduling” in Mentorix packaging refers to scheduling and managing lessons in Mentorix, not to unlimited third-party video capacity purchased by Mentorix on your behalf."
           ]
         },
         {
@@ -1711,7 +1605,6 @@
     "codeLabel": "Code:",
     "chat": "Chat",
     "liveClass": "🔴 Live lesson",
-    "liveStarting": "Starting…",
     "package": "Package",
     "code": "Code",
     "copyLink": "Copy link",
@@ -1723,20 +1616,6 @@
     "groupPlusPackage": "Group + package",
     "defaultSubject": "Subject",
     "defaultGroup": "Group",
-    "liveModal": {
-      "title": "Live lesson — notification",
-      "choosePrompt": "How do you want to start the live lesson for «{{name}}»?",
-      "startWithGroup": "Start with group members",
-      "createGuestLink": "Create a guest link",
-      "notifyPrompt": "Send a notification to students in «{{name}}»?",
-      "noNotifyHint": "If you select none, the lesson starts immediately — no notification is sent.",
-      "smsLabel": "SMS notification",
-      "smsHint": "SMS to the student's phone — deducted from your SMS balance.",
-      "emailLabel": "Gmail / email",
-      "emailHint": "To the registration email (usually Gmail) — does not use SMS credit.",
-      "bothChannels": "Both channels selected — each student may receive SMS and email.",
-      "startLesson": "Start lesson"
-    },
     "guestLinkModal": {
       "title": "Guest invite link",
       "validHint": "The link is valid for 24 hours. Outside guests can join without signing up.",
@@ -1795,20 +1674,11 @@
       "feeRequired": "Package price (₼) is required",
       "groupCreated": "Group and package settings created",
       "groupUpdated": "Group package updated",
-      "roomCreateFailed": "Could not create the room",
-      "liveStartedBoth": "Live lesson started — {{sms}} SMS and {{email}} emails sent",
-      "liveStartedSms": "Live lesson started — {{sms}} SMS sent",
-      "liveStartedEmail": "Live lesson started — {{email}} emails sent",
-      "liveStarted": "Live lesson started",
-      "liveStartFailed": "Could not start the live lesson",
       "codeCopied": "Code copied",
       "copyFailed": "Could not copy",
       "groupLinkCopied": "Group link copied",
       "linkCopied": "Link copied",
-      "linkCopyFailed": "Could not copy the link",
-      "guestLinkCreated": "Guest link created",
-      "guestLinkCopied": "Guest link copied",
-      "guestLinkRevoked": "Guest link revoked"
+      "linkCopyFailed": "Could not copy the link"
     }
   },
   "joinRequests": {
@@ -1844,9 +1714,7 @@
     "profileModalTitle": "Profile incomplete",
     "ok": "OK",
     "examApproveTitle": "Approve exam request",
-    "examApproveEmailHint": "After approval, the student will get a «Your request was approved» message by Gmail (they will see it even if they are not in the app). There will also be an in-app notification.",
-    "examApproveSmsLabel": "Also send SMS / WhatsApp",
-    "examApproveSmsHint": "Only if the student has a phone on their profile. For students registered with Gmail, email is enough at first."
+    "examApproveEmailHint": "After approval, the student will get a «Your request was approved» message by Gmail (they will see it even if they are not in the app). There will also be an in-app notification."
   },
   "notificationCenter": {
     "title": "Notifications",
@@ -1903,7 +1771,11 @@
       "grading": "Grading",
       "partner": "Partner program",
       "billing": "Billing",
-      "system": "System"
+      "system": "System",
+      "live_lesson": "Live lessons",
+      "parent": "Parent notifications",
+      "digest": "Weekly digest",
+      "marketing": "News and offers"
     },
     "categoryHelp": {
       "assessment": "Assessment access requests, results and reminders",
@@ -1913,7 +1785,11 @@
       "grading": "Answers waiting for review and published grades",
       "partner": "Referral and payout updates",
       "billing": "Payments, plans and limits",
-      "system": "Product news and account tips"
+      "system": "Product news and account tips",
+      "live_lesson": "Scheduled, changed and cancelled lessons and reminders",
+      "parent": "Your child’s results and important updates",
+      "digest": "Weekly activity summary",
+      "marketing": "Mentorix news (optional)"
     },
     "frequency": {
       "immediate": "Immediately",
@@ -1924,7 +1800,7 @@
     "settings": {
       "title": "Notification settings",
       "subtitle": "Choose which updates you receive and how.",
-      "emailNotice": "Email notifications are still being set up. Your email choices are saved now and will apply once email delivery is enabled.",
+      "emailNotice": "Email notifications are sent according to your choices. Use the link at the bottom of any email to unsubscribe from that type; security alerts are always sent.",
       "columns": {
         "category": "Category",
         "inApp": "In-app",
@@ -2081,167 +1957,6 @@
         "title": "Failed admin sign-ins",
         "body": "{{count}} failed sign-in attempts on the admin account {{account}} in the last {{minutes}} minutes."
       }
-    }
-  },
-  "notifications": {
-    "title": "Notifications",
-    "subtitle": "SMS and storage limits",
-    "systemStatus": "System status",
-    "attention": "Attention",
-    "stable": "Stable",
-    "monthlySms": "Monthly SMS",
-    "storage": "Storage",
-    "alerts": "Alerts",
-    "activeCount": "{{count}} active",
-    "tabAll": "All notifications",
-    "tabSms": "SMS history",
-    "smsHistory": "SMS history",
-    "smsHistoryDesc": "Real SMS sends, system logs, and scheduled reminders — with metadata for audit.",
-    "historyLoading": "Loading history…",
-    "thisMonth": "This month ({{month}})",
-    "sentCount": "{{count}} SMS sent",
-    "sentQuotaNote": "(counts toward the plan limit)",
-    "loggedCount": "{{count}} system logs",
-    "loggedQuotaNote": "(no SMS sent)",
-    "whatsappCount": "{{count}} WhatsApp",
-    "failedCount": "{{count}} failed SMS",
-    "scheduledCount": "{{count}} scheduled",
-    "debugTitle": "Debug: data from the API (before filters, first 2)",
-    "totalHistory": "Total history:",
-    "packageLimit": "Plan limit (this month):",
-    "packageUsed": "{{used}}/{{limit}} used",
-    "csvExport": "CSV export",
-    "searchPh": "Name or phone (e.g. Gozel / 559815866)",
-    "searchAria": "Search SMS history",
-    "filterAll": "All",
-    "filterToday": "Today",
-    "filterWeek": "This week",
-    "filterMonth": "This month",
-    "statusSent": "Sent",
-    "statusLogged": "Logged only",
-    "statusFailed": "Failed",
-    "statusScheduled": "Scheduled",
-    "historyLoadFailed": "Could not load SMS history",
-    "historyUnavailable": "SMS history is currently unavailable{{status}}",
-    "noSearchResults": "No SMS matched your search",
-    "noFilterResults": "No SMS for this filter",
-    "retryLater": "Try again in a moment.",
-    "searchHint": "Check the name or phone (at least 2 characters).",
-    "filterHint": "Change the filters or send a new SMS.",
-    "showing": "Showing:",
-    "showMore": "Show more",
-    "detailsTitle": "SMS details",
-    "loggedDetailDefault": "This record was not sent to the SMS provider and does not count against your plan limit.",
-    "loggedSystemNote": "The teacher did not send this manually from «Notifications» — the system logged it automatically.",
-    "examAutoNote": "This SMS was sent automatically when the exam was created or the student was assigned. It may remain in history even if the exam is deleted.",
-    "failureReason": "Failure reason",
-    "detailSource": "Source",
-    "detailStatus": "Status",
-    "detailSentAt": "Sent at",
-    "detailRecipient": "Recipient",
-    "detailPhone": "Phone",
-    "detailLength": "Message length",
-    "detailParts": "SMS parts",
-    "detailProvider": "SMS provider",
-    "detailMessageId": "Message ID",
-    "detailHttpStatus": "HTTP status",
-    "detailQuotaImpact": "Quota impact",
-    "quotaYes": "Yes — counts against the plan",
-    "quotaNo": "No — log only",
-    "messageText": "Message text",
-    "exportRow": "Export this row",
-    "close": "Close",
-    "loading": "Loading...",
-    "allGoodTitle": "Everything looks good",
-    "allGoodDesc": "Your limits are not more than 80% full",
-    "critical": "Critical",
-    "warning": "Warning",
-    "alertSms": "📱 SMS",
-    "alertStorage": "💾 Storage",
-    "alertDiscover": "🔍 Search profile",
-    "alertSystem": "⚙️ System",
-    "lastSmsNone": "Last SMS: none sent yet",
-    "lastSms": "Last SMS: {{relative}} · {{datetime}}",
-    "lastActivity": "Last activity: {{relative}}",
-    "chars": "{{count}} characters",
-    "smsStatus": {
-      "sent": "Sent",
-      "logged": "Logged only",
-      "whatsapp": "WhatsApp",
-      "failed": "Failed",
-      "scheduled": "Scheduled",
-      "pending": "Pending"
-    },
-    "relative": {
-      "seconds": "{{count}} seconds ago",
-      "minutes": "{{count}} minutes ago",
-      "hours": "{{count}} hours ago",
-      "days": "{{count}} days ago"
-    },
-    "dateToday": "Today • {{time}}",
-    "dateYesterday": "Yesterday • {{time}}",
-    "smsFailure": {
-      "unknown": "No reason recorded",
-      "quota": "SMS limit reached",
-      "phone": "The number is invalid or the format does not match",
-      "credentials": "SMS provider credentials are incorrect",
-      "provider": "SMS provider error",
-      "network": "Network or server error"
-    },
-    "months": {
-      "0": "January",
-      "1": "February",
-      "2": "March",
-      "3": "April",
-      "4": "May",
-      "5": "June",
-      "6": "July",
-      "7": "August",
-      "8": "September",
-      "9": "October",
-      "10": "November",
-      "11": "December"
-    },
-    "card": {
-      "paymentReminder": "Payment reminder",
-      "loggedNoSms": "No SMS sent · not sent manually by the teacher",
-      "paymentRecord": "Payment record",
-      "noQuota": "No SMS sent · does not count against the limit",
-      "systemNote": "System note",
-      "whatsappMessage": "WhatsApp message",
-      "examNotify": "Exam notification · does not count against the SMS limit",
-      "noSmsQuota": "Does not count against the SMS limit",
-      "examAutoSent": "Sent by the system when the exam was created — not manually from the Notifications page.",
-      "smsSent": "SMS sent",
-      "inPackage": "Counts toward the plan limit",
-      "scheduledSms": "Scheduled SMS",
-      "notSentYet": "Not sent yet",
-      "pending": "Pending",
-      "providerPending": "Waiting for provider confirmation",
-      "smsFailed": "SMS failed",
-      "morePhones": "· +{{count}} numbers",
-      "parts": "Parts:",
-      "approxTime": "{{time}} (approx.)",
-      "viewDetails": "View details",
-      "pack8": "8 lessons",
-      "pack12": "12 lessons",
-      "examAutoLog": "Automatic exam log",
-      "examAutoSms": "Automatic exam SMS",
-      "otpPin": "PIN code SMS",
-      "phone": "Phone:",
-      "length": "Length:",
-      "charsShort": "characters"
-    },
-    "csvHeaders": {
-      "date": "Date",
-      "status": "Status",
-      "type": "Type",
-      "student": "Student",
-      "phone": "Phone",
-      "chars": "Characters",
-      "parts": "Parts",
-      "reason": "Reason",
-      "message": "Message"
     }
   },
   "materials": {
@@ -2412,10 +2127,10 @@
       "availableUntil": "Last entry time",
       "allowFinishAfterUntil": "When the last entry time ends, new entries close, but students already inside can finish their remaining time",
       "duration": "Duration (min)",
-      "notifySms": "Reminder / result SMS",
       "showResults": "Show results to the student",
       "wrongPenalty": "Wrong answers deduct (0.25 penalty)",
-      "wrongPenaltyHint": "Only closed (ABCDE) questions deduct 0.25 for a wrong answer. Other question types have no penalty."
+      "wrongPenaltyHint": "Only closed (ABCDE) questions deduct 0.25 for a wrong answer. Other question types have no penalty.",
+      "notifyEmail": "Email reminder"
     },
     "questions": {
       "title": "Questions and points",
@@ -3014,15 +2729,11 @@
     "jumpPlan": "Plan",
     "changePlan": "Change plan",
     "activePlan": "Active plan:",
-    "downgradeNote": "A downgrade is possible only after the current plan period has run for at least 1 month, and only if student count, SMS, and storage all fit the target plan limits. If a limit is full, buy extra SMS on the current plan or manage storage.",
+    "downgradeNote": "You can move to a lower plan only after at least 1 month of the current billing period, and only if your student count and storage fit the target plan. If you hit a limit, buy extra storage on your current plan or manage your files.",
     "downgradeInDays": "A downgrade may open in about {{days}} days.",
-    "smsLimitLine": "SMS limit: {{label}}{{detail}}. To stay on the {{plan}} plan, the effective limit (plan + confirmed extra SMS) must be greater than or equal to your usage.",
-    "smsShortfall": "{{used}} SMS have been used this month; the current effective limit is {{effective}}. To stay on the {{plan}} plan you need at least +{{shortfall}} extra SMS.",
-    "pendingSmsPayment": "Until a pending SMS payment is confirmed, the limit may not appear increased. After confirmation the effective limit rises and you stay on the {{plan}} plan.",
     "pendingPlan": "Payment for the {{plan}} plan is waiting for admin confirmation. After confirmation, the active plan and limits will update.",
-    "basicLimitHint": "The BASIC plan cannot buy extra SMS or storage. If you have reached the limit, choose {{plans}}.",
-    "paidLimitHint": "If a limit is full: you can buy extra SMS or extra storage on the current plan. A downgrade is possible only after 1 month and when usage fits.",
-    "extraSms": "Extra SMS",
+    "basicLimitHint": "Extra storage cannot be bought on the free trial. If you hit a limit, choose {{plans}}.",
+    "paidLimitHint": "If you hit a limit you can buy extra storage on your current plan. Moving to a lower plan is possible only after 1 month and when your usage fits.",
     "extraStorage": "Extra storage",
     "badgeActive": "Active plan",
     "badgePending": "Awaiting confirmation",
@@ -3049,10 +2760,6 @@
     "btnPending": "Awaiting confirmation",
     "btnUpgrade": "Upgrade",
     "btnSwitchPlan": "Switch plan",
-    "buySmsTitle": "Buy extra SMS",
-    "buySmsDesc": "SMS credit added on top of your plan limit. Card payments activate immediately; bank transfer activates after admin confirmation.",
-    "confirmedExtraSms": "Confirmed extra SMS: +{{count}} (plan {{base}} + extra = {{limit}} limit)",
-    "pendingExtraSms": "Pending extra SMS: +{{count}} (added to the limit after admin confirmation)",
     "buy": "Buy",
     "storageTitle": "Extra storage",
     "storageDesc": "+1 GB, +5 GB, or +15 GB packs — added to your plan limit with a monthly fee. Card payments activate immediately; bank transfer activates after admin confirmation.",
@@ -3129,12 +2836,10 @@
     "previewSearch": "Preview search page",
     "viewLiveSearch": "→ View in live search",
     "limitModalTitle": "{{plan}} — limit solution",
-    "limitModalBasic": "The BASIC plan cannot buy extra SMS or storage. If you have reached the limit, choose {{plans}}.",
+    "limitModalBasic": "Extra storage cannot be bought on the free trial. If you hit a limit, choose {{plans}}.",
     "limitModalPaid": "Which limit do you need? You do not have to downgrade — stay on the current {{plan}} plan.",
-    "buyExtraSms": "Buy extra SMS",
     "manageStorage": "Manage storage (reduce files)",
     "renewPlan": "Renew plan",
-    "checkoutSms": "SMS payment",
     "checkoutStorage": "Extra storage payment",
     "checkoutPlan": "Plan payment",
     "checkoutChoice": "Selection: {{title}}",
@@ -3151,21 +2856,14 @@
       "expired": "Incomplete"
     },
     "billingTitle": {
-      "sms": "+{{count}} SMS",
       "storageGb": "+{{size}} GB document storage",
       "storageMb": "+{{size}} MB document storage",
-      "plan": "Plan: {{plan}}{{interval}}"
+      "plan": "Plan: {{plan}}{{interval}}",
+      "legacyAddon": "Legacy notification pack"
     },
     "billingInterval": {
       "yearly": " (yearly)",
       "monthly": " (monthly)"
-    },
-    "smsUsage": {
-      "plan": "plan {{count}}",
-      "extra": "+{{count}} extra",
-      "pending": "+{{count}} pending",
-      "limitAfter": "{{detail}} → limit will be {{count}}",
-      "afterConfirm": "After confirmation the limit will be {{count}}"
     },
     "storageUsage": {
       "plan": "plan {{size}}",
@@ -3180,8 +2878,8 @@
       "perMonth": "/mo",
       "perYear": "/yr",
       "yearlyHint": "≈ {{monthly}} AZN/mo equivalent (12 months, −{{pct}}%)",
-      "trialDaysLeft": "21-day free trial — {{days}} days left (extra SMS/storage only on paid plans)",
-      "trialExpired": "The BASIC trial has ended — choose a paid plan to continue",
+      "trialDaysLeft": "21-day free trial — {{days}} days left (extra storage only on paid plans)",
+      "trialExpired": "The free trial has ended — choose a paid plan to continue",
       "trialExtraOnly": "21-day free trial — extra limits only on {{plans}}",
       "monthly": "{{amount}} AZN/mo",
       "yearly": "{{amount}} AZN/yr (approx. {{monthly}} AZN/mo)"
@@ -3266,7 +2964,9 @@
       "errSize": "File is too large — maximum 5 MB",
       "errUpload": "Could not upload the photo",
       "errRemove": "Could not remove"
-    }
+    },
+    "buyExtraStorage": "Buy extra storage",
+    "legacyPlanNote": "Legacy plan — kept for you on the same terms, no longer offered to new subscribers."
   },
   "assignmentAnalytics": {
     "title": "Assignment analytics",
@@ -3420,7 +3120,7 @@
       "documents": "{{count}} documents",
       "cloudStorageGb": "{{size}} GB cloud storage",
       "cloudStorageGbShort": "{{size}} GB",
-      "cloudStorageUnlimited": "Unlimited storage",
+      "cloudStorageUnlimited": "Unlimited cloud storage",
       "storage5mb": "5 MB document storage",
       "storage256mb": "256 MB document storage",
       "storage1gb": "1 GB document storage",
@@ -3429,12 +3129,6 @@
       "storageMb": "{{size}} MB document storage",
       "storageGb": "{{size}} GB document storage",
       "storageUnlimited": "Unlimited document storage",
-      "smsUnlimited": "Unlimited SMS / month",
-      "smsTrial": "{{count}} SMS",
-      "smsMonthly": "{{count}} SMS / month",
-      "smsEffective": "{{effective}} SMS / month (base {{base}} + extra {{extra}})",
-      "smsPremiumCurrent": "{{count}} SMS / month (extra credit available)",
-      "smsPremiumOther": "{{count}} SMS / extra credit available",
       "examsUnlimited": "Unlimited exams",
       "examsUnlimitedMonthly": "Unlimited exams / month",
       "examsTrial": "{{count}} exams",
@@ -3445,15 +3139,11 @@
       "homeworksMonthly": "{{count}} assignments / month",
       "aiQuestionsTrial": "{{count}} AI questions",
       "aiQuestionsMonthly": "{{count}} AI questions / month",
-      "aiGradingsTrial": "{{count}} AI assignment reviews",
-      "aiGradingsMonthly": "{{count}} AI assignment reviews / month",
-      "liveUnlimited": "Unlimited live lessons · Unlimited participants",
-      "liveLessonsUnlimited": "Unlimited live lessons",
-      "liveParticipantsUnlimited": "Unlimited participants",
-      "liveParticipantsOnly": "{{count}} participants / live lesson",
-      "recordingNone": "No lesson recording (Basic)",
-      "recordingQuota": "Recording: {{hours}} h/mo · {{storage}} GB · {{retention}}d retention · max {{maxMin}} min · {{quality}}",
-      "liveParticipants": "{{count}} participants / live lesson"
+      "aiGradingsTrial": "{{count}} AI-checked open-ended answers",
+      "aiGradingsMonthly": "{{count}} AI-checked open-ended answers / month",
+      "cloudStorageMb": "{{size}} MB cloud storage",
+      "unlimitedShort": "Unlimited",
+      "liveLessonLinks": "Unlimited live lesson scheduling with Google Meet and Zoom links"
     },
     "map": {
       "basic": "📍 Visible on the map",
@@ -3462,26 +3152,24 @@
       "premium": "🔥 Always at the top of search (TOP)"
     },
     "desc": {
-      "basic": "21-day free trial — try the platform with no risk.",
-      "pro": "The most popular {{title}} plan for small and mid-size groups.",
-      "growth": "{{title}} plan — a growing teaching business and detailed reports.",
-      "premium": "{{title}} plan — unlimited students, 50 GB cloud storage, and priority support."
+      "basic": "Try the core of Mentorix free for 21 days.",
+      "pro": "{{title}} — legacy plan, kept for existing subscribers.",
+      "growth": "For teachers managing growing groups.",
+      "premium": "For active teachers and larger classes."
     },
     "detail": {
       "basic": {
         "trial": "21-day free trial plan.",
         "limitsPeriod": "During the trial: {{limits}}.",
-        "limitsFallback": "Limits follow the Starter plan.",
-        "noExtraSms": "Extra SMS and storage cannot be purchased — when you hit a limit, choose STANDARD or a higher plan.",
-        "noRenew": "The Starter plan is not renewed; a paid plan is required after 21 days.",
-        "oneTrialPerIp": "Only one free trial is given per device (IP)."
+        "limitsFallback": "Trial plan limits apply.",
+        "noRenew": "The trial does not renew; a paid plan is required after 21 days.",
+        "oneTrialPerIp": "Only one free trial is given per device (IP).",
+        "noAutoCharge": "Nothing is charged automatically when the trial ends — you choose a plan yourself to continue."
       },
       "paid": {
         "subscription": "An active subscription billed monthly or yearly; limits apply as soon as payment is confirmed.",
         "includes": "The plan includes: {{limits}}.",
-        "premiumSmsEffective": "Unlimited students — SMS limit {{sms}}.",
-        "premiumSmsDefault": "Unlimited students — SMS limit 200/month (extra credit available).",
-        "upgradeHint": "When you reach the limits, upgrade the plan or buy extra SMS/storage."
+        "upgradeHint": "When you hit a limit, upgrade your plan or buy extra storage."
       },
       "fallback": {
         "limits": "{{limits}}.",
@@ -3865,7 +3553,7 @@
       "experienceYears": "{{count}} years experience",
       "ratePerHour": "{{rate}} AZN / hour",
       "trialCta": "⚡ Trial lesson — apply",
-      "whatsappDisclaimer": "Sign-up is required for WhatsApp and inquiries. Inquiries are delivered by SMS and in-app notification.",
+      "whatsappDisclaimer": "Sign-up is required for WhatsApp and inquiries. Inquiries are delivered via in-app and email notifications.",
       "lessonFormat": "Lesson format",
       "nextSlot": "Next available time:",
       "about": "About",
@@ -5054,5 +4742,180 @@
       "privacy_requests": "Privacy requests: there is no data source for them yet.",
       "cross_workspace_attempts": "Cross-workspace access attempts: denied attempts are not logged yet."
     }
+  },
+  "liveLessons": {
+    "title": "Live lessons",
+    "subtitleInstructor": "Schedule lessons with a Google Meet, Zoom or other HTTPS link. Mentorix handles the link, reminders and attendance — the video call itself runs on that platform.",
+    "subtitleStudent": "Live lessons scheduled by your teacher. \"Join lesson\" opens Google Meet, Zoom or the other platform in a new tab.",
+    "new": "New live lesson",
+    "scopeTabs": {
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "emptyUpcoming": "No upcoming live lessons.",
+    "emptyPast": "No past live lessons.",
+    "emptyHintInstructor": "Add a Google Meet or Zoom link and schedule your first lesson — students get an email and an in-app notification.",
+    "emptyHintStudent": "When your teacher schedules a lesson it appears here and you get an email.",
+    "retry": "Try again",
+    "loadFailed": "Could not load live lessons",
+    "saveFailed": "Could not save",
+    "loading": "Loading…",
+    "createTitle": "Schedule a live lesson",
+    "editTitle": "Edit live lesson",
+    "create": "Schedule",
+    "save": "Save",
+    "created": "Live lesson scheduled",
+    "createdSeries": "Series of {{n}} lessons scheduled",
+    "updated": "Live lesson updated",
+    "fields": {
+      "title": "Topic",
+      "titlePlaceholder": "e.g. Maths — quadratic equations",
+      "description": "Short description (optional)",
+      "target": "For",
+      "target_group": "Group",
+      "target_student": "Individual student",
+      "pickGroup": "Choose a group",
+      "pickStudent": "Choose a student",
+      "date": "Date",
+      "startTime": "Start",
+      "endTime": "End",
+      "bakuTime": "Times are shown in Baku time (UTC+4).",
+      "platform": "Platform",
+      "linkManual": "I will add the link myself",
+      "linkOauth": "Create it with my connected account ({{email}})",
+      "meetingUrl": "Meeting link",
+      "meetingUrlHint": "A Google Meet, Zoom or other secure link starting with https://.",
+      "recurrence": "Repeat",
+      "reminder": "Reminder",
+      "notifyEmail": "Email students",
+      "materials": "Materials",
+      "linkTitle": "Link title",
+      "fromLibrary": "Add from library"
+    },
+    "platforms": {
+      "google_meet": "Google Meet",
+      "zoom": "Zoom",
+      "other": "Other"
+    },
+    "recurrence": {
+      "none": "Does not repeat",
+      "weekly": "Weekly",
+      "weekdays": "Weekdays",
+      "custom": "Selected days",
+      "every": "Every",
+      "weeks": "week(s)",
+      "count": "Number of lessons",
+      "until": "End date",
+      "hint": "Choose either a number of lessons or an end date (up to 52 lessons)."
+    },
+    "weekdays": {
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat",
+      "7": "Sun"
+    },
+    "reminders": {
+      "15": "15 minutes before",
+      "30": "30 minutes before",
+      "60": "1 hour before",
+      "1440": "1 day before"
+    },
+    "scope": {
+      "title": "Apply changes to",
+      "single": "This lesson only",
+      "following": "This and following lessons"
+    },
+    "remove": "Remove",
+    "add": "Add",
+    "privacyNote": "Only you and the assigned students can see the meeting link; it is never shown on public pages.",
+    "state": {
+      "upcoming": "Upcoming",
+      "live": "Now",
+      "ended": "Ended",
+      "cancelled": "Cancelled",
+      "legacy": "Old room"
+    },
+    "recurring": "Recurring",
+    "cancelReason": "Reason: {{reason}}",
+    "myAttendance": "My attendance",
+    "attendance": {
+      "attended": "Attended",
+      "absent": "Absent",
+      "late": "Late",
+      "excused": "Excused",
+      "unmarked": "Not marked"
+    },
+    "material": "Material",
+    "join": "Join lesson",
+    "opensNewTab": "(opens in a new tab)",
+    "addToCalendar": "Add to calendar",
+    "icsFailed": "Could not download the calendar file",
+    "edit": "Edit",
+    "attendanceCta": "Attendance",
+    "cancel": "Cancel",
+    "externalNote": "The lesson takes place on {{platform}}. Mentorix does not stream video.",
+    "attendanceTitle": "Attendance — {{title}}",
+    "attendanceHint": "Mark attendance yourself. Mentorix does not receive attendance data from Meet or Zoom.",
+    "attendanceSaved": "Attendance saved",
+    "markAllAttended": "Mark all attended",
+    "noStudents": "No students are assigned to this lesson.",
+    "student": "Student",
+    "attendanceFor": "{{name}} — attendance",
+    "note": "Note",
+    "cancelTitle": "Cancel lesson",
+    "keep": "Keep",
+    "cancelConfirm": "Cancel lesson",
+    "cancelText": "Cancel \"{{title}}\"?",
+    "cancelReasonLabel": "Reason (shown to students)",
+    "cancelNotifyHint": "Students will get an email and an in-app notification.",
+    "cancelled": "Lesson cancelled",
+    "accounts": {
+      "title": "Connected accounts (optional)",
+      "hint": "Connect your Google or Zoom account and Mentorix can create the link for you. You can always paste a link manually instead.",
+      "connected": "{{name}} account connected",
+      "connectFailed": "Could not connect the account",
+      "disconnected": "Account disconnected",
+      "connectedShort": "Connected",
+      "disconnect": "Disconnect",
+      "connect": "Connect",
+      "disconnectTitle": "Disconnect account",
+      "disconnectText": "Disconnect this account? Links of lessons already scheduled stay the same."
+    },
+    "legacy": {
+      "title": "Old lesson recordings",
+      "hint": "Lessons recorded in the former built-in video room. Download what you want to keep — no new recordings are made.",
+      "downloadFailed": "Download failed",
+      "download": "Download",
+      "delete": "Delete",
+      "deleteTitle": "Delete recording",
+      "deleteText": "Delete this recording permanently?"
+    },
+    "untitled": "Untitled lesson",
+    "retired": {
+      "title": "This link is no longer active",
+      "text": "The Mentorix built-in video room has been retired. Live lessons now run on Google Meet, Zoom or another platform link.",
+      "cta": "Go to live lessons",
+      "publicText": "This video room or recording link is no longer active. Ask your teacher for the lesson link.",
+      "home": "Back to home"
+    },
+    "notFound": {
+      "title": "Lesson not found",
+      "text": "The lesson was deleted or you do not have access to it."
+    }
+  },
+  "emailUnsubscribe": {
+    "title": "Unsubscribe from emails",
+    "question": "Stop receiving this type of email notification?",
+    "confirm": "Yes, unsubscribe",
+    "loading": "Sending…",
+    "done": "You will no longer receive these emails.",
+    "doneCategory": "You will no longer receive \"{{category}}\" emails.",
+    "invalid": "This link is invalid or has expired.",
+    "error": "Something went wrong. Please try again later.",
+    "settingsHint": "You can change all options in notification settings.",
+    "settingsCta": "Notification settings"
   }
 }

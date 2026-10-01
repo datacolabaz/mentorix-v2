@@ -37,7 +37,7 @@ const NAV_SECTION_DEFS = [
     titleKey: 'nav.sections.system',
     title: 'SİSTEM',
     items: [
-      { to: '/course/notifications', key: 'notifications', labelKey: 'nav.course.notifications', label: 'SMS / Bildirişlər', icon: 'notifications' },
+      { to: '/course/notifications', key: 'notifications', labelKey: 'nav.course.notifications', label: 'Bildirişlər', icon: 'notifications' },
       { to: '/course/settings', key: 'settings', labelKey: 'nav.course.settings', label: 'Parametrlər', icon: 'settings' },
     ],
   },

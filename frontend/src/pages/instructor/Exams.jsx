@@ -942,7 +942,7 @@ export default function InstructorExams() {
             </div>
             <div className="p-4 bg-[#13112e] rounded-xl border border-indigo-500/20 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">{t('exams.form.notifySms')}</span>
+                <span className="text-sm font-semibold">{t('exams.form.notifyEmail')}</span>
                 <input type="checkbox" checked={editExam.notify_students || false}
                   onChange={e => setEditExam(p => ({ ...p, notify_students: e.target.checked }))}
                   className="w-4 h-4 accent-blue-500" />

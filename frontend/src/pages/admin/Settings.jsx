@@ -10,7 +10,6 @@ const inp =
 /** Serverdəki `buildPlanFeaturesFromLimits` ilə eyni məntiqi önizləmə üçün */
 function previewFeatures(p) {
   const student_limit = p.unlimited_students ? null : Math.max(0, Math.round(Number(p.student_count) || 0))
-  const sms_limit = p.unlimited_sms ? null : Math.max(0, Math.round(Number(p.sms_count) || 0))
   let storage_gb = null
   let storage_limit_bytes = null
   if (!p.unlimited_storage) {
@@ -38,8 +37,6 @@ function previewFeatures(p) {
       lines.push(`${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB yaddaş`)
     }
   } else lines.push(`${Number(storage_gb)} GB yaddaş`)
-  if (sms_limit == null) lines.push('Limitsiz SMS / ay')
-  else lines.push(`${sms_limit} SMS / ay`)
   if (p.unlimited_documents) lines.push('Limitsiz sənəd')
   else lines.push(`${Math.max(0, Math.round(Number(p.document_count) || 0))} sənəd`)
   if (p.unlimited_exams) lines.push('Limitsiz imtahan / ay')
@@ -50,21 +47,9 @@ function previewFeatures(p) {
   const aiG = Math.max(0, Math.round(Number(p.ai_grading_limit) || 0))
   const isTrial = String(p.slug || '').toLowerCase() === 'basic'
   if (aiQ > 0) lines.push(isTrial ? `${aiQ} AI sual` : `${aiQ} AI sual / ay`)
-  if (aiG > 0) lines.push(isTrial ? `${aiG} AI Tapşırıq yoxlama` : `${aiG} AI Tapşırıq yoxlama / ay`)
-  lines.push('Limitsiz canlı dərslər')
-  const recHours = Number(p.recording_hours_monthly)
-  const recStorage = Number(p.recording_storage_bytes)
-  const recRetention = Number(p.recording_retention_days)
-  const recMax = Number(p.recording_max_duration_sec)
-  const recQuality = String(p.recording_max_quality || '').trim() || '720p'
-  if (!Number.isFinite(recHours) || recHours <= 0 || !Number.isFinite(recStorage) || recStorage <= 0) {
-    lines.push('Dərs yazısı yoxdur (SADƏ)')
-  } else {
-    const gb = recStorage / (1024 * 1024 * 1024)
-    const storageLabel = gb % 1 === 0 ? `${Math.round(gb)}` : `${Math.round(gb * 10) / 10}`
-    const maxMin = Math.round(recMax / 60)
+  if (aiG > 0) {
     lines.push(
-      `Yazı: ${recHours} saat/ay · ${storageLabel} GB · ${recRetention} gün saxlama · max ${maxMin} dəq · ${recQuality}`,
+      isTrial ? `${aiG} AI ilə yoxlanılan açıq-cavab işi` : `${aiG} AI ilə yoxlanılan açıq-cavab işi / ay`,
     )
   }
   return lines
@@ -92,7 +77,6 @@ function dbRowToEditor(p) {
   const hasHomeworkLimit = Object.prototype.hasOwnProperty.call(p, 'homework_limit')
   const hasDocumentLimit = Object.prototype.hasOwnProperty.call(p, 'document_limit')
   const unlimited_students = p.student_limit == null
-  const unlimited_sms = p.sms_limit == null
   const unlimited_exams = hasExamLimit ? p.exam_limit == null : Boolean(preset.unlimited_exams)
   const unlimited_homeworks = hasHomeworkLimit ? p.homework_limit == null : Boolean(preset.unlimited_homeworks)
   const unlimited_documents = hasDocumentLimit ? p.document_limit == null : Boolean(preset.unlimited_documents)
@@ -117,8 +101,6 @@ function dbRowToEditor(p) {
     ram_limit_mb: p.ram_limit_mb ?? '',
     unlimited_students,
     student_count: unlimited_students ? '' : String(p.student_limit ?? ''),
-    unlimited_sms,
-    sms_count: unlimited_sms ? '' : String(p.sms_limit ?? ''),
     unlimited_exams,
     exam_count: unlimited_exams
       ? ''
@@ -142,16 +124,6 @@ function dbRowToEditor(p) {
     plan_subtitle: p.plan_subtitle ?? preset.plan_subtitle ?? '',
     plan_cta: p.plan_cta ?? preset.plan_cta ?? '',
     popular_label: p.popular_label ?? preset.popular_label ?? '',
-    recording_hours_monthly:
-      p.recording_hours_monthly ?? preset.recording_hours_monthly ?? 0,
-    recording_storage_bytes:
-      p.recording_storage_bytes ?? preset.recording_storage_bytes ?? 0,
-    recording_retention_days:
-      p.recording_retention_days ?? preset.recording_retention_days ?? 0,
-    recording_max_duration_sec:
-      p.recording_max_duration_sec ?? preset.recording_max_duration_sec ?? 0,
-    recording_max_quality:
-      p.recording_max_quality ?? preset.recording_max_quality ?? null,
     ai_question_limit:
       p.ai_question_limit != null
         ? String(p.ai_question_limit)
@@ -173,8 +145,6 @@ function editorToPayload(p) {
     ram_limit_mb: p.ram_limit_mb === '' || p.ram_limit_mb == null ? null : Number(p.ram_limit_mb),
     unlimited_students: Boolean(p.unlimited_students),
     student_count: p.unlimited_students ? null : Number(p.student_count),
-    unlimited_sms: Boolean(p.unlimited_sms),
-    sms_count: p.unlimited_sms ? null : Number(p.sms_count),
     unlimited_exams: Boolean(p.unlimited_exams),
     exam_count: p.unlimited_exams ? null : Number(p.exam_count),
     unlimited_homeworks: Boolean(p.unlimited_homeworks),
@@ -199,34 +169,29 @@ function editorToPayload(p) {
   }
 }
 
+const LIVE_LINE = 'Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama'
+
 const PRESETS = {
   basic: {
-    title: 'SADƏ',
+    title: 'PULSUZ SINAQ',
     price_azn: 0,
     unlimited_students: false,
     student_count: '5',
-    unlimited_documents: false,
-    document_count: '50',
+    unlimited_documents: true,
+    document_count: '',
     unlimited_storage: false,
-    storage_value: '5',
+    storage_value: '1024',
     storage_unit: 'MB',
-    unlimited_sms: false,
-    sms_count: '5',
     unlimited_exams: false,
-    exam_count: '2',
+    exam_count: '3',
     unlimited_homeworks: false,
     homework_count: '5',
     highlight: false,
     ram_limit_mb: '',
-    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
-    plan_subtitle: '21 günlük pulsuz sınaq',
-    plan_cta: '21 günlük sınağa başla',
+    marketing_features: ['Google Meet və Zoom linki ilə canlı dərs planlama', 'Məhdud e-poçt bildirişləri'],
+    plan_subtitle: 'Mentorix-in əsas imkanlarını 21 gün ödənişsiz yoxlayın.',
+    plan_cta: 'Pulsuz başla',
     popular_label: '',
-    recording_hours_monthly: 0,
-    recording_storage_bytes: 0,
-    recording_retention_days: 0,
-    recording_max_duration_sec: 0,
-    recording_max_quality: null,
     ai_question_limit: '20',
     ai_grading_limit: '10',
   },
@@ -240,68 +205,59 @@ const PRESETS = {
     unlimited_storage: false,
     storage_value: '128',
     storage_unit: 'MB',
-    unlimited_sms: false,
-    sms_count: '20',
     unlimited_exams: false,
     exam_count: '20',
     unlimited_homeworks: false,
     homework_count: '40',
-    highlight: true,
+    highlight: false,
     ram_limit_mb: '',
-    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə'],
-    plan_subtitle: '',
-    plan_cta: 'Standart seç',
-    popular_label: '⭐ Ən populyar',
-    recording_hours_monthly: 5,
-    recording_storage_bytes: 5 * 1024 * 1024 * 1024,
-    recording_retention_days: 30,
-    recording_max_duration_sec: 7200,
-    recording_max_quality: '720p',
+    marketing_features: ['Ödəniş izləmə', 'Valideyn e-poçt bildirişləri', LIVE_LINE],
+    plan_subtitle: 'Köhnə paket — mövcud abunəçilər üçün',
+    plan_cta: 'Planı seç',
+    popular_label: '',
     ai_question_limit: '100',
     ai_grading_limit: '30',
   },
   growth: {
-    title: 'PROFESSİONAL',
+    title: 'PROFESSIONAL',
     price_azn: 10,
     unlimited_students: false,
     student_count: '50',
-    unlimited_documents: false,
-    document_count: '5000',
+    unlimited_documents: true,
+    document_count: '',
     unlimited_storage: false,
-    storage_value: '512',
-    storage_unit: 'MB',
-    unlimited_sms: false,
-    sms_count: '50',
+    storage_value: '20',
+    storage_unit: 'GB',
     unlimited_exams: false,
     exam_count: '50',
     unlimited_homeworks: false,
     homework_count: '120',
-    highlight: false,
+    highlight: true,
     ram_limit_mb: '',
-    marketing_features: ['Ödəniş izləmə', 'Valideyn bildirişləri', 'Xəritədə görünmə', 'Ətraflı hesabatlar'],
-    plan_subtitle: '',
-    plan_cta: 'Professional seç',
+    marketing_features: [
+      'Ödəniş izləmə',
+      'Valideyn e-poçt bildirişləri',
+      'Ətraflı hesabatlar',
+      'Qrup və fərdi çat',
+      LIVE_LINE,
+      'QR ilə doğrulana bilən sertifikat',
+    ],
+    plan_subtitle: 'Böyüyən qrupları idarə edən müəllimlər üçün.',
+    plan_cta: 'Planı seç',
     popular_label: '',
-    recording_hours_monthly: 20,
-    recording_storage_bytes: 20 * 1024 * 1024 * 1024,
-    recording_retention_days: 90,
-    recording_max_duration_sec: 7200,
-    recording_max_quality: '720p',
     ai_question_limit: '300',
     ai_grading_limit: '100',
   },
   premium: {
-    title: 'PREMİUM',
+    title: 'PREMIUM',
     price_azn: 19,
     unlimited_students: true,
     student_count: '',
     unlimited_documents: true,
     document_count: '',
-    unlimited_storage: true,
-    storage_value: '',
-    storage_unit: 'MB',
-    unlimited_sms: false,
-    sms_count: '200',
+    unlimited_storage: false,
+    storage_value: '50',
+    storage_unit: 'GB',
     unlimited_exams: true,
     exam_count: '',
     unlimited_homeworks: true,
@@ -310,19 +266,15 @@ const PRESETS = {
     ram_limit_mb: '',
     marketing_features: [
       'Ödəniş izləmə',
-      'Valideyn bildirişləri',
-      'Xəritədə görünmə',
+      'Valideyn e-poçt bildirişləri',
       'Ətraflı hesabatlar',
-      'Prioritet texniki dəstək',
+      'Prioritet dəstək',
+      LIVE_LINE,
+      'QR ilə doğrulana bilən sertifikat',
     ],
-    plan_subtitle: '',
-    plan_cta: 'Premium seç',
+    plan_subtitle: 'Aktiv müəllimlər və daha böyük tədris qrupları üçün.',
+    plan_cta: 'Planı seç',
     popular_label: '',
-    recording_hours_monthly: 50,
-    recording_storage_bytes: 50 * 1024 * 1024 * 1024,
-    recording_retention_days: 180,
-    recording_max_duration_sec: 10800,
-    recording_max_quality: '1080p',
     ai_question_limit: '800',
     ai_grading_limit: '300',
   },
@@ -372,10 +324,6 @@ export default function AdminSettings() {
     if (!p.unlimited_students) {
       const n = Number(p.student_count)
       if (!Number.isFinite(n) || n < 0) return 'Tələbə sayı düzgün deyil'
-    }
-    if (!p.unlimited_sms) {
-      const n = Number(p.sms_count)
-      if (!Number.isFinite(n) || n < 0) return 'SMS sayı düzgün deyil'
     }
     if (!p.unlimited_exams) {
       const n = Number(p.exam_count)
@@ -517,16 +465,16 @@ export default function AdminSettings() {
 
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'basic')}>
-                      Şablon: SADƏ
+                      Şablon: PULSUZ SINAQ
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'pro')}>
-                      Şablon: STANDART
+                      Şablon: STANDART (köhnə)
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'growth')}>
-                      Şablon: PROFESSİONAL
+                      Şablon: PROFESSIONAL
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={() => applyPreset(idx, 'premium')}>
-                      Şablon: PREMİUM
+                      Şablon: PREMIUM
                     </Button>
                   </div>
 
@@ -547,26 +495,6 @@ export default function AdminSettings() {
                           disabled={p.unlimited_students}
                           value={p.student_count}
                           onChange={(e) => patch(idx, { student_count: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Toggle
-                        id={`usms-${p.slug}`}
-                        label="Limitsiz SMS (aylıq)"
-                        checked={p.unlimited_sms}
-                        onChange={(v) => patch(idx, { unlimited_sms: v })}
-                      />
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">SMS / ay</label>
-                        <input
-                          type="number"
-                          min={0}
-                          className={inp}
-                          disabled={p.unlimited_sms}
-                          value={p.sms_count}
-                          onChange={(e) => patch(idx, { sms_count: e.target.value })}
                         />
                       </div>
                     </div>

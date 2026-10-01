@@ -124,7 +124,7 @@ export function useLandingPlanDisplay(p, t, i18n) {
     const v = Number(p?.price_azn)
     const priceLabel =
       !Number.isFinite(v) || v <= 0
-        ? t('landing.plans.free')
+        ? t('landing.plans.trialPrice')
         : t('landing.plans.pricePerMonth', { price: v })
     const subtitle = translateOptional(t, `${prefix}.subtitle`)
     return {

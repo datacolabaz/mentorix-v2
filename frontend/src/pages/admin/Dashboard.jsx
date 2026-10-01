@@ -298,8 +298,8 @@ export default function AdminDashboard() {
               to="/admin/inventory"
               className="block rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-5 hover:border-primary/40 transition-colors"
             >
-              <h2 className="font-display font-bold text-base text-token-textMain">SMS & Ehtiyat</h2>
-              <p className="text-sm text-gray-500 mt-1">Provayder balansı və infrastruktur monitorinqi</p>
+              <h2 className="font-display font-bold text-base text-token-textMain">Ehtiyat və infrastruktur</h2>
+              <p className="text-sm text-gray-500 mt-1">İnfrastruktur monitorinqi və köhnə paket tarixçəsi</p>
               <span className="inline-block mt-3 text-sm font-semibold text-primary">Aç →</span>
             </Link>
           </div>

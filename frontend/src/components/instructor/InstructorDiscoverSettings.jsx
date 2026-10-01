@@ -7,7 +7,7 @@ import Button from '../common/Button'
 import { useToast } from '../common/Toast'
 import { groupServiceAreas } from '../../lib/serviceAreaGroups'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
-import { higherPaidPlansSuffix, planTitleOrSlug } from '../../lib/subscriptionPlanGuards'
+import { higherPaidPlansSuffix, nextPlanInList, planTitleOrSlug } from '../../lib/subscriptionPlanGuards'
 import { DISCOVER_PROFILE_SECTION_ID } from '../../lib/scrollIntoAppView'
 
 export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
@@ -21,8 +21,7 @@ export default function InstructorDiscoverSettings({ mapVisible, theme, inp }) {
   const plansQ = useSubscriptionPlans()
   const plans = Array.isArray(plansQ.data) ? plansQ.data : []
   const proPlanTitle = useMemo(() => {
-    const pro = plans.find((p) => String(p?.id || '').toLowerCase() === 'pro')
-    return planTitleOrSlug(pro, 'pro')
+    return planTitleOrSlug(nextPlanInList(plans, 'basic'), 'professional')
   }, [plans])
   const paidDiscoverLabel = useMemo(() => higherPaidPlansSuffix(plans, 'basic'), [plans])
   const [loading, setLoading] = useState(true)

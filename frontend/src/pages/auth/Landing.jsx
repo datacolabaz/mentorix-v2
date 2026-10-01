@@ -336,7 +336,7 @@ export default function Landing() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-600 font-bold">✓</span>
-                    <span><strong>Davamiyyət & Ödəniş:</strong> Qruplar, jurnallar və SMS bildirişləri.</span>
+                    <span><strong>Davamiyyət & Ödəniş:</strong> Qruplar, jurnallar və e-poçt bildirişləri.</span>
                   </li>
                 </ul>
               </div>

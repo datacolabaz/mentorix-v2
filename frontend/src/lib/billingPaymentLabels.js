@@ -33,7 +33,7 @@ export function billingPaymentStatusLabel(status) {
 }
 
 export function billingPaymentTitle(p) {
-  if (p?.product_type === 'sms') return `+${p.sms_quantity || 0} SMS`
+  if (p?.product_type === 'sms') return 'Köhnə bildiriş paketi'
   if (p?.product_type === 'storage') {
     const mb = Math.round(Number(p.storage_mb) || 0)
     if (mb >= 1024 && mb % 1024 === 0) return `+${mb / 1024} GB Sənəd Yaddaşı`
@@ -48,8 +48,7 @@ export function billingPaymentTitle(p) {
 export const BILLING_RECEIPT_WHATSAPP_MSISDN = '994553775770'
 
 export function billingReceiptWhatsAppUrl({ amountAzn, product } = {}) {
-  const productAz =
-    product === 'sms' ? 'SMS paketi' : product === 'storage' ? 'yaddaş paketi' : 'paket'
+  const productAz = product === 'storage' ? 'yaddaş paketi' : 'paket'
   let text = 'Salam, Mentorix paket ödənişi ilə bağlı qəbzi göndərirəm.'
   if (amountAzn != null && Number.isFinite(Number(amountAzn))) {
     text = `Salam, Mentorix ${productAz} ödənişi ilə bağlı qəbzi göndərirəm. Məbləğ: ${amountAzn} AZN`

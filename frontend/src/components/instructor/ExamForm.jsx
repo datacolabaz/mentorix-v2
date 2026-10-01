@@ -438,10 +438,10 @@ export default function ExamForm({ students, studentsLoading = false, onCreated,
           <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold">Əlavə SMS / WhatsApp xatırlatması</p>
+                <p className="text-sm font-semibold">E-poçt xatırlatması</p>
                 <p className="text-xs text-token-textMuted">
-                  İlk təyinatda tələbəyə əsasən <strong>Gmail</strong> və panel bildirişi gedir; SMS ayrıca Sorğular
-                  təsdiqində seçilir. Bu checkbox: başlamadan 5 dəq əvvəl xatırlatma və imtahan bitəndə nəticə SMS-i.
+                  Başlamadan 5 dəq əvvəl tələbələrə panel və e-poçt xatırlatması gedir; imtahan təqdim olunanda bağlı
+                  valideyn hesabına nəticə xülasəsi göndərilir.
                 </p>
               </div>
               <input type="checkbox" checked={meta.notify_students}

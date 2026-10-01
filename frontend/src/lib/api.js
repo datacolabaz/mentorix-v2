@@ -25,7 +25,6 @@ function formatApiErrorMessage(err, serverMessage) {
 const USAGE_LIMIT_CODES = new Set([
   'STUDENT_LIMIT',
   'STORAGE_LIMIT',
-  'SMS_LIMIT',
   'MATERIALS_STORAGE_LIMIT',
   'MATERIALS_FILE_COUNT_LIMIT',
 ])

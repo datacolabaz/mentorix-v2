@@ -8,6 +8,10 @@ export const NOTIFICATION_CATEGORIES = [
   'partner',
   'billing',
   'system',
+  'live_lesson',
+  'parent',
+  'digest',
+  'marketing',
 ]
 
 const CATEGORY_ICON = {
@@ -20,6 +24,10 @@ const CATEGORY_ICON = {
   partner: 'briefcase',
   billing: 'payments',
   system: 'notifications',
+  live_lesson: 'live',
+  parent: 'children',
+  digest: 'progress',
+  marketing: 'notifications',
 }
 
 /** NavIcon name for a notification category. */

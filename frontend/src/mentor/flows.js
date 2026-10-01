@@ -54,9 +54,9 @@ export const FLOWS = {
       waitForClick: true,
       title: { az: 'Tələbələr', ru: 'Ученики', en: 'Students' },
       body: {
-        az: 'Tələbə əlavə etmək üçün bu menyuya keçin. İlk dəfə telefon OTP istəyə bilər — qeydiyyat SMS-i deyil.',
-        ru: 'Чтобы добавить ученика, откройте этот пункт. Может запросить OTP телефона — это не SMS регистрации.',
-        en: 'Open Students to add learners. Phone OTP may appear — that is not a signup SMS.',
+        az: 'Tələbə əlavə etmək üçün bu menyuya keçin.',
+        ru: 'Чтобы добавить ученика, откройте этот пункт.',
+        en: 'Open Students to add learners.',
       },
     },
     {
