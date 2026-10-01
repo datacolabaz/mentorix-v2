@@ -1,7 +1,8 @@
 import { MENTORIX_SEO_DESCRIPTION, MENTORIX_SEO_TITLE } from './mentorixPublicMarketing'
 import { PLAN_TITLES_SEO_FALLBACK } from './subscriptionPlanGuards'
+import { BRAND } from './brand'
 
-export const SITE_ORIGIN = 'https://mentorix.io'
+export const SITE_ORIGIN = `https://${BRAND.domain}`
 
 /** Google sitelink və footer naviqasiyası üçün əsas bölmələr */
 export const MENTORIX_SITE_NAV = [

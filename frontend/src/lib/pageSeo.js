@@ -4,6 +4,7 @@ import {
   MENTORIX_SEO_TITLE,
 } from './mentorixPublicMarketing'
 import { SITE_ORIGIN, buildBreadcrumbSchema, buildPersonSchema, buildPricingProductSchema } from './mentorixSeoSchema'
+import { BRAND } from './brand'
 
 export const OG_IMAGE_PATH = '/og.png?v=8'
 export const OG_CERTIFIED_IMAGE_PATH = '/og-certified.png?v=1'
@@ -22,7 +23,19 @@ const DEFAULT_DESCRIPTION = MENTORIX_SEO_DESCRIPTION
 const DEFAULT_KEYWORDS = MENTORIX_SEO_KEYWORDS
 
 function normalizeSeoBrand(value) {
-  return String(value || '').replace(/mentorix(?:\.io)?/gi, 'mentorix.io')
+  return String(value || '').replace(/mentorix(?:\.io)?/gi, BRAND.domain)
+}
+
+function buildFaqSchema(items) {
+  const entries = (Array.isArray(items) ? items : [])
+    .filter((item) => item?.q && item?.a)
+    .map((item) => ({
+      '@type': 'Question',
+      name: String(item.q),
+      acceptedAnswer: { '@type': 'Answer', text: String(item.a) },
+    }))
+  if (!entries.length) return null
+  return { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: entries }
 }
 
 function upsertMeta(name, content) {
@@ -88,6 +101,7 @@ export function setPageSeo({
   breadcrumbs,
   person,
   pricingProduct = false,
+  faq,
   locale,
 }) {
   if (typeof document === 'undefined') return
@@ -112,7 +126,7 @@ export function setPageSeo({
   }
   link.setAttribute('href', href)
 
-   upsertOg('og:site_name', 'mentorix.io')
+   upsertOg('og:site_name', BRAND.domain)
   upsertOg('og:title', nextTitle)
   upsertOg('og:description', nextDescription)
   upsertOg('og:url', href)
@@ -137,10 +151,12 @@ export function setPageSeo({
    upsertJsonLd('mx-breadcrumb-ld', buildBreadcrumbSchema(normalizedBreadcrumbs))
   upsertJsonLd('mx-person-ld', person ? buildPersonSchema(person) : null)
   upsertJsonLd('mx-pricing-ld', pricingProduct ? buildPricingProductSchema() : null)
+  upsertJsonLd('mx-faq-ld', buildFaqSchema(faq))
 }
 
 export function clearPageStructuredData() {
   if (typeof document === 'undefined') return
+  upsertJsonLd('mx-faq-ld', null)
   upsertJsonLd('mx-person-ld', null)
   upsertJsonLd('mx-pricing-ld', null)
   upsertJsonLd('mx-breadcrumb-ld', null)
@@ -153,7 +169,7 @@ export function resetPageSeo() {
     description: DEFAULT_DESCRIPTION,
     canonicalPath: '/',
     keywords: DEFAULT_KEYWORDS,
-    breadcrumbs: [{ name: 'mentorix.io', path: '/' }],
+    breadcrumbs: [{ name: BRAND.domain, path: '/' }],
   })
 }
 

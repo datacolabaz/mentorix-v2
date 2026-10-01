@@ -2,10 +2,9 @@ import i18n from 'i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 import az from '../locales/az/translation.json'
-import ru from '../locales/ru/translation.json'
-import en from '../locales/en/translation.json'
 import { universityCatalogAz, universityCatalogEn, universityCatalogRu } from '../locales/universityCatalog'
 import { publicLandingsAz, publicLandingsEn, publicLandingsRu } from '../locales/publicLandings'
+import { homeAz, homeEn, homeRu } from '../locales/home'
 import { normalizeUiLocale, UI_LOCALE_CODES } from '../lib/uiLocales'
 
 function withUniversityCatalog(base, catalog) {
@@ -18,9 +17,43 @@ function withUniversityCatalog(base, catalog) {
   }
 }
 
-const azResources = { ...withUniversityCatalog(az, universityCatalogAz), ...publicLandingsAz }
-const ruResources = { ...withUniversityCatalog(ru, universityCatalogRu), ...publicLandingsRu }
-const enResources = { ...withUniversityCatalog(en, universityCatalogEn), ...publicLandingsEn }
+const azResources = { ...withUniversityCatalog(az, universityCatalogAz), ...publicLandingsAz, home: homeAz }
+
+/**
+ * Azerbaijani (default) ships in the main bundle; ru/en (~520 KB of JSON) are split into their own
+ * chunks and fetched only when that language is active. tr/de reuse the English bundle.
+ */
+const LAZY_BUNDLES = {
+  ru: () =>
+    import('../locales/ru/translation.json').then((m) => ({
+      ...withUniversityCatalog(m.default, universityCatalogRu),
+      ...publicLandingsRu,
+      home: homeRu,
+    })),
+  en: () =>
+    import('../locales/en/translation.json').then((m) => ({
+      ...withUniversityCatalog(m.default, universityCatalogEn),
+      ...publicLandingsEn,
+      home: homeEn,
+    })),
+}
+const BUNDLE_SOURCE = { tr: 'en', de: 'en' }
+
+const lazyLocaleBackend = {
+  type: 'backend',
+  init() {},
+  read(language, namespace, callback) {
+    const load = LAZY_BUNDLES[BUNDLE_SOURCE[language] || language]
+    if (namespace !== 'translation' || !load) {
+      callback(null, {})
+      return
+    }
+    load().then(
+      (resources) => callback(null, resources),
+      (err) => callback(err, null),
+    )
+  },
+}
 
 export const LOCALE_KEY = 'mentorix_lang'
 const LEGACY_LOCALE_KEY = 'mentorix_locale_v1'
@@ -63,17 +96,17 @@ detector.init({
 const initialLocale = readStoredLocale()
 applyDocumentLocale(initialLocale)
 
-i18n
+/** Resolves once the initial language bundle is available (immediately for az). */
+export const i18nReady = i18n
   .use(detector)
+  .use(lazyLocaleBackend)
   .use(initReactI18next)
   .init({
     resources: {
       az: { translation: azResources },
-      ru: { translation: ruResources },
-      en: { translation: enResources },
-      tr: { translation: enResources },
-      de: { translation: enResources },
     },
+    partialBundledLanguages: true,
+    initAsync: false,
     lng: initialLocale,
     fallbackLng: {
       tr: ['en', 'az'],
@@ -86,8 +119,7 @@ i18n
   })
   .then(() => {
     i18n.addResourceBundle('az', 'translation', { universitySearch: { catalog: universityCatalogAz } }, true, true)
-    i18n.addResourceBundle('ru', 'translation', { universitySearch: { catalog: universityCatalogRu } }, true, true)
-    i18n.addResourceBundle('en', 'translation', { universitySearch: { catalog: universityCatalogEn } }, true, true)
   })
+  .catch(() => {})
 
 export default i18n
