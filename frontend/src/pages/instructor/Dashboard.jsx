@@ -20,6 +20,7 @@ import PresenceDot from '../../components/common/PresenceDot'
 import { moneyLocale as moneyLocaleTag } from '../../lib/uiLocale'
 import { formatYmMonthShort } from '../../lib/azMonths'
 import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
+import DashboardSummary from '../../components/dashboard/DashboardSummary'
 
 const DEFAULT_DASH = {
   income_this_month: 0,
@@ -555,6 +556,8 @@ export default function InstructorDashboard() {
           sparkline={sparkIncome}
         />
       </div>
+
+      <DashboardSummary role="teacher" className="mb-6" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0 w-full [&>*]:min-w-0">
         <div className="lg:col-span-2 min-w-0">

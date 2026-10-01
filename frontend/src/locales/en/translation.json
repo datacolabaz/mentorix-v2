@@ -4789,5 +4789,150 @@
         "cta": "Go to exams"
       }
     }
+  },
+  "dashboardSummary": {
+    "title": {
+      "admin": "Operations summary",
+      "teacher": "Needs your attention",
+      "student": "What’s new for you"
+    },
+    "subtitle": {
+      "admin": "Security, applications and failed operations — aggregate counts only",
+      "teacher": "Grading, overdue work and student activity — your own groups",
+      "student": "New work, upcoming deadlines and results"
+    },
+    "loading": "Loading summary…",
+    "error": "Could not load the summary.",
+    "retry": "Try again",
+    "allClear": "All clear",
+    "attention": "Needs attention: {{count}}",
+    "status": {
+      "unavailable": "Unavailable",
+      "none": "None",
+      "urgent": "Urgent",
+      "review": "Review",
+      "new": "New",
+      "ready": "Ready",
+      "info": "Info"
+    },
+    "items": {
+      "security_events": "Unread security events",
+      "partner_applications": "Pending partner applications",
+      "failed_email_deliveries": "Failed email deliveries (24h)",
+      "failed_background_jobs": "Failed background jobs",
+      "commission_actions": "Commission actions awaiting review",
+      "unread_submissions": "Unread student submissions",
+      "pending_grading": "Waiting for grading",
+      "overdue_assignments": "Overdue assignments",
+      "assessment_expiry": "Expired assessments",
+      "unviewed_materials": "Unviewed materials",
+      "join_requests": "Join requests",
+      "new_assessments": "New assessments",
+      "new_assignments": "New assignments",
+      "new_materials": "New materials",
+      "upcoming_deadlines": "Upcoming deadlines (7 days)",
+      "released_results": "Released results",
+      "teacher_feedback": "Teacher feedback"
+    },
+    "detail": {
+      "security_events": "Failed sign-ins in the last 24h: {{count}}",
+      "partner_applications": "Oldest: {{date}}",
+      "failed_email_deliveries": "Last 7 days: {{count}}",
+      "failed_background_jobs": "Last {{days}} days · AI grading queue",
+      "commission_actions": "Payouts: {{payouts}} ({{amount}}) · Commissions: {{commissions}}",
+      "pending_grading": "Assignments: {{assignments}} · Assessments: {{exams}}",
+      "overdue_assignments": "Assignments affected: {{count}}",
+      "assessment_expiry": "Auto-submitted: {{auto}} · Expired without answers: {{empty}}",
+      "unviewed_materials": "Materials: {{materials}} · Past due: {{overdue}}",
+      "upcoming_deadlines": "Next: {{date}}",
+      "released_results": "Latest: {{date}}",
+      "teacher_feedback": "Graded: {{graded}} · Returned for changes: {{returned}}"
+    },
+    "activity": {
+      "title": "Activity in the last 24 hours",
+      "open": "Activity report",
+      "countsLabel": "Counts by event type",
+      "empty": "No student activity in the last 24 hours.",
+      "capped": "High volume — counts cover the latest 5000 events.",
+      "student": "Student",
+      "buckets": {
+        "submissions": "Submissions: {{count}}",
+        "exams_completed": "Assessments finished: {{count}}",
+        "exams_started": "Assessments started: {{count}}",
+        "material_views": "Material views: {{count}}",
+        "downloads": "Downloads: {{count}}",
+        "expired": "Expired: {{count}}"
+      },
+      "events": {
+        "assignment_submitted": "submitted an assignment",
+        "assignment_late_submitted": "submitted an assignment late",
+        "exam_submitted": "finished an assessment",
+        "exam_started": "started an assessment",
+        "exam_expired": "ran out of time on an assessment",
+        "material_viewed": "viewed a material",
+        "video_started": "started a video",
+        "video_completed": "finished a video",
+        "material_file_downloaded": "downloaded a file"
+      }
+    },
+    "join": {
+      "title": "Group join requests",
+      "open": "My groups",
+      "group": "Group",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      }
+    },
+    "admin": {
+      "aggregateNote": "Only aggregate counts are shown here. Student-level data is available from a teacher’s activity page, with a stated reason and an audit log entry."
+    }
+  },
+  "adminOperations": {
+    "nav": "Operational failures",
+    "title": "Operational failures",
+    "subtitle": "Failed sign-ins, email deliveries and background jobs. Read-only.",
+    "back": "Back to dashboard",
+    "refresh": "Refresh",
+    "empty": "No failures in this period.",
+    "sectionUnavailable": "Could not load this section.",
+    "failures": "Failures: {{count}}",
+    "noFailures": "No failures",
+    "cols": {
+      "event": "Event",
+      "reason": "Reason",
+      "count": "Count",
+      "last": "Last",
+      "template": "Template",
+      "error": "Error",
+      "retries": "Attempts",
+      "failedAt": "Failed at",
+      "job": "Job"
+    },
+    "security": {
+      "title": "Failed sign-ins",
+      "subtitle": "Last {{hours}} hours, grouped by reason",
+      "privacy": "Emails, phone numbers and IP addresses are not shown.",
+      "events": {
+        "login_failed": "Failed sign-in",
+        "legacy_login_blocked": "Legacy sign-in blocked"
+      }
+    },
+    "email": {
+      "title": "Failed email deliveries",
+      "subtitle": "Last {{hours}} hours",
+      "privacy": "Recipient addresses, subjects and bodies are not shown."
+    },
+    "jobs": {
+      "title": "Failed background jobs",
+      "subtitle": "Last {{days}} days",
+      "openGrading": "AI open-answer grading"
+    },
+    "omitted": {
+      "title": "Not tracked yet",
+      "privacy_requests": "Privacy requests: there is no data source for them yet.",
+      "cross_workspace_attempts": "Cross-workspace access attempts: denied attempts are not logged yet."
+    }
   }
 }

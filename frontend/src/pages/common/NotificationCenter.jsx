@@ -28,9 +28,12 @@ const selectClass =
 export default function NotificationCenter() {
   const { t } = useTranslation()
   const { unreadCount } = useNotificationUnread()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [categories, setCategories] = useState(NOTIFICATION_CATEGORIES)
-  const [category, setCategory] = useState('')
-  const [unreadOnly, setUnreadOnly] = useState(false)
+  const [category, setCategory] = useState(() =>
+    NOTIFICATION_CATEGORIES.includes(searchParams.get('category')) ? searchParams.get('category') : '',
+  )
+  const [unreadOnly, setUnreadOnly] = useState(() => searchParams.get('unread') === '1')
   const [items, setItems] = useState([])
   const [cursor, setCursor] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -40,7 +43,6 @@ export default function NotificationCenter() {
   const [markingAll, setMarkingAll] = useState(false)
   const requestSeq = useRef(0)
   const deepLinkHandled = useRef(false)
-  const [searchParams, setSearchParams] = useSearchParams()
   const categoryId = useId()
   const unreadId = useId()
   const { open, openingId } = useOpenNotification({ source: CENTER_SOURCE })
