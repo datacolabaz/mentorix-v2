@@ -764,6 +764,7 @@ module.exports = {
   getAssignmentDetail,
   getExamSummaries,
   getExamDetail,
+  MATERIAL_ROSTER_SQL,
   EXAM_ROSTER_SQL,
   recordMaterialEvent,
   recordStudentAssignmentEvent,

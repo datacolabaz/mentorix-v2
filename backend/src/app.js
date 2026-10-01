@@ -88,6 +88,7 @@ app.use('/api/groups', require('./routes/groups'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/materials', require('./routes/materials'));
 app.use('/api/engagement', require('./routes/engagement'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/presentations', require('./routes/presentations'));
 app.use('/api/programs', requireFeature(FEATURE_FLAGS.UNIVERSITY_SEARCH), require('./routes/programs'));
 app.use('/api/applications', requireFeature(FEATURE_FLAGS.UNIVERSITY_SEARCH), require('./routes/applications'));
