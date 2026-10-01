@@ -262,12 +262,27 @@ body {
     --border-color: rgba(15, 23, 42, 0.1);
   }
 
+  /* The viewport must stay the only page scroller (window.scrollTo, sticky headers rely on it).
+     html keeps overflow visible so body's overflow propagates to the viewport (also what makes
+     body { overflow: hidden } scroll locks work). Never pair a fixed height with overflow-x: hidden
+     on body/#root: overflow-y computes to auto and nests a second scroller. */
   html, body, #root {
     width: 100%;
     min-width: 0;
     max-width: 100%;
+  }
+
+  html {
     height: 100%;
+  }
+
+  body {
+    min-height: 100%;
     overflow-x: hidden;
+  }
+
+  #root {
+    overflow-x: clip;
   }
 
   :focus-visible {
