@@ -7,7 +7,7 @@ import InstructorEngagement from '../instructor/Engagement'
 import InstructorEngagementDetail from '../instructor/EngagementDetail'
 import { clearAdminActivityScope, setAdminActivityScope } from '../../lib/adminActivityAccess'
 
-/** /admin/instructors/:instructorId/activity[/material|assignment/:id] — müəllim aktivliyinin admin baxışı (yalnız oxumaq). */
+/** /admin/instructors/:instructorId/activity[/material|assignment|exam/:id] — müəllim aktivliyinin admin baxışı (yalnız oxumaq). */
 export default function AdminInstructorActivity() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -37,7 +37,7 @@ export default function AdminInstructorActivity() {
     else navigate('/admin/instructors')
   }
 
-  const isDetail = (detailType === 'material' || detailType === 'assignment') && detailId
+  const isDetail = ['material', 'assignment', 'exam'].includes(detailType) && detailId
 
   return (
     <div className="space-y-2">

@@ -4332,5 +4332,345 @@
       "title": "Wrong answers only",
       "hint": "Students see only the questions they got wrong or skipped, with the correct answer."
     }
+  },
+  "activity": {
+    "types": {
+      "exam": "Exam",
+      "assignment": "Assignment",
+      "material": "Material"
+    },
+    "kinds": {
+      "pdf": "PDF",
+      "video": "Video",
+      "link": "Link",
+      "document": "Document",
+      "presentation": "Presentation",
+      "text": "Text lesson",
+      "image": "Image",
+      "file": "File"
+    },
+    "tabs": {
+      "materials": "Materials",
+      "assignments": "Assignments",
+      "exams": "Exams"
+    },
+    "common": {
+      "assignedOf_one": "Out of {{count}} student:",
+      "assignedOf_other": "Out of {{count}} students:",
+      "lastActivity": "Last activity: {{time}}",
+      "noGroup": "No group selected",
+      "more": "+{{count}} more",
+      "showAll": "Show all",
+      "loading": "Loading…",
+      "loadError": "Could not load data",
+      "retry": "Try again",
+      "close": "Close",
+      "illustrative": "Illustrative example",
+      "detailsLabel": "{{title}}: student activity",
+      "openDetails": "Detailed activity",
+      "nobody": "Nobody",
+      "unavailable": "Activity data is not available right now"
+    },
+    "time": {
+      "none": "—",
+      "justNow": "just now",
+      "minutes": "{{count}} min ago",
+      "hours": "{{count}} h ago",
+      "yesterday": "yesterday",
+      "days": "{{count}} days ago"
+    },
+    "notAssigned": {
+      "exam": "This exam has not been assigned to any student yet.",
+      "assignment": "This assignment has not been sent to any student yet.",
+      "material": "This material has not been sent to any student yet."
+    },
+    "lines": {
+      "exam": {
+        "completed": "completed",
+        "in_progress": "in progress",
+        "inactive": "inactive",
+        "expired": "time expired",
+        "not_started": "not started",
+        "pending_manual_grading": "awaiting grading"
+      },
+      "assignment": {
+        "opened": "opened",
+        "started": "started",
+        "submitted": "submitted",
+        "pending_review": "awaiting review",
+        "graded": "graded",
+        "not_submitted": "not submitted",
+        "overdue": "overdue",
+        "returned": "returned for revision",
+        "late_submitted": "submitted late"
+      },
+      "material": {
+        "viewed": "viewed",
+        "downloaded": "downloaded the file",
+        "not_viewed": "not viewed",
+        "overdue": "overdue, not viewed"
+      }
+    },
+    "exam": {
+      "secondary": "Viewed: {{viewed}} · Started: {{started}}",
+      "autoSubmitted": "{{count}} — Time expired — auto-submitted",
+      "averagePct": "Average result: {{pct}}%",
+      "averageScore": "Average result: {{score}} / {{max}} pts",
+      "averageBasis": "based on {{count}} graded attempts",
+      "schedule": "Window: {{from}} – {{until}}",
+      "scheduleFrom": "Opens: {{from}}",
+      "scheduleUntil": "Closes: {{until}}",
+      "noSchedule": "No time window set",
+      "duration": "{{count}} min",
+      "questions": "{{count}} questions",
+      "cta": {
+        "results": "Results",
+        "analytics": "Analytics",
+        "participants": "Participants"
+      },
+      "popover": {
+        "completed": "Completed",
+        "in_progress": "In progress",
+        "inactive": "Inactive",
+        "not_started": "Not started",
+        "expired": "Time expired",
+        "recentCompleters": "Recently completed",
+        "viewResults": "View results",
+        "showParticipants": "Show participants"
+      }
+    },
+    "assignment": {
+      "due": "Due: {{date}}",
+      "overdueDue": "Overdue · {{date}}",
+      "noDue": "No due date",
+      "cta": {
+        "submissions": "View submissions",
+        "review": "Review work",
+        "remind": "Send reminder"
+      },
+      "popover": {
+        "submitted": "Submitted",
+        "startedNotSubmitted": "Started but not submitted",
+        "notOpened": "Not opened",
+        "late": "Late",
+        "openedNotStarted": "Opened, not started"
+      }
+    },
+    "material": {
+      "due": "View by: {{date}}",
+      "totalViews": "Total views",
+      "uniqueDownloaders": "Unique downloaders",
+      "totalDownloads": "Total downloads",
+      "lastViewed": "Last view",
+      "lastDownload": "Last download",
+      "downloaders": "Students who downloaded the file",
+      "uploader": "Added by",
+      "uploadDate": "Upload date",
+      "fileOwner": "File owner",
+      "recentViewers": "Recent viewers",
+      "cta": {
+        "activity": "View activity",
+        "share": "Share",
+        "remindNotViewed": "Remind non-viewers"
+      },
+      "popover": {
+        "viewed": "Viewed",
+        "downloaded": "Downloaded",
+        "notViewed": "Not viewed",
+        "lastView": "Last viewed",
+        "lastDownload": "Last downloaded",
+        "totalDownloads": "Total downloads"
+      }
+    },
+    "status": {
+      "material": {
+        "completed": "Viewed",
+        "in_progress": "Started viewing",
+        "opened": "Opened, not viewed",
+        "not_opened": "Not opened",
+        "overdue": "Overdue, not viewed"
+      },
+      "assignment": {
+        "graded": "Graded",
+        "submitted": "Awaiting review",
+        "returned": "Returned for revision",
+        "started": "Started, not submitted",
+        "opened": "Opened, not submitted",
+        "overdue": "Overdue",
+        "not_opened": "Not opened"
+      },
+      "exam": {
+        "completed": "Completed",
+        "pending_manual_grading": "Awaiting grading",
+        "expired_auto_submitted": "Time expired — auto-submitted",
+        "in_progress": "In progress",
+        "inactive": "Inactive",
+        "expired_no_answers": "Time expired — no answers",
+        "viewed": "Viewed, not started",
+        "not_started": "Not started"
+      }
+    },
+    "filters": {
+      "all": "All",
+      "viewed": "Viewed",
+      "not_viewed": "Not viewed",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "downloaded": "Downloaded",
+      "not_downloaded": "Not downloaded",
+      "overdue": "Overdue",
+      "started": "Started",
+      "not_started": "Not started",
+      "submitted": "Submitted",
+      "not_submitted": "Not submitted",
+      "waiting_grading": "Awaiting review",
+      "graded": "Graded",
+      "returned": "Returned for revision",
+      "late": "Late",
+      "inactive": "Inactive",
+      "expired": "Time expired",
+      "pending_manual_grading": "Awaiting manual grading"
+    },
+    "report": {
+      "title": {
+        "material": "Material activity",
+        "assignment": "Assignment activity",
+        "exam": "Exam participants"
+      },
+      "back": "← Activity",
+      "filtersLabel": "Filters",
+      "group": "Group",
+      "allGroups": "All groups",
+      "status": "Status",
+      "anyStatus": "Any status",
+      "search": "Student",
+      "searchPlaceholder": "Search by name…",
+      "from": "From",
+      "to": "To",
+      "dateHint": "The date range filters by last activity.",
+      "reset": "Reset filters",
+      "columns": {
+        "student": "Student",
+        "groups": "Group",
+        "status": "Status",
+        "first": "First activity",
+        "last": "Last activity",
+        "count": "Activity count",
+        "result": "Result"
+      },
+      "score": "{{score}} pts",
+      "views": "{{count}} views",
+      "downloads": "{{count}} downloads",
+      "progress": "{{pct}}% watched",
+      "answered": "{{count}} answers",
+      "showing": "{{from}}–{{to}} of {{total}} students",
+      "matching": "Matching filter: {{count}}",
+      "prev": "Previous",
+      "next": "Next",
+      "page": "Page {{page}} of {{pages}}",
+      "empty": "No students match this filter.",
+      "emptyAll": "This has not been sent to any student yet.",
+      "showTimeline": "{{name}}: show timeline",
+      "hideTimeline": "{{name}}: hide timeline",
+      "timelineTitle": "Timeline",
+      "timelineEmpty": "No events recorded for this student yet.",
+      "timelineTruncated": "Only the first 200 events are shown.",
+      "selectAll": "Select eligible students on this page",
+      "selectStudent": "Select {{name}}",
+      "remindSelected": "Remind selected ({{count}})",
+      "remindAll": {
+        "material": "Remind non-viewers",
+        "assignment": "Remind non-submitters",
+        "exam": "Remind students who have not started"
+      },
+      "deadline": "View-by date (optional)",
+      "save": "Save",
+      "deadlineSaved": "Due date saved",
+      "deadlineCleared": "Due date removed",
+      "deadlineError": "Due date was not saved",
+      "loading": "Loading report…",
+      "error": "Could not load the report"
+    },
+    "timeline": {
+      "events": {
+        "material_assigned": "Material sent",
+        "material_opened": "Opened the material",
+        "material_viewed": "Viewed the material",
+        "material_downloaded": "Downloaded the file",
+        "material_file_downloaded": "Downloaded the file",
+        "video_started": "Started the video",
+        "video_progressed": "Watching the video",
+        "video_completed": "Watched the video to the end",
+        "file_uploaded": "Uploaded a file",
+        "file_downloaded": "Downloaded the file",
+        "assignment_opened": "Opened the assignment",
+        "assignment_started": "Started the assignment",
+        "assignment_submitted": "Submitted the assignment",
+        "assignment_late_submitted": "Submitted the assignment late",
+        "assignment_graded": "Graded",
+        "assignment_returned": "Returned for revision",
+        "exam_viewed": "Viewed the exam",
+        "exam_started": "Started the exam",
+        "exam_autosaved": "Answers auto-saved",
+        "exam_submitted": "Submitted the exam",
+        "exam_expired": "Time expired",
+        "exam_result_released": "Result released",
+        "exam_attempt_voided": "Attempt voided",
+        "reminder_sent": "Reminder sent",
+        "other": "Other event"
+      },
+      "details": {
+        "late": "late",
+        "progress": "{{pct}}%",
+        "answered": "{{count}} answers",
+        "delivered": "delivered",
+        "failed": "not delivered"
+      }
+    },
+    "reminder": {
+      "title": "Send reminder",
+      "manualOnly": "Reminders are sent only when you confirm — there are no automatic reminders.",
+      "stepSelect": "1. Recipients",
+      "stepConfirm": "2. Confirm",
+      "stepResult": "3. Result",
+      "selectHint": "Who should receive it?",
+      "allEligible": "All eligible students",
+      "selectedOnly": "Selected only ({{count}})",
+      "checking": "Checking recipients…",
+      "recipientsCount": "Will be sent to {{count}} students",
+      "recipientsTitle": "Recipients",
+      "recentlyTitle": "Already reminded in the last {{hours}} hours — will not be sent",
+      "nextAllowed": "again: {{time}}",
+      "notEligibleTitle": "Not eligible — will not be sent",
+      "closedNote": "The exam window has closed — reminders are not sent.",
+      "previewTitle": "Message preview",
+      "previewLang": "{{lang}} · {{count}} students",
+      "noRecipients": "There is nobody to remind.",
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Continue",
+      "confirm": "Confirm and send ({{count}})",
+      "sending": "Sending…",
+      "sent": "Sent to {{count}} students",
+      "failed": "Not delivered to {{count}} students",
+      "skipped": "{{count}} students were already reminded in the last 6 hours",
+      "notEligible": "{{count}} students are not eligible",
+      "nothingSent": "Nothing was sent",
+      "done": "Close",
+      "error": "The reminder was not sent",
+      "previewError": "Could not load the preview",
+      "languages": {
+        "az": "Azerbaijani",
+        "en": "English",
+        "ru": "Russian"
+      }
+    },
+    "empty": {
+      "exams": {
+        "title": "No exams yet",
+        "text": "When you assign an exam, you will see here who started and who completed it.",
+        "cta": "Go to exams"
+      }
+    }
   }
 }

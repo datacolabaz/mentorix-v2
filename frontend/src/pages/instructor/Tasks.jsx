@@ -19,6 +19,8 @@ import LibraryMaterialPickerModal from '../../components/instructor/LibraryMater
 import GeneratedQuestionsView from '../../components/generation/GeneratedQuestionsView'
 import { extractGeneratedQuestions } from '../../lib/aiAssignmentQuestions'
 import { intlLocale } from '../../lib/uiLocale'
+import ActivityStrip from '../../components/engagement/ActivityStrip'
+import useActivitySummaries from '../../components/engagement/useActivitySummaries'
 
 const BAKU_TZ = 'Asia/Baku'
 
@@ -150,6 +152,11 @@ export default function InstructorTasks() {
       setLoading(false)
     }
   }, [t])
+
+  const taskActivity = useActivitySummaries(
+    'assignment',
+    tasks.map((task) => task?.id),
+  )
 
   const loadStudents = useCallback(async () => {
     setStudentsLoading(true)
@@ -662,9 +669,11 @@ export default function InstructorTasks() {
                           · {t('tasks.card.maxScore')} <span className="text-token-textMain">{task.max_score}</span>
                         </>
                       ) : null}
-                      <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
-                        {t('tasks.card.assignments', { assigned: task.assigned_count || 0, submitted: task.submitted_count || 0, pending: task.pending_count || 0 })}
-                      </span>
+                      {taskActivity.byId.has(String(task.id)) ? null : (
+                        <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
+                          {t('tasks.card.assignments', { assigned: task.assigned_count || 0, submitted: task.submitted_count || 0, pending: task.pending_count || 0 })}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
@@ -710,6 +719,15 @@ export default function InstructorTasks() {
                     </Button>
                   </div>
                 </div>
+                {task.id ? (
+                  <ActivityStrip
+                    type="assignment"
+                    item={taskActivity.byId.get(String(task.id))}
+                    loading={taskActivity.loading}
+                    error={taskActivity.error}
+                    onChanged={taskActivity.reload}
+                  />
+                ) : null}
                 {task.description ? (
                   <div className="mt-3 text-sm text-token-textMain whitespace-pre-wrap leading-relaxed border-t border-[color:var(--border-subtle)] pt-3">
                     <span className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">{t('tasks.card.teacherNote')}</span>

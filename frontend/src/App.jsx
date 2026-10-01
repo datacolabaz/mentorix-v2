@@ -402,6 +402,9 @@ export default function App() {
         <Route path="inquiries" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><MentorOrInstructorPage mentor={MentorRequests} instructor={StudentInquiries} /></FeatureRoute>} />
         <Route path="schedule" element={<MentorOrInstructorPage mentor={MentorSessions} instructor={InstructorSchedule} />} />
         <Route path="exams" element={<InstructorExams />} />
+        <Route path="exams/:id/participants" element={<InstructorEngagementDetail type="exam" />} />
+        <Route path="assignments/:id/activity" element={<InstructorEngagementDetail type="assignment" />} />
+        <Route path="materials/:id/activity" element={<InstructorEngagementDetail type="material" />} />
         <Route path="certificates" element={<InstructorCertificates />} />
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="engagement" element={<InstructorEngagement />} />

@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import MaterialEngagementCard from '../../components/engagement/MaterialEngagementCard'
 import AssignmentEngagementCard from '../../components/engagement/AssignmentEngagementCard'
+import AssessmentEngagementCard from '../../components/engagement/AssessmentEngagementCard'
 import { CardSkeleton } from '../../components/engagement/EngagementParts'
 import { fetchEngagementList } from '../../components/engagement/engagementApi'
 import { isAdminActivityMode } from '../../lib/adminActivityAccess'
 
-const TABS = [
-  { id: 'materials', label: 'Materiallar' },
-  { id: 'assignments', label: 'Tapşırıqlar' },
-]
+const TABS = ['materials', 'assignments', 'exams']
 
 const EMPTY = {
   materials: {
@@ -27,9 +26,18 @@ const EMPTY = {
 }
 
 export default function InstructorEngagement() {
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'assignments' ? 'assignments' : 'materials'
-  const [data, setData] = useState({ materials: null, assignments: null })
+  const tab = TABS.includes(params.get('tab')) ? params.get('tab') : 'materials'
+  const [data, setData] = useState({ materials: null, assignments: null, exams: null })
+  const empty =
+    tab === 'exams'
+      ? {
+          title: t('activity.empty.exams.title'),
+          text: t('activity.empty.exams.text'),
+          cta: { to: '/instructor/exams', label: t('activity.empty.exams.cta') },
+        }
+      : EMPTY[tab]
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
 
@@ -64,7 +72,7 @@ export default function InstructorEngagement() {
         <div>
           <h1 className="font-display font-bold text-2xl text-token-textMain">Aktivlik</h1>
           <p className="text-sm text-token-textMuted mt-1 max-w-2xl">
-            Göndərdiyiniz material və tapşırıqlara kimin baxdığını, kimin təqdim etdiyini bir baxışda görün.
+            Göndərdiyiniz material, tapşırıq və imtahanlara kimin baxdığını, başladığını və təqdim etdiyini bir baxışda görün.
             Ətraflı siyahı üçün kartın status hissəsinin üzərinə gəlin və ya toxunun.
           </p>
         </div>
@@ -79,25 +87,25 @@ export default function InstructorEngagement() {
       </div>
 
       <div role="tablist" className="inline-flex rounded-xl border border-[color:var(--border-subtle)] p-1 gap-1">
-        {TABS.map((t) => (
+        {TABS.map((id) => (
           <button
-            key={t.id}
+            key={id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setParams(t.id === 'materials' ? {} : { tab: t.id })}
-            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              tab === t.id ? 'bg-primary text-[#041018]' : 'text-token-textMuted hover:text-token-textMain'
+            aria-selected={tab === id}
+            onClick={() => setParams(id === 'materials' ? {} : { tab: id })}
+            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+              tab === id ? 'bg-primary text-[#041018]' : 'text-token-textMuted hover:text-token-textMain'
             }`}
           >
-            {t.label}
+            {t(`activity.tabs.${id}`)}
           </button>
         ))}
       </div>
 
       {error ? (
         <Card className="p-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-sm text-red-700 [.theme-dark_&]:text-red-300">{error}</p>
           <Button size="sm" variant="secondary" onClick={() => void load(tab)}>
             Yenidən cəhd et
           </Button>
@@ -110,11 +118,11 @@ export default function InstructorEngagement() {
         </div>
       ) : !items.length ? (
         <Card className="p-8 text-center border border-dashed border-[color:var(--border-subtle)]">
-          <h2 className="font-display font-bold text-lg text-token-textMain">{EMPTY[tab].title}</h2>
-          <p className="text-sm text-token-textMuted mt-2 max-w-md mx-auto">{EMPTY[tab].text}</p>
+          <h2 className="font-display font-bold text-lg text-token-textMain">{empty.title}</h2>
+          <p className="text-sm text-token-textMuted mt-2 max-w-md mx-auto">{empty.text}</p>
           {isAdminActivityMode() ? null : (
-            <Link to={EMPTY[tab].cta.to} className="inline-block mt-4">
-              <Button size="sm">{EMPTY[tab].cta.label}</Button>
+            <Link to={empty.cta.to} className="inline-block mt-4">
+              <Button size="sm">{empty.cta.label}</Button>
             </Link>
           )}
         </Card>
@@ -124,9 +132,11 @@ export default function InstructorEngagement() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((it) =>
             tab === 'materials' ? (
-              <MaterialEngagementCard key={it.id} material={it} />
+              <MaterialEngagementCard key={it.id} material={it} onChanged={() => void load(tab)} />
+            ) : tab === 'assignments' ? (
+              <AssignmentEngagementCard key={it.id} assignment={it} onChanged={() => void load(tab)} />
             ) : (
-              <AssignmentEngagementCard key={it.id} assignment={it} />
+              <AssessmentEngagementCard key={it.id} exam={it} onChanged={() => void load(tab)} />
             ),
           )}
         </div>

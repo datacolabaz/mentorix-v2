@@ -3,26 +3,29 @@ import { adminActivityParams } from '../../lib/adminActivityAccess'
 
 const withScope = (params = {}) => ({ params: { ...params, ...adminActivityParams() } })
 
-export const fetchEngagementList = (which) => api.get(`/engagement/${which}`, withScope())
+const PLURAL = { material: 'materials', assignment: 'assignments', exam: 'exams' }
+const plural = (type) => PLURAL[type] || 'materials'
+const enc = encodeURIComponent
 
-export const fetchMaterialDetail = (id, filter = '') =>
-  api.get(`/engagement/materials/${encodeURIComponent(id)}`, withScope(filter ? { filter } : {}))
+/** which: 'materials' | 'assignments' | 'exams'; ids — yalnız bu obyektlərin kartları (siyahı səhifələri üçün). */
+export const fetchEngagementList = (which, ids = null) =>
+  api.get(`/engagement/${which}`, withScope(ids?.length ? { ids: ids.join(',') } : {}))
 
-export const fetchAssignmentDetail = (id, filter = '') =>
-  api.get(`/engagement/assignments/${encodeURIComponent(id)}`, withScope(filter ? { filter } : {}))
+/** Bir obyektin hesabatı. params: filter, status, group, q, from, to, page, page_size (page olmadan — hamısı). */
+export const fetchEngagementDetail = (type, id, params = {}) =>
+  api.get(`/engagement/${plural(type)}/${enc(id)}`, withScope(params))
 
-export async function sendEngagementReminder(entity, id, studentIds = null) {
-  const path = `/engagement/${entity === 'material' ? 'materials' : 'assignments'}/${encodeURIComponent(id)}/reminders`
-  return api.post(path, studentIds?.length ? { student_ids: studentIds } : {})
-}
+export const fetchMaterialDetail = (id, filter = '') => fetchEngagementDetail('material', id, filter ? { filter } : {})
+export const fetchAssignmentDetail = (id, filter = '') => fetchEngagementDetail('assignment', id, filter ? { filter } : {})
+export const fetchExamDetail = (id, filter = '') => fetchEngagementDetail('exam', id, filter ? { filter } : {})
 
-/** Xatırlatma nəticəsi üçün tələbəyə yox, müəllimə göstərilən mətn. */
-export function reminderResultText(r) {
-  const sent = Number(r?.sent) || 0
-  const skipped = Number(r?.skipped_recent) || 0
-  const parts = []
-  if (sent) parts.push(`${sent} tələbəyə xatırlatma göndərildi`)
-  if (skipped) parts.push(`${skipped} tələbəyə son 6 saatda artıq göndərilib`)
-  if (!parts.length) return 'Xatırlatma göndəriləcək tələbə yoxdur'
-  return parts.join(' · ')
+export const fetchStudentTimeline = (type, id, studentId) =>
+  api.get(`/engagement/${plural(type)}/${enc(id)}/students/${enc(studentId)}/timeline`, withScope())
+
+/** Göndərmədən əvvəl: alıcılar, son 6 saatda xatırladılanlar, mesaj önizləməsi. Heç nə yazmır. */
+export const previewEngagementReminder = (type, id, studentIds = null) =>
+  api.post(`/engagement/${plural(type)}/${enc(id)}/reminders/preview`, studentIds?.length ? { student_ids: studentIds } : {})
+
+export async function sendEngagementReminder(type, id, studentIds = null) {
+  return api.post(`/engagement/${plural(type)}/${enc(id)}/reminders`, studentIds?.length ? { student_ids: studentIds } : {})
 }

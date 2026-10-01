@@ -4346,5 +4346,344 @@
       "title": "Только ошибки",
       "hint": "Студент видит только вопросы с ошибками и пропущенные, вместе с правильным ответом."
     }
+  },
+  "activity": {
+    "types": {
+      "exam": "Экзамен",
+      "assignment": "Задание",
+      "material": "Материал"
+    },
+    "kinds": {
+      "pdf": "PDF",
+      "video": "Видео",
+      "link": "Ссылка",
+      "document": "Документ",
+      "presentation": "Презентация",
+      "text": "Текстовый урок",
+      "image": "Изображение",
+      "file": "Файл"
+    },
+    "tabs": {
+      "materials": "Материалы",
+      "assignments": "Задания",
+      "exams": "Экзамены"
+    },
+    "common": {
+      "assignedOf": "Всего учеников: {{count}}",
+      "lastActivity": "Последняя активность: {{time}}",
+      "noGroup": "Группа не выбрана",
+      "more": "ещё +{{count}}",
+      "showAll": "Показать всех",
+      "loading": "Загрузка…",
+      "loadError": "Не удалось загрузить данные",
+      "retry": "Повторить",
+      "close": "Закрыть",
+      "illustrative": "Иллюстративный пример",
+      "detailsLabel": "{{title}}: активность учеников",
+      "openDetails": "Подробная активность",
+      "nobody": "Никто",
+      "unavailable": "Данные об активности сейчас недоступны"
+    },
+    "time": {
+      "none": "—",
+      "justNow": "только что",
+      "minutes": "{{count}} мин назад",
+      "hours": "{{count}} ч назад",
+      "yesterday": "вчера",
+      "days": "{{count}} дн. назад"
+    },
+    "notAssigned": {
+      "exam": "Этот экзамен ещё не назначен ни одному ученику.",
+      "assignment": "Это задание ещё не отправлено ни одному ученику.",
+      "material": "Этот материал ещё не отправлен ни одному ученику."
+    },
+    "lines": {
+      "exam": {
+        "completed": "завершили",
+        "in_progress": "в процессе",
+        "inactive": "неактивны",
+        "expired": "время истекло",
+        "not_started": "не начали",
+        "pending_manual_grading": "ожидают проверки"
+      },
+      "assignment": {
+        "opened": "открыли",
+        "started": "начали",
+        "submitted": "сдали",
+        "pending_review": "ожидают проверки",
+        "graded": "проверено",
+        "not_submitted": "не сдали",
+        "overdue": "просрочили",
+        "returned": "возвращено на доработку",
+        "late_submitted": "сдали с опозданием"
+      },
+      "material": {
+        "viewed": "просмотрели",
+        "downloaded": "скачали файл",
+        "not_viewed": "не просмотрели",
+        "overdue": "срок истёк, не просмотрели"
+      }
+    },
+    "exam": {
+      "secondary": "Просмотрели: {{viewed}} · Начали: {{started}}",
+      "autoSubmitted": "{{count}} — Время истекло — отправлено автоматически",
+      "averagePct": "Средний результат: {{pct}}%",
+      "averageScore": "Средний результат: {{score}} / {{max}} б.",
+      "averageBasis": "проверенных попыток: {{count}}",
+      "schedule": "Время: {{from}} – {{until}}",
+      "scheduleFrom": "Начало: {{from}}",
+      "scheduleUntil": "Окончание: {{until}}",
+      "noSchedule": "Время не задано",
+      "duration": "{{count}} мин",
+      "questions": "Вопросов: {{count}}",
+      "cta": {
+        "results": "Результаты",
+        "analytics": "Аналитика",
+        "participants": "Участники"
+      },
+      "popover": {
+        "completed": "Завершили",
+        "in_progress": "В процессе",
+        "inactive": "Неактивны",
+        "not_started": "Не начали",
+        "expired": "Время истекло",
+        "recentCompleters": "Недавно завершили",
+        "viewResults": "Смотреть результаты",
+        "showParticipants": "Показать участников"
+      }
+    },
+    "assignment": {
+      "due": "Срок: {{date}}",
+      "overdueDue": "Просрочено · {{date}}",
+      "noDue": "Без срока",
+      "cta": {
+        "submissions": "Смотреть работы",
+        "review": "Проверить работы",
+        "remind": "Отправить напоминание"
+      },
+      "popover": {
+        "submitted": "Сдали",
+        "startedNotSubmitted": "Начали, но не сдали",
+        "notOpened": "Не открыли",
+        "late": "Опоздали",
+        "openedNotStarted": "Открыли, не начали"
+      }
+    },
+    "material": {
+      "due": "Просмотреть до: {{date}}",
+      "totalViews": "Всего просмотров",
+      "uniqueDownloaders": "Уникальные скачавшие",
+      "totalDownloads": "Всего скачиваний",
+      "lastViewed": "Последний просмотр",
+      "lastDownload": "Последнее скачивание",
+      "downloaders": "Ученики, скачавшие файл",
+      "uploader": "Добавил материал",
+      "uploadDate": "Дата загрузки",
+      "fileOwner": "Владелец файла",
+      "recentViewers": "Недавно смотрели",
+      "cta": {
+        "activity": "Смотреть активность",
+        "share": "Поделиться",
+        "remindNotViewed": "Напомнить не просмотревшим"
+      },
+      "popover": {
+        "viewed": "Просмотрели",
+        "downloaded": "Скачали",
+        "notViewed": "Не просмотрели",
+        "lastView": "Время последнего просмотра",
+        "lastDownload": "Время последнего скачивания",
+        "totalDownloads": "Всего скачиваний"
+      }
+    },
+    "status": {
+      "material": {
+        "completed": "Просмотрел",
+        "in_progress": "Начал просмотр",
+        "opened": "Открыл, не просмотрел",
+        "not_opened": "Не открыл",
+        "overdue": "Срок истёк, не просмотрел"
+      },
+      "assignment": {
+        "graded": "Оценено",
+        "submitted": "Ожидает проверки",
+        "returned": "Возвращено на доработку",
+        "started": "Начал, не сдал",
+        "opened": "Открыл, не сдал",
+        "overdue": "Просрочено",
+        "not_opened": "Не открыл"
+      },
+      "exam": {
+        "completed": "Завершил",
+        "pending_manual_grading": "Ожидает проверки",
+        "expired_auto_submitted": "Время истекло — отправлено автоматически",
+        "in_progress": "В процессе",
+        "inactive": "Неактивен",
+        "expired_no_answers": "Время истекло — ответов нет",
+        "viewed": "Просмотрел, не начал",
+        "not_started": "Не начал"
+      }
+    },
+    "filters": {
+      "all": "Все",
+      "viewed": "Просмотрели",
+      "not_viewed": "Не просмотрели",
+      "in_progress": "В процессе",
+      "completed": "Завершили",
+      "downloaded": "Скачали",
+      "not_downloaded": "Не скачали",
+      "overdue": "Просрочено",
+      "started": "Начали",
+      "not_started": "Не начали",
+      "submitted": "Сдали",
+      "not_submitted": "Не сдали",
+      "waiting_grading": "Ожидают проверки",
+      "graded": "Оценено",
+      "returned": "Возвращено на доработку",
+      "late": "С опозданием",
+      "inactive": "Неактивны",
+      "expired": "Время истекло",
+      "pending_manual_grading": "Ожидают ручной проверки"
+    },
+    "report": {
+      "title": {
+        "material": "Активность по материалу",
+        "assignment": "Активность по заданию",
+        "exam": "Участники экзамена"
+      },
+      "back": "← Активность",
+      "filtersLabel": "Фильтры",
+      "group": "Группа",
+      "allGroups": "Все группы",
+      "status": "Статус",
+      "anyStatus": "Любой статус",
+      "search": "Ученик",
+      "searchPlaceholder": "Поиск по имени…",
+      "from": "С даты",
+      "to": "По дату",
+      "dateHint": "Диапазон дат фильтрует по последней активности.",
+      "reset": "Сбросить фильтры",
+      "columns": {
+        "student": "Ученик",
+        "groups": "Группа",
+        "status": "Статус",
+        "first": "Первая активность",
+        "last": "Последняя активность",
+        "count": "Число действий",
+        "result": "Результат"
+      },
+      "score": "{{score}} б.",
+      "views": "просмотров: {{count}}",
+      "downloads": "скачиваний: {{count}}",
+      "progress": "просмотрено {{pct}}%",
+      "answered": "ответов: {{count}}",
+      "showing": "{{from}}–{{to}} из {{total}}",
+      "matching": "Подходит под фильтр: {{count}}",
+      "prev": "Назад",
+      "next": "Далее",
+      "page": "Страница {{page}} из {{pages}}",
+      "empty": "Нет учеников, подходящих под фильтр.",
+      "emptyAll": "Это ещё не отправлено ни одному ученику.",
+      "showTimeline": "{{name}}: показать хронологию",
+      "hideTimeline": "{{name}}: скрыть хронологию",
+      "timelineTitle": "Хронология",
+      "timelineEmpty": "Для этого ученика ещё нет событий.",
+      "timelineTruncated": "Показаны только первые 200 событий.",
+      "selectAll": "Выбрать подходящих учеников на странице",
+      "selectStudent": "Выбрать: {{name}}",
+      "remindSelected": "Напомнить выбранным ({{count}})",
+      "remindAll": {
+        "material": "Напомнить не просмотревшим",
+        "assignment": "Напомнить не сдавшим",
+        "exam": "Напомнить не начавшим"
+      },
+      "deadline": "Просмотреть до (необязательно)",
+      "save": "Сохранить",
+      "deadlineSaved": "Срок сохранён",
+      "deadlineCleared": "Срок удалён",
+      "deadlineError": "Срок не сохранён",
+      "loading": "Загрузка отчёта…",
+      "error": "Не удалось загрузить отчёт"
+    },
+    "timeline": {
+      "events": {
+        "material_assigned": "Материал отправлен",
+        "material_opened": "Открыл материал",
+        "material_viewed": "Просмотрел материал",
+        "material_downloaded": "Скачал файл",
+        "material_file_downloaded": "Скачал файл",
+        "video_started": "Начал видео",
+        "video_progressed": "Смотрит видео",
+        "video_completed": "Досмотрел видео",
+        "file_uploaded": "Загрузил файл",
+        "file_downloaded": "Скачал файл",
+        "assignment_opened": "Открыл задание",
+        "assignment_started": "Начал задание",
+        "assignment_submitted": "Сдал задание",
+        "assignment_late_submitted": "Сдал задание с опозданием",
+        "assignment_graded": "Оценено",
+        "assignment_returned": "Возвращено на доработку",
+        "exam_viewed": "Просмотрел экзамен",
+        "exam_started": "Начал экзамен",
+        "exam_autosaved": "Ответы сохранены автоматически",
+        "exam_submitted": "Отправил экзамен",
+        "exam_expired": "Время истекло",
+        "exam_result_released": "Результат опубликован",
+        "exam_attempt_voided": "Попытка аннулирована",
+        "reminder_sent": "Отправлено напоминание",
+        "other": "Другое событие"
+      },
+      "details": {
+        "late": "с опозданием",
+        "progress": "{{pct}}%",
+        "answered": "ответов: {{count}}",
+        "delivered": "доставлено",
+        "failed": "не доставлено"
+      }
+    },
+    "reminder": {
+      "title": "Отправить напоминание",
+      "manualOnly": "Напоминания отправляются только после вашего подтверждения — автоматических напоминаний нет.",
+      "stepSelect": "1. Получатели",
+      "stepConfirm": "2. Подтверждение",
+      "stepResult": "3. Результат",
+      "selectHint": "Кому отправить?",
+      "allEligible": "Всем подходящим ученикам",
+      "selectedOnly": "Только выбранным ({{count}})",
+      "checking": "Проверяем получателей…",
+      "recipientsCount": "Получателей: {{count}}",
+      "recipientsTitle": "Получатели",
+      "recentlyTitle": "Уже напоминали за последние {{hours}} ч — не будет отправлено",
+      "nextAllowed": "снова: {{time}}",
+      "notEligibleTitle": "Не подходят — не будет отправлено",
+      "closedNote": "Время экзамена истекло — напоминания не отправляются.",
+      "previewTitle": "Предпросмотр сообщения",
+      "previewLang": "{{lang}} · учеников: {{count}}",
+      "noRecipients": "Некому отправлять напоминание.",
+      "cancel": "Отмена",
+      "back": "Назад",
+      "next": "Продолжить",
+      "confirm": "Подтвердить и отправить ({{count}})",
+      "sending": "Отправка…",
+      "sent": "Отправлено: {{count}}",
+      "failed": "Не доставлено: {{count}}",
+      "skipped": "Уже напоминали за последние 6 ч: {{count}}",
+      "notEligible": "Не подходят: {{count}}",
+      "nothingSent": "Ничего не отправлено",
+      "done": "Закрыть",
+      "error": "Напоминание не отправлено",
+      "previewError": "Не удалось загрузить предпросмотр",
+      "languages": {
+        "az": "Азербайджанский",
+        "en": "Английский",
+        "ru": "Русский"
+      }
+    },
+    "empty": {
+      "exams": {
+        "title": "Экзаменов пока нет",
+        "text": "Когда вы назначите экзамен, здесь будет видно, кто начал и кто завершил его.",
+        "cta": "Перейти к экзаменам"
+      }
+    }
   }
 }

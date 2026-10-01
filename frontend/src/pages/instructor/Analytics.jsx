@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   BarChart,
@@ -42,6 +43,8 @@ function studentPerformanceBal(s, examById) {
 export default function InstructorAnalytics() {
   const { t, i18n } = useTranslation()
   const toast = useToast()
+  const [searchParams] = useSearchParams()
+  const preselectExamId = searchParams.get('exam') || ''
   const [students, setStudents] = useState([])
   const [examStats, setExamStats] = useState([])
   const [referralBreakdown, setReferralBreakdown] = useState([])
@@ -166,6 +169,15 @@ export default function InstructorAnalytics() {
       setExamLoading(false)
     }
   }
+
+  /** Aktivlik kartındakı «Nəticələr / Analitika» → /instructor/analytics?exam=<id>: imtahan əvvəlcədən seçilir. */
+  useEffect(() => {
+    if (!preselectExamId || examId || !exams.some((ex) => String(ex.id) === preselectExamId)) return
+    setExamId(preselectExamId)
+    void loadExamAnalytics(preselectExamId, null, 'all')
+    requestAnimationFrame(() => document.getElementById('exam-results')?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exams, preselectExamId])
 
   const openPromoteModal = (studentId, studentName) => {
     if (!participantGroupId) return
@@ -689,7 +701,7 @@ export default function InstructorAnalytics() {
 
       <div className="mt-4" />
 
-      <Card hover className="p-4 sm:p-5 min-w-0 overflow-hidden">
+      <Card id="exam-results" hover className="p-4 sm:p-5 min-w-0 overflow-hidden scroll-mt-20">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
           <div className="min-w-0">
             <h2 className="font-display font-bold text-base text-token-textMain">{t('analytics.examResultsTitle')}</h2>

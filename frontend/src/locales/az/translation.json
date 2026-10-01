@@ -4353,5 +4353,344 @@
       "title": "Yalnız səhv cavablar",
       "hint": "Tələbə yalnız səhv etdiyi və boş buraxdığı sualları, düzgün cavabla birlikdə görür."
     }
+  },
+  "activity": {
+    "types": {
+      "exam": "İmtahan",
+      "assignment": "Tapşırıq",
+      "material": "Material"
+    },
+    "kinds": {
+      "pdf": "PDF",
+      "video": "Video",
+      "link": "Link",
+      "document": "Sənəd",
+      "presentation": "Təqdimat",
+      "text": "Mətn dərsi",
+      "image": "Şəkil",
+      "file": "Fayl"
+    },
+    "tabs": {
+      "materials": "Materiallar",
+      "assignments": "Tapşırıqlar",
+      "exams": "İmtahanlar"
+    },
+    "common": {
+      "assignedOf": "{{count}} tələbədən:",
+      "lastActivity": "Son aktivlik: {{time}}",
+      "noGroup": "Qrup seçilməyib",
+      "more": "+{{count}} daha",
+      "showAll": "Hamısını göstər",
+      "loading": "Yüklənir…",
+      "loadError": "Məlumat yüklənmədi",
+      "retry": "Yenidən cəhd et",
+      "close": "Bağla",
+      "illustrative": "İllustrativ nümunə",
+      "detailsLabel": "{{title}}: tələbə aktivliyi",
+      "openDetails": "Ətraflı aktivlik",
+      "nobody": "Heç kim",
+      "unavailable": "Aktivlik məlumatı hazırda əlçatan deyil"
+    },
+    "time": {
+      "none": "—",
+      "justNow": "indicə",
+      "minutes": "{{count}} dəq əvvəl",
+      "hours": "{{count}} saat əvvəl",
+      "yesterday": "dünən",
+      "days": "{{count}} gün əvvəl"
+    },
+    "notAssigned": {
+      "exam": "Bu imtahan hələ heç bir tələbəyə təyin olunmayıb.",
+      "assignment": "Bu tapşırıq hələ heç bir tələbəyə göndərilməyib.",
+      "material": "Bu material hələ heç bir tələbəyə göndərilməyib."
+    },
+    "lines": {
+      "exam": {
+        "completed": "tamamlayıb",
+        "in_progress": "davam edir",
+        "inactive": "fəaliyyətsizdir",
+        "expired": "vaxtı bitib",
+        "not_started": "başlamayıb",
+        "pending_manual_grading": "yoxlama gözləyir"
+      },
+      "assignment": {
+        "opened": "açıb baxıb",
+        "started": "başlayıb",
+        "submitted": "təhvil verib",
+        "pending_review": "yoxlama gözləyir",
+        "graded": "yoxlanıb",
+        "not_submitted": "təqdim etməyib",
+        "overdue": "gecikib",
+        "returned": "düzəlişə qaytarılıb",
+        "late_submitted": "gec təhvil verib"
+      },
+      "material": {
+        "viewed": "baxıb",
+        "downloaded": "faylı yükləyib",
+        "not_viewed": "baxmayıb",
+        "overdue": "vaxtı keçib, baxmayıb"
+      }
+    },
+    "exam": {
+      "secondary": "Baxıb: {{viewed}} · Başlayıb: {{started}}",
+      "autoSubmitted": "{{count}} — Vaxtı bitib — avtomatik təqdim edildi",
+      "averagePct": "Orta nəticə: {{pct}}%",
+      "averageScore": "Orta nəticə: {{score}} / {{max}} bal",
+      "averageBasis": "{{count}} yoxlanmış cəhd üzrə",
+      "schedule": "Vaxt: {{from}} – {{until}}",
+      "scheduleFrom": "Başlama: {{from}}",
+      "scheduleUntil": "Bitmə: {{until}}",
+      "noSchedule": "Vaxt təyin edilməyib",
+      "duration": "{{count}} dəq",
+      "questions": "{{count}} sual",
+      "cta": {
+        "results": "Nəticələr",
+        "analytics": "Analitika",
+        "participants": "İştirakçılar"
+      },
+      "popover": {
+        "completed": "Tamamlayıb",
+        "in_progress": "Davam edir",
+        "inactive": "Fəaliyyətsizdir",
+        "not_started": "Başlamayıb",
+        "expired": "Vaxtı bitib",
+        "recentCompleters": "Son tamamlayanlar",
+        "viewResults": "Nəticələrə bax",
+        "showParticipants": "İştirakçıları göstər"
+      }
+    },
+    "assignment": {
+      "due": "Son tarix: {{date}}",
+      "overdueDue": "Vaxtı keçib · {{date}}",
+      "noDue": "Son tarix yoxdur",
+      "cta": {
+        "submissions": "Təqdimatlara bax",
+        "review": "İşləri yoxla",
+        "remind": "Xatırlatma göndər"
+      },
+      "popover": {
+        "submitted": "Təhvil verib",
+        "startedNotSubmitted": "Başlayıb, amma təqdim etməyib",
+        "notOpened": "Açmayıb",
+        "late": "Gecikib",
+        "openedNotStarted": "Açıb, başlamayıb"
+      }
+    },
+    "material": {
+      "due": "Son baxış tarixi: {{date}}",
+      "totalViews": "Ümumi baxış",
+      "uniqueDownloaders": "Unikal yükləyənlər",
+      "totalDownloads": "Ümumi yükləmə",
+      "lastViewed": "Son baxış",
+      "lastDownload": "Son yükləmə",
+      "downloaders": "Faylı yükləyən tələbələr",
+      "uploader": "Materialı əlavə edən",
+      "uploadDate": "Yüklənmə tarixi",
+      "fileOwner": "Fayl sahibi",
+      "recentViewers": "Son baxanlar",
+      "cta": {
+        "activity": "Aktivliyə bax",
+        "share": "Paylaş",
+        "remindNotViewed": "Baxmayanlara xatırlatma"
+      },
+      "popover": {
+        "viewed": "Baxıb",
+        "downloaded": "Yükləyib",
+        "notViewed": "Baxmayıb",
+        "lastView": "Son baxış vaxtı",
+        "lastDownload": "Son yükləmə vaxtı",
+        "totalDownloads": "Ümumi yükləmə"
+      }
+    },
+    "status": {
+      "material": {
+        "completed": "Baxıb",
+        "in_progress": "Baxmağa başlayıb",
+        "opened": "Açıb, baxmayıb",
+        "not_opened": "Açmayıb",
+        "overdue": "Vaxtı keçib, baxmayıb"
+      },
+      "assignment": {
+        "graded": "Qiymətləndirilib",
+        "submitted": "Yoxlama gözləyir",
+        "returned": "Düzəlişə qaytarılıb",
+        "started": "Başlayıb, təqdim etməyib",
+        "opened": "Açıb, təqdim etməyib",
+        "overdue": "Vaxtı keçib",
+        "not_opened": "Açmayıb"
+      },
+      "exam": {
+        "completed": "Tamamlayıb",
+        "pending_manual_grading": "Yoxlama gözləyir",
+        "expired_auto_submitted": "Vaxtı bitib — avtomatik təqdim edildi",
+        "in_progress": "Davam edir",
+        "inactive": "Fəaliyyətsizdir",
+        "expired_no_answers": "Vaxtı bitib — cavab yoxdur",
+        "viewed": "Baxıb, başlamayıb",
+        "not_started": "Başlamayıb"
+      }
+    },
+    "filters": {
+      "all": "Hamısı",
+      "viewed": "Baxıb",
+      "not_viewed": "Baxmayıb",
+      "in_progress": "Davam edir",
+      "completed": "Tamamlayıb",
+      "downloaded": "Yükləyib",
+      "not_downloaded": "Yükləməyib",
+      "overdue": "Vaxtı keçib",
+      "started": "Başlayıb",
+      "not_started": "Başlamayıb",
+      "submitted": "Təqdim edib",
+      "not_submitted": "Təqdim etməyib",
+      "waiting_grading": "Yoxlama gözləyir",
+      "graded": "Qiymətləndirilib",
+      "returned": "Düzəlişə qaytarılıb",
+      "late": "Gecikib",
+      "inactive": "Fəaliyyətsizdir",
+      "expired": "Vaxtı bitib",
+      "pending_manual_grading": "Əl ilə yoxlama gözləyir"
+    },
+    "report": {
+      "title": {
+        "material": "Material aktivliyi",
+        "assignment": "Tapşırıq aktivliyi",
+        "exam": "İmtahan iştirakçıları"
+      },
+      "back": "← Aktivlik",
+      "filtersLabel": "Filtrlər",
+      "group": "Qrup",
+      "allGroups": "Bütün qruplar",
+      "status": "Status",
+      "anyStatus": "İstənilən status",
+      "search": "Tələbə",
+      "searchPlaceholder": "Ad üzrə axtar…",
+      "from": "Tarixdən",
+      "to": "Tarixə",
+      "dateHint": "Tarix aralığı son aktivliyə görə süzülür.",
+      "reset": "Filtrləri sıfırla",
+      "columns": {
+        "student": "Tələbə",
+        "groups": "Qrup",
+        "status": "Status",
+        "first": "İlk aktivlik",
+        "last": "Son aktivlik",
+        "count": "Fəaliyyət sayı",
+        "result": "Nəticə"
+      },
+      "score": "{{score}} bal",
+      "views": "{{count}} baxış",
+      "downloads": "{{count}} yükləmə",
+      "progress": "{{pct}}% izlənib",
+      "answered": "{{count}} cavab",
+      "showing": "{{from}}–{{to}} / {{total}} tələbə",
+      "matching": "Filtrə uyğun: {{count}}",
+      "prev": "Əvvəlki",
+      "next": "Növbəti",
+      "page": "Səhifə {{page}} / {{pages}}",
+      "empty": "Bu filtrə uyğun tələbə yoxdur.",
+      "emptyAll": "Bu hələ heç bir tələbəyə göndərilməyib.",
+      "showTimeline": "{{name}}: zaman xəttini göstər",
+      "hideTimeline": "{{name}}: zaman xəttini gizlət",
+      "timelineTitle": "Zaman xətti",
+      "timelineEmpty": "Bu tələbə üçün hələ qeydə alınmış hadisə yoxdur.",
+      "timelineTruncated": "Yalnız ilk 200 hadisə göstərilir.",
+      "selectAll": "Bu səhifədəki uyğun tələbələri seç",
+      "selectStudent": "{{name}} seç",
+      "remindSelected": "Seçilənlərə xatırlatma ({{count}})",
+      "remindAll": {
+        "material": "Baxmayanlara xatırlat",
+        "assignment": "Təqdim etməyənlərə xatırlat",
+        "exam": "Başlamayanlara xatırlat"
+      },
+      "deadline": "Son baxış tarixi (istəyə bağlı)",
+      "save": "Saxla",
+      "deadlineSaved": "Son tarix saxlanıldı",
+      "deadlineCleared": "Son tarix silindi",
+      "deadlineError": "Son tarix saxlanılmadı",
+      "loading": "Hesabat yüklənir…",
+      "error": "Hesabat yüklənmədi"
+    },
+    "timeline": {
+      "events": {
+        "material_assigned": "Material göndərildi",
+        "material_opened": "Materialı açdı",
+        "material_viewed": "Materiala baxdı",
+        "material_downloaded": "Faylı yüklədi",
+        "material_file_downloaded": "Faylı yüklədi",
+        "video_started": "Videoya başladı",
+        "video_progressed": "Videonu izləyir",
+        "video_completed": "Videonu sona qədər izlədi",
+        "file_uploaded": "Fayl əlavə etdi",
+        "file_downloaded": "Faylı yüklədi",
+        "assignment_opened": "Tapşırığı açdı",
+        "assignment_started": "Tapşırığa başladı",
+        "assignment_submitted": "Tapşırığı təhvil verdi",
+        "assignment_late_submitted": "Tapşırığı gec təhvil verdi",
+        "assignment_graded": "Qiymətləndirildi",
+        "assignment_returned": "Düzəlişə qaytarıldı",
+        "exam_viewed": "İmtahana baxdı",
+        "exam_started": "İmtahana başladı",
+        "exam_autosaved": "Cavablar avtomatik saxlanıldı",
+        "exam_submitted": "İmtahanı təqdim etdi",
+        "exam_expired": "Vaxtı bitdi",
+        "exam_result_released": "Nəticə açıqlandı",
+        "exam_attempt_voided": "Cəhd ləğv edildi",
+        "reminder_sent": "Xatırlatma göndərildi",
+        "other": "Digər hadisə"
+      },
+      "details": {
+        "late": "gecikmə ilə",
+        "progress": "{{pct}}%",
+        "answered": "{{count}} cavab",
+        "delivered": "çatdırıldı",
+        "failed": "çatdırılmadı"
+      }
+    },
+    "reminder": {
+      "title": "Xatırlatma göndər",
+      "manualOnly": "Xatırlatma yalnız siz təsdiqləyəndə göndərilir — avtomatik göndərmə yoxdur.",
+      "stepSelect": "1. Alıcılar",
+      "stepConfirm": "2. Təsdiq",
+      "stepResult": "3. Nəticə",
+      "selectHint": "Kimə göndərilsin?",
+      "allEligible": "Bütün uyğun tələbələr",
+      "selectedOnly": "Yalnız seçilənlər ({{count}})",
+      "checking": "Alıcılar yoxlanılır…",
+      "recipientsCount": "{{count}} tələbəyə göndəriləcək",
+      "recipientsTitle": "Alıcılar",
+      "recentlyTitle": "Son {{hours}} saatda artıq xatırladılıb — göndərilməyəcək",
+      "nextAllowed": "yenidən: {{time}}",
+      "notEligibleTitle": "Uyğun deyil — göndərilməyəcək",
+      "closedNote": "İmtahanın vaxtı bitib — xatırlatma göndərilmir.",
+      "previewTitle": "Mesajın önizləməsi",
+      "previewLang": "{{lang}} · {{count}} tələbə",
+      "noRecipients": "Göndəriləcək tələbə yoxdur.",
+      "cancel": "Ləğv et",
+      "back": "Geri",
+      "next": "Davam et",
+      "confirm": "Təsdiqlə və göndər ({{count}})",
+      "sending": "Göndərilir…",
+      "sent": "{{count}} tələbəyə göndərildi",
+      "failed": "{{count}} tələbəyə çatdırılmadı",
+      "skipped": "{{count}} tələbəyə son 6 saatda artıq göndərilib",
+      "notEligible": "{{count}} tələbə uyğun deyil",
+      "nothingSent": "Heç kimə göndərilmədi",
+      "done": "Bağla",
+      "error": "Xatırlatma göndərilmədi",
+      "previewError": "Önizləmə yüklənmədi",
+      "languages": {
+        "az": "Azərbaycanca",
+        "en": "İngiliscə",
+        "ru": "Rusca"
+      }
+    },
+    "empty": {
+      "exams": {
+        "title": "Hələ imtahan yoxdur",
+        "text": "Tələbələrə imtahan təyin edəndə kimin başladığını, kimin tamamladığını burada görəcəksiniz.",
+        "cta": "İmtahanlara keç"
+      }
+    }
   }
 }

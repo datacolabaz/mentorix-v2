@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ADMIN_REASON_MIN_LENGTH,
+  activityDetailPath,
   adminActivityParams,
   clearAdminActivityScope,
   engagementBasePath,
@@ -31,6 +32,16 @@ test('admin scope requires a reason of the backend minimum length', () => {
   assert.equal(engagementBasePath(), `/admin/instructors/${TEACHER}/activity`)
   clearAdminActivityScope()
   assert.deepEqual(adminActivityParams(), {})
+})
+
+test('activity report paths: per-entity teacher routes, admin read-only route', () => {
+  clearAdminActivityScope()
+  assert.equal(activityDetailPath('exam', 'e1'), '/instructor/exams/e1/participants')
+  assert.equal(activityDetailPath('assignment', 'a1', { filter: 'not_submitted' }), '/instructor/assignments/a1/activity?filter=not_submitted')
+  assert.equal(activityDetailPath('material', 'm/1', '?filter=viewed'), '/instructor/materials/m%2F1/activity?filter=viewed')
+  setAdminActivityScope({ instructorId: TEACHER, reason: 'Dəstək sorğusu #42' })
+  assert.equal(activityDetailPath('exam', 'e1'), `/admin/instructors/${TEACHER}/activity/exam/e1`)
+  clearAdminActivityScope()
 })
 
 test('reason normalization and error detection', () => {
