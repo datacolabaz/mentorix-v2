@@ -72,8 +72,7 @@
     "partnerRole": "Partner",
     "adminRole": "Admin",
     "footer": {
-      "copyright": "© 2026 Mentorix. Bütün hüquqlar qorunur.",
-      "poweredBy": "Powered by"
+      "copyright": "© 2026 Mentorix. Bütün hüquqlar qorunur."
     }
   },
   "nav": {
@@ -1544,7 +1543,6 @@
     "terms": "İstifadə şərtləri",
     "tagline": "Mentorix müəllimləri, tələbələri və valideynləri bir platformada birləşdirərək təhsil prosesini daha rahat və effektiv idarə etməyə kömək edir.",
     "copyright": "© 2026 Mentorix.io. Bütün hüquqlar qorunur.",
-    "byDatacolab": "Datacolab tərəfindən",
     "links": {
       "universities": "Universitetlər",
       "imtahanlar": "İmtahanlar",

@@ -34,20 +34,7 @@ export default function Footer() {
       style={{ left: `${leftOffset}px` }}
     >
       <div className="px-6 py-4 pr-16 sm:pr-20">
-        <div className="flex items-center justify-between gap-3 text-xs text-fg-muted">
-          <div className="text-left">{t('layout.footer.copyright')}</div>
-          <div className="text-right">
-            {t('layout.footer.poweredBy')}{' '}
-            <a
-              href="https://datacolab.az"
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-fg-secondary hover:text-fg transition-colors"
-            >
-              DataColab
-            </a>
-          </div>
-        </div>
+        <div className="text-left text-xs text-fg-muted">{t('layout.footer.copyright')}</div>
       </div>
     </footer>
   )

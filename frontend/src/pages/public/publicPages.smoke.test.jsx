@@ -75,7 +75,10 @@ describe('Home page (/)', () => {
 
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('banner')).toBeInTheDocument()
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    const footer = screen.getByRole('contentinfo')
+    expect(within(footer).getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', 'https://wa.me/994503066626')
+    expect(within(footer).queryByText(/datacolab/i)).not.toBeInTheDocument()
+    expect(document.body.innerHTML).not.toMatch(/994553775770|377 57 70/)
 
     const nav = screen.getAllByRole('navigation', { name: 'Əsas naviqasiya' })[0]
     for (const name of ['Necə işləyir', 'Müəllimlər üçün', 'İmtahanlar', 'Qiymətlər']) {

@@ -170,18 +170,8 @@ export default function PublicSeoFooter({ className = '' }) {
           </nav>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-line pt-6 text-caption text-fg-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="border-t border-line pt-6 text-caption text-fg-muted">
           <p>{t('home.footer.copyright', { year, brand: BRAND.name })}</p>
-          <p>
-            <a
-              href="https://datacolab.az"
-              target="_blank"
-              rel="noreferrer noopener"
-              className="rounded-sm underline-offset-4 hover:text-fg hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              {t('publicFooter.byDatacolab')}
-            </a>
-          </p>
         </div>
       </div>
     </footer>

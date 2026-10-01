@@ -1,4 +1,4 @@
-export const DEFAULT_PLATFORM_WHATSAPP_MSISDN = '994553775770'
+export const DEFAULT_PLATFORM_WHATSAPP_MSISDN = '994503066626'
 
 export function normalizeWhatsAppMsisdn(raw) {
   let d = String(raw || '').replace(/\D/g, '')
