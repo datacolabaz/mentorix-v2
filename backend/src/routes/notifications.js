@@ -18,6 +18,18 @@ router.patch('/student/:id/read', authenticate, authorize('student'), markStuden
 router.post('/student/read-all', authenticate, authorize('student'), markAllStudentNotificationsRead);
 router.post('/quick', authenticate, authorize('instructor'), require('../controllers/notificationController').quickInstructorNotification);
 
+// E-poçtdakı imzalı "abunəlikdən çıx" linki (giriş tələb etmir; yalnız bir kateqoriyanın e-poçtunu söndürür).
+router.post('/unsubscribe', async (req, res) => {
+  try {
+    const out = await require('../services/emailUnsubscribe').applyUnsubscribe(req.body?.token);
+    if (!out.ok) return res.status(400).json({ error: 'Link etibarsızdır və ya vaxtı keçib.', code: out.code });
+    return res.json({ ok: true, category: out.category });
+  } catch (e) {
+    console.error('[notifications/unsubscribe]', e?.message || e);
+    return res.status(500).json({ error: 'Server xətası' });
+  }
+});
+
 // Bildiriş mərkəzi — bütün rollar, yalnız öz bildirişləri.
 router.get('/', authenticate, center.listMyNotifications);
 router.get('/unread-count', authenticate, center.getMyUnreadCount);

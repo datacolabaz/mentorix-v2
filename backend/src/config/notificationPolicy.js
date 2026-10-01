@@ -14,6 +14,10 @@ const CATEGORIES = Object.freeze([
   'partner',
   'billing',
   'system',
+  'live_lesson',
+  'parent',
+  'digest',
+  'marketing',
 ]);
 const PRIORITIES = Object.freeze(['CRITICAL', 'HIGH', 'NORMAL', 'LOW']);
 const CHANNELS = Object.freeze(['in_app', 'email']);
@@ -22,6 +26,17 @@ const CHANNEL_FREQUENCIES = Object.freeze({
   in_app: Object.freeze(['immediate', 'off']),
   email: FREQUENCIES,
 });
+
+/**
+ * Bu kateqoriyalarda email yalnız "dərhal" və ya "söndür" ola bilər: xatırlatma/xülasə öz vaxtında
+ * getməlidir, gündəlik/həftəlik toplu email bunları gecikdirərdi.
+ */
+const IMMEDIATE_ONLY_EMAIL_CATEGORIES = new Set(['live_lesson', 'parent', 'digest', 'marketing']);
+
+function allowedFrequencies(category, channel) {
+  if (channel === 'email' && IMMEDIATE_ONLY_EMAIL_CATEGORIES.has(category)) return ['immediate', 'off'];
+  return [...CHANNEL_FREQUENCIES[channel]];
+}
 
 /** Bütöv kateqoriya kilidli: in-app və email həmişə açıq, dərhal. */
 const LOCKED_CATEGORIES = new Set(['security']);
@@ -100,6 +115,10 @@ const ROLE_DEFAULTS = Object.freeze({
     partner: { in_app: ON, email: ON },
     billing: { in_app: ON, email: ON },
     system: { in_app: ON, email: OFF },
+    live_lesson: { in_app: ON, email: ON },
+    parent: { in_app: OFF, email: OFF },
+    digest: { in_app: ON, email: ON },
+    marketing: { in_app: OFF, email: OFF },
   },
   learner: {
     security: { in_app: ON, email: ON },
@@ -111,6 +130,10 @@ const ROLE_DEFAULTS = Object.freeze({
     partner: { in_app: ON, email: ON },
     billing: { in_app: ON, email: ON },
     system: { in_app: ON, email: OFF },
+    live_lesson: { in_app: ON, email: ON },
+    parent: { in_app: ON, email: ON },
+    digest: { in_app: OFF, email: OFF },
+    marketing: { in_app: OFF, email: OFF },
   },
   admin: {
     security: { in_app: ON, email: ON },
@@ -122,12 +145,19 @@ const ROLE_DEFAULTS = Object.freeze({
     partner: { in_app: ON, email: ON },
     billing: { in_app: ON, email: ON },
     system: { in_app: ON, email: ON },
+    live_lesson: { in_app: OFF, email: OFF },
+    parent: { in_app: OFF, email: OFF },
+    digest: { in_app: OFF, email: OFF },
+    marketing: { in_app: OFF, email: OFF },
   },
 });
 
+/** Marketing heç vaxt default açıq deyil: yalnız istifadəçi özü açarsa göndərilir. */
+const OPT_IN_CATEGORIES = new Set(['marketing']);
+
 const VISIBLE_CATEGORIES = Object.freeze({
-  provider: ['security', 'assessment', 'assignment', 'material', 'group', 'grading', 'billing', 'system'],
-  learner: ['security', 'assessment', 'assignment', 'material', 'group', 'grading', 'billing', 'system'],
+  provider: ['security', 'assessment', 'assignment', 'material', 'group', 'grading', 'billing', 'system', 'live_lesson', 'digest', 'marketing'],
+  learner: ['security', 'assessment', 'assignment', 'material', 'group', 'grading', 'billing', 'system', 'live_lesson', 'marketing'],
   admin: ['security', 'partner', 'billing', 'system'],
 });
 
@@ -142,6 +172,10 @@ const CATEGORY_DEFAULT_PRIORITY = Object.freeze({
   partner: 'NORMAL',
   billing: 'HIGH',
   system: 'NORMAL',
+  live_lesson: 'NORMAL',
+  parent: 'NORMAL',
+  digest: 'LOW',
+  marketing: 'LOW',
 });
 
 /** Köhnə sətirlər (category IS NULL): type → { category, priority }. */
@@ -282,6 +316,8 @@ function resolveDelivery({ role, category, eventType, prefs = [], wantsEmail = f
     const s = effectiveSetting({ role, category, eventType: ev, channel: 'email', prefs });
     if (OPT_IN_EMAIL_EVENT_TYPES.has(ev) && s.source !== 'event') {
       email = { eligible: false, frequency: null, reason: 'opt_in_required' };
+    } else if (OPT_IN_CATEGORIES.has(category) && s.source === 'default') {
+      email = { eligible: false, frequency: null, reason: 'opt_in_required' };
     } else if (!s.enabled) {
       email = { eligible: false, frequency: null, reason: 'preference_off' };
     } else {
@@ -294,6 +330,10 @@ function resolveDelivery({ role, category, eventType, prefs = [], wantsEmail = f
 
 function visibleCategories(role, { isPartner = false } = {}) {
   const list = [...(VISIBLE_CATEGORIES[roleGroup(role)] || VISIBLE_CATEGORIES.learner)];
+  if (String(role || '').toLowerCase() === 'parent') {
+    const idx = list.indexOf('live_lesson');
+    list.splice(idx >= 0 ? idx : list.length, 0, 'parent');
+  }
   if (isPartner && !list.includes('partner')) {
     const idx = list.indexOf('billing');
     list.splice(idx >= 0 ? idx : list.length, 0, 'partner');
@@ -316,7 +356,7 @@ function buildPreferenceMatrix({ role, isPartner = false, prefs = [] }) {
         enabled: eff.enabled,
         locked,
         default_frequency: locked ? 'immediate' : def.frequency,
-        allowed_frequencies: [...CHANNEL_FREQUENCIES[channel]],
+        allowed_frequencies: allowedFrequencies(category, channel),
       };
     }
     return { category, locked, channels };
@@ -346,7 +386,7 @@ function validatePreferenceUpdate({ role, isPartner = false, items }) {
     if (!CHANNELS.includes(channel)) {
       return { ok: false, code: 'INVALID_CHANNEL', message: `invalid channel: ${channel}` };
     }
-    if (!CHANNEL_FREQUENCIES[channel].includes(frequency)) {
+    if (!allowedFrequencies(category, channel).includes(frequency)) {
       return { ok: false, code: 'INVALID_FREQUENCY', message: `invalid frequency for ${channel}: ${frequency}` };
     }
     if (LOCKED_CATEGORIES.has(category)) {
@@ -371,6 +411,9 @@ module.exports = {
   FREQUENCIES,
   CHANNEL_FREQUENCIES,
   LOCKED_CATEGORIES,
+  OPT_IN_CATEGORIES,
+  IMMEDIATE_ONLY_EMAIL_CATEGORIES,
+  allowedFrequencies,
   MANDATORY_EVENT_TYPES,
   NEVER_EMAIL_EVENT_TYPES,
   OPT_IN_EMAIL_EVENT_TYPES,

@@ -51,6 +51,7 @@ function buildCtx(locale, env) {
  * @param {object} params    plain values (escaped by the layout)
  * @param {object} [opts]
  * @param {string} [opts.ctaUrl]   notification emails: absolute deep link
+ * @param {string} [opts.unsubscribeUrl]  notification emails: signed one-click category opt-out
  * @param {object} [opts.env]
  */
 function renderEmail(key, locale, params = {}, opts = {}) {
@@ -69,6 +70,9 @@ function renderEmail(key, locale, params = {}, opts = {}) {
     cta = opts.ctaUrl ? { label: spec.ctaLabel, url: opts.ctaUrl } : null;
     footer = notification.FOOTER[lang](ctx);
     linkHint = notification.LINK_HINT[lang];
+    if (opts.unsubscribeUrl && /^https?:\/\//i.test(String(opts.unsubscribeUrl))) {
+      footer = [...footer, notification.UNSUBSCRIBE[lang](opts.unsubscribeUrl)];
+    }
   }
 
   const { html, text } = renderLayout({

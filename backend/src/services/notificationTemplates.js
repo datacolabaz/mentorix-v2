@@ -418,6 +418,99 @@ const TEMPLATES = Object.freeze({
       body: 'Неудачных попыток входа в админ-аккаунт {{account}} за последние {{minutes}} мин: {{count}}.',
     },
   },
+
+  /* ---------- Email-first: exams, live lessons (Meet/Zoom links), certificates, parent, digest, limits ---------- */
+  exam_starting_soon: {
+    az: { title: 'İmtahan tezliklə başlayır', body: '«{{examTitle}}» imtahanı {{startsAt}} tarixində başlayır.[[ Müddət: {{minutes}} dəqiqə.]]' },
+    en: { title: 'Assessment starts soon', body: '“{{examTitle}}” starts at {{startsAt}}.[[ Duration: {{minutes}} min.]]' },
+    ru: { title: 'Экзамен скоро начнётся', body: 'Экзамен «{{examTitle}}» начнётся {{startsAt}}.[[ Длительность: {{minutes}} мин.]]' },
+  },
+  live_lesson_created: {
+    az: {
+      title: 'Yeni canlı dərs',
+      body: '{{instructorName}} «{{lessonTitle}}» canlı dərsini planladı: {{startsAt}} ({{platformName}}).[[ Təkrarlanan seriya: {{recurrenceCount}} dərs.]]',
+    },
+    en: {
+      title: 'New live lesson',
+      body: '{{instructorName}} scheduled the live lesson “{{lessonTitle}}”: {{startsAt}} ({{platformName}}).[[ Recurring series: {{recurrenceCount}} lessons.]]',
+    },
+    ru: {
+      title: 'Новый онлайн-урок',
+      body: '{{instructorName}} запланировал(а) онлайн-урок «{{lessonTitle}}»: {{startsAt}} ({{platformName}}).[[ Серия занятий: {{recurrenceCount}}.]]',
+    },
+  },
+  live_lesson_updated: {
+    az: { title: 'Canlı dərs dəyişdi', body: '«{{lessonTitle}}» canlı dərsinin məlumatları yeniləndi. Yeni vaxt: {{startsAt}}.' },
+    en: { title: 'Live lesson changed', body: 'The live lesson “{{lessonTitle}}” was updated. New time: {{startsAt}}.' },
+    ru: { title: 'Онлайн-урок изменён', body: 'Онлайн-урок «{{lessonTitle}}» обновлён. Новое время: {{startsAt}}.' },
+  },
+  live_lesson_cancelled: {
+    az: { title: 'Canlı dərs ləğv edildi', body: '{{startsAt}} tarixinə planlanan «{{lessonTitle}}» canlı dərsi ləğv edildi.' },
+    en: { title: 'Live lesson cancelled', body: 'The live lesson “{{lessonTitle}}” scheduled for {{startsAt}} was cancelled.' },
+    ru: { title: 'Онлайн-урок отменён', body: 'Онлайн-урок «{{lessonTitle}}», запланированный на {{startsAt}}, отменён.' },
+  },
+  live_lesson_reminder: {
+    az: { title: 'Canlı dərs xatırlatması', body: '«{{lessonTitle}}» canlı dərsi {{startsAt}} tarixində başlayır ({{platformName}}).' },
+    en: { title: 'Live lesson reminder', body: 'The live lesson “{{lessonTitle}}” starts at {{startsAt}} ({{platformName}}).' },
+    ru: { title: 'Напоминание об онлайн-уроке', body: 'Онлайн-урок «{{lessonTitle}}» начнётся {{startsAt}} ({{platformName}}).' },
+  },
+  certificate_issued: {
+    az: { title: 'Sertifikat hazırdır', body: '«{{courseTitle}}» üzrə sertifikatınız yaradıldı.' },
+    en: { title: 'Certificate ready', body: 'Your certificate for “{{courseTitle}}” has been issued.' },
+    ru: { title: 'Сертификат готов', body: 'Ваш сертификат по «{{courseTitle}}» выдан.' },
+  },
+  certificate_status_changed: {
+    az: {
+      title: 'Sertifikatın statusu dəyişdi',
+      body: '«{{courseTitle}}» üzrə əvvəlki sertifikatınız artıq etibarlı deyil ({{statusLabel}}). Aktual sertifikatı panelinizdə görə bilərsiniz.',
+    },
+    en: {
+      title: 'Certificate status changed',
+      body: 'Your previous certificate for “{{courseTitle}}” is no longer valid ({{statusLabel}}). See the current certificate in your dashboard.',
+    },
+    ru: {
+      title: 'Статус сертификата изменён',
+      body: 'Ваш предыдущий сертификат по «{{courseTitle}}» больше не действителен ({{statusLabel}}). Актуальный сертификат — в вашем кабинете.',
+    },
+  },
+  parent_result_summary: {
+    az: { title: 'Övladınızın nəticəsi hazırdır', body: '{{studentName}} «{{examTitle}}» imtahanını tamamladı. Nəticəni panelinizdə görə bilərsiniz.' },
+    en: { title: 'Your child’s result is ready', body: '{{studentName}} completed “{{examTitle}}”. You can see the result in your dashboard.' },
+    ru: { title: 'Результат вашего ребёнка готов', body: '{{studentName}} завершил(а) «{{examTitle}}». Результат доступен в вашем кабинете.' },
+  },
+  weekly_teacher_digest: {
+    az: {
+      title: 'Həftəlik xülasə',
+      body: '{{periodLabel}}: {{activeStudents}} aktiv tələbə, {{examSubmissions}} imtahan təqdimatı, {{assignmentSubmissions}} tapşırıq təqdimatı, {{pendingReviews}} yoxlama gözləyən iş, {{liveLessons}} canlı dərs.',
+    },
+    en: {
+      title: 'Weekly summary',
+      body: '{{periodLabel}}: {{activeStudents}} active students, {{examSubmissions}} assessment submissions, {{assignmentSubmissions}} assignment submissions, {{pendingReviews}} items awaiting review, {{liveLessons}} live lessons.',
+    },
+    ru: {
+      title: 'Итоги недели',
+      body: '{{periodLabel}}: активных учеников — {{activeStudents}}, сдано экзаменов — {{examSubmissions}}, сдано заданий — {{assignmentSubmissions}}, ждут проверки — {{pendingReviews}}, онлайн-уроков — {{liveLessons}}.',
+    },
+  },
+  storage_limit_warning: {
+    az: { title: 'Yaddaş limitinin {{percent}}%-i doldu', body: 'Bulud yaddaşınızın {{used}} / {{limit}} hissəsi istifadə olunub. Limitə çatdıqda yeni fayl yükləmək dayanır.' },
+    en: { title: '{{percent}}% of your storage is used', body: 'You are using {{used}} of {{limit}} cloud storage. New uploads stop when the limit is reached.' },
+    ru: { title: 'Хранилище заполнено на {{percent}}%', body: 'Использовано {{used}} из {{limit}} облачного хранилища. При достижении лимита загрузка новых файлов останавливается.' },
+  },
+  storage_limit_reached: {
+    az: {
+      title: 'Yaddaş limiti doldu',
+      body: 'Bulud yaddaşınız doldu ({{used}} / {{limit}}). Yeni fayl yükləmək üçün köhnə faylları silin və ya daha yüksək paketə keçin. Mövcud fayllar silinmir.',
+    },
+    en: {
+      title: 'Storage limit reached',
+      body: 'Your cloud storage is full ({{used}} / {{limit}}). Delete old files or upgrade to upload new ones. Existing files are not deleted.',
+    },
+    ru: {
+      title: 'Хранилище заполнено',
+      body: 'Облачное хранилище заполнено ({{used}} / {{limit}}). Удалите старые файлы или перейдите на тариф выше, чтобы загружать новые. Существующие файлы не удаляются.',
+    },
+  },
 });
 
 const LOCALES = ['az', 'en', 'ru'];

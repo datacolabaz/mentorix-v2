@@ -511,6 +511,7 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
 
     return {
       cert,
+      previousId,
       studentId,
       studentEmail,
       studentName,
@@ -519,6 +520,26 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
       verificationToken,
       pdfFilename,
     };
+  });
+
+  setImmediate(() => {
+    // The dedicated certificate email below already covers e-mail; this is the dashboard entry.
+    const { createNotificationSafe } = require('./notificationService');
+    createNotificationSafe({
+      recipientId: issued.studentId,
+      category: 'assessment',
+      eventType: 'certificate_issued',
+      params: { courseTitle: issued.courseTitle },
+      meta: { certificate_id: issued.cert.id, href: '/student/certificates' },
+      relatedEntityType: 'certificate',
+      relatedEntityId: issued.cert.id,
+      providerWorkspaceId: exam.instructor_id,
+      dedupeKey: `certificate_issued:${issued.cert.id}`,
+      email: false,
+    }).catch(() => {});
+    if (issued.previousId) {
+      notifyCertificateStatusChanged(issued.previousId, 'superseded', { email: false }).catch(() => {});
+    }
   });
 
   setImmediate(() => {
@@ -543,6 +564,41 @@ async function issueCertificate({ examId, studentId, examResultId, scorePct, pas
   });
 
   return issued.cert;
+}
+
+const CERTIFICATE_STATUS_LABELS = Object.freeze({
+  superseded: 'yeni sertifikatla əvəz olunub',
+  revoked: 'ləğv olunub',
+  issued: 'yenidən aktivdir',
+});
+
+/**
+ * In-app (+ optional email) notice to the student when a certificate's status changes.
+ * Re-issue (superseded) passes email:false because the new certificate's own email already goes out.
+ */
+async function notifyCertificateStatusChanged(certificateId, status, { email = true } = {}) {
+  const { rows } = await db.query(
+    `SELECT id, student_id, instructor_id, title FROM certificates WHERE id = $1`,
+    [certificateId],
+  );
+  const cert = rows[0];
+  if (!cert) return null;
+  const { createNotificationSafe } = require('./notificationService');
+  return createNotificationSafe({
+    recipientId: cert.student_id,
+    category: 'assessment',
+    eventType: 'certificate_status_changed',
+    params: {
+      courseTitle: cert.title || '',
+      statusLabel: CERTIFICATE_STATUS_LABELS[status] || String(status || ''),
+    },
+    meta: { certificate_id: cert.id, status, href: '/student/certificates' },
+    relatedEntityType: 'certificate',
+    relatedEntityId: cert.id,
+    providerWorkspaceId: cert.instructor_id,
+    dedupeKey: `certificate_status_changed:${cert.id}:${status}`,
+    email: email === true,
+  });
 }
 
 async function getPublicVerification(token) {
@@ -838,4 +894,6 @@ module.exports = {
   instructorHasCertificateFeature,
   resendCertificateEmailToStudent,
   regenerateCertificatePdfForExisting,
+  notifyCertificateStatusChanged,
+  CERTIFICATE_STATUS_LABELS,
 };
