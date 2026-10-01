@@ -23,7 +23,7 @@ async function runNotificationDeliveryFailureAlerts({ now = new Date() } = {}) {
   const { rows } = await db.query(
     `SELECT COUNT(*)::int AS failed
      FROM notification_queue
-     WHERE status = 'failed'
+     WHERE status = 'failed' AND channel = 'email'
        AND failed_at >= $1 AND failed_at < $2
        AND COALESCE(event_type, '') <> $3`,
     [from.toISOString(), to.toISOString(), EVENT_TYPE],

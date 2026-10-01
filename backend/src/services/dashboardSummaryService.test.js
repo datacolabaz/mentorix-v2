@@ -84,6 +84,9 @@ test('teacher: every query is scoped to the teacher id and nothing else', async 
   assert.equal(by.pending_grading.count, 4);
   assert.equal(by.join_requests.count, 2);
   assert.equal(by.unread_submissions.count, 5);
+  const unread = queries.find((q) => q.key === 'dash_teacher_unread_submissions');
+  assert.match(unread.sql, /n\.type = ANY\(\$2::text\[\]\)/);
+  assert.deepEqual(unread.params[1], ['assignment_submitted', 'assignment_late_submitted', 'exam_submitted', 'exam_auto_submitted']);
   assert.equal(s.recent_activity.counts.submissions, 2);
   assert.equal(s.recent_activity.latest[0].entity_title, 'Faiz');
 });
@@ -118,6 +121,10 @@ test('admin: aggregate only — no student/user level fields in the summary', as
   assert.equal(s.attention_total, 1 + 2 + 1 + 0 + 1);
   const sec = queries.find((q) => q.key === 'dash_admin_security');
   assert.equal(sec.params[0], ADMIN, 'security notifications are the admin’s own');
+  assert.ok(sec.params[1].includes('admin_login_failures'));
+  const del = queries.find((q) => q.key === 'dash_admin_deliveries');
+  assert.match(del.sql, /channel = 'email'/);
+  assert.equal(del.params[2], 'notification_delivery_failed', 'the hourly summary itself is not a failed delivery');
 });
 
 test('one failing source does not break the dashboard', async () => {

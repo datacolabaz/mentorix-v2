@@ -109,7 +109,7 @@ const TEACHER_UNREAD_SUBMISSIONS_SQL = `
   SELECT COUNT(*)::int AS n
   FROM notifications n
   WHERE n.user_id = $1 AND n.is_read = FALSE
-    AND LOWER(COALESCE(n.type, '')) ~ $2
+    AND n.type = ANY($2::text[])
     AND NOT (n.meta @> '{"silent": true}'::jsonb)`;
 
 /** Son 24 saat: (instructor_id, created_at DESC) indeks aralığı, ən çox RECENT_ACTIVITY_SCAN_CAP sətir. */
@@ -161,7 +161,7 @@ async function getTeacherSummary(instructorId, { now = new Date() } = {}) {
     safe('assignments', async () => rowOrNull(await db.query(TEACHER_ASSIGNMENTS_SQL, [instructorId, now]))),
     safe('exams', async () => rowOrNull(await db.query(TEACHER_EXAMS_SQL, [instructorId, null]))),
     safe('unread_submissions', async () =>
-      rowOrNull(await db.query(TEACHER_UNREAD_SUBMISSIONS_SQL, [instructorId, rules.SUBMISSION_NOTIFICATION_TYPE_RE]))?.n ?? 0,
+      rowOrNull(await db.query(TEACHER_UNREAD_SUBMISSIONS_SQL, [instructorId, rules.TEACHER_SUBMISSION_NOTIFICATION_TYPES]))?.n ?? 0,
     ),
     safe('join_requests', () => countPendingJoinRequests(instructorId)),
     safe('activity', () => teacherRecentActivity(instructorId, now)),
@@ -358,12 +358,16 @@ const ADMIN_PARTNERS_SQL = `
   /* dash_admin_partners */
   SELECT COUNT(*)::int AS pending, MIN(created_at) AS oldest_at FROM partners WHERE status = 'pending'`;
 
-/** idx_notification_queue_failed (failed_at DESC) WHERE status = 'failed'. failed_at olmayan köhnə sətirlər sayılmır. */
+/**
+ * idx_notification_queue_failed (failed_at DESC) WHERE status = 'failed'. failed_at olmayan köhnə sətirlər sayılmır.
+ * Saatlıq admin xülasəsi (jobs/notificationDeliveryFailureAlerts) eyni sətirləri sayır.
+ */
 const ADMIN_DELIVERIES_SQL = `
   /* dash_admin_deliveries */
   SELECT COUNT(*) FILTER (WHERE failed_at >= $1)::int AS last_24h, COUNT(*)::int AS last_7d
   FROM notification_queue
-  WHERE status = 'failed' AND channel = 'email' AND failed_at >= $2`;
+  WHERE status = 'failed' AND channel = 'email' AND failed_at >= $2
+    AND COALESCE(event_type, '') <> $3`;
 
 /** Yeganə iş-xətası mənbəyi: AI açıq sual yoxlama növbəsi (openExamGradingWorker status = 'error'). */
 const ADMIN_JOBS_SQL = `
@@ -397,6 +401,7 @@ async function getAdminSummary(adminId, { now = new Date() } = {}) {
         await db.query(ADMIN_DELIVERIES_SQL, [
           hoursAgo(now, rules.FAILED_DELIVERY_WINDOWS_HOURS.day),
           hoursAgo(now, rules.FAILED_DELIVERY_WINDOWS_HOURS.week),
+          rules.DELIVERY_FAILURE_ALERT_EVENT_TYPE,
         ]),
       ),
     ),

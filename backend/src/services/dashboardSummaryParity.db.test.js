@@ -324,4 +324,74 @@ test('dashboard summary parity against the real schema', { skip }, async (t) => 
     assert.ok(ops.security && ops.jobs, 'operations sections load');
     assert.ok(ops.security.groups.some((g) => g.event === 'login_failed' && g.reason === 'bad_password'));
   });
+
+  await t.test('Phase F producers feed the teacher and admin counts', async () => {
+    const hooks = require('./activityNotificationHooks');
+    const notifications = require('./notificationService');
+    const alerts = require('./adminLoginFailureAlerts');
+    const { runNotificationDeliveryFailureAlerts } = require('../jobs/notificationDeliveryFailureAlerts');
+
+    await ins('users', { id: id('TF'), full_name: 'Müəllim F', role: 'instructor', email: `tf-${id('TF')}@x.local` });
+    await ins('users', { id: id('SF'), full_name: 'Tələbə F', role: 'student', email: `sf-${id('SF')}@x.local` });
+    await ins('users', { id: id('AD'), full_name: 'Admin F', role: 'admin', email: `ad-${id('AD')}@x.local` });
+    await ins('assignments', { id: id('AF'), instructor_id: id('TF'), title: 'Tapşırıq F', due_date: day(3) });
+    await ins('student_assignments', { id: id('saF'), assignment_id: id('AF'), student_id: id('SF'), status: 'submitted', submitted_at: at(-1 * H) });
+    await ins('exams', { id: id('EF'), instructor_id: id('TF'), title: 'İmtahan F', slug: `p-${id('EF')}`, duration_minutes: 60 });
+
+    const exam = { examId: id('EF'), studentId: id('SF'), instructorId: id('TF') };
+    await hooks.onAssignmentSubmitted({ studentAssignmentId: id('saF'), late: false, submissionCount: 1 });
+    await hooks.onAssignmentSubmitted({ studentAssignmentId: id('saF'), late: true, submissionCount: 2 });
+    await hooks.onAssessmentSubmitted({ ...exam, examResultId: randomUUID(), gradingPending: true });
+    await hooks.onAssessmentAutoSubmitted({ ...exam, examResultId: randomUUID() });
+    await hooks.onAssessmentExpiredNoAnswers({ examId: id('EF'), instructorId: id('TF') });
+    await notifications.flushDeferredNotifications();
+
+    const { rows } = await db.query(`SELECT type FROM notifications WHERE user_id = $1 ORDER BY type`, [id('TF')]);
+    assert.deepEqual(
+      rows.map((r) => r.type),
+      ['assignment_late_submitted', 'assignment_submitted', 'exam_auto_submitted', 'exam_expired_no_answers', 'exam_submitted'],
+      'producers wrote through notificationService',
+    );
+    const teacher = byKey(await svc.getTeacherSummary(id('TF'), { now: NOW }));
+    assert.equal(teacher.unread_submissions.count, 4, 'four submissions; the no-answers summary is not a submission');
+
+    const before = byKey(await svc.getAdminSummary(id('AD'), { now: NOW }));
+    for (let i = 0; i < alerts.THRESHOLD; i++) {
+      await alerts.recordAndMaybeAlert({ userId: id('AD'), email: `ad-${id('AD')}@x.local`, now: NOW });
+    }
+    const failedAt = at(-1 * H);
+    const failedRow = (channel, eventType) =>
+      ins('notification_queue', { id: randomUUID(), channel, event_type: eventType, unique_key: `parity:${randomUUID()}`, status: 'failed', failed_at: failedAt });
+    await failedRow('email', 'exam_assigned');
+    await failedRow('sms', 'sms_reminder');
+    await failedRow('email', 'notification_delivery_failed');
+    const after = byKey(await svc.getAdminSummary(id('AD'), { now: NOW }));
+    assert.equal(after.security_events.count, before.security_events.count + 1, 'one CRITICAL admin_login_failures alert');
+    assert.equal(after.security_events.detail.auth_failures_24h, before.security_events.detail.auth_failures_24h + alerts.THRESHOLD);
+    assert.equal(after.failed_email_deliveries.count, before.failed_email_deliveries.count + 1, 'email only, not the summary itself');
+
+    // Isolated hour window, so leftovers from other runs on the same DB are not counted.
+    const hourStart = new Date(Date.UTC(2001, 0, 1) + Math.floor(Math.random() * 8760) * H);
+    const inWindow = (channel, eventType) =>
+      ins('notification_queue', {
+        id: randomUUID(),
+        channel,
+        event_type: eventType,
+        unique_key: `parity:${randomUUID()}`,
+        status: 'failed',
+        failed_at: new Date(hourStart.getTime() + 10 * 60000),
+      });
+    await inWindow('email', 'exam_assigned');
+    await inWindow('sms', 'sms_reminder');
+    const job = await runNotificationDeliveryFailureAlerts({ now: new Date(hourStart.getTime() + H + 5 * 60000) });
+    assert.equal(job.failed, 1, 'hourly summary counts the same rows as the dashboard (email only)');
+    const summary = await db.query(
+      `SELECT category, meta FROM notifications WHERE user_id = $1 AND type = 'notification_delivery_failed' AND dedupe_key = $2`,
+      [id('AD'), `notification_delivery_failed:${hourStart.toISOString()}`],
+    );
+    assert.equal(summary.rows.length, 1);
+    assert.equal(summary.rows[0].category, 'system');
+    const last = byKey(await svc.getAdminSummary(id('AD'), { now: NOW }));
+    assert.equal(last.security_events.count, after.security_events.count, 'delivery summary is not a security event');
+  });
 });

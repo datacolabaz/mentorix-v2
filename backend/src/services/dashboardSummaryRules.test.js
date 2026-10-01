@@ -155,12 +155,31 @@ test('student: empty data → zero counts, no join block when the query failed',
   assert.equal(s.group_join, null);
 });
 
-test('submission notification type pattern covers legacy and Phase F names, not reminders', () => {
-  const re = new RegExp(r.SUBMISSION_NOTIFICATION_TYPE_RE);
-  for (const t of ['assignment_submitted', 'assignment_late_submitted', 'exam_submitted', 'exam_auto_submitted']) {
-    assert.ok(re.test(t), t);
+test('teacher submission types are exactly the Phase F submission producers, not reminders or summaries', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const { hasTemplate } = require('./notificationTemplates');
+  const hooks = fs.readFileSync(path.join(__dirname, 'activityNotificationHooks.js'), 'utf8');
+  assert.deepEqual(
+    [...r.TEACHER_SUBMISSION_NOTIFICATION_TYPES],
+    ['assignment_submitted', 'assignment_late_submitted', 'exam_submitted', 'exam_auto_submitted'],
+  );
+  for (const t of r.TEACHER_SUBMISSION_NOTIFICATION_TYPES) {
+    assert.ok(hooks.includes(`'${t}'`), `${t} is emitted by activityNotificationHooks`);
+    assert.ok(hasTemplate(t), `${t} has a notification template`);
   }
-  for (const t of ['assignment_reminder', 'assignment_submitted_reminder', 'exam_result_released', 'submitted']) {
-    assert.equal(re.test(t), false, t);
+  for (const t of ['exam_expired_no_answers', 'assignment_reminder', 'assignment_returned', 'exam_result_released', 'partner_application_submitted']) {
+    assert.equal(r.TEACHER_SUBMISSION_NOTIFICATION_TYPES.includes(t), false, t);
   }
+});
+
+test('admin security and delivery-failure types match the Phase F admin producers', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const loginAlerts = fs.readFileSync(path.join(__dirname, 'adminLoginFailureAlerts.js'), 'utf8');
+  assert.match(loginAlerts, /category: 'security',\s*eventType: 'admin_login_failures'/);
+  assert.ok(r.SECURITY_NOTIFICATION_TYPES.includes('admin_login_failures'));
+  const job = fs.readFileSync(path.join(__dirname, '..', 'jobs', 'notificationDeliveryFailureAlerts.js'), 'utf8');
+  assert.match(job, new RegExp(`EVENT_TYPE = '${r.DELIVERY_FAILURE_ALERT_EVENT_TYPE}'`));
+  assert.match(job, /status = 'failed' AND channel = 'email'/, 'hourly summary counts the same rows as the dashboard');
 });

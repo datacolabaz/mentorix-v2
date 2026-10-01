@@ -405,10 +405,17 @@ test('payout status change notifies the partner once per status; request notifie
 test('hourly delivery-failure summary: one per admin per hour bucket, nothing when there were no failures', async () => {
   reset();
   let failed = 4;
-  state.handlers.push({ match: /FROM notification_queue/, reply: () => ({ rows: [{ failed }] }) });
+  let countSql = null;
+  let countParams = null;
+  state.handlers.push({
+    match: /FROM notification_queue/,
+    reply: (p, sql) => ((countSql = sql), (countParams = p), { rows: [{ failed }] }),
+  });
   const { runNotificationDeliveryFailureAlerts } = require('../jobs/notificationDeliveryFailureAlerts');
   const now = new Date('2026-10-01T10:05:00Z');
   const a = await runNotificationDeliveryFailureAlerts({ now });
+  assert.match(countSql, /status = 'failed' AND channel = 'email'/, 'email deliveries only, like the admin dashboard');
+  assert.equal(countParams[2], 'notification_delivery_failed');
   const b = await runNotificationDeliveryFailureAlerts({ now: new Date('2026-10-01T10:30:00Z') });
   assert.deepEqual([a.created, b.created], [2, 0], 'second replica / rerun in the same hour is deduped');
   assert.equal(state.notifications[0].dedupe_key, 'notification_delivery_failed:2026-10-01T09:00:00.000Z');

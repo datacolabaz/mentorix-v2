@@ -22,18 +22,27 @@ const AUTH_FAILURE_HOURS = 24;
 const JOB_FAILURE_DAYS = 7;
 
 /**
- * Müəllimə gələn «tələbə təqdim etdi» bildirişləri (köhnə birbaşa insert-lər və notificationService):
- * assignment_submitted, assignment_late_submitted, exam_submitted, exam_auto_submitted ...
+ * Müəllimə gələn «tələbə təqdim etdi» bildirişləri: notifications.type = activityNotificationHooks-un eventType-ı
+ * (Phase F öncəsi sətirlər də assignment_submitted idi). exam_expired_no_answers təqdim deyil, sayılmır.
  */
-const SUBMISSION_NOTIFICATION_TYPE_RE = '^(assignment|exam)_([a-z]+_)*submitted$';
+const TEACHER_SUBMISSION_NOTIFICATION_TYPES = Object.freeze([
+  'assignment_submitted',
+  'assignment_late_submitted',
+  'exam_submitted',
+  'exam_auto_submitted',
+]);
 
-/** Təhlükəsizlik bildirişləri: category = 'security' və ya köhnə sətirlərdə bu tiplər. */
+/** Təhlükəsizlik bildirişləri: category = 'security' və ya category-siz (köhnə) sətirlərdə bu tiplər. */
 const SECURITY_NOTIFICATION_TYPES = Object.freeze([
   'security_alert',
   'login_security_alert',
   'google_account_changed',
   'account_suspended',
+  'admin_login_failures',
 ]);
+
+/** jobs/notificationDeliveryFailureAlerts saatlıq xülasəsinin öz tipi: uğursuz çatdırılma kimi sayılmır. */
+const DELIVERY_FAILURE_ALERT_EVENT_TYPE = 'notification_delivery_failed';
 
 const AUTH_FAILURE_EVENTS = Object.freeze(['login_failed', 'legacy_login_blocked']);
 
@@ -327,8 +336,9 @@ module.exports = {
   FAILED_DELIVERY_WINDOWS_HOURS,
   AUTH_FAILURE_HOURS,
   JOB_FAILURE_DAYS,
-  SUBMISSION_NOTIFICATION_TYPE_RE,
+  TEACHER_SUBMISSION_NOTIFICATION_TYPES,
   SECURITY_NOTIFICATION_TYPES,
+  DELIVERY_FAILURE_ALERT_EVENT_TYPE,
   AUTH_FAILURE_EVENTS,
   ACTIVITY_BUCKETS,
   ACTIVITY_EVENT_TYPES,
