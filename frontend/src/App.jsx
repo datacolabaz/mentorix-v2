@@ -38,12 +38,12 @@ const MentorixLive = lazy(() => import('./pages/live/MentorixLive'))
 const LiveGuestJoin = lazy(() => import('./pages/live/LiveGuestJoin'))
 const LiveRecordingShare = lazy(() => import('./pages/live/LiveRecordingShare'))
 const InstructorLiveHistory = lazy(() => import('./pages/instructor/LiveHistory'))
-import AdminLayout from './layouts/AdminLayout'
-import InstructorLayout from './layouts/InstructorLayout'
-import StudentLayout from './layouts/StudentLayout'
-import ParentLayout from './layouts/ParentLayout'
-import OrgLayout from './layouts/OrgLayout'
-import RoleLayout from './layouts/RoleLayout'
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
+const InstructorLayout = lazy(() => import('./layouts/InstructorLayout'))
+const StudentLayout = lazy(() => import('./layouts/StudentLayout'))
+const ParentLayout = lazy(() => import('./layouts/ParentLayout'))
+const OrgLayout = lazy(() => import('./layouts/OrgLayout'))
+const RoleLayout = lazy(() => import('./layouts/RoleLayout'))
 
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'))
 const AdminInstructors = lazy(() => import('./pages/admin/Instructors'))
