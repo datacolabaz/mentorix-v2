@@ -47,6 +47,7 @@ const NAV_GROUP_DEFS = [
       { to: '/student/mentorship', key: 'mentorship', labelKey: 'nav.student.mentorship', label: 'Mentorluq', icon: 'instructors' },
       { to: '/student/groups', key: 'groups', labelKey: 'nav.student.groups', label: 'Qruplarım', icon: 'courses' },
       { to: '/student/schedule', key: 'schedule', labelKey: 'nav.student.schedule', label: 'Cədvəlim', icon: 'schedule' },
+      { to: '/student/live-lessons', key: 'liveLessons', labelKey: 'nav.student.live_lessons', label: 'Canlı dərslər', icon: 'live' },
       { to: '/student/chat', key: 'groupChat', labelKey: 'nav.student.groupChat', label: 'Qrup çatı', icon: 'chat' },
       { to: '/student/direct-chat', key: 'directChat', labelKey: 'nav.student.directChat', label: 'Fərdi çat', icon: 'chat' },
       { to: '/student/exams', key: 'exams', labelKey: 'nav.student.exams', label: 'İmtahanlarım', icon: 'exams' },
