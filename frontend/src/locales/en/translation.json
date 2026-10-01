@@ -647,6 +647,8 @@
     "meetDisconnectConfirmTitle": "Disconnect Google Meet?",
     "meetDisconnectConfirmMessage": "Your Google account will be disconnected. You’ll need to reconnect before creating another Meet lesson.",
     "meetNeedsConnect": "Connect your Google account for Meet",
+    "optionalBeta": "Optional · beta",
+    "optionalBetaHint": "Connecting an account is optional and in beta. Pasting a Google Meet, Zoom or other link into the lesson always works.",
     "meetConnectSuccess": "Google Meet connected",
     "meetConnectFailed": "Could not connect Google Meet",
     "meetCalendarScopeRequired": "Calendar permission was not granted. Disconnect, reconnect, and tick “View and edit events on all your calendars”.",

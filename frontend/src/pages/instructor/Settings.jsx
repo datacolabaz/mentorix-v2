@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import OptionalBetaBadge from '../../components/live/OptionalBetaBadge'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import { planTitleOrSlug, nextPlanInList } from '../../lib/subscriptionPlanGuards'
@@ -785,10 +786,14 @@ export default function InstructorSettings() {
       <PersonaSettingsCard />
 
       <Card id="google-meet-settings" className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Google Meet</h2>
+        <h2 className={cardTitleCls}>
+          Google Meet
+          <OptionalBetaBadge />
+        </h2>
         <p className={cardTextCls}>
           Canlı dərslər üçün Google Meet hesabınızı bağlayın
         </p>
+        <p className="mb-3 text-xs text-token-textMuted">{t('live.optionalBetaHint')}</p>
         <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
           {loadingMeetConnections ? (
             <span className="text-token-textMuted">{t('live.loading')}</span>
@@ -822,10 +827,14 @@ export default function InstructorSettings() {
       </Card>
 
       <Card id="zoom-settings" className={settingsCardCls}>
-        <h2 className={cardTitleCls}>Zoom</h2>
+        <h2 className={cardTitleCls}>
+          Zoom
+          <OptionalBetaBadge />
+        </h2>
         <p className={cardTextCls}>
           {t('live.zoomSettingsDescription')}
         </p>
+        <p className="mb-3 text-xs text-token-textMuted">{t('live.optionalBetaHint')}</p>
         <div className="rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceMain px-3 py-2.5 text-sm">
           {loadingMeetConnections ? (
             <span className="text-token-textMuted">{t('live.loading')}</span>

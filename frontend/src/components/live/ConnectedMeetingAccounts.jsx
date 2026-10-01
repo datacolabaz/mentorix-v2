@@ -4,6 +4,7 @@ import Button from '../common/Button'
 import ConfirmDialog from '../common/ConfirmDialog'
 import { useToast } from '../common/Toast'
 import PlatformIcon from './PlatformIcon'
+import OptionalBetaBadge from './OptionalBetaBadge'
 import api from '../../lib/api'
 
 const PROVIDERS = ['google_meet', 'zoom']
@@ -89,6 +90,7 @@ export default function ConnectedMeetingAccounts() {
     <section className="rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceMain p-4 sm:p-5" aria-labelledby="ll-accounts-title">
       <h2 id="ll-accounts-title" className="text-sm font-semibold text-token-textMain">
         {t('liveLessons.accounts.title')}
+        <OptionalBetaBadge />
       </h2>
       <p className="mt-1 text-xs text-token-textMuted">{t('liveLessons.accounts.hint')}</p>
       <ul className="mt-3 space-y-2">

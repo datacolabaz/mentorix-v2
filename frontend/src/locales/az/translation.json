@@ -647,6 +647,8 @@
     "meetDisconnectConfirmTitle": "Google Meet bağlantısını kəsin?",
     "meetDisconnectConfirmMessage": "Hesab kəsiləcək. Yenidən Meet dərsi yaratmaq üçün Google-u birləşdirməli olacaqsınız.",
     "meetNeedsConnect": "Google Meet üçün hesabınızı bağlayın",
+    "optionalBeta": "İstəyə bağlı · beta",
+    "optionalBetaHint": "Hesab bağlantısı istəyə bağlıdır və beta mərhələsindədir. Google Meet, Zoom və ya digər linki dərsə əl ilə əlavə etmək həmişə işləyir.",
     "meetConnectSuccess": "Google Meet bağlandı",
     "meetConnectFailed": "Google Meet bağlana bilmədi",
     "connectedAs": "Bağlı: {{email}}",
