@@ -1,4 +1,4 @@
-/** Role-based UI walkthrough. Targets must exist as data-mentor-id in the live UI. */
+/** Role-based UI walkthrough. Targets must exist as data-tour-id in the live UI. */
 
 export const FLOWS = {
   instructor: [
@@ -8,9 +8,9 @@ export const FLOWS = {
       target: null,
       title: { az: 'Xoş gəlmisiniz', ru: 'Добро пожаловать', en: 'Welcome' },
       body: {
-        az: 'Mən Mentorix Digital Mentoram. Qısa tur: dashboard, axtarış profili, tələbələr və cədvəl. İstəyəndə keçin və ya sonra davam edin.',
-        ru: 'Я Digital Mentor Mentorix. Короткий тур: панель, профиль поиска, ученики и расписание. Можно пропустить и продолжить позже.',
-        en: 'I am the Mentorix Digital Mentor. A short tour: dashboard, search profile, students and schedule. Skip anytime and resume later.',
+        az: 'Mən Mentorix AI köməkçisiyəm. Qısa tur: dashboard, axtarış profili, tələbələr və cədvəl. İstəyəndə keçin və ya sonra davam edin.',
+        ru: 'Я AI-помощник Mentorix. Короткий тур: панель, профиль поиска, ученики и расписание. Можно пропустить и продолжить позже.',
+        en: 'I am the Mentorix AI assistant. A short tour: dashboard, search profile, students and schedule. Skip anytime and resume later.',
       },
     },
     {
@@ -99,9 +99,9 @@ export const FLOWS = {
       target: null,
       title: { az: 'Hazırsınız', ru: 'Готово', en: 'You are set' },
       body: {
-        az: 'Əsas menyunu tanıdınız. Sualınız olanda yaşıl Mentor düyməsindən «AI-dən soruş» seçin — yalnız real Mentorix funksiyalarını izah edirəm.',
-        ru: 'Базовое меню вы знаете. Вопросы — кнопка Mentor → Спросить ИИ. Я не выдумываю функции.',
-        en: 'You know the core menu. Use Mentor → Ask AI for questions. I only explain real Mentorix features.',
+        az: 'Əsas menyunu tanıdınız. Sualınız olanda yaşıl AI köməkçi düyməsindən «AI-dən soruş» seçin — yalnız real Mentorix funksiyalarını izah edirəm.',
+        ru: 'Базовое меню вы знаете. Вопросы — кнопка AI-помощник → Спросить ИИ. Я не выдумываю функции.',
+        en: 'You know the core menu. Use AI assistant → Ask AI for questions. I only explain real Mentorix features.',
       },
     },
   ],
@@ -198,9 +198,9 @@ export const FLOWS = {
       },
     },
     {
-      id: 'mentor-search',
+      id: 'teacher-search',
       route: '/search',
-      target: 'page:mentor-search',
+      target: 'page:teacher-search',
       title: { az: 'Müəllim tap', ru: 'Найти преподавателя', en: 'Find a teacher' },
       body: {
         az: 'Filter və xəritə ilə müəllim seçin, profilə keçin, sorğu göndərin. Calendar booking yoxdur.',
@@ -214,9 +214,9 @@ export const FLOWS = {
       target: null,
       title: { az: 'Hazırsınız', ru: 'Готово', en: 'You are set' },
       body: {
-        az: 'Əsas yerləri bildiniz. Sual üçün yaşıl Mentor düyməsi → AI-dən soruş.',
-        ru: 'Базовые разделы вы знаете. Вопросы — Mentor → Спросить ИИ.',
-        en: 'You know the core areas. Questions: Mentor → Ask AI.',
+        az: 'Əsas yerləri bildiniz. Sual üçün yaşıl AI köməkçi düyməsi → AI-dən soruş.',
+        ru: 'Базовые разделы вы знаете. Вопросы — AI-помощник → Спросить ИИ.',
+        en: 'You know the core areas. Questions: AI assistant → Ask AI.',
       },
     },
   ],
@@ -295,9 +295,9 @@ export const FLOWS = {
       target: null,
       title: { az: 'Hazırsınız', ru: 'Готово', en: 'You are set' },
       body: {
-        az: 'Sual olanda Mentor → AI-dən soruş. Yalnız real admin səhifələrini izah edirəm.',
-        ru: 'Вопросы — Mentor → Спросить ИИ. Только реальные разделы админки.',
-        en: 'Questions: Mentor → Ask AI. I only cover real admin pages.',
+        az: 'Sual olanda AI köməkçi → AI-dən soruş. Yalnız real admin səhifələrini izah edirəm.',
+        ru: 'Вопросы — AI-помощник → Спросить ИИ. Только реальные разделы админки.',
+        en: 'Questions: AI assistant → Ask AI. I only cover real admin pages.',
       },
     },
   ],

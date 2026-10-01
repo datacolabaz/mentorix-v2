@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import { useToast } from './Toast'
-import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
 export default function WorkspaceSwitcher({ className = '' }) {
   const { t } = useTranslation()
@@ -14,7 +13,6 @@ export default function WorkspaceSwitcher({ className = '' }) {
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
 
-  const mentorServicesOn = useFeatureFlag(FEATURE_FLAGS.MENTOR_SERVICES)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const menuRef = useRef(null)
@@ -34,20 +32,14 @@ export default function WorkspaceSwitcher({ className = '' }) {
   if (!user || user.role === 'admin') return null
 
   const currentRole = String(user.role || '').toLowerCase()
-  const currentPersona = String(user.persona || '').toLowerCase()
-  const isMentor = mentorServicesOn && currentPersona === 'mentor'
-  const isTeacher = currentRole === 'instructor' && !isMentor
-  const isStudent = currentRole === 'student' || currentRole === 'mentee'
+  const isTeacher = currentRole === 'instructor'
+  const isStudent = currentRole === 'student'
 
-  let activeTitle = t('workspace.student', { defaultValue: 'İştirakçı / Mentee' })
+  let activeTitle = t('workspace.student', { defaultValue: 'İştirakçı kabineti' })
   let activeIcon = '🎓'
-  let activeBadge = 'Mentee'
+  let activeBadge = 'İştirakçı'
 
-  if (isMentor) {
-    activeTitle = t('workspace.mentor', { defaultValue: 'Mentor kabineti' })
-    activeIcon = '🚀'
-    activeBadge = 'Mentor'
-  } else if (isTeacher) {
+  if (isTeacher) {
     activeTitle = t('workspace.teacher', { defaultValue: 'Müəllim kabineti' })
     activeIcon = '👨‍🏫'
     activeBadge = 'Müəllim'
@@ -92,11 +84,9 @@ export default function WorkspaceSwitcher({ className = '' }) {
         <span
           className={[
             'text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md border shrink-0',
-            isMentor
-              ? 'bg-primary/10 border-primary/30 text-slate-900 dark:text-primary'
-              : isTeacher
-                ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
-                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400',
+            isTeacher
+              ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400',
           ].join(' ')}
         >
           {activeBadge}
@@ -117,7 +107,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
           </div>
 
           <div className="mt-1 space-y-1">
-            {/* Mentee / Student */}
+            {/* Student */}
             <button
               type="button"
               disabled={loading}
@@ -135,7 +125,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
             >
               <div className="flex items-center gap-2">
                 <span className="text-base">🎓</span>
-                <span>{t('workspace.student', { defaultValue: 'İştirakçı / Mentee kabineti' })}</span>
+                <span>{t('workspace.student', { defaultValue: 'İştirakçı kabineti' })}</span>
               </div>
               {isStudent && <span className="text-xs font-bold text-emerald-500">✓</span>}
             </button>
@@ -165,40 +155,6 @@ export default function WorkspaceSwitcher({ className = '' }) {
               </div>
               {isTeacher && <span className="text-xs font-bold text-blue-500">✓</span>}
             </button>
-
-            {/* Mentor */}
-            {mentorServicesOn ? (
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleSwitch('mentor', '/instructor')}
-                className={[
-                  'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
-                  isMentor
-                    ? isDark
-                      ? 'bg-primary/15 text-primary'
-                      : 'bg-primary/10 text-slate-900'
-                    : isDark
-                      ? 'hover:bg-white/5 text-gray-300'
-                      : 'hover:bg-slate-50 text-slate-700',
-                ].join(' ')}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🧭</span>
-                  <div>
-                    <div className="font-bold leading-none">{t('workspace.mentor', { defaultValue: 'Mentor kabineti' })}</div>
-                    <div className="text-[10px] text-slate-400 font-normal mt-0.5">Mentor dashboard</div>
-                  </div>
-                </div>
-                {isMentor ? (
-                  <span className="text-xs font-bold text-primary">✓</span>
-                ) : (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-slate-900 dark:text-primary font-semibold">
-                    Aktivləşdir
-                  </span>
-                )}
-              </button>
-            ) : null}
 
             {/* Partner */}
             <Link

@@ -4,6 +4,7 @@ import {
   PERSONA_TO_AUTH_ROLE,
   AUTH_ROLE_TO_DEFAULT_PERSONA,
   isPersonaId,
+  normalizePersonaId,
   authRoleForPersona,
   defaultPersonaForAuthRole,
   ONBOARDING_PATH,
@@ -16,6 +17,7 @@ export {
   PERSONA_TO_AUTH_ROLE,
   AUTH_ROLE_TO_DEFAULT_PERSONA,
   isPersonaId,
+  normalizePersonaId,
   authRoleForPersona,
   defaultPersonaForAuthRole,
   ONBOARDING_PATH,
@@ -25,7 +27,6 @@ export {
 /** Public picker: teacher / participant / partner. Other personas stay valid for existing accounts. */
 export const PRIMARY_PERSONA_ORDER = Object.freeze([
   PERSONAS.TEACHER,
-  PERSONAS.MENTOR,
   PERSONAS.PARTNER,
   PERSONAS.STUDENT,
 ])
@@ -41,11 +42,6 @@ export const PERSONA_UI = Object.freeze({
     icon: 'instructors',
     titleKey: 'onboarding.personas.teacher.title',
     descKey: 'onboarding.personas.teacher.desc',
-  },
-  [PERSONAS.MENTOR]: {
-    icon: 'instructors',
-    titleKey: 'onboarding.personas.mentor.title',
-    descKey: 'onboarding.personas.mentor.desc',
   },
   [PERSONAS.EDUCATION_CENTER]: {
     icon: 'building',
@@ -124,8 +120,8 @@ export const PERSONA_HOME_LINKS = Object.freeze({
 })
 
 export function resolveUserPersona(user) {
-  const direct = String(user?.persona || '').trim()
-  if (isPersonaId(direct)) return direct
+  const direct = normalizePersonaId(user?.persona)
+  if (direct) return direct
   // Never infer İştirakçı from placeholder users.role='student'.
   return null
 }
@@ -135,7 +131,7 @@ export function userNeedsOnboarding(user) {
   if (String(user.role || '').toLowerCase() === 'admin') return false
   if (user.onboarding_completed === false) return true
   if (user.role_selected === false) return true
-  if (!isPersonaId(user.persona)) return true
+  if (!normalizePersonaId(user.persona)) return true
   if (user.onboarding_completed === true) return false
   if (!user.role) return true
   return false

@@ -1,4 +1,4 @@
-import { DEFAULT_APP_PATH, ONBOARDING_PATH, PERSONAS, isPersonaId, userNeedsOnboarding } from '../constants/personas'
+import { DEFAULT_APP_PATH, ONBOARDING_PATH, PERSONAS, normalizePersonaId, userNeedsOnboarding } from '../constants/personas'
 import {
   consumeReturnAfterLogin,
   isAllowedReturnPathForUser,
@@ -93,7 +93,7 @@ export function dashboardPathForUser(user) {
   if (String(user.role || '').toLowerCase() === 'admin') return '/admin'
   if (isPartnerPersona(user)) return '/partner/dashboard'
   // Placeholder role=student must not open /student until persona is chosen.
-  if (isPersonaId(user.persona)) return dashboardPathForRole(user.role)
+  if (normalizePersonaId(user.persona)) return dashboardPathForRole(user.role)
   return DEFAULT_APP_PATH
 }
 

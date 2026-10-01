@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import useAuthStore from './hooks/useAuth'
-import { MentorWorkspaceProvider, useIsMentorWorkspace } from './hooks/useMentorWorkspace.jsx'
 import FeatureRoute from './components/common/FeatureRoute'
 import AccountLinkHost from './components/auth/AccountLinkHost'
 import { FEATURE_FLAGS } from './lib/featureFlags'
@@ -24,9 +23,8 @@ import {
 const InstructorMapSearch = lazy(() => import('./pages/public/InstructorMapSearch'))
 const UniversityProgramSearch = lazy(() => import('./pages/public/UniversityProgramSearch'))
 const PublicSeoLanding = lazy(() => import('./pages/public/PublicSeoLanding'))
-const MentorshipLanding = lazy(() => import('./pages/public/MentorshipLanding'))
-const MentorshipGoals = lazy(() => import('./pages/public/MentorshipGoals'))
-const MentorshipSafety = lazy(() => import('./pages/public/MentorshipSafety'))
+const RetiredPage = lazy(() => import('./pages/public/RetiredPage'))
+import { RETIRED_PAGES, RETIRED_REDIRECTS } from './lib/retiredRoutes'
 const Favorites = lazy(() => import('./pages/account/Favorites'))
 const LegalDocumentPage = lazy(() => import('./pages/public/LegalDocumentPage'))
 import { PUBLIC_SEO_LANDINGS } from './lib/publicSeoLandings'
@@ -62,19 +60,9 @@ const AdminCertifiedExamVerifications = lazy(() => import('./pages/admin/AdminCe
 const AdminInstructorActivity = lazy(() => import('./pages/admin/InstructorActivity'))
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
 import PresenceHeartbeat from './components/analytics/PresenceHeartbeat'
-import { DigitalMentorProvider } from './mentor/DigitalMentorProvider'
-import DigitalMentorHost from './mentor/DigitalMentorHost'
+import { AssistantProvider } from './assistant/AssistantProvider'
 
 const InstructorDashboard = lazy(() => import('./pages/instructor/Dashboard'))
-const MentorDashboard = lazy(() => import('./pages/instructor/MentorDashboard'))
-const MentorGoals = lazy(() => import('./pages/instructor/mentor/MentorGoals'))
-const MentorSessions = lazy(() => import('./pages/instructor/mentor/MentorSessions'))
-const MentorConnections = lazy(() => import('./pages/instructor/mentor/MentorConnections'))
-const MentorRequests = lazy(() => import('./pages/instructor/mentor/MentorRequests'))
-const MentorNotes = lazy(() => import('./pages/instructor/mentor/MentorNotes'))
-const MentorOffers = lazy(() => import('./pages/instructor/mentor/MentorOffers'))
-const MentorOutcomes = lazy(() => import('./pages/instructor/mentor/MentorOutcomes'))
-const MentorResources = lazy(() => import('./pages/instructor/mentor/MentorResources'))
 const InstructorStudents = lazy(() => import('./pages/instructor/Students'))
 const InstructorEngagement = lazy(() => import('./pages/instructor/Engagement'))
 const InstructorEngagementDetail = lazy(() => import('./pages/instructor/EngagementDetail'))
@@ -115,7 +103,6 @@ const PartnerProgramLanding = lazy(() => import('./pages/partner/PartnerProgramL
 const PartnerReferralLanding = lazy(() => import('./pages/PartnerReferralLanding'))
 
 const StudentDashboard = lazy(() => import('./pages/student/Dashboard'))
-const MentorshipDashboard = lazy(() => import('./pages/student/MentorshipDashboard'))
 const StudentExams = lazy(() => import('./pages/student/Exams'))
 const StudentPayments = lazy(() => import('./pages/student/Payments'))
 const StudentSchedule = lazy(() => import('./pages/student/Schedule'))
@@ -244,16 +231,6 @@ function NavigateKeepSearch({ to }) {
   return <Navigate to={`${to}${search}`} replace />
 }
 
-function InstructorOrMentorDashboard() {
-  const isMentor = useIsMentorWorkspace()
-  return isMentor ? <MentorDashboard key="mentor" /> : <InstructorDashboard key="instructor" />
-}
-
-function MentorOrInstructorPage({ mentor: MentorPage, instructor: InstructorPage }) {
-  const isMentor = useIsMentorWorkspace()
-  return isMentor ? <MentorPage /> : <InstructorPage />
-}
-
 export default function App() {
   const { user } = useAuthStore()
 
@@ -263,7 +240,7 @@ export default function App() {
   }, [])
 
   return (
-    <DigitalMentorProvider>
+    <AssistantProvider>
       <ScrollToTop />
       <AnalyticsPageTracker />
       <PresenceHeartbeat />
@@ -272,9 +249,12 @@ export default function App() {
       <Routes>
       <Route path="/search" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><InstructorMapSearch /></FeatureRoute>} />
       <Route path="/universities" element={<FeatureRoute flag={FEATURE_FLAGS.UNIVERSITY_SEARCH}><UniversityProgramSearch /></FeatureRoute>} />
-      <Route path="/mentorship" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipLanding /></FeatureRoute>} />
-      <Route path="/mentorship/goals" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipGoals /></FeatureRoute>} />
-      <Route path="/mentorship/safety" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipSafety /></FeatureRoute>} />
+      {RETIRED_REDIRECTS.map((r) => (
+        <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />
+      ))}
+      {RETIRED_PAGES.map((path) => (
+        <Route key={path} path={path} element={<RetiredPage />} />
+      ))}
       <Route path="/account/favorites" element={<ProtectedRoute><FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><Favorites /></FeatureRoute></ProtectedRoute>} />
       {PUBLIC_SEO_LANDINGS.map((l) => (
         <Route key={l.path} path={l.path} element={<PublicSeoLanding />} />
@@ -391,16 +371,16 @@ export default function App() {
       <Route path="/courses" element={<Navigate to="/instructor/teaching-groups" replace />} />
       <Route path="/courses/*" element={<Navigate to="/instructor/teaching-groups" replace />} />
 
-      <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><MentorWorkspaceProvider><InstructorLayout /></MentorWorkspaceProvider></ProtectedRoute>}>
-        <Route index element={<InstructorOrMentorDashboard />} />
-        <Route path="students" element={<MentorOrInstructorPage mentor={MentorConnections} instructor={InstructorStudents} />} />
-        <Route path="teaching-groups" element={<MentorOrInstructorPage mentor={MentorOffers} instructor={InstructorTeachingGroups} />} />
+      <Route path="/instructor" element={<ProtectedRoute roles={['instructor']}><InstructorLayout /></ProtectedRoute>}>
+        <Route index element={<InstructorDashboard />} />
+        <Route path="students" element={<InstructorStudents />} />
+        <Route path="teaching-groups" element={<InstructorTeachingGroups />} />
         <Route path="chat" element={<GroupChatPage role="instructor" basePath="/instructor/chat" />} />
         <Route path="direct-chat" element={<DirectChatPage role="instructor" />} />
         <Route path="assignment-chat" element={<AssignmentChatPage role="instructor" />} />
         <Route path="join-requests" element={<InstructorJoinRequests />} />
-        <Route path="inquiries" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><MentorOrInstructorPage mentor={MentorRequests} instructor={StudentInquiries} /></FeatureRoute>} />
-        <Route path="schedule" element={<MentorOrInstructorPage mentor={MentorSessions} instructor={InstructorSchedule} />} />
+        <Route path="inquiries" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><StudentInquiries /></FeatureRoute>} />
+        <Route path="schedule" element={<InstructorSchedule />} />
         <Route path="exams" element={<InstructorExams />} />
         <Route path="exams/:id/participants" element={<InstructorEngagementDetail type="exam" />} />
         <Route path="assignments/:id/activity" element={<InstructorEngagementDetail type="assignment" />} />
@@ -409,15 +389,14 @@ export default function App() {
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="engagement" element={<InstructorEngagement />} />
         <Route path="engagement/:type/:id" element={<InstructorEngagementDetail />} />
-        <Route path="analytics" element={<MentorOrInstructorPage mentor={MentorOutcomes} instructor={InstructorAnalytics} />} />
-        <Route path="tasks" element={<MentorOrInstructorPage mentor={MentorNotes} instructor={InstructorTasks} />} />
+        <Route path="analytics" element={<InstructorAnalytics />} />
+        <Route path="tasks" element={<InstructorTasks />} />
         <Route path="ai-generator" element={<InstructorAIQuestionGenerator />} />
-        <Route path="materials" element={<MentorOrInstructorPage mentor={MentorResources} instructor={InstructorMaterialsLibrary} />} />
+        <Route path="materials" element={<InstructorMaterialsLibrary />} />
         <Route path="presentations" element={<InstructorPresentations />} />
         <Route path="presentations/:id" element={<InstructorPresentationViewer />} />
         <Route path="live-lessons" element={<LiveLessons />} />
         <Route path="live/history" element={<NavigateKeepSearch to="/instructor/live-lessons" />} />
-        <Route path="roadmap" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorGoals /></FeatureRoute>} />
         <Route path="university-programs" element={<FeatureRoute flag={FEATURE_FLAGS.UNIVERSITY_SEARCH}><InstructorUniversityPrograms /></FeatureRoute>} />
         <Route path="materials/upload" element={<Navigate to="/instructor/materials" replace />} />
         <Route path="tasks/analytics" element={<AssignmentAnalytics />} />
@@ -435,7 +414,6 @@ export default function App() {
 
       <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentLayout /></ProtectedRoute>}>
         <Route index element={<StudentDashboard />} />
-        <Route path="mentorship" element={<FeatureRoute flag={FEATURE_FLAGS.MENTOR_SERVICES}><MentorshipDashboard /></FeatureRoute>} />
         <Route path="groups" element={<StudentMyGroups />} />
         <Route path="join" element={<StudentJoinRedirect />} />
         <Route path="schedule" element={<StudentSchedule />} />
@@ -511,6 +489,6 @@ export default function App() {
       <Route path="*" element={<Placeholder title="404 — Tapılmadı" />} />
     </Routes>
       </Suspense>
-    </DigitalMentorProvider>
+    </AssistantProvider>
   )
 }

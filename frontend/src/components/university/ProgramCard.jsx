@@ -91,9 +91,9 @@ export default function ProgramCard({ program, onDetails, onApply, showCountryBa
         />
       </div>
 
-      {program.mentor?.display_name ? (
+      {program.contributor?.display_name ? (
         <div className={['rounded-xl border px-3 py-2 text-xs', light ? 'border-violet-200 bg-violet-50 text-violet-800' : 'border-violet-500/25 bg-violet-500/10 text-violet-200'].join(' ')}>
-          {t('universitySearch.card.mentor', { name: program.mentor.display_name })}
+          {t('universitySearch.card.contributor', { name: program.contributor.display_name })}
         </div>
       ) : null}
 

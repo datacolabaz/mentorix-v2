@@ -71,8 +71,8 @@ export default function AdminLayout() {
 
   useEffect(() => {
     const openNav = () => setNavOpen(true)
-    window.addEventListener('mx:mentor-open-nav', openNav)
-    return () => window.removeEventListener('mx:mentor-open-nav', openNav)
+    window.addEventListener('mx:assistant-open-nav', openNav)
+    return () => window.removeEventListener('mx:assistant-open-nav', openNav)
   }, [])
 
   return (
@@ -112,7 +112,7 @@ export default function AdminLayout() {
           aria-label="Menyunu bağla"
           className="md:hidden fixed inset-0 z-[1090] bg-black/60"
           onClick={() => {
-            if (document.body.dataset.mentorTour) return
+            if (document.body.dataset.assistantTour) return
             setNavOpen(false)
           }}
         />
@@ -212,7 +212,7 @@ export default function AdminLayout() {
                     key={item.to}
                     to={item.to}
                     end={item.end}
-                    data-mentor-id={`nav:${item.to}`}
+                    data-tour-id={`nav:${item.to}`}
                     onClick={() => setNavOpen(false)}
                     className={({ isActive }) => sidebarNavClass(isActive, theme)}
                   >

@@ -59,7 +59,7 @@ export default function AdminUniversityPrograms() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display font-bold text-xl sm:text-2xl text-token-headingPrimary">Mentorix Apply — Admin</h1>
-          <p className="text-sm text-gray-400 mt-1">AI skrayp və mentor proqram təsdiqi</p>
+          <p className="text-sm text-gray-400 mt-1">AI skrayp və təlimçi proqram təsdiqi</p>
         </div>
         <Button onClick={() => void runScraper()} loading={scraping}>AI skrayp işə sal</Button>
       </div>
@@ -82,7 +82,7 @@ export default function AdminUniversityPrograms() {
             <li key={p.id} className="rounded-xl border border-white/10 p-3 flex flex-wrap justify-between gap-3">
               <div>
                 <p className="text-token-textMain font-medium">{p.uni_name} — {p.name}</p>
-                <p className="text-xs text-gray-400">{p.source_type} · {p.mentor_display_name || '—'} · {p.field}</p>
+                <p className="text-xs text-gray-400">{p.source_type} · {p.contributor_display_name || '—'} · {p.field}</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="secondary" className="text-xs" onClick={() => void review(p.id, 'rejected')}>Rədd</Button>

@@ -12,7 +12,6 @@ describe('featureForPath', () => {
   it('maps disabled module routes to their flag', () => {
     assert.equal(featureForPath('/student/universities'), FEATURE_FLAGS.UNIVERSITY_SEARCH)
     assert.equal(featureForPath('/instructor/inquiries?x=1'), FEATURE_FLAGS.MARKETPLACE)
-    assert.equal(featureForPath('/mentorship/goals'), FEATURE_FLAGS.MENTOR_SERVICES)
     assert.equal(featureForPath('/live/join/abc'), FEATURE_FLAGS.LIVE_ROOM)
   })
 

@@ -52,7 +52,7 @@ const PUBLIC_SOURCES = {
       '../locales/publicLandings.js',
       '../constants/subscriptionPlans.js',
       '../constants/defaultLoginMarketing.js',
-      '../mentor/*.js',
+      '../assistant/*.js',
       '../pages/auth/Landing.jsx',
       '../pages/instructor/Settings.jsx',
       '../pages/instructor/Dashboard.jsx',

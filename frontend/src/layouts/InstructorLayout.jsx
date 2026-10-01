@@ -22,8 +22,7 @@ import { useToast } from '../components/common/Toast'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import SidebarPreferences from '../components/common/SidebarPreferences'
 import { useInstructorNavSections } from '../hooks/useInstructorNavSections'
-import { buildMentorNavSections } from '../constants/instructorNav'
-import { FEATURE_FLAGS, filterNavSectionsByFlags, useFeatureFlags } from '../lib/featureFlags'
+import { FEATURE_FLAGS, useFeatureFlags } from '../lib/featureFlags'
 import InstructorAvatar from '../components/common/InstructorAvatar'
 import NotificationBell from '../components/notifications/NotificationBell'
 import {
@@ -85,42 +84,15 @@ export default function InstructorLayout() {
   const mainRef = useRef(null)
   const showMobileSidebar = navOpen && !sidebarHidden
   const { sections: navSections } = useInstructorNavSections()
-  const isMentorRoute = [
-    '/instructor/inquiries',
-    '/instructor/roadmap',
-    '/instructor/students',
-    '/instructor/tasks',
-    '/instructor/schedule',
-    '/instructor/teaching-groups',
-    '/instructor/analytics',
-    '/instructor/materials',
-  ].includes(location.pathname)
   const { flags: featureFlags } = useFeatureFlags()
-  const mentorServicesOn = featureFlags[FEATURE_FLAGS.MENTOR_SERVICES] === true
   const marketplaceOn = featureFlags[FEATURE_FLAGS.MARKETPLACE] === true
-  const isActiveMentorWorkspace = (() => {
-    if (!mentorServicesOn) return false
-    if (String(user?.persona || '').toLowerCase() === 'mentor') return true
-    try {
-      const workspace = String(localStorage.getItem('mx_active_workspace') || '').toLowerCase()
-      if (workspace) return workspace === 'mentor'
-    } catch {
-      /* ignore storage failures */
-    }
-    return isMentorRoute
-  })()
-  const renderedNavSections = isActiveMentorWorkspace
-    ? filterNavSectionsByFlags(buildMentorNavSections(), featureFlags)
-    : navSections
+  const renderedNavSections = navSections
 
-  const isMentorPersona = isActiveMentorWorkspace
   const instructorRoleLabel = isPartnerPersona(user)
     ? t('layout.partnerRole', { defaultValue: 'Partner' })
-    : isMentorPersona
-      ? 'Mentor'
-      : user?.public_label === 'trainer'
-        ? t('layout.trainer')
-        : t('layout.teacher')
+    : user?.public_label === 'trainer'
+      ? t('layout.trainer')
+      : t('layout.teacher')
 
   const notifUnread = useMemo(() => {
     if (!hasAlerts || !notifFetchAt) return false
@@ -138,8 +110,8 @@ export default function InstructorLayout() {
 
   useEffect(() => {
     const openNav = () => setNavOpen(true)
-    window.addEventListener('mx:mentor-open-nav', openNav)
-    return () => window.removeEventListener('mx:mentor-open-nav', openNav)
+    window.addEventListener('mx:assistant-open-nav', openNav)
+    return () => window.removeEventListener('mx:assistant-open-nav', openNav)
   }, [])
 
   useEffect(() => {
@@ -236,7 +208,7 @@ export default function InstructorLayout() {
   useEffect(() => {
     // Subject modal is only for missing discover categories (fənnlər).
     // Other gaps (map pin / formats) use the banner — do not re-ask for subjects.
-    if (!user?.id || !marketplaceOn || isActiveMentorWorkspace || !shouldShowDiscoverSubjectsModal(discoverProfileAlert)) {
+    if (!user?.id || !marketplaceOn || !shouldShowDiscoverSubjectsModal(discoverProfileAlert)) {
       setDiscoverModalOpen(false)
       return
     }
@@ -390,7 +362,7 @@ export default function InstructorLayout() {
           aria-label={t('layout.closeMenu')}
           className="lg:hidden fixed inset-0 z-[1090] bg-black/60"
           onClick={() => {
-            if (document.body.dataset.mentorTour) return
+            if (document.body.dataset.assistantTour) return
             setNavOpen(false)
           }}
         />
@@ -529,7 +501,7 @@ export default function InstructorLayout() {
                       key={item.to}
                       to={item.to}
                       end={item.end}
-                      data-mentor-id={`nav:${item.to}`}
+                      data-tour-id={`nav:${item.to}`}
                       onClick={() => setNavOpen(false)}
                       className={({ isActive }) => sidebarNavClass(isActive, theme)}
                     >
@@ -638,7 +610,7 @@ export default function InstructorLayout() {
             </div>
           ) : null}
 
-          {discoverProfileAlert && marketplaceOn && !isActiveMentorWorkspace ? (
+          {discoverProfileAlert && marketplaceOn ? (
             <div
               className={`mt-4 rounded-2xl border px-4 py-3 text-sm box-border max-w-full w-full ${
                 theme === 'dark'

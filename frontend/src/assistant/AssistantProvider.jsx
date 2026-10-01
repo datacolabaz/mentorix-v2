@@ -2,12 +2,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocation, useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import useUiStore from '../hooks/useUi'
-import { buildMentorContext, loc } from './knowledge'
+import { buildAssistantContext, loc } from './knowledge'
 import { flowForRole } from './flows'
-import { fetchOnboarding, saveOnboarding, askMentor } from './mentorApi'
+import { fetchOnboarding, saveOnboarding, askAssistant } from './assistantApi'
 import { isPartnerPersona } from '../lib/postAuth'
 
-const DigitalMentorContext = createContext(null)
+const AssistantContext = createContext(null)
 
 const HIDE_PATHS = new Set(['/login', '/register', '/', '/onboarding', '/onboarding/role', '/verify-phone', '/verify-email', '/reset-password'])
 
@@ -27,7 +27,7 @@ function emptyProgress(role, firstStepId) {
   }
 }
 
-export function DigitalMentorProvider({ children }) {
+export function AssistantProvider({ children }) {
   const location = useLocation()
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
@@ -208,10 +208,10 @@ export function DigitalMentorProvider({ children }) {
 
   useEffect(() => {
     const navHighlight = Boolean(open && currentStep?.waitForClick && String(currentStep.target || '').startsWith('nav:'))
-    if (navHighlight) document.body.dataset.mentorTour = '1'
-    else delete document.body.dataset.mentorTour
+    if (navHighlight) document.body.dataset.assistantTour = '1'
+    else delete document.body.dataset.assistantTour
     return () => {
-      delete document.body.dataset.mentorTour
+      delete document.body.dataset.assistantTour
     }
   }, [open, currentStep])
 
@@ -219,9 +219,9 @@ export function DigitalMentorProvider({ children }) {
     if (!open || overlayLock) return undefined
     if (!currentStep?.waitForClick || !currentStep.target) return undefined
     if (currentStep.target.startsWith('nav:')) {
-      window.dispatchEvent(new CustomEvent('mx:mentor-open-nav'))
+      window.dispatchEvent(new CustomEvent('mx:assistant-open-nav'))
     }
-    const selector = `[data-mentor-id="${String(currentStep.target).replace(/"/g, '')}"]`
+    const selector = `[data-tour-id="${String(currentStep.target).replace(/"/g, '')}"]`
     const onClick = (e) => {
       const hit = e.target.closest?.(selector)
       if (hit) void completeCurrent()
@@ -236,7 +236,7 @@ export function DigitalMentorProvider({ children }) {
       if (!q) return
       setMessages((m) => [...m, { role: 'user', text: q }])
       setAskBusy(true)
-      const context = buildMentorContext({
+      const context = buildAssistantContext({
         userRole: user?.role,
         currentRoute: location.pathname,
         onboardingStep: currentStep?.id || null,
@@ -244,7 +244,7 @@ export function DigitalMentorProvider({ children }) {
         locale,
       })
       try {
-        const res = await askMentor({
+        const res = await askAssistant({
           question: q,
           currentRoute: location.pathname,
           onboardingStep: currentStep?.id || null,
@@ -298,9 +298,9 @@ export function DigitalMentorProvider({ children }) {
     overlayLock,
   }
 
-  return <DigitalMentorContext.Provider value={value}>{children}</DigitalMentorContext.Provider>
+  return <AssistantContext.Provider value={value}>{children}</AssistantContext.Provider>
 }
 
-export function useDigitalMentor() {
-  return useContext(DigitalMentorContext)
+export function useAssistant() {
+  return useContext(AssistantContext)
 }

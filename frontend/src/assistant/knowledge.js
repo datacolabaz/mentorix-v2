@@ -6,7 +6,7 @@ export const NOT_IN_PRODUCT = [
   'calendar session booking / sessiya bronu',
   'in-app payment between student and marketplace teacher',
   'login-screen chatbot',
-  'parent/course Digital Mentor tour',
+  'parent/course AI assistant tour',
 ]
 
 export const PAGES = {
@@ -110,7 +110,7 @@ export const PAGES = {
     actions: ['view-schedule'],
   },
   '/search': {
-    id: 'mentor-search',
+    id: 'teacher-search',
     roles: ['student', 'instructor', 'admin'],
     title: { az: 'Müəllim tap', ru: 'Найти преподавателя', en: 'Find a teacher' },
     summary: {
@@ -236,8 +236,8 @@ export function availableActions(role, pathname) {
   return page.actions || []
 }
 
-/** Structured payload the Digital Mentor (and Ask AI) is allowed to use. */
-export function buildMentorContext({
+/** Structured payload the AI assistant (and Ask AI) is allowed to use. */
+export function buildAssistantContext({
   userRole,
   currentRoute,
   onboardingStep = null,

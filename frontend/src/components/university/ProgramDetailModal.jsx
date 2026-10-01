@@ -180,18 +180,18 @@ export default function ProgramDetailModal({ program, open, onClose, onApply }) 
           <RequirementsBlock requirements={program.requirements} />
         </div>
 
-        {program.mentor?.display_name ? (
+        {program.contributor?.display_name ? (
           <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 p-4 space-y-2">
             <p className="text-sm text-white font-medium">
-              {t('universitySearch.detail.mentorTitle', { name: program.mentor.display_name })}
+              {t('universitySearch.detail.contributorTitle', { name: program.contributor.display_name })}
             </p>
-            <p className="text-xs text-gray-400">{t('universitySearch.detail.mentorDesc')}</p>
-            {program.mentor.user_id ? (
+            <p className="text-xs text-gray-400">{t('universitySearch.detail.contributorDesc')}</p>
+            {program.contributor.user_id ? (
               <a
-                href={`/teachers/${program.mentor.user_id}`}
+                href={`/teachers/${program.contributor.user_id}`}
                 className="inline-flex text-xs font-semibold text-violet-300 hover:text-white underline"
               >
-                {t('universitySearch.detail.mentorProfile')}
+                {t('universitySearch.detail.contributorProfile')}
               </a>
             ) : null}
           </div>

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import useUiStore from '../hooks/useUi'
 import { loc } from './knowledge'
-import { useDigitalMentor } from './DigitalMentorProvider'
+import { useAssistant } from './AssistantProvider'
 
 function IconSparkles({ className }) {
   return (
@@ -52,7 +52,7 @@ function Spotlight({ targetId, active }) {
       return String(id).replace(/"/g, '')
     }
     const measure = () => {
-      const el = document.querySelector(`[data-mentor-id="${escapeId(targetId)}"]`)
+      const el = document.querySelector(`[data-tour-id="${escapeId(targetId)}"]`)
       if (!el) {
         setBox(null)
         return
@@ -66,7 +66,7 @@ function Spotlight({ targetId, active }) {
       })
     }
     measure()
-    const el = document.querySelector(`[data-mentor-id="${escapeId(targetId)}"]`)
+    const el = document.querySelector(`[data-tour-id="${escapeId(targetId)}"]`)
     if (el) {
       try {
         el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
@@ -102,8 +102,8 @@ function Spotlight({ targetId, active }) {
   )
 }
 
-export default function DigitalMentorHost() {
-  const m = useDigitalMentor()
+export default function AssistantHost() {
+  const m = useAssistant()
   const { t } = useTranslation()
   const theme = useUiStore((s) => s.theme)
   const [askText, setAskText] = useState('')
@@ -155,7 +155,7 @@ export default function DigitalMentorHost() {
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00E676]/15 text-[#00E676]">
               <IconSparkles className="h-3.5 w-3.5" />
             </span>
-            {t('mentor.title')}
+            {t('assistant.title')}
           </div>
           <button
             type="button"
@@ -173,7 +173,7 @@ export default function DigitalMentorHost() {
         {showTour ? (
           <>
             <div className={`mb-2 text-[11px] ${muted}`}>
-              {t('mentor.stepOf', { current: stepIndex + 1, total: totalSteps })}
+              {t('assistant.stepOf', { current: stepIndex + 1, total: totalSteps })}
             </div>
             <p className="text-sm font-medium">{loc(currentStep.title, locale)}</p>
             <p className={`mt-1 text-xs leading-relaxed ${bodyText}`}>{loc(currentStep.body, locale)}</p>
@@ -183,18 +183,18 @@ export default function DigitalMentorHost() {
                 className="rounded-lg bg-[#00E676] px-3 py-1.5 text-xs font-semibold text-black"
                 onClick={lastStep ? finish : completeCurrent}
               >
-                {lastStep ? t('mentor.finish') : t('mentor.next')}
+                {lastStep ? t('assistant.finish') : t('assistant.next')}
               </button>
               {!lastStep ? (
                 <button type="button" className={`rounded-lg border px-3 py-1.5 text-xs ${ghostBtn}`} onClick={skipStep}>
-                  {t('mentor.skip')}
+                  {t('assistant.skip')}
                 </button>
               ) : null}
               <button type="button" className={`rounded-lg border px-3 py-1.5 text-xs ${ghostBtn}`} onClick={() => setMode('ask')}>
-                {t('mentor.askAi')}
+                {t('assistant.askAi')}
               </button>
               <button type="button" className={`rounded-lg px-2 py-1.5 text-xs ${muted} hover:opacity-80`} onClick={finish}>
-                {t('mentor.finish')}
+                {t('assistant.finish')}
               </button>
             </div>
           </>
@@ -204,7 +204,7 @@ export default function DigitalMentorHost() {
           <div className="flex max-h-72 flex-col">
             <div className="mb-2 max-h-40 space-y-2 overflow-y-auto text-xs">
               {messages.length === 0 ? (
-                <p className={muted}>{t('mentor.askHint')}</p>
+                <p className={muted}>{t('assistant.askHint')}</p>
               ) : (
                 messages.map((msg, i) => (
                   <div
@@ -238,14 +238,14 @@ export default function DigitalMentorHost() {
                     ? 'border-white/10 bg-black/30 text-white focus:border-[#00E676]/50'
                     : 'border-black/10 bg-white text-slate-900 focus:border-[#00E676]/50'
                 }`}
-                placeholder={t('mentor.askPlaceholder')}
+                placeholder={t('assistant.askPlaceholder')}
               />
               <button
                 type="submit"
                 disabled={askBusy}
                 className="rounded-lg bg-[#00E676] px-2.5 py-1.5 text-xs font-semibold text-black disabled:opacity-50"
               >
-                {t('mentor.send')}
+                {t('assistant.send')}
               </button>
             </form>
             <button
@@ -253,14 +253,14 @@ export default function DigitalMentorHost() {
               className={`mt-2 text-left text-[11px] ${muted} hover:opacity-80`}
               onClick={() => setMode('tour')}
             >
-              {t('mentor.backToTour')}
+              {t('assistant.backToTour')}
             </button>
           </div>
         ) : null}
 
         {!showTour && !showAsk ? (
           <div className={`text-xs ${bodyText}`}>
-            {t('mentor.ready')}
+            {t('assistant.ready')}
             <div className="mt-2 flex gap-1.5">
               <button
                 type="button"
@@ -270,7 +270,7 @@ export default function DigitalMentorHost() {
                   setOpen(true)
                 }}
               >
-                {t('mentor.askAi')}
+                {t('assistant.askAi')}
               </button>
               <button type="button" className={`rounded-lg border px-3 py-1.5 text-xs ${ghostBtn}`} onClick={() => setOpen(false)}>
                 {t('common.close')}
@@ -290,8 +290,8 @@ export default function DigitalMentorHost() {
         className={`fixed bottom-4 right-4 z-[1160] flex h-12 w-12 items-center justify-center rounded-full border border-[#00E676]/30 text-[#00E676] shadow-[0_8px_24px_rgba(0,0,0,0.28)] ${
           dark ? 'bg-[#0c1016] hover:bg-[#12161e]' : 'bg-white hover:bg-slate-50'
         }`}
-        aria-label={t('mentor.title')}
-        title={t('mentor.title')}
+        aria-label={t('assistant.title')}
+        title={t('assistant.title')}
         onClick={() => {
           if (open) {
             if (status === 'in_progress') pause()

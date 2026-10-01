@@ -55,7 +55,6 @@ export default function Landing() {
 
   const { flags: featureFlags } = useFeatureFlags()
   const marketplaceOn = featureFlags[FEATURE_FLAGS.MARKETPLACE] === true
-  const mentorOn = featureFlags[FEATURE_FLAGS.MENTOR_SERVICES] === true
   const showMarketplace = marketplaceOn && isMarketingSectionVisible(marketing.marketplace)
   const showSteps = isMarketingSectionVisible(marketing.steps)
   const showFeatures = isMarketingSectionVisible(marketing.features)
@@ -166,7 +165,7 @@ export default function Landing() {
 
         {showSteps ? <HowItWorks /> : null}
         {showFeatures ? <FeatureGrid /> : null}
-        <AudienceSection mentorshipEnabled={mentorOn} />
+        <AudienceSection />
 
         <div className="mx-auto max-w-6xl space-y-8 px-4 py-16 sm:px-6 lg:py-20">
           <CertifiedExamsSection onHowItWorks={() => scrollToId('mx-trust')} />

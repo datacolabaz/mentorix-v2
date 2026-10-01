@@ -44,7 +44,6 @@ const NAV_GROUP_DEFS = [
     label: 'MANAGEMENT',
     items: [
       { to: '/student', key: 'progress', labelKey: 'nav.student.progress', label: 'Proqresim', icon: 'progress', end: true },
-      { to: '/student/mentorship', key: 'mentorship', labelKey: 'nav.student.mentorship', label: 'Mentorluq', icon: 'instructors' },
       { to: '/student/groups', key: 'groups', labelKey: 'nav.student.groups', label: 'Qruplarım', icon: 'courses' },
       { to: '/student/schedule', key: 'schedule', labelKey: 'nav.student.schedule', label: 'Cədvəlim', icon: 'schedule' },
       { to: '/student/live-lessons', key: 'liveLessons', labelKey: 'nav.student.live_lessons', label: 'Canlı dərslər', icon: 'live' },
@@ -136,8 +135,8 @@ function StudentLayoutInner() {
 
   useEffect(() => {
     const openNav = () => setNavOpen(true)
-    window.addEventListener('mx:mentor-open-nav', openNav)
-    return () => window.removeEventListener('mx:mentor-open-nav', openNav)
+    window.addEventListener('mx:assistant-open-nav', openNav)
+    return () => window.removeEventListener('mx:assistant-open-nav', openNav)
   }, [])
 
   useEffect(() => {
@@ -219,7 +218,7 @@ function StudentLayoutInner() {
             className="md:hidden fixed inset-0 z-[1090] bg-black/60"
             aria-label="Menyunu bağla"
             onClick={() => {
-              if (document.body.dataset.mentorTour) return
+              if (document.body.dataset.assistantTour) return
               closeNav()
             }}
           />
@@ -314,7 +313,7 @@ function StudentLayoutInner() {
                         key={item.to}
                         to={item.to}
                         end={item.end}
-                        data-mentor-id={`nav:${item.to}`}
+                        data-tour-id={`nav:${item.to}`}
                         onClick={closeNav}
                         className={({ isActive }) => sidebarNavClass(isActive, theme)}
                       >

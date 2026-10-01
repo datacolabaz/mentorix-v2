@@ -91,7 +91,7 @@ export default function AdminOperations() {
   const authTotal = (security?.groups || []).reduce((s, g) => s + (Number(g.count) || 0), 0)
 
   return (
-    <div className="p-4 sm:p-6 max-w-[1100px] mx-auto space-y-5" data-mentor-id="page:admin-operations">
+    <div className="p-4 sm:p-6 max-w-[1100px] mx-auto space-y-5" data-tour-id="page:admin-operations">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold text-token-headingPrimary break-words">{t('adminOperations.title')}</h1>

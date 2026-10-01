@@ -1,8 +1,13 @@
 {
+  "retiredPage": {
+    "title": "Bu səhifə artıq mövcud deyil",
+    "text": "Axtardığınız bölmə platformadan çıxarılıb. Ana səhifədən və ya kabinetinizdən davam edə bilərsiniz.",
+    "home": "Ana səhifə",
+    "dashboard": "Kabinetə keç"
+  },
   "workspace": {
-    "student": "İştirakçı / Mentee kabineti",
+    "student": "İştirakçı kabineti",
     "teacher": "Müəllim kabineti",
-    "mentor": "Mentor kabineti",
     "switchPrompt": "Profil/Kabineti dəyiş",
     "selectRole": "İş Rejimi / Kabinet",
     "switched": "Kabinet dəyişdirildi",
@@ -26,8 +31,8 @@
     "menu": "Menyu",
     "closeMenu": "Menyunu bağla"
   },
-  "mentor": {
-    "title": "Rəqəmsal mentor",
+  "assistant": {
+    "title": "AI köməkçi",
     "stepOf": "Addım {{current}} / {{total}}",
     "next": "Növbəti",
     "skip": "Keç",
@@ -37,7 +42,7 @@
     "askPlaceholder": "Sual yazın…",
     "askHint": "Mentorix səhifələri, axtarış və cədvəl haqqında soruşun. Mövcud olmayan funksiya uydurulmur.",
     "backToTour": "← Tura qayıt",
-    "ready": "Rəqəmsal mentor hazırdır."
+    "ready": "AI köməkçi hazırdır."
   },
   "layout": {
     "theme": "Tema",
@@ -87,7 +92,6 @@
       "default": "Bölmə",
       "content": "MƏZMUN",
       "organization": "TƏŞKİLAT",
-      "mentoring": "MENTORLUQ",
       "services": "XİDMƏTLƏR",
       "core_management": "İDARƏETMƏ VƏ NƏZARƏT",
       "development": "İNKİŞAF VƏ HƏDƏFLƏR",
@@ -114,24 +118,6 @@
       "payments": "Ödənişlər",
       "notifications": "Bildirişlər",
       "settings": "Tənzimləmələr"
-    },
-    "mentor": {
-      "dashboard": "İcmal",
-      "discovery": "Mentorları kəşf et",
-      "schedule": "Görüşlər və cədvəl",
-      "connections": "Mentee-lərim",
-      "roadmap": "Məqsədlər və yol xəritəsi",
-      "notes_tasks": "Sessiya qeydləri",
-      "models": "Modellər və paketlər",
-      "reviews": "Rəylər və nəticələr",
-      "ethics_resources": "Resurslar və etika",
-      "applications": "Müraciətlər",
-      "mentees": "Mentee-lər",
-      "sessions": "Sessiyalar",
-      "messages": "Mesajlar",
-      "services": "Mentor xidmətləri",
-      "packages": "Qiymətlər / Paketlər",
-      "earnings": "Qazanc"
     },
     "student": {
       "progress": "Proqresim",
@@ -320,10 +306,6 @@
       "teacher": {
         "title": "Müəllim / Təlimçi",
         "desc": "Testlər və imtahanlar yaradın, iştirakçıları və nəticələri idarə edin."
-      },
-      "mentor": {
-        "title": "Mentor",
-        "desc": "Məqsədlərə çatmaq üçün yol xəritəsi, geribildirim və davamlı dəstək verin."
       },
       "education_center": {
         "title": "Təşkilat",
@@ -940,59 +922,12 @@
       "pendingPhoneReady": "{{count}} tələbənin telefonu hazırdır — «Quraşdırmanı tamamla» ilə paket və cədvəli təyin edin; tamamladıqdan sonra bu xəbərdarlıq getməyəcək."
     }
   },
-  "mentorship": {
-    "navLabel": "Mentorluq",
-    "seoTitle": "Mentorluq marketplace — Mentorix",
-    "seoDescription": "Məqsədinizə uyğun təsdiqlənmiş mentor tapın: karyera, texnologiya, universitet və dil inkişafı üçün fərdi yol xəritəsi.",
-    "seoKeywords": "mentorluq, mentor tap, karyera mentoru, proqramlaşdırma mentoru, IELTS mentoru",
-    "eyebrow": "Məqsədinizdən nəticənizə",
-    "title": "Sizə sadəcə dərs yox, irəliləyiş üçün mentor lazımdır.",
-    "description": "Hədəfinizi seçin, sizə uyğun təsdiqlənmiş mentorları kəşf edin və aydın yol xəritəsi ilə inkişaf edin.",
-    "startCta": "Məqsədimi seçirəm",
-    "mentorCta": "Mentor kimi qoşul",
-    "howEyebrow": "Mentorluq necə işləyir",
-    "howTitle": "Hədəfinizdən növbəti addıma qədər",
-    "howDescription": "Mentorix-də uyğun insanı tapmaqla yanaşı, məqsədinizə çatmaq üçün plan, görüşlər və davamlı geribildirim bir yerdə olur.",
-    "bottomTitle": "İrəliləyişiniz üçün doğru dəstəyi tapın.",
-    "bottomText": "Bir məqsədlə başlayın. Mentorix sizə uyğun istiqaməti və növbəti addımları daha aydın görməyə kömək edir.",
-    "goals": {
-      "career": { "title": "Karyeramı inkişaf etdirim", "text": "CV, müsahibə, ilk iş və karyera dəyişikliyi üçün praktik dəstək." },
-      "technology": { "title": "Texnologiya öyrənim", "text": "Proqramlaşdırma, AI və data bacarıqlarını real layihələrlə inkişaf etdirin." },
-      "university": { "title": "Universitetə hazırlaşım", "text": "Qəbul, təqaüd və xaricdə təhsil yolunuzu planlı şəkildə qurun." },
-      "language": { "title": "Dil bacarığımı artırım", "text": "Speaking, IELTS və akademik dil üçün məqsədli məşq və geribildirim." }
-    },
-    "steps": {
-      "goal": { "title": "Hədəfinizi müəyyən edin", "text": "Hazırkı səviyyənizi, istədiyiniz nəticəni və vaxtınızı bizə bildirin." },
-      "match": { "title": "Uyğun mentor seçin", "text": "Təcrübə, mövzu, dil, qrafik və büdcənizə uyğun seçimləri müqayisə edin." },
-      "grow": { "title": "Planla inkişaf edin", "text": "Görüşlər, tapşırıqlar, mərhələlər və geribildirimlə irəliləyişinizi izləyin." }
-    },
-    "goalsPage": {
-      "back": "Mentorluğa qayıt",
-      "eyebrow": "Sizə uyğun istiqamət",
-      "title": "Hədəfinizi bir neçə addımda dəqiqləşdirin",
-      "description": "Cavablarınız uyğun mentor və təklifləri tapmaq üçün istifadə olunacaq. İndi nəticə göstərmirik — əvvəlcə ehtiyacınızı düzgün anlayaq.",
-      "goalLabel": "Nəyə nail olmaq istəyirsiniz?",
-      "levelLabel": "Hazırkı səviyyəniz",
-      "availabilityLabel": "Həftəlik uyğun vaxtınız",
-      "budgetLabel": "Aylıq büdcə aralığı",
-      "previewEyebrow": "Seçim xülasəsi",
-      "previewTitle": "Növbəti mərhələ",
-      "previewEmpty": "Bütün seçimləri tamamladıqda sizə uyğun mentor axtarışını başlatmaq üçün xülasəni burada görəcəksiniz.",
-      "continue": "Davam et",
-      "privacyNote": "Nəticələr yalnız mentor tövsiyəsini fərdiləşdirmək üçün istifadə olunur.",
-      "summary": "{{goal}} üçün {{level}} səviyyəsindən başlayırsınız. {{availability}} vaxtı ayıra və {{budget}} aralığında seçim edə bilərsiniz.",
-      "levels": { "beginner": "Başlanğıc", "developing": "İnkişaf edirəm", "experienced": "Təcrübəli" },
-      "availability": { "weekdayMorning": "Həftəiçi səhərlər", "weekdayEvening": "Həftəiçi axşamlar", "weekend": "Həftəsonu" },
-      "budgets": { "starter": "50 AZN-dək", "standard": "50–150 AZN", "premium": "150 AZN-dən çox" }
-    }
-  },
   "landing": {
     "nav": {
       "findTeacher": "Müəllim tap",
       "universities": "Universitetlər",
       "features": "Xüsusiyyətlər",
       "forTeachers": "Müəllimlər üçün",
-      "mentorship": "Mentorluq",
       "exams": "İmtahanlar",
       "examsTests": "İmtahanlar",
       "partner": "Partner ol",
@@ -3360,7 +3295,7 @@
       "scholarship": "Təqaüd",
       "scholarshipYes": "Mövcuddur",
       "scholarshipNo": "Yoxdur",
-      "mentor": "Bu proqram üzrə mentor: {{name}}"
+      "contributor": "Bu proqram üzrə təlimçi: {{name}}"
     },
     "ai": {
       "title": "AI uyğunluq axtarışı",
@@ -3382,9 +3317,9 @@
       "housing": "Yataqxana",
       "funding": "Maliyyələşdirmə",
       "admissionRequirements": "Qəbul tələbləri",
-      "mentorTitle": "Mentor: {{name}}",
-      "mentorDesc": "Bu proqram üzrə qəbul və müraciət prosesində pullu konsultasiya ala bilərsiniz.",
-      "mentorProfile": "Mentor profilinə keç",
+      "contributorTitle": "Təlimçi: {{name}}",
+      "contributorDesc": "Bu proqram üzrə qəbul və müraciət prosesində pullu konsultasiya ala bilərsiniz.",
+      "contributorProfile": "Təlimçi profilinə keç",
       "applyOfficial": "Apply — rəsmi sayt",
       "req": {
         "minGpa": "Minimum GPA",

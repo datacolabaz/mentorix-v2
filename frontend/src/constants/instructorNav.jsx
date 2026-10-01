@@ -27,17 +27,6 @@ export const INSTRUCTOR_NAV_ITEM_DEFS = {
   payments: { to: '/instructor/payments', labelKey: 'nav.instructor.payments', label: 'Ödənişlər', icon: 'payments' },
   notifications: { to: '/notifications', labelKey: 'nav.instructor.notifications', label: 'Bildirişlər', icon: 'notifications' },
   settings: { to: '/instructor/settings', labelKey: 'nav.instructor.settings', label: 'Tənzimləmələr', icon: 'settings' },
-
-  // Mentor Workspace spesifik linklər (EMCC / Beynəlxalq Standart)
-  mentor_dashboard: { to: '/instructor', labelKey: 'nav.mentor.dashboard', label: 'İcmal', icon: 'dashboard', end: true },
-  mentor_discovery: { to: '/instructor/inquiries', labelKey: 'nav.mentor.requests', label: 'Yeni müraciətlər', icon: 'instructors' },
-  mentor_schedule: { to: '/instructor/schedule', labelKey: 'nav.mentor.schedule', label: 'Görüşlər və cədvəl', icon: 'schedule' },
-  mentor_connections: { to: '/instructor/students', labelKey: 'nav.mentor.connections', label: 'Mentee-lərim', icon: 'students' },
-  mentor_roadmap: { to: '/instructor/roadmap', labelKey: 'nav.mentor.roadmap', label: 'Məqsədlər və yol xəritəsi', icon: 'tasks' },
-  mentor_notes_tasks: { to: '/instructor/tasks', labelKey: 'nav.mentor.notes_tasks', label: 'Sessiya qeydləri', icon: 'tasks' },
-  mentor_models: { to: '/instructor/teaching-groups', labelKey: 'nav.mentor.models', label: 'Modellər və paketlər', icon: 'courses' },
-  mentor_reviews: { to: '/instructor/analytics', labelKey: 'nav.mentor.reviews', label: 'Rəylər və nəticələr', icon: 'analytics' },
-  mentor_ethics_resources: { to: '/instructor/materials', labelKey: 'nav.mentor.ethics_resources', label: 'Resurslar və etika', icon: 'materials' },
 }
 
 /** Server menyu konfiqurasiyasında hələ olmasa da göstərilən yeni bəndlər. */
@@ -55,35 +44,6 @@ const INSTRUCTOR_PRODUCT_GROUPS = [
   { id: 'results', title: 'NƏTİCƏLƏR', itemKeys: ['engagement', 'attendance', 'certificates', 'analytics'] },
   { id: 'business', title: 'BİZNES', itemKeys: ['payments', 'settings'] },
 ]
-
-export function defaultMentorNavSections() {
-  return [
-    {
-      id: 'core_management',
-      title: 'ƏSAS İDARƏETMƏ',
-      enabled: true,
-      itemKeys: ['mentor_dashboard', 'mentor_discovery', 'mentor_schedule', 'mentor_connections'],
-    },
-    {
-      id: 'development',
-      title: 'MƏQSƏD VƏ İNKİŞAF',
-      enabled: true,
-      itemKeys: ['mentor_roadmap', 'mentor_notes_tasks'],
-    },
-    {
-      id: 'programs',
-      title: 'TƏKLİFLƏR',
-      enabled: true,
-      itemKeys: ['mentor_models'],
-    },
-    {
-      id: 'quality',
-      title: 'KEYFİYYƏT VƏ RESURSLAR',
-      enabled: true,
-      itemKeys: ['mentor_reviews', 'mentor_ethics_resources'],
-    },
-  ]
-}
 
 /** Sidebar linkləri yalnız bu bölmədə görünsün. */
 const ITEM_CANONICAL_SECTION = {
@@ -228,26 +188,13 @@ function reframeInstructorSections(sourceSections) {
       ...(section.items || []).map((item) => item?.key).filter(Boolean),
     ]),
   )
-  const source = available.size ? available : new Set(Object.keys(INSTRUCTOR_NAV_ITEM_DEFS).filter((key) => !key.startsWith('mentor_')))
+  const source = available.size ? available : new Set(Object.keys(INSTRUCTOR_NAV_ITEM_DEFS))
   for (const key of ALWAYS_AVAILABLE_KEYS) source.add(key)
   return INSTRUCTOR_PRODUCT_GROUPS.map((group) => ({
     id: group.id,
     title: group.title,
     items: group.itemKeys.filter((key) => source.has(key)).map(itemFromKey).filter(Boolean),
   })).filter((section) => section.items.length > 0)
-}
-
-export function buildMentorNavSections() {
-  const sections = defaultMentorNavSections()
-  return sections.map((section) => {
-    const keys = Array.isArray(section.itemKeys) ? section.itemKeys : []
-    const items = keys.map(itemFromKey).filter(Boolean)
-    return {
-      id: section.id,
-      title: section.title,
-      items,
-    }
-  }).filter((s) => s.items.length > 0)
 }
 
 /** API `nav.sections` və ya admin payload `sections` → InstructorLayout NAV_SECTIONS */

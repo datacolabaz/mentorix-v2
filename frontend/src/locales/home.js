@@ -175,11 +175,6 @@ export const homeAz = {
         body: 'Şagird və valideyn kabineti pulsuzdur: tapşırıqlar, imtahanlar və nəticələr bir yerdə görünür.',
         cta: 'Tələbələr üçün',
       },
-      mentorship: {
-        title: 'Mentorluq',
-        body: 'Məqsədinizə uyğun mentor tapın və inkişaf planı qurun.',
-        cta: 'Mentor tap',
-      },
     },
   },
   trust: {
@@ -442,11 +437,6 @@ export const homeEn = {
         body: 'Student and parent accounts are free: assignments, exams and results in one place.',
         cta: 'For students',
       },
-      mentorship: {
-        title: 'Mentorship',
-        body: 'Find a mentor that fits your goal and build a development plan.',
-        cta: 'Find a mentor',
-      },
     },
   },
   trust: {
@@ -708,11 +698,6 @@ export const homeRu = {
         title: 'Ученики и родители',
         body: 'Кабинеты ученика и родителя бесплатны: задания, экзамены и результаты в одном месте.',
         cta: 'Для учеников',
-      },
-      mentorship: {
-        title: 'Менторство',
-        body: 'Найдите ментора под свою цель и составьте план развития.',
-        cta: 'Найти ментора',
       },
     },
   },

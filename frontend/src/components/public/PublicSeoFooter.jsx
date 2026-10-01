@@ -33,7 +33,6 @@ const PRODUCT_LINKS = [
   { to: '/kurslar-ve-qruplar', key: 'publicFooter.links.kurslar-ve-qruplar' },
   { to: '/telebeler-ucun', key: 'publicFooter.links.telebeler-ucun' },
   { to: '/sertifikatli-imtahanlar', key: 'home.footer.certifiedExams' },
-  { to: '/mentorship', key: 'landing.nav.mentorship' },
   { to: '/qiymetler', key: 'publicFooter.links.qiymetler' },
 ]
 

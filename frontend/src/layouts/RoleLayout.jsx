@@ -1,5 +1,4 @@
 import useAuthStore from '../hooks/useAuth'
-import { MentorWorkspaceProvider } from '../hooks/useMentorWorkspace.jsx'
 import AdminLayout from './AdminLayout'
 import InstructorLayout from './InstructorLayout'
 import StudentLayout from './StudentLayout'
@@ -13,11 +12,7 @@ export default function RoleLayout() {
     case 'admin':
       return <AdminLayout />
     case 'instructor':
-      return (
-        <MentorWorkspaceProvider>
-          <InstructorLayout />
-        </MentorWorkspaceProvider>
-      )
+      return <InstructorLayout />
     case 'parent':
       return <ParentLayout />
     case 'course':

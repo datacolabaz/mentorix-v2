@@ -4,12 +4,9 @@ import api from '../lib/api'
 import {
   buildInstructorNavSectionsFromClient,
   buildInstructorNavSections,
-  buildMentorNavSections,
-  defaultMentorNavSections,
 } from '../constants/instructorNav'
-import useAuthStore from './useAuth'
 import { localizeInstructorNavSections } from '../lib/localizeNav'
-import { FEATURE_FLAGS, filterNavSectionsByFlags, useFeatureFlags } from '../lib/featureFlags'
+import { filterNavSectionsByFlags, useFeatureFlags } from '../lib/featureFlags'
 
 const NAV_REFRESH_EVENT = 'mx:instructor-nav-updated'
 
@@ -35,43 +32,9 @@ export function notifyInstructorNavUpdated() {
 
 export function useInstructorNavSections() {
   const { t, i18n } = useTranslation()
-  const { user } = useAuthStore()
-  const [activeWorkspace, setActiveWorkspace] = useState(() => {
-    try {
-      return String(localStorage.getItem('mx_active_workspace') || '').toLowerCase()
-    } catch {
-      return ''
-    }
-  })
   const { flags } = useFeatureFlags()
-  const isMentor =
-    flags[FEATURE_FLAGS.MENTOR_SERVICES] === true &&
-    (String(user?.persona || '').toLowerCase() === 'mentor' || activeWorkspace === 'mentor')
 
-  useEffect(() => {
-    const persona = String(user?.persona || '').toLowerCase()
-    if (!persona || activeWorkspace) return
-    const initialWorkspace = persona === 'mentor' ? 'mentor' : persona === 'teacher' ? 'teacher' : ''
-    if (!initialWorkspace) return
-    try {
-      localStorage.setItem('mx_active_workspace', initialWorkspace)
-    } catch {
-      /* ignore storage failures */
-    }
-    setActiveWorkspace(initialWorkspace)
-  }, [user?.persona, activeWorkspace])
-
-  useEffect(() => {
-    const onWorkspaceSwitch = (event) => setActiveWorkspace(String(event.detail || '').toLowerCase())
-    window.addEventListener('mx:workspace-switched', onWorkspaceSwitch)
-    return () => window.removeEventListener('mx:workspace-switched', onWorkspaceSwitch)
-  }, [])
-
-  const [rawSections, setRawSections] = useState(() =>
-    isMentor
-      ? buildMentorNavSections()
-      : buildInstructorNavSections(),
-  )
+  const [rawSections, setRawSections] = useState(() => buildInstructorNavSections())
   const [loading, setLoading] = useState(true)
 
   const sections = useMemo(
@@ -80,11 +43,6 @@ export function useInstructorNavSections() {
   )
 
   const refresh = useCallback(async () => {
-    if (isMentor) {
-      setRawSections(buildMentorNavSections())
-      setLoading(false)
-      return
-    }
     try {
       const nav = await fetchInstructorNavConfig()
       if (nav?.sections?.length) {
@@ -95,15 +53,7 @@ export function useInstructorNavSections() {
     } finally {
       setLoading(false)
     }
-  }, [isMentor])
-
-  useEffect(() => {
-    if (isMentor) {
-      setRawSections(buildMentorNavSections())
-    } else {
-      void refresh()
-    }
-  }, [isMentor, refresh])
+  }, [])
 
   useEffect(() => {
     let cancelled = false

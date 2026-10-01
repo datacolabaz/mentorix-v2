@@ -24,7 +24,7 @@ const emptyForm = () => ({
   min_gpa: '',
   ielts: '',
   apply_link: '',
-  mentor_notes: '',
+  contributor_notes: '',
 })
 
 export default function InstructorUniversityPrograms() {
@@ -72,7 +72,7 @@ export default function InstructorUniversityPrograms() {
           documents: ['Transcript', 'CV'],
         },
         apply_link: form.apply_link,
-        mentor_notes: form.mentor_notes,
+        contributor_notes: form.contributor_notes,
       })
       if (res?.success) {
         toast(res.message || 'Proqram göndərildi')
@@ -91,7 +91,7 @@ export default function InstructorUniversityPrograms() {
       <div>
         <h1 className="font-display font-bold text-xl sm:text-2xl text-white">Universitet proqramı əlavə et</h1>
         <p className="text-sm text-gray-400 mt-1">
-          Real qəbul etdiyiniz və ya məsləhət verdiyiniz proqramları daxil edin. Təsdiqdən sonra kartda mentor kimi görünəcəksiniz.
+          Real qəbul etdiyiniz və ya məsləhət verdiyiniz proqramları daxil edin. Təsdiqdən sonra kartda təlimçi kimi görünəcəksiniz.
         </p>
       </div>
 

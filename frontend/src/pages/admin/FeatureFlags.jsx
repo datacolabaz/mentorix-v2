@@ -16,10 +16,6 @@ const FLAG_COPY = {
     title: 'Müəllim marketplace-i',
     hint: 'Xəritə, kəşf, AI axtarış, axtarış müraciətləri, seçilmişlər və profil kəşf xəbərdarlıqları.',
   },
-  [FEATURE_FLAGS.MENTOR_SERVICES]: {
-    title: 'Mentor xidmətləri',
-    hint: 'Mentor kabineti, mentorluq səhifələri və kabinet keçidində «Mentor». AI köməkçi buna daxil deyil.',
-  },
   [FEATURE_FLAGS.LIVE_ROOM]: {
     title: 'Mentorix Live otağı',
     hint: 'Daxili video otaq (LiveKit), qonaq linkləri, otaq çatı və prezentasiya. Zoom/Google Meet dərsləri açıq qalır.',

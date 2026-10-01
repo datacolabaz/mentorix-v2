@@ -17,7 +17,6 @@ const LINKS = [
   { to: '/#mx-steps', labelKey: 'home.nav.howItWorks', hash: 'mx-steps' },
   { to: '/muellimler-ucun', labelKey: 'landing.nav.forTeachers' },
   { to: '/imtahanlar', labelKey: 'landing.nav.exams' },
-  { to: '/mentorship', labelKey: 'landing.nav.mentorship' },
   { to: '/qiymetler', labelKey: 'landing.nav.plans' },
 ]
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import '../../i18n'
 import PublicPricingAudienceGroups from './PublicPricingAudienceGroups'
@@ -29,15 +29,11 @@ function renderPricing() {
 }
 
 describe('release/site-pricing: pricing screens', () => {
-  it('audience tabs have no emojis and are real tabs', () => {
-    renderPricing()
-    const tabs = screen.getAllByRole('tab')
-    expect(tabs).toHaveLength(2)
-    for (const tab of tabs) expect(tab.textContent).not.toMatch(EMOJI_RE)
-    expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
-    fireEvent.click(tabs[1])
-    expect(tabs[1]).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'pricing-tab-mentor')
+  it('pricing shows only the teacher/organisation plans, without emojis or audience tabs', () => {
+    const { container } = renderPricing()
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(container.textContent).not.toMatch(/mentor(?!ix)/i)
+    expect(container.textContent).not.toMatch(EMOJI_RE)
     expect(audienceSrc).not.toMatch(EMOJI_RE)
   })
 

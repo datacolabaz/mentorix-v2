@@ -505,7 +505,7 @@ export default function InstructorMapSearch() {
   )
 
   return (
-    <div className="h-[100dvh] overflow-hidden bg-[#f4f6fb] text-slate-800 flex flex-col" data-mentor-id="page:mentor-search">
+    <div className="h-[100dvh] overflow-hidden bg-[#f4f6fb] text-slate-800 flex flex-col" data-tour-id="page:teacher-search">
       <PublicPageTopBar
         tone="light"
         backTo="/"
