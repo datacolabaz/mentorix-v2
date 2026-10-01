@@ -42,9 +42,9 @@ function PulseCard({ label, value, sub, accent = 'primary' }) {
     <div
       className={`rounded-2xl border bg-gradient-to-br p-5 ${accentClass}`}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-token-textMuted">{label}</div>
       <div className="mt-2 font-display font-bold text-3xl text-token-textMain tabular-nums">{value}</div>
-      {sub ? <div className="mt-1 text-xs text-gray-500">{sub}</div> : null}
+      {sub ? <div className="mt-1 text-xs text-token-textMuted">{sub}</div> : null}
     </div>
   )
 }
@@ -56,7 +56,7 @@ function severityStyles(severity) {
 }
 
 function severityBadge(severity, count) {
-  if (count <= 0) return 'bg-white/10 text-gray-500'
+  if (count <= 0) return 'bg-white/10 text-token-textMuted'
   if (severity === 'critical') return 'bg-rose-500/25 text-rose-200'
   if (severity === 'warning') return 'bg-amber-500/25 text-amber-200'
   return 'bg-primary/20 text-primary'
@@ -113,10 +113,10 @@ export default function AdminDashboard() {
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
           <h1 className="font-display font-bold text-2xl text-token-headingPrimary">CEO Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-token-textMuted mt-1">
             {formatNamedDate(new Date(), 'az', { month: 'long', weekday: true })}
           </p>
-          <p className="text-xs text-gray-600 mt-1">Biznesin nəbzi — trafik analitikası ayrıca bölmədədir</p>
+          <p className="text-xs text-token-textMuted mt-1">Biznesin nəbzi — trafik analitikası ayrıca bölmədədir</p>
         </div>
 
         <Card className="p-4 border-emerald-500/30 min-w-[240px] shrink-0">
@@ -125,25 +125,25 @@ export default function AdminDashboard() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">Hazırda onlayn</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-text">Hazırda onlayn</span>
           </div>
           <div className="font-display font-bold text-4xl text-token-textMain tabular-nums">{fmt(live.users)}</div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-token-textMuted mt-1">
             Son {live.window_minutes || 1} dəq · cəmi {fmt(live.total)} (qonaq {fmt(live.guests)})
           </p>
           <div className="mt-3 space-y-1.5">
             {roleLines.length ? (
               roleLines.map(({ role, n, label }) => (
                 <div key={role} className="flex justify-between text-sm">
-                  <span className="text-gray-400 capitalize">{label}</span>
+                  <span className="text-token-textMuted capitalize">{label}</span>
                   <span className="font-semibold text-token-textMain tabular-nums">{fmt(n)}</span>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-gray-600">Rol üzrə məlumat yoxdur</p>
+              <p className="text-xs text-token-textMuted">Rol üzrə məlumat yoxdur</p>
             )}
           </div>
-          <p className="text-[10px] text-gray-600 mt-3">Hər {dashboard?.refresh_seconds ?? 30} saniyədə yenilənir</p>
+          <p className="text-[10px] text-token-textMuted mt-3">Hər {dashboard?.refresh_seconds ?? 30} saniyədə yenilənir</p>
         </Card>
       </div>
 
@@ -177,13 +177,13 @@ export default function AdminDashboard() {
       <DashboardSummary role="admin" />
 
       {loading ? (
-        <div className="text-sm text-gray-500 py-16 text-center">Dashboard yüklənir…</div>
+        <div className="text-sm text-token-textMuted py-16 text-center">Dashboard yüklənir…</div>
       ) : null}
 
       {!loading && dashboard ? (
         <>
           <section>
-            <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-token-textMuted mb-3">
               Bu gün · biznes KPI
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
@@ -221,10 +221,10 @@ export default function AdminDashboard() {
           <section>
             <div className="flex flex-wrap items-end justify-between gap-2 mb-3">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <div className="text-xs font-semibold uppercase tracking-wider text-token-textMuted">
                   Pending Actions
                 </div>
-                <p className="text-sm text-gray-400 mt-1">Bu səhər nəzərdən keçirməli olduğunuz işlər</p>
+                <p className="text-sm text-token-textMuted mt-1">Bu səhər nəzərdən keçirməli olduğunuz işlər</p>
               </div>
               {dashboard.pending_total > 0 ? (
                 <span className="text-xs font-bold rounded-full bg-amber-500/20 text-amber-200 px-3 py-1 tabular-nums">
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-semibold text-token-textMain text-sm">{item.label}</div>
-                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">{item.description}</p>
+                      <p className="text-xs text-token-textMuted mt-1 leading-relaxed">{item.description}</p>
                     </div>
                     <span
                       className={`shrink-0 min-w-[2.5rem] text-center rounded-xl px-2.5 py-1.5 text-lg font-bold tabular-nums ${severityBadge(item.severity, item.count)}`}
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
           {dashboard.recent_today?.length ? (
             <Card className="p-5">
               <h2 className="text-sm font-semibold text-token-textMain mb-1">Bu günün qeydiyyatları</h2>
-              <p className="text-xs text-gray-500 mb-4">Son fəaliyyət axını</p>
+              <p className="text-xs text-token-textMuted mb-4">Son fəaliyyət axını</p>
               <div className="space-y-3">
                 {dashboard.recent_today.map((u) => (
                   <div
@@ -270,9 +270,9 @@ export default function AdminDashboard() {
                   >
                     <div>
                       <div className="text-sm font-medium text-token-textMain">{u.full_name}</div>
-                      <div className="text-xs text-gray-500 capitalize">{ROLE_LABELS[u.role] || u.role}</div>
+                      <div className="text-xs text-token-textMuted capitalize">{ROLE_LABELS[u.role] || u.role}</div>
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-token-textMuted">
                       {u.created_at
                         ? formatDistanceToNow(new Date(u.created_at), { addSuffix: true, locale: az })
                         : '—'}
@@ -289,7 +289,7 @@ export default function AdminDashboard() {
               className="block rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-5 hover:border-primary/40 transition-colors"
             >
               <h2 className="font-display font-bold text-base text-token-textMain">Analitika paneli</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-token-textMuted mt-1">
                 Trafik, funnel, cihaz payı və detallı konversiya — ikinci plan
               </p>
               <span className="inline-block mt-3 text-sm font-semibold text-primary">Aç →</span>
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
               className="block rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-5 hover:border-primary/40 transition-colors"
             >
               <h2 className="font-display font-bold text-base text-token-textMain">SMS & Ehtiyat</h2>
-              <p className="text-sm text-gray-500 mt-1">Provayder balansı və infrastruktur monitorinqi</p>
+              <p className="text-sm text-token-textMuted mt-1">Provayder balansı və infrastruktur monitorinqi</p>
               <span className="inline-block mt-3 text-sm font-semibold text-primary">Aç →</span>
             </Link>
           </div>

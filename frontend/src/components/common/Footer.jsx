@@ -30,11 +30,11 @@ export default function Footer() {
 
   const footer = (
     <footer
-      className="fixed right-0 bottom-0 z-[1000] border-t border-slate-200 bg-slate-50/95 shadow-[0_-4px_16px_rgba(15,23,42,0.06)] backdrop-blur-sm"
+      className="fixed right-0 bottom-0 z-[1000] border-t border-line bg-canvas/95 shadow-[0_-4px_16px_rgb(var(--mx-shadow-color)/0.06)] backdrop-blur-sm"
       style={{ left: `${leftOffset}px` }}
     >
       <div className="px-6 py-4 pr-16 sm:pr-20">
-        <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="flex items-center justify-between gap-3 text-xs text-fg-muted">
           <div className="text-left">{t('layout.footer.copyright')}</div>
           <div className="text-right">
             {t('layout.footer.poweredBy')}{' '}
@@ -42,7 +42,7 @@ export default function Footer() {
               href="https://datacolab.az"
               target="_blank"
               rel="noreferrer"
-              className="font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+              className="font-semibold text-fg-secondary hover:text-fg transition-colors"
             >
               DataColab
             </a>

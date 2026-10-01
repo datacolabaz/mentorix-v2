@@ -7,6 +7,8 @@ const FONT_STACK = ['Inter', 'Inter Fallback', 'Segoe UI', 'Roboto', 'Helvetica 
 
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  // `dark:` must follow the in-app theme toggle (class on <html>), not the OS preference.
+  darkMode: ['selector', '.theme-dark'],
   theme: {
     extend: {
       keyframes: {

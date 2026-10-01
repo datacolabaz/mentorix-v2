@@ -84,7 +84,7 @@ export default function WorkspaceSwitcher({ className = '' }) {
           <span className="text-base shrink-0">{activeIcon}</span>
           <div className="min-w-0">
             <div className="truncate text-xs font-bold leading-snug">{activeTitle}</div>
-            <div className="text-[10px] text-slate-400 dark:text-gray-400 font-normal">
+            <div className="text-[10px] text-token-textMuted font-normal">
               {t('workspace.switchPrompt', { defaultValue: 'Profil/Kabineti dəyiş' })}
             </div>
           </div>
