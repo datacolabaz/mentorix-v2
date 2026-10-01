@@ -57,11 +57,14 @@ function normalizeInput(input = {}) {
   const relatedEntityType = input.relatedEntityType ? clip(input.relatedEntityType, MAX_ENTITY_TYPE) : null;
   const params = input.params && typeof input.params === 'object' ? input.params : {};
   const meta = input.meta && typeof input.meta === 'object' && !Array.isArray(input.meta) ? { ...input.meta } : {};
+  const templateKey = input.templateKey ? String(input.templateKey).trim() : eventType;
+  if (!/^[a-z0-9_]+$/.test(templateKey)) throw invalid('templateKey must be snake_case');
 
   return {
     recipientId,
     category,
     eventType,
+    templateKey,
     priority,
     title: input.title == null ? '' : String(input.title),
     body: input.body == null ? '' : String(input.body),
@@ -103,7 +106,7 @@ async function loadPreferences(q, userId, category) {
 }
 
 function renderText(n, locale) {
-  const rendered = hasTemplate(n.eventType) ? renderTemplate(n.eventType, locale, n.params) : null;
+  const rendered = hasTemplate(n.templateKey) ? renderTemplate(n.templateKey, locale, n.params) : null;
   const title = clip(rendered?.title || n.title, MAX_TITLE);
   const body = clip(rendered?.body || n.body, MAX_BODY);
   if (!title) throw invalid('title required (or a template for eventType)');
@@ -132,21 +135,50 @@ async function legacyInsert(q, n, text, meta) {
   return rows[0]?.id || null;
 }
 
+const SAVEPOINT_RE = /^[a-z_][a-z0-9_]{0,40}$/i;
+let savepointSeq = 0;
+
+function savepointName(opt) {
+  if (typeof opt === 'string' && SAVEPOINT_RE.test(opt)) return opt;
+  savepointSeq = (savepointSeq + 1) % 1e9;
+  return `notification_sp_${savepointSeq}`;
+}
+
 /**
  * @param {object} input
  * @param {string} input.recipientId
  * @param {string} input.category        policy.CATEGORIES
  * @param {string} input.eventType       snake_case, saxlanılır `notifications.type`-da
  * @param {string} [input.priority]      CRITICAL|HIGH|NORMAL|LOW
+ * @param {string} [input.templateKey]   şablon açarı (default: eventType) — eyni tipin fərqli mətnləri üçün
  * @param {string} [input.title]         şablon yoxdursa məcburidir
  * @param {string} [input.body]
  * @param {object} [input.params]        şablon parametrləri (gizli məlumat YOX)
  * @param {object} [input.meta]          köhnə oxucular üçün (assignment_id, exam_id, ...)
  * @param {string} [input.dedupeKey]     alıcı üzrə unikal
  * @param {boolean} [input.email]        hadisə email tələb edirmi (seçim/siyasət yenə də yoxlanır)
- * @param {{ client?: { query: Function } }} [opts] tranzaksiya client-i
+ * @param {{ client?: { query: Function }, savepoint?: boolean|string }} [opts]
+ *   client — çağıranın tranzaksiya client-i: bildiriş və email outbox sətri həmin tranzaksiyada yazılır
+ *   (rollback olunsa heç biri qalmır, commit olunsa ikisi də qalır).
+ *   savepoint — bütün iş bir SAVEPOINT-in içində gedir: xəta çağıranın tranzaksiyasını pozmur.
  */
 async function createNotification(input, opts = {}) {
+  if (!opts.savepoint) return createNotificationCore(input, opts);
+  if (!opts.client) throw invalid('savepoint requires a transaction client');
+  const name = savepointName(opts.savepoint);
+  await opts.client.query(`SAVEPOINT ${name}`);
+  try {
+    const out = await createNotificationCore(input, { client: opts.client, inSavepoint: true });
+    await opts.client.query(`RELEASE SAVEPOINT ${name}`);
+    return out;
+  } catch (err) {
+    await opts.client.query(`ROLLBACK TO SAVEPOINT ${name}`);
+    await opts.client.query(`RELEASE SAVEPOINT ${name}`);
+    throw err;
+  }
+}
+
+async function createNotificationCore(input, opts = {}) {
   const q = opts.client || db;
   const n = normalizeInput(input);
 
@@ -170,7 +202,7 @@ async function createNotification(input, opts = {}) {
 
   const text = renderText(n, recipient.locale);
   const meta = { ...n.meta };
-  if (text.templated) meta.i18n = { key: n.eventType, params: n.params };
+  if (text.templated) meta.i18n = { key: n.templateKey, params: n.params };
   if (!decision.inApp) meta.silent = true;
   if (emailStatus === EMAIL_STATUS.DIGEST) meta.email_frequency = decision.email.frequency;
   if (plan.route === EMAIL_ROUTE.LEGACY) meta.email_route = 'legacy';
@@ -254,7 +286,8 @@ async function createNotification(input, opts = {}) {
     queued = Number(rows[0]?.queued || 0) + Number(rows[0]?.legacy_queued || 0) > 0;
   } catch (err) {
     // Migrasiya 214 hələ tətbiq olunmayıbsa (yalnız lokal/köhnə DB) — köhnə formada yaz.
-    if (err && err.code === '42703') {
+    // Savepoint daxilində xəta tranzaksiyanı dayandırıb: geri dönüş çağıranın savepoint-indən sonra olmur.
+    if (err && err.code === '42703' && !opts.inSavepoint) {
       id = await legacyInsert(q, n, text, meta);
       return { created: Boolean(id), deduped: false, id, inApp: true, emailStatus: null, legacy: true };
     }
@@ -271,8 +304,89 @@ async function createNotificationSafe(input, opts = {}) {
     return await createNotification(input, opts);
   } catch (err) {
     console.error('[notificationService]', input?.eventType || '?', err?.code || '', err?.message || err);
-    return { created: false, deduped: false, id: null, reason: 'error' };
+    return { created: false, deduped: false, id: null, reason: 'error', errorCode: String(err?.code || 'error').slice(0, 40) };
   }
 }
 
-module.exports = { createNotification, createNotificationSafe, normalizeInput, isUuid };
+/**
+ * Çağıranın açıq tranzaksiyasında (db.transaction client-i) bildiriş + email outbox sətri.
+ * Öz SAVEPOINT-indədir və heç vaxt atmır: alınmasa tranzaksiya istifadəyə yararlı qalır və
+ * `{ created: false, reason: 'error', errorCode }` qaytarılır. Çağıran rollback etsə, heç nə qalmır.
+ */
+async function createNotificationInTransaction(client, input, { savepoint = true } = {}) {
+  return createNotificationSafe(input, { client, savepoint });
+}
+
+/** Bütün aktiv adminlər (admin bildirişləri üçün alıcılar). */
+async function listActiveAdminIds(q = db) {
+  const { rows } = await q.query(
+    `SELECT id FROM users
+     WHERE role = 'admin' AND COALESCE(is_active, TRUE) = TRUE AND deleted_at IS NULL
+     ORDER BY created_at ASC NULLS LAST
+     LIMIT 200`,
+  );
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Eyni bildirişi hər aktiv adminə yazır. dedupeKey alıcı üzrə unikal olduğu üçün təkrar/replika
+ * eyni adminə ikinci sətir yaratmır. Xəta heç vaxt atılmır.
+ * @returns {Promise<{ recipients: number, created: number }>}
+ */
+async function notifyAdmins(input, { excludeUserIds = [] } = {}) {
+  let adminIds = [];
+  try {
+    adminIds = await listActiveAdminIds();
+  } catch (err) {
+    console.error('[notificationService] admins', input?.eventType || '?', err?.message || err);
+    return { recipients: 0, created: 0 };
+  }
+  const skip = new Set((excludeUserIds || []).filter(Boolean).map(String));
+  let created = 0;
+  let recipients = 0;
+  for (const id of adminIds) {
+    if (skip.has(String(id))) continue;
+    recipients += 1;
+    const out = await createNotificationSafe({ ...input, recipientId: id });
+    if (out.created) created += 1;
+  }
+  return { recipients, created };
+}
+
+/* Deferred work: hooks call these after the request's transaction committed. */
+const pending = new Set();
+
+/**
+ * Bildiriş işini cavabdan sonraya saxlayır (setImmediate): təqdim/qiymətləndirmə sorğusu gözləmir.
+ * fn xətası tutulur və loglanır.
+ */
+function deferNotification(label, fn) {
+  const p = new Promise((resolve) => {
+    setImmediate(() => {
+      Promise.resolve()
+        .then(fn)
+        .catch((err) => console.error('[notificationService] deferred', label, err?.code || '', err?.message || err))
+        .finally(resolve);
+    });
+  });
+  pending.add(p);
+  p.finally(() => pending.delete(p));
+  return p;
+}
+
+/** Testlər üçün: gözləyən təxirə salınmış bildiriş işlərinin bitməsini gözləyir. */
+async function flushDeferredNotifications() {
+  while (pending.size) await Promise.all([...pending]);
+}
+
+module.exports = {
+  createNotification,
+  createNotificationSafe,
+  createNotificationInTransaction,
+  listActiveAdminIds,
+  notifyAdmins,
+  deferNotification,
+  flushDeferredNotifications,
+  normalizeInput,
+  isUuid,
+};

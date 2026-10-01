@@ -1,70 +1,34 @@
-const db = require('../utils/db');
-const { userEmail } = require('./emailService');
-const { enqueueNotification } = require('./notificationQueueService');
-const { getBrand } = require('../config/brand');
+const { createNotificationSafe } = require('./notificationService');
 
 async function notifyInstructorCatalogApproved({ instructorId, examId, examTitle }) {
-  const title = 'Kataloq təsdiqi';
-  const body = `«${examTitle}» imtahanınız təsdiqləndi və sertifikatlı imtahan kataloqunda yayımlandı.`;
-
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, 'catalog_exam_approved', FALSE, $4::jsonb)`,
-      [instructorId, title, body, JSON.stringify({ exam_id: examId })],
-    )
-    .catch((e) => console.error('catalog approve notification', e.message));
-
-  try {
-    const to = await userEmail(instructorId);
-    if (!to) return;
-    const brand = getBrand().name;
-    await enqueueNotification({
-      channel: 'email',
-      event_type: 'catalog_exam_approved',
-      unique_key: `catalog_exam_approved_${examId}`,
-      instructor_id: instructorId,
-      to_addr: to,
-      subject: `${brand} — ${title}`,
-      body: `${body}\n\n${brand} → İmtahanlar bölməsindən izləyə bilərsiniz.`,
-      context: { exam_id: examId },
-    });
-  } catch (e) {
-    console.error('catalog approve email', e.message);
-  }
+  return createNotificationSafe({
+    recipientId: instructorId,
+    category: 'assessment',
+    eventType: 'catalog_exam_approved',
+    params: { examTitle: String(examTitle || '').trim() },
+    meta: { exam_id: examId },
+    relatedEntityType: 'exam',
+    relatedEntityId: examId,
+    dedupeKey: `catalog_exam_approved:${examId}`,
+    email: true,
+  });
 }
 
+/** Hər rədd ayrıca hadisədir (yenidən göndərilib yenə rədd edilə bilər); dəqiqə dəqiqliyi təkrar kliki birləşdirir. */
 async function notifyInstructorCatalogRejected({ instructorId, examId, examTitle, reason }) {
-  const title = 'Kataloq rəddi';
-  const body =
-    `«${examTitle}» imtahanınız kataloq üçün rədd edildi: ${reason}. ` +
-    'Düzəliş edib yenidən «Kataloqda göstərilsin» seçimini aktivləşdirə bilərsiniz.';
-
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, 'catalog_exam_rejected', FALSE, $4::jsonb)`,
-      [instructorId, title, body, JSON.stringify({ exam_id: examId, reason })],
-    )
-    .catch((e) => console.error('catalog reject notification', e.message));
-
-  try {
-    const to = await userEmail(instructorId);
-    if (!to) return;
-    const brand = getBrand().name;
-    await enqueueNotification({
-      channel: 'email',
-      event_type: 'catalog_exam_rejected',
-      unique_key: `catalog_exam_rejected_${examId}_${Date.now()}`,
-      instructor_id: instructorId,
-      to_addr: to,
-      subject: `${brand} — ${title}`,
-      body: `${body}\n\n${brand} → İmtahanı redaktə edib yenidən göndərin.`,
-      context: { exam_id: examId, reason },
-    });
-  } catch (e) {
-    console.error('catalog reject email', e.message);
-  }
+  const minute = new Date().toISOString().slice(0, 16);
+  return createNotificationSafe({
+    recipientId: instructorId,
+    category: 'assessment',
+    eventType: 'catalog_exam_rejected',
+    priority: 'HIGH',
+    params: { examTitle: String(examTitle || '').trim(), reason: String(reason || '').trim() },
+    meta: { exam_id: examId, reason },
+    relatedEntityType: 'exam',
+    relatedEntityId: examId,
+    dedupeKey: `catalog_exam_rejected:${examId}:${minute}`,
+    email: true,
+  });
 }
 
 module.exports = { notifyInstructorCatalogApproved, notifyInstructorCatalogRejected };

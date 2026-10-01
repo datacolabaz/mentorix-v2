@@ -212,6 +212,7 @@ async function notifyStudentsAfterAiPublish(assignment, instructorId, database =
       id: assignment.assignmentId,
       title: assignment.title,
       due_date: assignment.dueDate,
+      instructor_id: instructorId,
     },
     studentIds,
     iu[0]?.full_name || '',

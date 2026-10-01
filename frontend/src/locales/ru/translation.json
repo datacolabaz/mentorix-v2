@@ -1974,6 +1974,126 @@
       "open_grading_pending": {
         "title": "Открытые ответы ждут проверки",
         "body": "Ответов, ожидающих вашего подтверждения: {{count}} — «{{examTitle}}»."
+      },
+      "assignment_late_submitted": {
+        "title": "Задание сдано с опозданием",
+        "body": "{{studentName}} сдал(а) задание «{{assignmentTitle}}» после срока."
+      },
+      "exam_submitted": {
+        "title": "Экзамен сдан",
+        "body": "{{studentName}} сдал(а) экзамен «{{examTitle}}»."
+      },
+      "exam_submitted_review": {
+        "title": "Экзамен ждёт проверки",
+        "body": "{{studentName}} сдал(а) «{{examTitle}}» — открытые ответы ждут вашей проверки."
+      },
+      "exam_auto_submitted": {
+        "title": "Время вышло — отправлено автоматически",
+        "body": "У {{studentName}} закончилось время на экзамене «{{examTitle}}», ответы отправлены автоматически."
+      },
+      "exam_auto_submitted_review": {
+        "title": "Отправлено автоматически — ждёт проверки",
+        "body": "У {{studentName}} закончилось время на «{{examTitle}}»; открытые ответы ждут вашей проверки."
+      },
+      "exam_expired_no_answers": {
+        "title": "Попытки истекли без ответов",
+        "body": "У некоторых учеников закончилось время на экзамене «{{examTitle}}» без ответов."
+      },
+      "catalog_exam_approved": {
+        "title": "Одобрено для каталога",
+        "body": "Ваш экзамен «{{examTitle}}» одобрен и опубликован в каталоге сертифицированных экзаменов."
+      },
+      "catalog_exam_rejected": {
+        "title": "Отказ в каталоге",
+        "body": "Ваш экзамен «{{examTitle}}» не принят в каталог: {{reason}}. Исправьте его и отправьте снова."
+      },
+      "exam_access_approved": {
+        "title": "Доступ к экзамену открыт",
+        "body": "Преподаватель открыл вам доступ к экзамену «{{examTitle}}». Можно начинать."
+      },
+      "exam_access_rejected": {
+        "title": "В доступе к экзамену отказано",
+        "body": "Преподаватель отклонил ваш запрос на экзамен «{{examTitle}}»."
+      },
+      "exam_result_released": {
+        "title": "Результат опубликован",
+        "body": "Результат экзамена «{{examTitle}}» доступен."
+      },
+      "task_access_rejected": {
+        "title": "В доступе к заданию отказано",
+        "body": "Преподаватель отклонил ваш запрос на задание «{{assignmentTitle}}»."
+      },
+      "join_request_approved": {
+        "title": "Заявка одобрена",
+        "body": "Вас приняли в группу «{{groupName}}»."
+      },
+      "join_request_rejected": {
+        "title": "Заявка отклонена",
+        "body": "Ваша заявка на вступление в группу «{{groupName}}» отклонена."
+      },
+      "assignment_due_soon": {
+        "title": "Напоминание о задании",
+        "body": "До срока сдачи «{{assignmentTitle}}» осталось меньше 24 часов ({{dueDate}})."
+      },
+      "assignment_overdue": {
+        "title": "Задание просрочено",
+        "body": "Срок сдачи «{{assignmentTitle}}» прошёл. Сдайте задание или свяжитесь с преподавателем."
+      },
+      "assignment_reviewed": {
+        "title": "Задание проверено",
+        "body": "Преподаватель проверил задание «{{assignmentTitle}}». Откройте его, чтобы увидеть результат."
+      },
+      "assignment_returned": {
+        "title": "Задание возвращено на доработку",
+        "body": "Преподаватель вернул задание «{{assignmentTitle}}» на доработку. Отправьте его снова."
+      },
+      "material_shared": {
+        "title": "Новый материал",
+        "body": "{{instructorName}} поделился(-ась) с вами материалом «{{materialTitle}}»."
+      },
+      "partner_application_approved": {
+        "title": "Заявка партнёра одобрена",
+        "body": "Ваша заявка в партнёрскую программу одобрена. Реферальная ссылка доступна в кабинете."
+      },
+      "partner_application_rejected": {
+        "title": "Заявка партнёра отклонена",
+        "body": "Ваша заявка в партнёрскую программу отклонена."
+      },
+      "partner_suspended": {
+        "title": "Партнёрский аккаунт приостановлен",
+        "body": "Ваш партнёрский аккаунт приостановлен. Обратитесь в поддержку."
+      },
+      "partner_commission_approved": {
+        "title": "Комиссия одобрена",
+        "body": "Комиссия {{amount}} AZN за реферальный платёж зачислена на ваш баланс."
+      },
+      "partner_payout_approved": {
+        "title": "Выплата одобрена",
+        "body": "Ваш запрос на выплату {{amount}} AZN одобрен."
+      },
+      "partner_payout_paid": {
+        "title": "Выплата отправлена",
+        "body": "{{amount}} AZN выплачено на ваш счёт"
+      },
+      "partner_payout_rejected": {
+        "title": "Запрос на выплату отклонён",
+        "body": "Ваш запрос на выплату {{amount}} AZN отклонён. Комиссии возвращены на баланс."
+      },
+      "partner_application_submitted": {
+        "title": "Новая заявка партнёра",
+        "body": "{{partnerName}} подал(а) заявку в партнёрскую программу."
+      },
+      "partner_payout_requested": {
+        "title": "Запрос на выплату ждёт проверки",
+        "body": "{{partnerName}} запросил(а) выплату {{amount}} AZN."
+      },
+      "notification_delivery_failed": {
+        "title": "Уведомления не доставлены",
+        "body": "С {{from}} до {{to}} (UTC) не доставлено email-уведомлений: {{count}}."
+      },
+      "admin_login_failures": {
+        "title": "Неудачные входы администратора",
+        "body": "Неудачных попыток входа в админ-аккаунт {{account}} за последние {{minutes}} мин: {{count}}."
       }
     }
   },

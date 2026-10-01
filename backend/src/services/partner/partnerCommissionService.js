@@ -145,6 +145,21 @@ async function createPartnerCommissionIfEligible(client, payment, { reviewedBy =
       client
     );
 
+    if (attr.partner_user_id) {
+      const { createNotificationInTransaction } = require('../notificationService');
+      await createNotificationInTransaction(client, {
+        recipientId: attr.partner_user_id,
+        category: 'partner',
+        eventType: 'partner_commission_approved',
+        params: { amount: (commissionCents / 100).toFixed(2) },
+        meta: { commission_id: rows[0].id, partner_id: attr.partner_id, amount_cents: commissionCents },
+        relatedEntityType: 'partner',
+        relatedEntityId: attr.partner_id,
+        dedupeKey: `partner_commission_approved:${rows[0].id}`,
+        email: true,
+      });
+    }
+
     return { created: true, commission: rows[0] };
   } catch (err) {
     // Unique violation → concurrent duplicate approve

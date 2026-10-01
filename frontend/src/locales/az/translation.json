@@ -1981,6 +1981,126 @@
       "open_grading_pending": {
         "title": "Açıq sual qiymətləndirməsi",
         "body": "{{count}} tələbənin cavabı təsdiqinizi gözləyir — «{{examTitle}}»."
+      },
+      "assignment_late_submitted": {
+        "title": "Tapşırıq gecikmə ilə təslim edildi",
+        "body": "{{studentName}} «{{assignmentTitle}}» tapşırığını son tarixdən sonra təslim etdi."
+      },
+      "exam_submitted": {
+        "title": "İmtahan təqdim edildi",
+        "body": "{{studentName}} «{{examTitle}}» imtahanını təqdim etdi."
+      },
+      "exam_submitted_review": {
+        "title": "İmtahan yoxlama gözləyir",
+        "body": "{{studentName}} «{{examTitle}}» imtahanını təqdim etdi — açıq cavablar yoxlamanızı gözləyir."
+      },
+      "exam_auto_submitted": {
+        "title": "Vaxt bitdi — avtomatik təqdim edildi",
+        "body": "{{studentName}} üçün «{{examTitle}}» imtahanının vaxtı bitdi, cavablar avtomatik təqdim edildi."
+      },
+      "exam_auto_submitted_review": {
+        "title": "Avtomatik təqdim — yoxlama gözləyir",
+        "body": "{{studentName}} üçün «{{examTitle}}» imtahanının vaxtı bitdi; açıq cavablar yoxlamanızı gözləyir."
+      },
+      "exam_expired_no_answers": {
+        "title": "Cavabsız bitən cəhdlər",
+        "body": "«{{examTitle}}» imtahanında bəzi tələbələrin vaxtı cavab vermədən bitdi."
+      },
+      "catalog_exam_approved": {
+        "title": "Kataloq təsdiqi",
+        "body": "«{{examTitle}}» imtahanınız təsdiqləndi və sertifikatlı imtahan kataloqunda yayımlandı."
+      },
+      "catalog_exam_rejected": {
+        "title": "Kataloq rəddi",
+        "body": "«{{examTitle}}» imtahanınız kataloq üçün rədd edildi: {{reason}}. Düzəliş edib yenidən «Kataloqda göstərilsin» seçimini aktivləşdirə bilərsiniz."
+      },
+      "exam_access_approved": {
+        "title": "İmtahana giriş təsdiqləndi",
+        "body": "«{{examTitle}}» üçün müəlliminiz icazə verdi. İndi imtahana başlaya bilərsiniz."
+      },
+      "exam_access_rejected": {
+        "title": "İmtahana giriş rədd edildi",
+        "body": "«{{examTitle}}» üçün müəllim sorğunuzu rədd etdi."
+      },
+      "exam_result_released": {
+        "title": "Nəticə açıqlandı",
+        "body": "«{{examTitle}}» imtahanının nəticəsi açıqlandı."
+      },
+      "task_access_rejected": {
+        "title": "Tapşırığa giriş rədd edildi",
+        "body": "«{{assignmentTitle}}» üçün müəllim sorğunuzu rədd etdi."
+      },
+      "join_request_approved": {
+        "title": "Qoşulma sorğusu təsdiqləndi",
+        "body": "«{{groupName}}» qrupuna qəbul olundunuz."
+      },
+      "join_request_rejected": {
+        "title": "Qoşulma sorğusu rədd edildi",
+        "body": "«{{groupName}}» qrupuna qoşulma sorğunuz rədd edildi."
+      },
+      "assignment_due_soon": {
+        "title": "Tapşırıq xatırlatması",
+        "body": "«{{assignmentTitle}}» üçün son tarixə 24 saatdan az qalıb ({{dueDate}})."
+      },
+      "assignment_overdue": {
+        "title": "Tapşırıq gecikib",
+        "body": "«{{assignmentTitle}}» üçün son tarix keçib. Təslim edin və ya müəllimlə əlaqə saxlayın."
+      },
+      "assignment_reviewed": {
+        "title": "Tapşırıq yoxlanıldı",
+        "body": "«{{assignmentTitle}}» üçün müəllim rəy bildirdi. Nəticəni görmək üçün tapşırığı açın."
+      },
+      "assignment_returned": {
+        "title": "Tapşırıq düzəlişə qaytarıldı",
+        "body": "Müəlliminiz «{{assignmentTitle}}» tapşırığını düzəliş üçün qaytardı. Yenidən təslim edin."
+      },
+      "material_shared": {
+        "title": "Yeni material",
+        "body": "{{instructorName}} sizinlə «{{materialTitle}}» materialını paylaşdı."
+      },
+      "partner_application_approved": {
+        "title": "Partnyor müraciəti təsdiqləndi",
+        "body": "Partnyor proqramına müraciətiniz təsdiqləndi. Referal linkiniz panelinizdə hazırdır."
+      },
+      "partner_application_rejected": {
+        "title": "Partnyor müraciəti rədd edildi",
+        "body": "Partnyor proqramına müraciətiniz rədd edildi."
+      },
+      "partner_suspended": {
+        "title": "Partnyor hesabı dayandırıldı",
+        "body": "Partnyor hesabınız dayandırıldı. Ətraflı məlumat üçün dəstəklə əlaqə saxlayın."
+      },
+      "partner_commission_approved": {
+        "title": "Komissiya təsdiqləndi",
+        "body": "Referal ödənişi üzrə {{amount}} ₼ komissiya balansınıza əlavə olundu."
+      },
+      "partner_payout_approved": {
+        "title": "Ödəniş təsdiqləndi",
+        "body": "{{amount}} ₼ ödəniş sorğunuz təsdiqləndi."
+      },
+      "partner_payout_paid": {
+        "title": "Ödəniş uğurlu",
+        "body": "{{amount}} ₼ uğurla hesabınıza ödənildi"
+      },
+      "partner_payout_rejected": {
+        "title": "Ödəniş sorğusu rədd edildi",
+        "body": "{{amount}} ₼ ödəniş sorğunuz rədd edildi. Komissiyalar balansınıza qaytarıldı."
+      },
+      "partner_application_submitted": {
+        "title": "Yeni partnyor müraciəti",
+        "body": "{{partnerName}} partnyor proqramına müraciət etdi."
+      },
+      "partner_payout_requested": {
+        "title": "Ödəniş sorğusu yoxlama gözləyir",
+        "body": "{{partnerName}} {{amount}} ₼ ödəniş tələb etdi."
+      },
+      "notification_delivery_failed": {
+        "title": "Bildirişlər çatdırılmadı",
+        "body": "{{from}}–{{to}} (UTC) arasında {{count}} email bildirişi çatdırılmadı."
+      },
+      "admin_login_failures": {
+        "title": "Admin girişində uğursuz cəhdlər",
+        "body": "{{account}} admin hesabına son {{minutes}} dəqiqədə {{count}} uğursuz giriş cəhdi olub."
       }
     }
   },

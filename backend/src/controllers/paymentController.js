@@ -838,25 +838,7 @@ const confirmRestorePayments = async (req, res) => {
   }
 };
 
-async function ensureNotificationOnce({ user_id, type, title, body }) {
-  // Dedupe: same user+type+body in last 45 days
-  const { rows } = await db.query(
-    `SELECT 1 FROM notifications
-     WHERE user_id = $1
-       AND type = $2
-       AND body = $3
-       AND created_at > NOW() - INTERVAL '45 days'
-     LIMIT 1`,
-    [user_id, type, body]
-  );
-  if (rows.length) return false;
-  await db.query(
-    `INSERT INTO notifications (user_id, title, body, type, is_read)
-     VALUES ($1,$2,$3,$4,FALSE)`,
-    [user_id, title, body, type]
-  );
-  return true;
-}
+const { notifyBillingOnce } = require('../services/billingNotifications');
 
 function isMissingPaymentsStatusColumn(err) {
   const msg = err && err.message ? String(err.message) : '';
@@ -1360,19 +1342,27 @@ const listMyPayments = async (req, res) => {
           const msg =
             'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
 
-          await ensureNotificationOnce({
-            user_id: enrollmentOut.student_id,
+          const monthlyKey = `billing_monthly_2d:${enrollmentOut.id}:${monthlyProgress.cycle_end_ymd || todayBaku}`;
+          await notifyBillingOnce({
+            userId: enrollmentOut.student_id,
             type: 'billing_monthly_2d_student',
             title: 'Abunəlik bitir',
             body: msg,
+            priority: 'HIGH',
+            meta: { enrollment_id: enrollmentOut.id },
+            providerWorkspaceId: enrollmentOut.instructor_id || null,
+            dedupeKey: monthlyKey,
           });
 
           if (enrollmentOut.instructor_id) {
-            await ensureNotificationOnce({
-              user_id: enrollmentOut.instructor_id,
+            await notifyBillingOnce({
+              userId: enrollmentOut.instructor_id,
               type: 'billing_monthly_2d_instructor',
               title: 'Abunəlik bitir',
               body: msg,
+              meta: { enrollment_id: enrollmentOut.id, student_id: enrollmentOut.student_id },
+              providerWorkspaceId: enrollmentOut.instructor_id,
+              dedupeKey: monthlyKey,
             });
           }
         }
@@ -1758,20 +1748,29 @@ const listMyPayments = async (req, res) => {
       const instId = enrollment?.instructor_id || null;
       const studentBody =
         'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
-      await ensureNotificationOnce({
-        user_id: enrollment.student_id,
+      const pkgCycle = Number(enrollment.billing_cycle || 1) || 1;
+      const packKey = `billing_pkg_last_lesson:${enrollment.id}:${pkgCycle}`;
+      await notifyBillingOnce({
+        userId: enrollment.student_id,
         type: 'billing_pkg_last_lesson_student',
         title: 'Paket bitir',
         body: studentBody,
+        priority: 'HIGH',
+        meta: { enrollment_id: enrollment.id, billing_cycle: pkgCycle },
+        providerWorkspaceId: instId,
+        dedupeKey: packKey,
       });
       if (instId) {
         const instBody =
           'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
-        await ensureNotificationOnce({
-          user_id: instId,
+        await notifyBillingOnce({
+          userId: instId,
           type: 'billing_pkg_last_lesson_instructor',
           title: 'Paket bitir',
           body: instBody,
+          meta: { enrollment_id: enrollment.id, student_id: enrollment.student_id, billing_cycle: pkgCycle },
+          providerWorkspaceId: instId,
+          dedupeKey: packKey,
         });
       }
     }
@@ -2142,11 +2141,14 @@ const confirmDuePayment = async (req, res) => {
 
     const [dd, mm, yyyy] = due_ymd.split('-');
     const dueLabel = `${dd}.${mm}.${yyyy}`;
-    await ensureNotificationOnce({
-      user_id: req.user.id,
+    await notifyBillingOnce({
+      userId: req.user.id,
       type: 'payment_confirmed',
       title: 'Ödəniş təsdiqləndi',
       body: `${studentName}: ${dueLabel} — ${amt} ₼`,
+      meta: { enrollment_id, payment_id: inserted[0]?.id || null },
+      providerWorkspaceId: req.user.id,
+      dedupeKey: `payment_confirmed:${inserted[0]?.id || `${enrollment_id}:${due_ymd}`}`,
     });
 
     res.json({ success: true, payment: inserted[0], due_ymd, amount: amt });
@@ -2243,11 +2245,14 @@ const confirmPackPayment = async (req, res) => {
 
     const [dd, mm, yyyy] = payDate.split('-');
     const dueLabel = `${dd}.${mm}.${yyyy}`;
-    await ensureNotificationOnce({
-      user_id: req.user.id,
+    await notifyBillingOnce({
+      userId: req.user.id,
       type: 'payment_confirmed',
       title: 'Paket ödənişi təsdiqləndi',
       body: `${studentName}: Paket #${package_number} — ${amt} ₼ (${dueLabel})`,
+      meta: { enrollment_id, payment_id: inserted[0]?.id || null, billing_cycle: package_number },
+      providerWorkspaceId: req.user.id,
+      dedupeKey: `payment_confirmed:${inserted[0]?.id || `${enrollment_id}:pkg${package_number}`}`,
     });
 
     res.json({
@@ -2626,11 +2631,13 @@ const confirmAllLegacyPackPayments = async (req, res) => {
 
     const total_amount = roundMoney(inserted.reduce((s, r) => s + (Number(r.amount) || 0), 0));
     const studentName = String(enRow.full_name || 'Tələbə').trim();
-    await ensureNotificationOnce({
-      user_id: enRow.student_id,
+    await notifyBillingOnce({
+      userId: enRow.student_id,
       type: 'payment',
       title: 'Ödəniş qeydləri yeniləndi',
       body: `${studentName}: ${inserted.length} keçmiş paket ödənişi sistemə əlavə olundu (${total_amount} ₼)`,
+      meta: { enrollment_id, payment_ids: inserted.map((r) => r.id).slice(0, 50) },
+      dedupeKey: `payment_history:${enrollment_id}:${inserted[0]?.id || 'none'}`,
     });
 
     res.json({

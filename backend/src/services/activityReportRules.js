@@ -187,6 +187,9 @@ function reminderEligibleFor(entityType, s) {
   return false;
 }
 
+/** Eyni tələbəyə eyni material/tapşırıq üçün bu müddətdə ikinci xatırlatma getmir (əl ilə və avtomatik). */
+const REMINDER_COOLDOWN_HOURS = 6;
+
 const REMINDER_NOTIFICATION_TYPES = Object.freeze({
   material: 'material_reminder',
   assignment: 'assignment_reminder',
@@ -310,6 +313,7 @@ module.exports = {
   enrichReportRow,
   earliestIso,
   reminderEligibleFor,
+  REMINDER_COOLDOWN_HOURS,
   REMINDER_NOTIFICATION_TYPES,
   normalizeLocale,
   reminderMessage,

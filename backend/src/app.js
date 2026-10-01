@@ -17,6 +17,7 @@ const { runBillingNotifications } = require('./jobs/billingNotifications');
 const { runPackReminders } = require('./jobs/packReminders');
 const { expireAbandonedBillingPayments, markPastDueSubscriptions } = require('./jobs/billingPaymentsReaper');
 const { runNotificationQueueOnce } = require('./jobs/notificationQueueWorker');
+const { runNotificationDeliveryFailureAlerts } = require('./jobs/notificationDeliveryFailureAlerts');
 const { describeEmailConfig } = require('./services/email/emailConfig');
 const { runAssignmentNotifications } = require('./jobs/assignmentNotifications');
 const { runExamActivitySweep } = require('./jobs/examActivitySweep');
@@ -201,6 +202,11 @@ cron.schedule('*/15 * * * *', () => {
 // Notification queue retry worker: every minute
 cron.schedule('* * * * *', () => {
   runNotificationQueueOnce().catch((e) => console.error('notification queue cron', e.message));
+});
+
+// Admin summary of failed notification emails in the previous hour: hourly
+cron.schedule('5 * * * *', () => {
+  runNotificationDeliveryFailureAlerts().catch((e) => console.error('notification delivery failure alerts cron', e.message));
 });
 
 // Storage usage reconciliation: every 6 hours

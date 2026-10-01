@@ -364,12 +364,25 @@ const quickInstructorNotification = async (req, res) => {
     const title = 'Sürətli Bildiriş';
 
     if (safeMethod === 'internal') {
-      await db.query(
-        `INSERT INTO notifications (user_id, title, body, type, is_read)
-         SELECT unnest($1::uuid[]), $2, $3, $4, FALSE`,
-        [allowedIds, title, msg, 'instructor_panel'],
-      );
-      return res.json({ success: true, method: 'internal', sent: allowedIds.length });
+      const { createNotificationSafe } = require('../services/notificationService');
+      const batchId = require('crypto').randomUUID();
+      let sent = 0;
+      for (const studentId of allowedIds) {
+        const out = await createNotificationSafe({
+          recipientId: studentId,
+          category: 'group',
+          eventType: 'instructor_panel',
+          title,
+          body: msg,
+          meta: { batch_id: batchId },
+          actorUserId: instructorId,
+          providerWorkspaceId: instructorId,
+          dedupeKey: `instructor_panel:${batchId}`,
+          email: false,
+        });
+        if (out.created) sent += 1;
+      }
+      return res.json({ success: true, method: 'internal', sent });
     }
 
     if (safeMethod === 'sms' || safeMethod === 'whatsapp') {

@@ -145,6 +145,9 @@ async function notifyMarketplaceSearchOpportunity({
 
   const title = opportunityTitle('az');
   const body = buildOpportunityBody(areaLabel, subjectLabel, plansMap, 'az');
+  const { createNotificationSafe } = require('./notificationService');
+  const searchKeyHash = require('crypto').createHash('sha1').update(searchKey).digest('hex').slice(0, 16);
+  const dedupeBucket = Math.floor(Date.now() / (Number(DEDUPE_HOURS) * 3600 * 1000));
   let notified = 0;
 
   for (const row of instructors) {
@@ -161,24 +164,25 @@ async function notifyMarketplaceSearchOpportunity({
     );
     if (dup[0]) continue;
 
-    await db.query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, $4, FALSE, $5::jsonb)`,
-      [
-        userId,
-        title,
-        body,
-        NOTIFY_TYPE,
-        JSON.stringify({
-          search_key: searchKey,
-          category_id: categoryId || null,
-          category_name: subjectLabel,
-          area_id: areaId || null,
-          area_name: areaLabel,
-        }),
-      ],
-    );
-    notified += 1;
+    const out = await createNotificationSafe({
+      recipientId: userId,
+      category: 'system',
+      eventType: NOTIFY_TYPE,
+      priority: 'LOW',
+      title,
+      body,
+      meta: {
+        search_key: searchKey,
+        category_id: categoryId || null,
+        category_name: subjectLabel,
+        area_id: areaId || null,
+        area_name: areaLabel,
+      },
+      providerWorkspaceId: userId,
+      dedupeKey: `${NOTIFY_TYPE}:${searchKeyHash}:${dedupeBucket}`,
+      email: false,
+    });
+    if (out.created) notified += 1;
   }
 
   return { notified, search_key: searchKey };

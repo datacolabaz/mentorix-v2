@@ -2,25 +2,7 @@ const db = require('../utils/db');
 const { computeMonthlyCycleProgress, getTodayBakuYmd, toYmd } = require('../services/subscriptionBilling');
 const { sendSms } = require('../services/smsService');
 const { SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS } = require('../services/systemGroupGuards');
-
-async function ensureNotificationOnce({ user_id, type, title, body }) {
-  const { rows } = await db.query(
-    `SELECT 1 FROM notifications
-     WHERE user_id = $1
-       AND type = $2
-       AND body = $3
-       AND created_at > NOW() - INTERVAL '45 days'
-     LIMIT 1`,
-    [user_id, type, body]
-  );
-  if (rows.length) return false;
-  await db.query(
-    `INSERT INTO notifications (user_id, title, body, type, is_read)
-     VALUES ($1,$2,$3,$4,FALSE)`,
-    [user_id, title, body, type]
-  );
-  return true;
-}
+const { notifyBillingOnce } = require('../services/billingNotifications');
 
 const BILLING_MESSAGE =
   'Hörmətli tələbə, aylıq abunəliyinizin bitməsinə 2 gün qalıb. Davam etmək üçün ödənişi yeniləməyiniz xahiş olunur.';
@@ -87,11 +69,16 @@ async function runMonthlyTwoDayNotifications() {
     const prog = computeMonthlyCycleProgress({ anchor_ymd: anchorYmd, today_ymd: todayBaku });
     if (prog?.days_remaining !== 2) continue;
 
-    const a = await ensureNotificationOnce({
-      user_id: r.student_id,
+    const monthlyKey = `billing_monthly_2d:${r.enrollment_id}:${prog.cycle_end_ymd || todayBaku}`;
+    const a = await notifyBillingOnce({
+      userId: r.student_id,
       type: 'billing_monthly_2d_student',
       title: 'Abunəlik bitir',
       body: BILLING_MESSAGE,
+      priority: 'HIGH',
+      meta: { enrollment_id: r.enrollment_id },
+      providerWorkspaceId: r.instructor_id || null,
+      dedupeKey: monthlyKey,
     });
     if (a) sent += 1;
 
@@ -110,11 +97,14 @@ async function runMonthlyTwoDayNotifications() {
     });
 
     if (r.instructor_id) {
-      const b = await ensureNotificationOnce({
-        user_id: r.instructor_id,
+      const b = await notifyBillingOnce({
+        userId: r.instructor_id,
         type: 'billing_monthly_2d_instructor',
         title: 'Abunəlik bitir',
         body: BILLING_MESSAGE,
+        meta: { enrollment_id: r.enrollment_id, student_id: r.student_id },
+        providerWorkspaceId: r.instructor_id,
+        dedupeKey: monthlyKey,
       });
       if (b) sent += 1;
     }
@@ -239,11 +229,16 @@ async function runLessonPackLastLessonNotifications() {
     );
     if (dayDiff !== 1) continue;
 
-    const a = await ensureNotificationOnce({
-      user_id: r.student_id,
+    const packKey = `billing_pkg_last_lesson:${r.enrollment_id}:${cycle}`;
+    const a = await notifyBillingOnce({
+      userId: r.student_id,
       type: 'billing_pkg_last_lesson_student',
       title: 'Paket bitir',
       body: BILLING_MESSAGE,
+      priority: 'HIGH',
+      meta: { enrollment_id: r.enrollment_id, billing_cycle: cycle },
+      providerWorkspaceId: r.instructor_id || null,
+      dedupeKey: packKey,
     });
     if (a) sent += 1;
 
@@ -261,11 +256,14 @@ async function runLessonPackLastLessonNotifications() {
     });
 
     if (r.instructor_id) {
-      const b = await ensureNotificationOnce({
-        user_id: r.instructor_id,
+      const b = await notifyBillingOnce({
+        userId: r.instructor_id,
         type: 'billing_pkg_last_lesson_instructor',
         title: 'Paket bitir',
         body: BILLING_MESSAGE,
+        meta: { enrollment_id: r.enrollment_id, student_id: r.student_id, billing_cycle: cycle },
+        providerWorkspaceId: r.instructor_id,
+        dedupeKey: packKey,
       });
       if (b) sent += 1;
     }

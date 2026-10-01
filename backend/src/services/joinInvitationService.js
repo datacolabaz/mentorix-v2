@@ -202,6 +202,32 @@ async function notifyInstructorJoinRequest({ instructorId, studentId, studentNam
   });
 }
 
+/** Tələbəyə qoşulma sorğusunun nəticəsi (rədd səbəbi bildirişə yazılmır). */
+async function notifyStudentJoinRequestResolved({ studentId, instructorId, groupId, requestId, approved }) {
+  const { createNotificationSafe } = require('./notificationService');
+  let groupName = '';
+  if (groupId) {
+    const { rows } = await db
+      .query(`SELECT name FROM instructor_groups WHERE id = $1 LIMIT 1`, [groupId])
+      .catch(() => ({ rows: [] }));
+    groupName = String(rows[0]?.name || '').trim();
+  }
+  return createNotificationSafe({
+    recipientId: studentId,
+    category: 'group',
+    eventType: approved ? 'join_request_approved' : 'join_request_rejected',
+    params: { groupName: groupName || 'Qrup' },
+    meta: approved ? { href: '/student/groups' } : {},
+    relatedEntityType: approved && groupId ? 'group' : null,
+    relatedEntityId: approved && groupId ? groupId : null,
+    actorUserId: instructorId,
+    providerWorkspaceId: instructorId,
+    groupId: groupId || null,
+    dedupeKey: `join_request_resolved:${requestId}`,
+    email: true,
+  });
+}
+
 async function createJoinRequest({
   studentId,
   code,
@@ -642,6 +668,8 @@ async function approveJoinRequest(requestId, instructorId) {
     throw err;
   }
 
+  await notifyStudentJoinRequestResolved({ studentId, instructorId, groupId, requestId, approved: true });
+
   const packLabel = defaults.billing_type === '12_lessons' ? '12 dərs' : '8 dərs';
   const fee =
     defaults.package_fee != null && Number.isFinite(defaults.package_fee)
@@ -692,6 +720,14 @@ async function rejectJoinRequest(requestId, instructorId, reason) {
       `UPDATE enrollments SET status = 'rejected' WHERE id = $1`,
       [req.enrollment_id],
     );
+  });
+
+  await notifyStudentJoinRequestResolved({
+    studentId: req.student_id,
+    instructorId,
+    groupId: req.group_id,
+    requestId,
+    approved: false,
   });
 
   return { message: 'Sorğu rədd edildi' };

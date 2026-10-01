@@ -23,11 +23,9 @@ const {
   planReminderRecipients,
   previewMessages,
   sanitizeTimelineEvent,
+  REMINDER_COOLDOWN_HOURS,
 } = require('./activityReportRules');
 const { deliverReminderNotification } = require('./reminderDelivery');
-
-/** Eyni tələbəyə eyni material/tapşırıq üçün bu müddətdə ikinci xatırlatma getmir. */
-const REMINDER_COOLDOWN_HOURS = 6;
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -655,7 +653,10 @@ async function previewReminders(instructorId, entityType, entityId, { studentIds
  * Müəllimin təsdiqindən sonra göndərmə. Eyni obyekt üçün paralel iki sorğu advisory lock ilə növbəyə düşür və
  * soyuma müddəti kilidin içində yenidən yoxlanılır — ikiqat klik eyni tələbəyə ikinci xatırlatma yaratmır.
  * Hər alıcı üçün reminder_log-a çatdırılma nəticəsi (sent | failed | skipped_recent) və jurnala reminder_sent yazılır.
- * Avtomatik xatırlatma yoxdur: bu funksiya yalnız müəllimin əl ilə göndərməsindən çağırılır.
+ * Bu funksiya yalnız müəllimin əl ilə göndərməsindən çağırılır. Əl ilə xatırlatma yalnız reminder_log-da
+ * izlənir: student_assignments.reminder_sent_at avtomatik 24 saatlıq xatırlatmaya məxsusdur və burada
+ * yazılmır (əks halda əl ilə xatırlatma avtomatiki həmişəlik söndürərdi). Avtomatik iş yalnız son
+ * REMINDER_COOLDOWN_HOURS saatdakı əl ilə xatırlatmanı gözləyir (jobs/assignmentNotifications.js).
  */
 async function sendReminders(instructorId, entityType, entityId, { studentIds = null, now = new Date() } = {}) {
   const ctx = await loadReminderContext(instructorId, entityType, entityId, now);
@@ -733,12 +734,6 @@ async function sendReminders(instructorId, entityType, entityId, { studentIds = 
       if (!delivered) {
         result.failed += 1;
         continue;
-      }
-      if (entityType === 'assignment') {
-        await client.query(
-          `UPDATE student_assignments SET reminder_sent_at = $3 WHERE assignment_id = $1 AND student_id = $2`,
-          [ctx.id, s.student_id, now],
-        );
       }
       result.sent += 1;
       result.recipients.push(s.student_id);

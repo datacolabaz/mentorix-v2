@@ -20,7 +20,7 @@ async function requestPayout(partnerId, userId) {
 
   const minCents = Number(partner.minimum_payout_cents) || PARTNER_DEFAULTS.minimum_payout_cents;
 
-  return db.transaction(async (client) => {
+  const payout = await db.transaction(async (client) => {
     const { rows: available } = await client.query(
       `SELECT id, commission_cents
        FROM partner_commissions
@@ -71,38 +71,68 @@ async function requestPayout(partnerId, userId) {
 
     return payout;
   });
+
+  const { deferNotification } = require('../notificationService');
+  deferNotification('partner_payout_requested', () => notifyAdminsPayoutRequested(payout, partnerId));
+  return payout;
 }
 
 function formatAznAmount(cents) {
   return (Math.round(Number(cents) || 0) / 100).toFixed(2);
 }
 
-async function notifyPartnerPayoutPaid(payout) {
-  if (!payout?.partner_id) return;
+const PAYOUT_STATUS_EVENTS = Object.freeze({
+  approved: 'partner_payout_approved',
+  paid: 'partner_payout_paid',
+  rejected: 'partner_payout_rejected',
+});
+
+/** Partnyora ödəniş sorğusunun yeni statusu (status həqiqətən dəyişəndə). */
+async function notifyPartnerPayoutStatus(payout, status) {
+  const eventType = PAYOUT_STATUS_EVENTS[status];
+  if (!eventType || !payout?.partner_id) return null;
   const { rows } = await db.query(`SELECT user_id FROM partners WHERE id = $1 LIMIT 1`, [payout.partner_id]);
   const userId = rows[0]?.user_id;
-  if (!userId) return;
-
+  if (!userId) return null;
   const amount = formatAznAmount(payout.amount_cents);
-  const title = 'Ödəniş uğurlu';
-  const body = `${amount} ₼ uğurla hesabınıza ödənildi`;
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, 'partner_payout_paid', FALSE, $4::jsonb)`,
-      [
-        userId,
-        title,
-        body,
-        JSON.stringify({
-          kind: 'partner_payout_paid',
-          payout_id: payout.id,
-          amount_cents: Number(payout.amount_cents) || 0,
-          amount,
-        }),
-      ]
-    )
-    .catch((e) => console.error('notifyPartnerPayoutPaid', e.message));
+  const { createNotificationSafe } = require('../notificationService');
+  return createNotificationSafe({
+    recipientId: userId,
+    category: 'partner',
+    eventType,
+    priority: status === 'rejected' ? 'HIGH' : 'NORMAL',
+    params: { amount },
+    meta: { kind: eventType, payout_id: payout.id, amount_cents: Number(payout.amount_cents) || 0, amount },
+    relatedEntityType: 'partner_payout',
+    relatedEntityId: payout.id,
+    dedupeKey: `${eventType}:${payout.id}`,
+    email: true,
+  });
+}
+
+/** Bütün aktiv adminlərə: yeni ödəniş sorğusu yoxlama gözləyir. */
+async function notifyAdminsPayoutRequested(payout, partnerId) {
+  const { rows } = await db.query(
+    `SELECT COALESCE(NULLIF(TRIM(pr.display_name), ''), NULLIF(TRIM(u.full_name), ''), 'Partnyor') AS name
+     FROM partners p
+     JOIN users u ON u.id = p.user_id
+     LEFT JOIN partner_profiles pr ON pr.partner_id = p.id
+     WHERE p.id = $1
+     LIMIT 1`,
+    [partnerId],
+  );
+  const { notifyAdmins } = require('../notificationService');
+  return notifyAdmins({
+    category: 'partner',
+    eventType: 'partner_payout_requested',
+    priority: 'HIGH',
+    params: { partnerName: rows[0]?.name || 'Partnyor', amount: formatAznAmount(payout.amount_cents) },
+    meta: { payout_id: payout.id, partner_id: partnerId, href: '/admin/partners' },
+    relatedEntityType: 'partner_payout',
+    relatedEntityId: payout.id,
+    dedupeKey: `partner_payout_requested:${payout.id}`,
+    email: true,
+  });
 }
 
 async function adminReviewPayout({ payoutId, status, adminUserId, adminNote }) {
@@ -112,6 +142,7 @@ async function adminReviewPayout({ payoutId, status, adminUserId, adminNote }) {
     throw err;
   }
 
+  let previousStatus = null;
   const updated = await db.transaction(async (client) => {
     const { rows } = await client.query(`SELECT * FROM partner_payouts WHERE id = $1 FOR UPDATE`, [payoutId]);
     const payout = rows[0];
@@ -120,6 +151,7 @@ async function adminReviewPayout({ payoutId, status, adminUserId, adminNote }) {
       err.statusCode = 404;
       throw err;
     }
+    previousStatus = payout.status;
 
     await client.query(
       `UPDATE partner_payouts
@@ -167,8 +199,8 @@ async function adminReviewPayout({ payoutId, status, adminUserId, adminNote }) {
     return out[0];
   });
 
-  if (status === 'paid' && updated) {
-    await notifyPartnerPayoutPaid(updated);
+  if (updated && previousStatus !== status) {
+    await notifyPartnerPayoutStatus(updated, status);
   }
 
   return updated;
@@ -219,6 +251,8 @@ async function listCommissionsAdmin({ partnerId, limit = 50 } = {}) {
 module.exports = {
   requestPayout,
   adminReviewPayout,
+  notifyPartnerPayoutStatus,
+  notifyAdminsPayoutRequested,
   listPayoutsAdmin,
   listCommissionsAdmin,
 };

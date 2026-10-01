@@ -22,6 +22,9 @@ const MIGRATED = [
   ['services/examAccessRequestService.js', 'notifyInstructorExamAccessRequest'],
   ['services/taskAccessRequestService.js', 'notifyInstructorTaskAccessRequest'],
   ['jobs/openGradingInstructorNotifications.js', 'runOpenGradingInstructorNotifications'],
+  ['services/examService.js', 'notifyStudentExamAssigned'],
+  ['services/catalogExamReviewNotifyService.js', 'notifyInstructorCatalogApproved'],
+  ['services/catalogExamReviewNotifyService.js', 'notifyInstructorCatalogRejected'],
 ];
 
 for (const [file, fn] of MIGRATED) {

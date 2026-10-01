@@ -5,6 +5,7 @@ const { isFeatureEnabled } = require('../services/featureFlagService');
 const { sendFeatureDisabled } = require('../middleware/requireFeature');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');
 const { logAuthEvent } = require('../services/authEventService');
+const { recordAdminPasswordFailure } = require('../services/adminLoginFailureAlerts');
 const { signAccountLinkToken, verifyAccountLinkToken, maskEmail } = require('../lib/googleOnlyAuth');
 const { classifyLoginIdentifier, pickPhoneLoginUser } = require('../lib/loginIdentifier');
 
@@ -672,8 +673,10 @@ const login = async (req, res) => {
       );
       user = rows[0];
     }
-    if (!user || !user.password_hash || !(await bcrypt.compare(pass, user.password_hash)))
+    if (!user || !user.password_hash || !(await bcrypt.compare(pass, user.password_hash))) {
+      if (user?.password_hash) recordAdminPasswordFailure(req, user);
       return res.status(401).json({ success: false, message: 'Giriş məlumatları yanlışdır' });
+    }
     if (user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Yalnız admin bu girişlə daxil ola bilər' });
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
@@ -1481,6 +1484,7 @@ const loginWithEmail = async (req, res) => {
     // «Forgot password» — never silently adopt a typed password on email login.
     const passOk = Boolean(user.password_hash) && (await bcrypt.compare(pass, user.password_hash));
     if (!passOk) {
+      if (user.password_hash) recordAdminPasswordFailure(req, user);
       return res.status(401).json(passwordLoginFailureBody(user));
     }
 

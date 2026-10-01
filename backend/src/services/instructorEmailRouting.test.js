@@ -233,6 +233,10 @@ test('emailRoute decision table (pure)', () => {
     ['join_request', 'live', true, 'outbox'],
     ['assignment_submitted', 'off', true, 'none'],
     ['assignment_submitted', 'dry_run', true, 'outbox'],
+    ['exam_assigned', 'off', true, 'legacy'],
+    ['exam_assigned', 'off', false, 'none'],
+    ['catalog_exam_approved', 'dry_run', true, 'legacy'],
+    ['catalog_exam_rejected', 'live', true, 'outbox'],
   ];
   for (const [eventType, mode, smtp, route] of cases) {
     assert.equal(emailRoute({ eventType, emailDecision: imm }, envFor(mode, smtp, true)), route, `${eventType}/${mode}/smtp=${smtp}`);
