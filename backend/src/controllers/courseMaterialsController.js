@@ -226,8 +226,19 @@ const serveMaterialFile = async (req, res) => {
       'Content-Disposition',
       `${forceDownload ? 'attachment' : 'inline'}; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
     );
-    res.setHeader('Cache-Control', 'private, max-age=300');
+    /** Yükləmədə keş yoxdur ki, hər yükləmə serverə çatsın və sayılsın. */
+    res.setHeader('Cache-Control', forceDownload ? 'private, no-store' : 'private, max-age=300');
     res.setHeader('Referrer-Policy', 'no-referrer');
+    if (forceDownload) {
+      const { recordServerMaterialDownload } = require('../services/activityProgressService');
+      const userId = user.id;
+      const role = user.role;
+      setImmediate(() => {
+        recordServerMaterialDownload({ material, userId, role }).catch((e) =>
+          console.error('[activity] material download', e.message),
+        );
+      });
+    }
     return res.send(hit.buffer);
   } catch (e) {
     res.status(500).json({ success: false, message: e.message || 'Xəta' });

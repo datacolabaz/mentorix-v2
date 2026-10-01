@@ -18,6 +18,8 @@ import { BILLING_STATUS_QUERY_KEY, useBillingStatus } from '../../hooks/useBilli
 import { copyStudentExamLink, studentExamShareUrl } from '../../lib/examShare'
 import { EXAM_MONTHLY_LIMIT_MESSAGE, isExamsMonthlyLimitReached } from '../../lib/subscriptionPlanGuards'
 import { intlCollatorLang, intlLocale } from '../../lib/uiLocale'
+import ActivityStrip from '../../components/engagement/ActivityStrip'
+import useActivitySummaries from '../../components/engagement/useActivitySummaries'
 
 function fmtDateLocale(iso, locale) {
   if (!iso) return ''
@@ -199,6 +201,10 @@ export default function InstructorExams() {
   const blocked = Boolean(billing?.should_block)
   const examsLimitReached = isExamsMonthlyLimitReached(billing)
   const createBlocked = blocked || examsLimitReached
+  const examActivity = useActivitySummaries(
+    'exam',
+    exams.map((e) => e?.id),
+  )
 
   const loadExams = async () => {
     setExamsError(null)
@@ -747,7 +753,7 @@ export default function InstructorExams() {
                     {Number(exam.results_count) > 0 ? (
                       <span>{t('exams.resultsCount', { count: exam.results_count })}</span>
                     ) : null}
-                    {exam.avg_score != null && Number.isFinite(Number(exam.avg_score)) ? (
+                    {!examActivity.byId.has(String(exam.id)) && exam.avg_score != null && Number.isFinite(Number(exam.avg_score)) ? (
                       <span>{t('exams.avgScore', { score: exam.avg_score })}</span>
                     ) : null}
                     {exam.subject && <span>{exam.subject}</span>}
@@ -819,6 +825,15 @@ export default function InstructorExams() {
                   </Button>
                 </div>
               </div>
+              {exam?.id ? (
+                <ActivityStrip
+                  type="exam"
+                  item={examActivity.byId.get(String(exam.id))}
+                  loading={examActivity.loading}
+                  error={examActivity.error}
+                  onChanged={examActivity.reload}
+                />
+              ) : null}
             </Card>
           )
         })}

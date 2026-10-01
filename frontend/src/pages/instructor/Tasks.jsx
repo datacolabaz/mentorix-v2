@@ -19,6 +19,8 @@ import LibraryMaterialPickerModal from '../../components/instructor/LibraryMater
 import GeneratedQuestionsView from '../../components/generation/GeneratedQuestionsView'
 import { extractGeneratedQuestions } from '../../lib/aiAssignmentQuestions'
 import { intlLocale } from '../../lib/uiLocale'
+import ActivityStrip from '../../components/engagement/ActivityStrip'
+import useActivitySummaries from '../../components/engagement/useActivitySummaries'
 
 const BAKU_TZ = 'Asia/Baku'
 
@@ -106,6 +108,7 @@ export default function InstructorTasks() {
   const [reviewScore, setReviewScore] = useState('')
   const [reviewFeedback, setReviewFeedback] = useState('')
   const [reviewSaving, setReviewSaving] = useState(false)
+  const [returnConfirmOpen, setReturnConfirmOpen] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiMeta, setAiMeta] = useState(null)
   const [groups, setGroups] = useState([])
@@ -149,6 +152,11 @@ export default function InstructorTasks() {
       setLoading(false)
     }
   }, [t])
+
+  const taskActivity = useActivitySummaries(
+    'assignment',
+    tasks.map((task) => task?.id),
+  )
 
   const loadStudents = useCallback(async () => {
     setStudentsLoading(true)
@@ -494,6 +502,27 @@ export default function InstructorTasks() {
     toast(t('tasks.toasts.aiApplied'), 'success')
   }
 
+  const returnForRevision = async () => {
+    if (!review?.student_assignment_id) return
+    setReviewSaving(true)
+    try {
+      const d = await api.post(
+        '/tasks/instructor/review/' + encodeURIComponent(review.student_assignment_id) + '/return',
+        { feedback: reviewFeedback || null },
+      )
+      setReview((prev) => (prev ? { ...prev, ...(d.review || {}), submitted_at: null, score: null, reviewed_at: null } : prev))
+      setReviewScore('')
+      setReturnConfirmOpen(false)
+      toast(t('tasks.toasts.returnedForRevision'), 'success')
+      await load()
+      await loadAnalytics()
+    } catch (e) {
+      toast(e?.message || t('tasks.toasts.error'), 'error')
+    } finally {
+      setReviewSaving(false)
+    }
+  }
+
   const decideLate = async (decision) => {
     if (!review?.student_assignment_id) return
     setReviewSaving(true)
@@ -513,6 +542,16 @@ export default function InstructorTasks() {
 
   return (
     <div className="p-4 sm:p-6 w-full min-w-0 max-w-5xl mx-auto">
+      <ConfirmDialog
+        open={returnConfirmOpen}
+        onClose={() => !reviewSaving && setReturnConfirmOpen(false)}
+        onConfirm={() => void returnForRevision()}
+        title={t('tasks.review.returnForRevision')}
+        message={t('tasks.review.returnConfirm')}
+        confirmLabel={t('tasks.review.returnForRevision')}
+        cancelLabel={t('common.cancel')}
+        loading={reviewSaving}
+      />
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onClose={() => !deletingId && setDeleteTarget(null)}
@@ -630,9 +669,11 @@ export default function InstructorTasks() {
                           · {t('tasks.card.maxScore')} <span className="text-token-textMain">{task.max_score}</span>
                         </>
                       ) : null}
-                      <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
-                        {t('tasks.card.assignments', { assigned: task.assigned_count || 0, submitted: task.submitted_count || 0, pending: task.pending_count || 0 })}
-                      </span>
+                      {taskActivity.byId.has(String(task.id)) ? null : (
+                        <span className="block sm:inline sm:ml-1 mt-0.5 sm:mt-0">
+                          {t('tasks.card.assignments', { assigned: task.assigned_count || 0, submitted: task.submitted_count || 0, pending: task.pending_count || 0 })}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
@@ -678,6 +719,15 @@ export default function InstructorTasks() {
                     </Button>
                   </div>
                 </div>
+                {task.id ? (
+                  <ActivityStrip
+                    type="assignment"
+                    item={taskActivity.byId.get(String(task.id))}
+                    loading={taskActivity.loading}
+                    error={taskActivity.error}
+                    onChanged={taskActivity.reload}
+                  />
+                ) : null}
                 {task.description ? (
                   <div className="mt-3 text-sm text-token-textMain whitespace-pre-wrap leading-relaxed border-t border-[color:var(--border-subtle)] pt-3">
                     <span className="text-xs font-semibold text-token-textMuted uppercase tracking-wider">{t('tasks.card.teacherNote')}</span>
@@ -1134,9 +1184,20 @@ export default function InstructorTasks() {
                 onChange={(e) => setReviewFeedback(e.target.value)}
                 placeholder={t('tasks.review.feedbackPh')}
               />
-              <Button onClick={() => void saveReview()} loading={reviewSaving}>
-                {t('tasks.review.saveFeedback')}
-              </Button>
+              {review.status === 'returned' ? (
+                <p className="text-sm text-amber-300">{t('tasks.review.returnedAwaiting')}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => void saveReview()} loading={reviewSaving}>
+                    {t('tasks.review.saveFeedback')}
+                  </Button>
+                  {review.submitted_at && ['submitted', 'late', 'reviewed'].includes(review.status) ? (
+                    <Button variant="secondary" onClick={() => setReturnConfirmOpen(true)} disabled={reviewSaving}>
+                      {t('tasks.review.returnForRevision')}
+                    </Button>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <Button

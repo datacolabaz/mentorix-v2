@@ -25,6 +25,8 @@ const {
 } = require('../services/examResultVisibility');
 const { isFeatureEnabled } = require('../services/featureFlagService');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');
+const assessmentAttempts = require('../services/assessmentAttemptService');
+const { classifySubmission, countAnsweredQuestions, hasAnyAnswer } = require('../services/activityStatusRules');
 
 async function resultModesEnabled() {
   return isFeatureEnabled(FEATURE_FLAGS.EXAM_RESULT_MODES).catch(() => true);
@@ -806,7 +808,7 @@ const studentExams = async (req, res) => {
          ) en ON true
          WHERE er.submitted_at IS NOT NULL
        )
-       SELECT e.*, er.score, er.submitted_at, er.started_at,
+       SELECT e.*, er.score, er.submitted_at, er.started_at, er.status AS attempt_status,
          COALESCE(ig_my.name, NULLIF(TRIM(me.grade), ''), '—') AS my_group,
          lb.rank_in_group,
          eq_count.question_count,
@@ -830,9 +832,10 @@ const studentExams = async (req, res) => {
          LIMIT 1
        ) ea_assign ON TRUE
        LEFT JOIN LATERAL (
-         SELECT score, submitted_at, started_at FROM exam_results er0
+         SELECT score, submitted_at, started_at, status FROM exam_results er0
          WHERE er0.exam_id = e.id
            AND REPLACE(LOWER(TRIM(er0.student_id::text)), '-', '') = $1
+           AND COALESCE(er0.status, '') <> 'voided'
          ORDER BY CASE WHEN er0.submitted_at IS NULL THEN 1 ELSE 0 END DESC,
                   er0.submitted_at DESC NULLS LAST,
                   er0.started_at DESC NULLS LAST
@@ -1121,10 +1124,11 @@ const getExamQuestions = async (req, res) => {
       const canEnterExamWindow = () => inGlobalWindow() || inLateWindow();
 
       const { rows: rRows } = await db.query(
-        `SELECT id, started_at, submitted_at, answers
+        `SELECT id, started_at, submitted_at, answers, status
          FROM exam_results
          WHERE exam_id = $1
            AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+           AND COALESCE(status, '') <> 'voided'
          ORDER BY CASE WHEN submitted_at IS NULL THEN 1 ELSE 0 END DESC,
                   submitted_at DESC NULLS LAST,
                   started_at DESC NULLS LAST
@@ -1132,11 +1136,19 @@ const getExamQuestions = async (req, res) => {
         [id, sidHex]
       );
       const attempt = rRows[0] || null;
+      const attemptExpiredNoAnswers = !!(attempt && !attempt.submitted_at && attempt.status === 'expired');
       /** Davam: şəxsi müddət bitməyibsə, qlobal pəncərə bitəndən sonra belə bloklamırıq */
-      const inProgressResume = !!(attempt?.started_at && !attempt?.submitted_at);
+      const inProgressResume = !!(attempt?.started_at && !attempt?.submitted_at && !attemptExpiredNoAnswers);
 
       if (attempt?.submitted_at) {
         return res.status(400).json({ success: false, message: 'Artıq təqdim edilib' });
+      }
+      if (attemptExpiredNoAnswers) {
+        return res.status(400).json({
+          success: false,
+          code: 'EXAM_EXPIRED_NO_ANSWERS',
+          message: 'Vaxtınız bitib. Cavab qeydə alınmayıb — yenidən giriş üçün müəllimə müraciət edin.',
+        });
       }
 
       if (attempt?.started_at) {
@@ -1144,28 +1156,28 @@ const getExamQuestions = async (req, res) => {
         const durMin = Math.max(Number(dur) || 0, 1);
         const personalEnd = new Date(s.getTime() + durMin * 60000);
         if (now > personalEnd) {
-          /** Köhnə in_progress: şəxsi müddət bitib, amma müəllimin pəncərəsindədirsə — yeni şəxsi müddət */
-          if (canEnterExamWindow()) {
-            const { rows: up } = await db.query(
-              `UPDATE exam_results
-               SET started_at = NOW(),
-                   answers = NULL,
-                   grading = NULL,
-                   status = 'in_progress',
-                   score = NULL,
-                   duration_seconds = NULL,
-                   submitted_at = NULL
-               WHERE id = $1 AND exam_id = $2 AND submitted_at IS NULL
-               RETURNING started_at`,
-              [attempt.id, id]
-            );
-            if (!up.length) {
-              return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
-            }
-            startedAtForStudent = up[0].started_at || null;
-          } else {
-            return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
+          /** Şəxsi müddət bitib: cavablar silinmir — varsa avtomatik təqdim, yoxdursa «cavabsız» (güzəşt pəncərəsindən sonra). */
+          const fin = await assessmentAttempts
+            .finalizeExpiredAttempt(attempt.id, { now, via: 'reopen', minimumMinutes: 1 })
+            .catch((e) => {
+              console.error('[exam-expiry] reopen finalize', e.message);
+              return { finalized: false };
+            });
+          if (fin.outcome === 'expired_auto_submitted' || fin.outcome === 'submitted') {
+            return res.status(400).json({
+              success: false,
+              code: 'EXAM_EXPIRED_AUTO_SUBMITTED',
+              message: 'Vaxtınız bitib. Saxlanmış cavablarınız avtomatik təqdim edildi.',
+            });
           }
+          if (fin.outcome === 'expired_no_answers') {
+            return res.status(400).json({
+              success: false,
+              code: 'EXAM_EXPIRED_NO_ANSWERS',
+              message: 'Vaxtınız bitib. Cavab qeydə alınmayıb — yenidən giriş üçün müəllimə müraciət edin.',
+            });
+          }
+          return res.status(400).json({ success: false, code: 'EXAM_TIME_OVER', message: 'Vaxtınız bitib' });
         } else {
           startedAtForStudent = attempt.started_at;
           if (attempt.answers && typeof attempt.answers === 'object') {
@@ -1186,10 +1198,20 @@ const getExamQuestions = async (req, res) => {
         const { rows: inserted } = await db.query(
           `INSERT INTO exam_results (exam_id, student_id, status, started_at)
            VALUES ($1,$2,'in_progress', NOW())
-           RETURNING started_at`,
+           RETURNING id, started_at`,
           [id, req.user.id]
         );
         startedAtForStudent = inserted[0]?.started_at || null;
+        const newResultId = inserted[0]?.id || null;
+        const studentId = req.user.id;
+        assessmentAttempts.track('started', () =>
+          assessmentAttempts.recordExamStarted({
+            studentId,
+            examId: id,
+            resultId: newResultId,
+            startedAt: new Date(startedAtForStudent || Date.now()),
+          }),
+        );
       }
 
       if (!allowFinish && now > until && !inLateWindow() && !inProgressResume) {
@@ -1267,10 +1289,11 @@ const submitExam = async (req, res) => {
     }
 
     const already = await db.query(
-      `SELECT id, started_at, submitted_at
+      `SELECT id, started_at, submitted_at, status
        FROM exam_results
        WHERE exam_id=$1
          AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
+         AND COALESCE(status, '') <> 'voided'
        ORDER BY CASE WHEN submitted_at IS NULL THEN 1 ELSE 0 END DESC,
                 submitted_at DESC NULLS LAST,
                 started_at DESC NULLS LAST
@@ -1279,13 +1302,20 @@ const submitExam = async (req, res) => {
     );
     const attempt = already.rows[0] || null;
     if (attempt?.submitted_at) return res.status(400).json({ success: false, message: 'Artıq təqdim edilib' });
+    if (attempt?.status === 'expired') {
+      return res.status(400).json({
+        success: false,
+        code: 'EXAM_EXPIRED_NO_ANSWERS',
+        message: 'Vaxtınız bitib. Cavab qeydə alınmayıb — yenidən giriş üçün müəllimə müraciət edin.',
+      });
+    }
 
     const { rows: questions } = await db.query(
       'SELECT * FROM exam_questions WHERE exam_id=$1',
       [exam_id]
     );
     const { rows: [exam] } = await db.query(
-      `SELECT id, is_deleted, duration_minutes, available_until,
+      `SELECT id, instructor_id, is_deleted, duration_minutes, available_until,
               COALESCE(wrong_penalty_enabled, TRUE) AS wrong_penalty_enabled,
               COALESCE(show_results, TRUE) AS show_results,
               result_visibility_mode, results_release_at
@@ -1294,6 +1324,63 @@ const submitExam = async (req, res) => {
     );
     if (!exam || exam.is_deleted === true) {
       return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    }
+
+    const now = new Date();
+    const durMin = Number(exam.duration_minutes) || 0;
+    const deadline =
+      attempt?.started_at && durMin > 0 ? new Date(new Date(attempt.started_at).getTime() + durMin * 60000) : null;
+    const submission = classifySubmission({ deadline, now, clientAutoSubmit: req.body?.auto_submit === true });
+    if (!submission.accept) {
+      /** Güzəşt pəncərəsi də bitib: yeni cavablar qəbul edilmir, yalnız serverdə saxlanmış cavablar yekunlaşdırılır. */
+      const fin = attempt?.id
+        ? await assessmentAttempts.finalizeExpiredAttempt(attempt.id, { now, via: 'late_submit' }).catch((e) => {
+            console.error('[exam-expiry] late submit finalize', e.message);
+            return { finalized: false };
+          })
+        : { finalized: false };
+      if (fin.outcome === 'expired_auto_submitted') {
+        return res.status(400).json({
+          success: false,
+          code: 'EXAM_EXPIRED_AUTO_SUBMITTED',
+          message: 'Vaxtınız bitib. Saxlanmış cavablarınız avtomatik təqdim edildi.',
+        });
+      }
+      if (fin.outcome === 'expired_no_answers') {
+        return res.status(400).json({
+          success: false,
+          code: 'EXAM_EXPIRED_NO_ANSWERS',
+          message: 'Vaxtınız bitib. Cavab qeydə alınmayıb — yenidən giriş üçün müəllimə müraciət edin.',
+        });
+      }
+      return res.status(400).json({ success: false, code: 'EXAM_TIME_OVER', message: 'Vaxtınız bitib' });
+    }
+
+    /**
+     * Brauzer vaxt bitəndə boş cavabla avtomatik təqdim edib: 0 ballıq «tamamlandı» yazılmır.
+     * Serverdə saxlanmış (autosave) cavab varsa o təqdim olunur, yoxdursa cəhd «cavabsız» qalır və ortaya düşmür.
+     */
+    if (submission.kind === 'auto_expired' && !hasAnyAnswer(answers) && attempt?.id) {
+      const fin = await assessmentAttempts
+        .finalizeExpiredAttempt(attempt.id, { now, via: 'client_auto_submit', clientDeclared: true })
+        .catch((e) => {
+          console.error('[exam-expiry] empty auto submit finalize', e.message);
+          return { finalized: false };
+        });
+      if (fin.outcome === 'expired_auto_submitted') {
+        return res.status(400).json({
+          success: false,
+          code: 'EXAM_EXPIRED_AUTO_SUBMITTED',
+          message: 'Vaxtınız bitdi. Saxlanmış cavablarınız avtomatik təqdim edildi.',
+        });
+      }
+      if (fin.outcome === 'expired_no_answers') {
+        return res.status(400).json({
+          success: false,
+          code: 'EXAM_EXPIRED_NO_ANSWERS',
+          message: 'Vaxtınız bitdi. Cavab qeydə alınmayıb — yenidən giriş üçün müəllimə müraciət edin.',
+        });
+      }
     }
 
     const wrongPen = exam.wrong_penalty_enabled !== false;
@@ -1307,22 +1394,16 @@ const submitExam = async (req, res) => {
       grading,
       studentView: true,
     });
-    const now = new Date();
     const startedAt = attempt?.started_at ? new Date(attempt.started_at) : now;
-    const durMin = Number(exam.duration_minutes) || 0;
-    if (attempt?.started_at && durMin > 0) {
-      const personalEnd = new Date(startedAt.getTime() + durMin * 60000);
-      if (now > personalEnd) {
-        return res.status(400).json({ success: false, message: 'Vaxtınız bitib' });
-      }
-    }
-    const duration = Math.floor((now - startedAt) / 1000);
+    /** Güzəşt pəncərəsində gələn təqdimdə müddət şəxsi son vaxtdan çox göstərilmir. */
+    const submittedAt = deadline && now > deadline ? deadline : now;
+    const duration = Math.floor((submittedAt - startedAt) / 1000);
     const isCrmStudent = await isCrmStudentForInstructor(exam.instructor_id, student_id);
 
     let examResultId = attempt?.id || null;
 
     if (attempt?.id) {
-      await db.query(
+      const { rows: updated } = await db.query(
         `UPDATE exam_results
          SET score = $3,
              answers = $4,
@@ -1332,7 +1413,10 @@ const submitExam = async (req, res) => {
              submitted_at = $7,
              duration_seconds = $8,
              is_crm_student = $9
-         WHERE id = $1 AND exam_id = $2`,
+         WHERE id = $1 AND exam_id = $2
+           AND submitted_at IS NULL
+           AND COALESCE(status, 'in_progress') NOT IN ('expired', 'voided')
+         RETURNING id`,
         [
           attempt.id,
           exam_id,
@@ -1340,11 +1424,18 @@ const submitExam = async (req, res) => {
           JSON.stringify(answers),
           JSON.stringify(grading),
           startedAt,
-          now,
+          submittedAt,
           duration,
           isCrmStudent,
         ],
       );
+      if (!updated.length) {
+        return res.status(409).json({
+          success: false,
+          code: 'EXAM_ALREADY_FINALIZED',
+          message: 'Bu cəhd artıq yekunlaşdırılıb. Səhifəni yeniləyin.',
+        });
+      }
     } else {
       const { rows: inserted } = await db.query(
         `INSERT INTO exam_results (
@@ -1420,6 +1511,24 @@ const submitExam = async (req, res) => {
           console.error('notifyParentExamResultAfterSubmit', e.message)
         );
       });
+    }
+
+    if (examResultId) {
+      const released = view?.released === true && !gradingPending;
+      assessmentAttempts.track('submitted', () =>
+        assessmentAttempts.recordExamSubmitted({
+          studentId: student_id,
+          examId: exam_id,
+          resultId: examResultId,
+          submittedAt,
+          kind: submission.kind,
+          deadline,
+          gradingPending,
+          released,
+          answeredCount: countAnsweredQuestions(answers),
+          totalQuestions: questions.length,
+        }),
+      );
     }
 
     res.json({
@@ -1934,7 +2043,18 @@ const grantLateAccess = async (req, res) => {
     if (!rows.length) {
       return res.status(404).json({ success: false, message: 'Təyinat tapılmadı' });
     }
-    res.json({ success: true, late_access: rows[0] });
+    /** Cavabsız bitmiş cəhd ləğv olunur ki, gec girişdə tələbə yenidən başlaya bilsin (orta nəticəyə düşmür). */
+    let voidedAttempts = 0;
+    try {
+      voidedAttempts = await assessmentAttempts.voidExpiredAttemptsForLateAccess({
+        examId,
+        studentId,
+        actorId: req.user.id,
+      });
+    } catch (e) {
+      console.error('[exam-expiry] void on late access', e.message);
+    }
+    res.json({ success: true, late_access: rows[0], voided_attempts: voidedAttempts });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -2744,9 +2864,38 @@ const confirmOpenQuestionGrading = async (req, res) => {
       action,
       finalScore,
     });
+    assessmentAttempts.track('open_grading_confirmed', () => assessmentAttempts.refreshAfterOpenGrading(examResultId));
     return res.json({ success: true, ...result });
   } catch (err) {
     return res.status(err.status || 500).json({ success: false, message: err.message });
+  }
+};
+
+/** Tələbə: cavabların serverdə aralıq saxlanması (jurnala yazılmır, bildiriş yaratmır). */
+const autosaveExamAnswers = async (req, res) => {
+  try {
+    const out = await assessmentAttempts.autosaveAttempt({
+      studentId: req.user.id,
+      examId: req.params.id,
+      answers: req.body?.answers,
+    });
+    return res.json({ success: true, ...out });
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ success: false, code: err.code, message: err.statusCode ? err.message : 'Cavablar saxlanılmadı' });
+  }
+};
+
+/** Tələbə: imtahan kartını/başlama pəncərəsini açdı (ASSESSMENT_VIEWED, bir dəfə). */
+const markExamViewed = async (req, res) => {
+  try {
+    await assessmentAttempts.recordExamViewed({ studentId: req.user.id, examId: req.params.id });
+    return res.json({ success: true });
+  } catch (err) {
+    return res
+      .status(err.statusCode || 500)
+      .json({ success: false, code: err.code, message: err.statusCode ? err.message : 'Xəta' });
   }
 };
 
@@ -2768,6 +2917,8 @@ module.exports = {
   getStudentExamReview,
   getExamQuestions,
   submitExam,
+  autosaveExamAnswers,
+  markExamViewed,
   confirmOpenQuestionGrading,
   getResults,
   getExamGroups,

@@ -58,6 +58,7 @@ const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'))
 const AdminUniversityPrograms = lazy(() => import('./pages/admin/AdminUniversityPrograms'))
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'))
 const AdminCertifiedExamVerifications = lazy(() => import('./pages/admin/AdminCertifiedExamVerifications'))
+const AdminInstructorActivity = lazy(() => import('./pages/admin/InstructorActivity'))
 import AnalyticsPageTracker from './components/analytics/AnalyticsPageTracker'
 import PresenceHeartbeat from './components/analytics/PresenceHeartbeat'
 import { DigitalMentorProvider } from './mentor/DigitalMentorProvider'
@@ -368,6 +369,7 @@ export default function App() {
       <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="instructors" element={<AdminInstructors />} />
+        <Route path="instructors/:instructorId/activity/*" element={<AdminInstructorActivity />} />
         <Route path="students" element={<AdminStudents />} />
         <Route path="classes" element={<AdminClasses />} />
         <Route path="payments" element={<AdminPayments />} />
@@ -400,6 +402,9 @@ export default function App() {
         <Route path="inquiries" element={<FeatureRoute flag={FEATURE_FLAGS.MARKETPLACE}><MentorOrInstructorPage mentor={MentorRequests} instructor={StudentInquiries} /></FeatureRoute>} />
         <Route path="schedule" element={<MentorOrInstructorPage mentor={MentorSessions} instructor={InstructorSchedule} />} />
         <Route path="exams" element={<InstructorExams />} />
+        <Route path="exams/:id/participants" element={<InstructorEngagementDetail type="exam" />} />
+        <Route path="assignments/:id/activity" element={<InstructorEngagementDetail type="assignment" />} />
+        <Route path="materials/:id/activity" element={<InstructorEngagementDetail type="material" />} />
         <Route path="certificates" element={<InstructorCertificates />} />
         <Route path="attendance" element={<InstructorAttendance />} />
         <Route path="engagement" element={<InstructorEngagement />} />

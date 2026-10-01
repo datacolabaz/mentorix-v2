@@ -1,141 +1,184 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Card from '../common/Card'
 import { useToast } from '../common/Toast'
 import EngagementPopover from './EngagementPopover'
-import { AvatarStack, CountChip, ProgressBar, StatusBadge } from './EngagementParts'
-import { fetchMaterialDetail, reminderResultText, sendEngagementReminder } from './engagementApi'
-import { MATERIAL_KIND, MATERIAL_STATUS, formatDue, isRecent, materialStatusKey, relativeTime } from '../../lib/engagementCopy'
+import ReminderDialog from './ReminderDialog'
+import {
+  AvatarStack,
+  DateTimeText,
+  LastActivity,
+  NameGroup,
+  ProgressBar,
+  RelativeTime,
+  StatLines,
+  StatusBadge,
+} from './EngagementParts'
+import { fetchMaterialDetail } from './engagementApi'
+import { CTA_BUTTON, CTA_LINK, HOVER_BG, MATERIAL_KIND, SUBTLE_BG, formatDue } from '../../lib/engagementCopy'
+import { cardLines, statusMeta } from '../../lib/activityCards'
+import { activityDetailPath, isAdminActivityMode } from '../../lib/adminActivityAccess'
+import { materialShareUrl } from '../../lib/materialShareUrl'
 
-const LIST_LIMIT = 6
-
-function NameList({ title, students, renderMeta, emptyText }) {
+function Stat({ label, children }) {
   return (
-    <div>
-      <p className="text-[11px] font-bold uppercase tracking-wider text-token-textMuted mb-1">
-        {title} ({students.length})
-      </p>
-      {students.length ? (
-        <ul className="space-y-1">
-          {students.slice(0, LIST_LIMIT).map((s) => (
-            <li key={s.student_id} className="flex items-center justify-between gap-2 text-sm">
-              <span className="truncate">{s.full_name}</span>
-              {renderMeta ? <span className="shrink-0 text-[11px] text-token-textMuted">{renderMeta(s)}</span> : null}
-            </li>
-          ))}
-          {students.length > LIST_LIMIT ? (
-            <li className="text-[11px] text-token-textMuted">+{students.length - LIST_LIMIT} daha</li>
-          ) : null}
-        </ul>
-      ) : (
-        <p className="text-xs text-token-textMuted">{emptyText}</p>
-      )}
+    <div className="min-w-0">
+      <dt className="text-[10px] uppercase tracking-wider text-token-textMuted break-words">{label}</dt>
+      <dd className="text-sm font-bold tabular-nums">{children}</dd>
     </div>
   )
 }
 
-export default function MaterialEngagementCard({ material }) {
+/**
+ * Material kartı. variant="card" — Aktivlik səhifəsi (öz Card-ı ilə); "embedded" — Kitabxana kartının içində zolaq.
+ * «Materialı əlavə edən / Yüklənmə tarixi» (müəllim) ilə «Faylı yükləyən tələbələr» (tələbə yükləmələri) ayrı saxlanılır.
+ */
+export default function MaterialEngagementCard({ material, variant = 'card', onShare, onChanged }) {
+  const { t } = useTranslation()
   const toast = useToast()
-  const [sending, setSending] = useState(false)
+  const [reminderOpen, setReminderOpen] = useState(false)
+  const embedded = variant === 'embedded'
   const kind = MATERIAL_KIND[material.kind] || MATERIAL_KIND.file
+  const kindLabel = t(`activity.kinds.${material.kind || 'file'}`, kind.label)
   const due = formatDue(material.due_at)
-  const recent = isRecent(material.last_activity_at)
-  const detailPath = `/instructor/engagement/material/${material.id}`
+  const detailPath = activityDetailPath('material', material.id)
+  const readOnly = isAdminActivityMode()
+  const lines = cardLines('material', material)
+  const label = t('activity.common.detailsLabel', { title: material.title })
 
-  const remind = async (refresh) => {
-    setSending(true)
+  const share = async () => {
+    if (onShare) return onShare(material)
+    const url = materialShareUrl(material.id)
     try {
-      toast(reminderResultText(await sendEngagementReminder('material', material.id)), 'success')
-      await refresh()
-    } catch (e) {
-      toast(e?.message || 'Xatırlatma göndərilmədi', 'error')
-    } finally {
-      setSending(false)
+      await navigator.clipboard.writeText(url)
+      toast(t('materials.toasts.linkCopied'), 'success')
+    } catch {
+      toast(url, 'info')
     }
   }
 
-  return (
-    <Card className="p-4 flex flex-col gap-3">
-      <div className="flex items-start gap-3">
-        <span
-          className="h-10 w-10 shrink-0 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center text-xl"
-          title={kind.label}
-          aria-label={kind.label}
-        >
-          {kind.icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm text-token-textMain truncate" title={material.title}>
-            {material.title}
-          </h3>
-          <p className="text-[11px] text-token-textMuted truncate">
-            {kind.label} · {material.group_names?.length ? material.group_names.join(', ') : 'Qrup seçilməyib'}
-          </p>
-        </div>
-        {due ? <span className="shrink-0 text-[11px] text-token-textMuted whitespace-nowrap">Son tarix: {due}</span> : null}
+  const summary = (
+    <div className={`space-y-2 rounded-xl p-2 -m-2 ${HOVER_BG}`}>
+      <p className="text-xs font-semibold text-token-textMuted">{t('activity.common.assignedOf', { count: material.assigned })}</p>
+      <StatLines type="material" lines={lines} />
+      <ProgressBar pct={material.assigned ? Math.round((material.viewed / material.assigned) * 100) : 0} label={t('activity.lines.material.viewed')} />
+      <dl className="grid grid-cols-3 gap-2">
+        <Stat label={t('activity.material.totalViews')}>{material.total_views ?? 0}</Stat>
+        <Stat label={t('activity.material.uniqueDownloaders')}>{material.unique_downloaders ?? 0}</Stat>
+        <Stat label={t('activity.material.totalDownloads')}>{material.total_downloads ?? 0}</Stat>
+      </dl>
+      <div className="flex flex-wrap items-center justify-between gap-2 min-h-6">
+        <AvatarStack people={material.recent_viewers} more={material.more_viewers} label={t('activity.material.recentViewers')} />
+        <LastActivity iso={material.last_activity_at} />
       </div>
+    </div>
+  )
+
+  const content = (
+    <>
+      {!embedded ? (
+        <div className="flex items-start gap-3">
+          <span className={`h-10 w-10 shrink-0 rounded-xl ${SUBTLE_BG} flex items-center justify-center text-xl`} aria-hidden="true">
+            {kind.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-sm text-token-textMain break-words [overflow-wrap:anywhere]">{material.title}</h3>
+            <p className="text-[11px] text-token-textMuted break-words">
+              {kindLabel} · {material.group_names?.length ? material.group_names.join(', ') : t('activity.common.noGroup')}
+            </p>
+          </div>
+          {due ? <span className="shrink-0 text-[11px] text-token-textMuted">{t('activity.material.due', { date: due })}</span> : null}
+        </div>
+      ) : null}
+
+      {!embedded && (material.uploaded_by || material.created_at) ? (
+        <dl className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-token-textMuted">
+          {material.uploaded_by?.full_name ? (
+            <div className="flex gap-1">
+              <dt>{t('activity.material.uploader')}:</dt>
+              <dd className="font-semibold text-token-textMain">{material.uploaded_by.full_name}</dd>
+            </div>
+          ) : null}
+          {material.created_at ? (
+            <div className="flex gap-1">
+              <dt>{t('activity.material.uploadDate')}:</dt>
+              <dd>
+                <DateTimeText iso={material.created_at} />
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
 
       {material.assigned === 0 ? (
         <p className="text-xs text-token-textMuted rounded-xl border border-dashed border-[color:var(--border-subtle)] px-3 py-2">
-          Bu material hələ heç bir tələbəyə göndərilməyib.
+          {t('activity.notAssigned.material')}
         </p>
       ) : (
-        <EngagementPopover
-          label={`${material.title}: tələbə aktivliyi`}
-          load={() => fetchMaterialDetail(material.id)}
-          trigger={
-            <div className="space-y-2 rounded-xl p-2 -m-2 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-semibold">
-                  {material.viewed} / {material.assigned} baxıb
-                </span>
-                <span className="text-xs font-bold tabular-nums">{material.completion_pct}% tamamlanıb</span>
-              </div>
-              <ProgressBar pct={material.completion_pct} label="Tamamlanma faizi" />
-              <div className="flex items-center justify-between gap-2 min-h-6">
-                <AvatarStack people={material.recent_viewers} more={material.more_viewers} />
-                <span className={`text-[11px] ${recent ? 'text-sky-600 dark:text-sky-300 font-semibold' : 'text-token-textMuted'}`}>
-                  {recent ? '● ' : ''}Son aktivlik: {relativeTime(material.last_activity_at)}
-                </span>
-              </div>
-              {material.overdue || material.not_opened ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {material.overdue ? <CountChip tone="red" icon="!">{material.overdue} vaxtı keçib</CountChip> : null}
-                  {material.not_opened ? <CountChip tone="gray" icon="○">{material.not_opened} açmayıb</CountChip> : null}
-                </div>
-              ) : null}
-            </div>
-          }
-        >
-          {(data, { refresh }) => {
+        <EngagementPopover label={label} load={() => fetchMaterialDetail(material.id)} trigger={summary}>
+          {(data, { close }) => {
             const viewed = data.students.filter((s) => s.viewed)
+            const downloaded = data.students.filter((s) => s.downloaded)
             const notViewed = data.students.filter((s) => !s.viewed)
+            const card = data.material || material
             return (
               <div className="space-y-3">
-                <NameList
-                  title="Baxanlar"
+                <NameGroup
+                  title={t('activity.material.popover.viewed')}
+                  icon="✓"
+                  tone="green"
                   students={viewed}
-                  renderMeta={(s) => relativeTime(s.last_activity_at)}
-                  emptyText="Hələ heç kim baxmayıb."
+                  renderMeta={(s) => <RelativeTime iso={s.last_viewed_at || s.last_activity_at} />}
+                  emptyText={t('activity.common.nobody')}
                 />
-                <NameList
-                  title="Baxmayanlar"
+                <NameGroup
+                  title={t('activity.material.popover.downloaded')}
+                  icon="↓"
+                  tone="blue"
+                  students={downloaded}
+                  renderMeta={(s) => `${s.download_count}×`}
+                  emptyText={t('activity.common.nobody')}
+                />
+                <NameGroup
+                  title={t('activity.material.popover.notViewed')}
+                  icon="○"
                   students={notViewed}
-                  renderMeta={(s) => <StatusBadge meta={MATERIAL_STATUS[materialStatusKey(s)]} />}
-                  emptyText="Hamı baxıb."
+                  renderMeta={(s) => <StatusBadge meta={statusMeta('material', s)} />}
+                  emptyText={t('activity.common.nobody')}
                 />
-                <div className="flex flex-wrap gap-2 pt-1 border-t border-[color:var(--border-subtle)]">
-                  <Link to={detailPath} className="mt-2 text-xs font-semibold text-primary hover:underline">
-                    Bütün tələbələrə bax →
+                <dl className="grid grid-cols-1 gap-1 text-xs border-t border-[color:var(--border-subtle)] pt-2">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-token-textMuted">{t('activity.material.popover.lastView')}</dt>
+                    <dd>
+                      <DateTimeText iso={card.last_viewed_at} />
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-token-textMuted">{t('activity.material.popover.lastDownload')}</dt>
+                    <dd>
+                      <DateTimeText iso={card.last_downloaded_at} />
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-token-textMuted">{t('activity.material.popover.totalDownloads')}</dt>
+                    <dd className="font-semibold tabular-nums">{card.total_downloads ?? 0}</dd>
+                  </div>
+                </dl>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Link to={detailPath} className={CTA_LINK}>
+                    {t('activity.common.showAll')} →
                   </Link>
-                  {notViewed.length ? (
+                  {notViewed.length && !readOnly ? (
                     <button
                       type="button"
-                      disabled={sending}
-                      onClick={() => void remind(refresh)}
-                      className="mt-2 ml-auto text-xs font-semibold rounded-lg border border-primary/40 px-2.5 py-1 text-primary hover:bg-primary/10 disabled:opacity-60"
+                      className={`${CTA_BUTTON} ml-auto`}
+                      onClick={() => {
+                        close()
+                        setReminderOpen(true)
+                      }}
                     >
-                      {sending ? 'Göndərilir…' : `Xatırlatma göndər (${notViewed.length})`}
+                      {t('activity.material.cta.remindNotViewed')} ({notViewed.length})
                     </button>
                   ) : null}
                 </div>
@@ -144,6 +187,36 @@ export default function MaterialEngagementCard({ material }) {
           }}
         </EngagementPopover>
       )}
-    </Card>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
+        <Link to={detailPath} className={CTA_LINK}>
+          {t('activity.material.cta.activity')}
+        </Link>
+        {!readOnly ? (
+          <button type="button" className={CTA_LINK} onClick={() => void share()}>
+            {t('activity.material.cta.share')}
+          </button>
+        ) : null}
+        {!readOnly && material.not_viewed > 0 ? (
+          <button type="button" className={`${CTA_BUTTON} ml-auto`} onClick={() => setReminderOpen(true)}>
+            {t('activity.material.cta.remindNotViewed')}
+          </button>
+        ) : null}
+      </div>
+
+      {!readOnly ? (
+        <ReminderDialog
+          open={reminderOpen}
+          type="material"
+          entityId={material.id}
+          entityTitle={material.title}
+          onClose={() => setReminderOpen(false)}
+          onSent={() => onChanged?.()}
+        />
+      ) : null}
+    </>
   )
+
+  if (embedded) return <div className="flex flex-col gap-3 min-w-0">{content}</div>
+  return <Card className="p-4 flex flex-col gap-3">{content}</Card>
 }

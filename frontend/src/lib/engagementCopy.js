@@ -16,13 +16,25 @@ export const MATERIAL_KIND = {
   file: { icon: '📎', label: 'Fayl' },
 }
 
-/** tone: green | yellow | red | gray | blue */
+/**
+ * tone: green | yellow | red | gray | blue
+ * Tətbiqin mövzusu <html> üzərindəki `theme-dark` sinfidir (OS yox), ona görə `dark:` əvəzinə `[.theme-dark_&]:`.
+ */
 export const TONE_CLASSES = {
-  green: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-  yellow: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30',
-  red: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
-  gray: 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/25',
-  blue: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30',
+  green: 'bg-emerald-500/15 text-emerald-700 [.theme-dark_&]:text-emerald-300 border-emerald-500/30',
+  yellow: 'bg-amber-500/15 text-amber-800 [.theme-dark_&]:text-amber-300 border-amber-500/30',
+  red: 'bg-red-500/15 text-red-700 [.theme-dark_&]:text-red-300 border-red-500/30',
+  gray: 'bg-slate-500/10 text-slate-600 [.theme-dark_&]:text-slate-300 border-slate-500/25',
+  blue: 'bg-sky-500/15 text-sky-700 [.theme-dark_&]:text-sky-300 border-sky-500/30',
+}
+
+/** Kart sətirlərindəki rəqəm/mətn rəngi (fon olmadan). */
+export const TONE_TEXT = {
+  green: 'text-emerald-700 [.theme-dark_&]:text-emerald-300',
+  yellow: 'text-amber-800 [.theme-dark_&]:text-amber-300',
+  red: 'text-red-700 [.theme-dark_&]:text-red-300',
+  gray: 'text-slate-600 [.theme-dark_&]:text-slate-300',
+  blue: 'text-sky-700 [.theme-dark_&]:text-sky-300',
 }
 
 export const BAR_CLASSES = {
@@ -31,6 +43,14 @@ export const BAR_CLASSES = {
   red: 'bg-red-500',
   gray: 'bg-slate-400',
 }
+
+export const SUBTLE_BG = 'bg-black/10 [.theme-dark_&]:bg-white/10'
+export const HOVER_BG = 'hover:bg-black/[0.03] [.theme-dark_&]:hover:bg-white/[0.04]'
+
+const FOCUS_RING = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1'
+export const PRIMARY_TEXT = 'text-emerald-700 [.theme-dark_&]:text-primary'
+export const CTA_LINK = `rounded text-xs font-semibold ${PRIMARY_TEXT} hover:underline ${FOCUS_RING}`
+export const CTA_BUTTON = `rounded-lg border border-primary/40 px-2.5 py-1 text-xs font-semibold ${PRIMARY_TEXT} hover:bg-primary/10 disabled:opacity-60 ${FOCUS_RING}`
 
 export const MATERIAL_STATUS = {
   completed: { label: 'Baxıb', icon: '✓', tone: 'green' },
@@ -43,6 +63,7 @@ export const MATERIAL_STATUS = {
 export const ASSIGNMENT_STATUS = {
   graded: { label: 'Qiymətləndirilib', icon: '✓', tone: 'green' },
   submitted: { label: 'Yoxlama gözləyir', icon: '⏳', tone: 'yellow' },
+  returned: { label: 'Düzəlişə qaytarılıb', icon: '↺', tone: 'yellow' },
   started: { label: 'Başlayıb, təqdim etməyib', icon: '✎', tone: 'yellow' },
   opened: { label: 'Açıb, təqdim etməyib', icon: '◐', tone: 'yellow' },
   overdue: { label: 'Vaxtı keçib', icon: '!', tone: 'red' },
@@ -66,6 +87,7 @@ export const ASSIGNMENT_FILTERS = [
   { id: 'not_submitted', label: 'Təqdim etməyib' },
   { id: 'waiting_grading', label: 'Yoxlama gözləyir' },
   { id: 'graded', label: 'Qiymətləndirilib' },
+  { id: 'returned', label: 'Düzəlişə qaytarılıb' },
   { id: 'overdue', label: 'Vaxtı keçib' },
   { id: 'not_opened', label: 'Açmayıb' },
 ]

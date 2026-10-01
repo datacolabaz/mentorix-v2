@@ -80,7 +80,6 @@ export default function MaterialViewerModal({ material, onClose }) {
           </a>
           <a
             href={materialFileDownloadUrl(material.file_url)}
-            onClick={() => trackMaterialEvent(material.id, 'material_downloaded')}
             className="text-xs font-semibold px-3 py-2 rounded-lg border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
           >
             Yüklə

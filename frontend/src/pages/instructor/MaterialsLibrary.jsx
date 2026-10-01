@@ -16,6 +16,8 @@ import { materialShareUrlForRow } from '../../lib/materialShareUrl'
 import { formatMaterialsBytes } from '../../lib/materialsPlanLimits'
 import useUiStore from '../../hooks/useUi'
 import { useTeachingFields } from '../../hooks/useTeachingFields'
+import ActivityStrip from '../../components/engagement/ActivityStrip'
+import useActivitySummaries from '../../components/engagement/useActivitySummaries'
 
 function fileKindKey(kind) {
   if (kind === 'PDF') return 'pdf'
@@ -60,6 +62,10 @@ export default function InstructorMaterialsLibrary() {
   const [renamingId, setRenamingId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameSaving, setRenameSaving] = useState(false)
+  const materialActivity = useActivitySummaries(
+    'material',
+    materials.map((m) => m?.id),
+  )
 
   const localizedFileKind = useCallback(
     (fileType, fileUrl) => {
@@ -415,6 +421,14 @@ export default function InstructorMaterialsLibrary() {
                         </div>
                       </div>
                     </div>
+                    <ActivityStrip
+                      type="material"
+                      item={materialActivity.byId.get(String(m.id))}
+                      loading={materialActivity.loading}
+                      error={materialActivity.error}
+                      onChanged={materialActivity.reload}
+                      onShare={copyShareLink}
+                    />
                     <div className="flex flex-wrap gap-2 mt-auto pt-4">
                       <a
                         href={materialFileOpenUrl(m.file_url)}

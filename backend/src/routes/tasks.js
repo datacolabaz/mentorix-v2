@@ -17,6 +17,7 @@ const {
   getInstructorStudentAssignment,
   requestAiReviewSuggestion,
   reviewInstructorAssignment,
+  returnInstructorAssignment,
   getAssignmentAnalytics,
   listInstructorGroups,
   listParentAssignments,
@@ -89,6 +90,7 @@ router.post(
   requestAiReviewSuggestion,
 );
 router.patch('/instructor/review/:id', authenticate, authorize('instructor'), reviewInstructorAssignment);
+router.post('/instructor/review/:id/return', authenticate, authorize('instructor'), returnInstructorAssignment);
 
 // Upload attachments for assignments (local storage, unguessable filenames)
 const { ensureAssignmentsUploadDir, persistAssignmentFileBlob } = require('../services/assignmentFileStorage');

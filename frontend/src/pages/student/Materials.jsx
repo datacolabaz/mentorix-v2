@@ -122,7 +122,6 @@ export default function StudentMaterials() {
                       )}
                       <a
                         href={materialFileDownloadUrl(m.file_url)}
-                        onClick={() => trackMaterialEvent(m.id, 'material_downloaded')}
                         className="text-center text-xs font-semibold py-2 rounded-lg border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
                       >
                         Yüklə
