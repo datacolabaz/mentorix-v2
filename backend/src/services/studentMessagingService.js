@@ -1,5 +1,4 @@
 const db = require('../utils/db');
-const { sendSms } = require('./smsService');
 const { sendWhatsAppOutbound } = require('./whatsappService');
 
 function pickStudentNotifyPhone(row) {
@@ -9,38 +8,30 @@ function pickStudentNotifyPhone(row) {
   return st || par || null;
 }
 
-async function logOutboundMessage({ instructorId, studentId, phone, message, status, channel, logType }) {
+/** WhatsApp outbound history (kept in the legacy sms_logs table, package_type = 'whatsapp'). */
+async function logOutboundMessage({ instructorId, studentId, phone, message, status, logType }) {
   const safeStatus = String(status || 'unknown').slice(0, 20);
-  const ch = channel === 'whatsapp' ? 'whatsapp' : 'sms';
   try {
     await db.query(
       `INSERT INTO sms_logs (instructor_id, student_id, phone, message, status, type, package_type, sent_at, delivered_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),CASE WHEN $5 = 'sent' THEN NOW() ELSE NULL END)`,
-      [instructorId, studentId || null, phone, message, safeStatus, logType || 'notification', ch]
+       VALUES ($1,$2,$3,$4,$5,$6,'whatsapp',NOW(),CASE WHEN $5 = 'sent' THEN NOW() ELSE NULL END)`,
+      [instructorId, studentId || null, phone, message, safeStatus, logType || 'notification']
     );
   } catch {
-    try {
-      await db.query(
-        `INSERT INTO sms_logs (instructor_id, student_id, phone, message, status)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [instructorId, studentId || null, phone, message, safeStatus]
-      );
-    } catch {
-      // optional table
-    }
+    // optional table
   }
 }
 
 /**
- * Tələbə/valideyn nömrəsinə: əvvəl WhatsApp (konfiq varsa), uğursuzdursa SMS.
+ * Teacher-initiated WhatsApp message to a student/parent number (configured WhatsApp Cloud API only).
+ * There is no SMS fallback: SMS is retired.
  */
-async function sendStudentWhatsAppOrSms({
+async function sendStudentWhatsApp({
   instructorId,
   studentId,
   phone,
   message,
   logType = 'notification',
-  whatsappOnly = false,
   templateBodyParams = null,
   templateNameOverride = null,
 }) {
@@ -56,36 +47,17 @@ async function sendStudentWhatsAppOrSms({
   });
   if (wa.success) {
     if (instructorId) {
-      await logOutboundMessage({
-        instructorId,
-        studentId,
-        phone,
-        message,
-        status: 'whatsapp',
-        channel: 'whatsapp',
-        logType,
-      });
+      await logOutboundMessage({ instructorId, studentId, phone, message, status: 'whatsapp', logType });
     }
     return { ...wa, channel: 'whatsapp' };
   }
 
-  if (whatsappOnly) {
-    return {
-      success: false,
-      channel: 'whatsapp',
-      error: wa.skipped ? 'whatsapp_not_configured' : wa.error || 'whatsapp_failed',
-      whatsapp_skipped: Boolean(wa.skipped),
-    };
-  }
-
-  const sms = await sendSms({ instructorId, phone, message, logType, studentId });
-
   return {
-    ...sms,
-    channel: 'sms',
+    success: false,
+    channel: 'whatsapp',
+    error: wa.skipped ? 'whatsapp_not_configured' : wa.error || 'whatsapp_failed',
     whatsapp_skipped: Boolean(wa.skipped),
-    whatsapp_error: wa.skipped ? null : wa.error || null,
   };
 }
 
-module.exports = { sendStudentWhatsAppOrSms, pickStudentNotifyPhone };
+module.exports = { sendStudentWhatsApp, pickStudentNotifyPhone };

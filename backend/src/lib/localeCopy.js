@@ -63,13 +63,6 @@ function ctaViewPlans(locale) {
   return 'Paketlərə bax';
 }
 
-function ctaSmsTopup(locale) {
-  const l = lang(locale);
-  if (l === 'ru') return 'Пополнить SMS';
-  if (l === 'en') return 'Top up SMS';
-  return 'SMS Balansı Artır';
-}
-
 function ctaStorageTopup(locale) {
   const l = lang(locale);
   if (l === 'ru') return 'Купить память';
@@ -171,7 +164,6 @@ module.exports = {
   joinOr,
   higherPlanOrAbove,
   ctaViewPlans,
-  ctaSmsTopup,
   ctaStorageTopup,
   ctaUpgrade,
   mapFeatureLine,

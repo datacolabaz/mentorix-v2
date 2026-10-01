@@ -319,9 +319,9 @@ const EMAIL_FIRST_TEMPLATES = {
     ru: { subject: 'Итоги недели: {{periodLabel}}', eyebrow: 'Итоги недели', lines: ['Активные ученики: {{activeStudents}}', 'Сдано экзаменов: {{examSubmissions}}', 'Сдано заданий: {{assignmentSubmissions}}', 'Ждут проверки: {{pendingReviews}}', 'Онлайн-уроки: {{liveLessons}}'], cta: REPORT_CTA.ru },
   }),
   storage_limit_warning: compact({
-    az: { subject: 'Yaddaş limitinin {{percent}}%-i doldu', eyebrow: 'Limit', lines: ['Bulud yaddaşınızın {{used}} / {{limit}} hissəsi istifadə olunub.', 'Limitə çatdıqda yeni fayl yükləmək dayanır; mövcud fayllar silinmir.'], cta: STORAGE_CTA.az },
-    en: { subject: '{{percent}}% of your storage is used', eyebrow: 'Limit', lines: ['You are using {{used}} of {{limit}} cloud storage.', 'New uploads stop at the limit; existing files are not deleted.'], cta: STORAGE_CTA.en },
-    ru: { subject: 'Хранилище заполнено на {{percent}}%', eyebrow: 'Лимит', lines: ['Использовано {{used}} из {{limit}} облачного хранилища.', 'При достижении лимита загрузка новых файлов останавливается; файлы не удаляются.'], cta: STORAGE_CTA.ru },
+    az: { subject: 'Yaddaş limitinə yaxınlaşırsınız', eyebrow: 'Limit', lines: ['Bulud yaddaşınızın {{percent}}%-i istifadə olunub ({{used}} / {{limit}}).', 'Limitə çatdıqda yeni fayl yükləmək dayanır; mövcud fayllar silinmir.'], cta: STORAGE_CTA.az },
+    en: { subject: 'You are nearing your storage limit', eyebrow: 'Limit', lines: ['{{percent}}% of your cloud storage is used ({{used}} / {{limit}}).', 'New uploads stop at the limit; existing files are not deleted.'], cta: STORAGE_CTA.en },
+    ru: { subject: 'Хранилище почти заполнено', eyebrow: 'Лимит', lines: ['Облачное хранилище заполнено на {{percent}}% ({{used}} / {{limit}}).', 'При достижении лимита загрузка новых файлов останавливается; файлы не удаляются.'], cta: STORAGE_CTA.ru },
   }),
   storage_limit_reached: compact({
     az: { subject: 'Yaddaş limiti doldu', eyebrow: 'Limit', lines: ['Bulud yaddaşınız doldu ({{used}} / {{limit}}).', 'Yeni fayl yükləmək üçün köhnə faylları silin və ya daha yüksək paketə keçin. Mövcud fayllar silinmir.'], cta: STORAGE_CTA.az },

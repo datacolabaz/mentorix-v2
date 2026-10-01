@@ -15,7 +15,6 @@ const { enqueueNotification } = require('../services/notificationQueueService');
 const { getBrand } = require('../config/brand');
 const {
   createPlanCheckout,
-  createSmsCheckout,
   createStorageCheckout,
   normalizePaymentMethod,
 } = require('../services/billingCheckoutService');
@@ -241,21 +240,10 @@ router.post(
   }
 });
 
-router.post('/create-sms-payment', authenticate, authorize('instructor'), async (req, res) => {
-  try {
-    const paymentMethod = normalizePaymentMethod(req.body?.payment_method ?? req.body?.paymentMethod ?? 'card');
-    const callbackUrl = paymentMethod === 'cash' ? null : callbackUrlFromReq(req);
-    const payment = await createSmsCheckout({
-      userId: req.user.id,
-      smsQuantity: req.body?.quantity ?? req.body?.sms_quantity,
-      paymentMethod,
-      callbackUrl,
-    });
-    return res.json({ success: true, payment });
-  } catch (err) {
-    return res.status(err.statusCode || err.status || 500).json({ success: false, message: err.message, code: err.code });
-  }
-});
+// SMS packages are no longer sold (SMS retired). Historical SMS payments stay in billing history.
+router.post('/create-sms-payment', authenticate, authorize('instructor'), (_req, res) =>
+  res.status(410).json({ success: false, code: 'SMS_RETIRED', message: 'SMS paketləri artıq satılmır.' }),
+);
 
 router.post('/create-storage-payment', authenticate, authorize('instructor'), async (req, res) => {
   try {

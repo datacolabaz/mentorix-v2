@@ -1,6 +1,7 @@
 const db = require('../utils/db');
-const { normalizePlanSlug, PLANS } = require('../config/plans');
-const { liveParticipantLimitLabel } = require('../constants/livePlanLimits');
+const { normalizePlanSlug, PLANS, PUBLIC_PLAN_SLUGS } = require('../config/plans');
+
+const LIVE_LESSON_FEATURE = 'Google Meet və Zoom linkləri ilə limitsiz canlı dərs planlama';
 
 // Lightweight cache to avoid DB hit on every request, but still "dynamic".
 // TTL is short so admin edits reflect quickly.
@@ -49,7 +50,6 @@ function normalizeRow(r) {
     storage_limit_bytes != null && Number.isFinite(storage_limit_bytes)
       ? null
       : gbToMb(r.storage_gb);
-  const sms_monthly = r.sms_limit == null ? null : Number(r.sms_limit);
   const exams_monthly = r.exam_limit == null ? null : Number(r.exam_limit);
   const homeworks_monthly = r.homework_limit == null ? null : Number(r.homework_limit);
   const documents = r.document_limit == null ? null : Number(r.document_limit);
@@ -63,8 +63,6 @@ function normalizeRow(r) {
     r.ai_grading_limit == null
       ? fallback.ai_gradings_monthly ?? null
       : Number(r.ai_grading_limit);
-  const live_participants =
-    fallback.live_participants === undefined ? null : fallback.live_participants;
   const features = Array.isArray(r.features) ? r.features : r.features ? r.features : null;
   const marketing_features = parseMarketingFeatures(r.marketing_features);
   const plan_subtitle =
@@ -86,11 +84,9 @@ function normalizeRow(r) {
       documents,
       storage_mb,
       storage_limit_bytes,
-      sms_monthly,
       exams_monthly,
       homeworks_monthly,
       ram_limit_mb,
-      live_participants,
       recording_hours_monthly:
         r.recording_hours_monthly == null
           ? fallback.recording_hours_monthly ?? null
@@ -144,6 +140,7 @@ function normalizeRow(r) {
     },
     highlight: Boolean(r.highlight),
     is_active: Boolean(r.is_active),
+    is_public: r.is_public !== false && PUBLIC_PLAN_SLUGS.includes(slug),
     features,
     marketing_features,
     plan_subtitle,
@@ -155,7 +152,7 @@ function normalizeRow(r) {
 
 async function loadPlansFromDb() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, ai_question_limit, ai_grading_limit, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, ai_question_limit, ai_grading_limit, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, is_public, updated_at
      FROM subscription_plans
      WHERE is_active = TRUE
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
@@ -170,6 +167,14 @@ async function getActivePlansList({ forceRefresh = false } = {}) {
   const plans = await loadPlansFromDb();
   cache = { at: now(), plans };
   return plans;
+}
+
+/** Pricing page / new purchases: only the three public plans (legacy `pro` stays for its subscribers). */
+async function getPublicPlansList(opts) {
+  const list = await getActivePlansList(opts);
+  return list
+    .filter((p) => p.is_public)
+    .sort((a, b) => PUBLIC_PLAN_SLUGS.indexOf(a.slug) - PUBLIC_PLAN_SLUGS.indexOf(b.slug));
 }
 
 async function getActivePlansMap() {
@@ -196,17 +201,13 @@ async function getPlanOrThrow(slugRaw) {
 function storageLabelForBytes(bytes) {
   const b = Number(bytes);
   if (!Number.isFinite(b) || b <= 0) return null;
-  if (b === 5 * 1024 * 1024) return '5 MB Sənəd Yaddaşı';
-  if (b === 256 * 1024 * 1024) return '256 MB Sənəd Yaddaşı';
-  if (b === 1024 * 1024 * 1024) return '1 GB Sənəd Yaddaşı';
-  if (b === 2048 * 1024 * 1024) return '2 GB Sənəd Yaddaşı';
-  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB Sənəd Yaddaşı`;
+  if (b < 1024 * 1024) return `${Math.max(1, Math.round(b / 1024))} KB bulud yaddaşı`;
   const mb = b / (1024 * 1024);
   if (mb >= 1024) {
     const gb = mb / 1024;
-    return `${gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10} GB Sənəd Yaddaşı`;
+    return `${gb % 1 === 0 ? Math.round(gb) : Math.round(gb * 10) / 10} GB bulud yaddaşı`;
   }
-  return `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB Sənəd Yaddaşı`;
+  return `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB bulud yaddaşı`;
 }
 
 function formatDocumentCount(n) {
@@ -219,16 +220,10 @@ function buildPlanFeaturesFromLimits({
   slug,
   student_limit,
   document_limit,
-  sms_limit,
   exam_limit,
   homework_limit,
   storage_gb,
   storage_limit_bytes,
-  recording_hours_monthly,
-  recording_storage_bytes,
-  recording_retention_days,
-  recording_max_duration_sec,
-  recording_max_quality,
   ai_question_limit,
   ai_grading_limit,
 }) {
@@ -245,15 +240,11 @@ function buildPlanFeaturesFromLimits({
       lines.push(label || 'Sənəd Yaddaşı');
     } else if (storage_gb != null && Number.isFinite(Number(storage_gb))) {
       const gb = Number(storage_gb);
-      lines.push(gb >= 1 ? `${gb} GB Sənəd Yaddaşı` : `${Math.round(gb * 1024)} MB Sənəd Yaddaşı`);
+      lines.push(gb >= 1 ? `${gb} GB bulud yaddaşı` : `${Math.round(gb * 1024)} MB bulud yaddaşı`);
     }
   } else {
     lines.push(`${formatDocumentCount(document_limit)} sənəd`);
   }
-
-  if (sms_limit == null) lines.push('Limitsiz SMS / ay');
-  else if (planSlug === 'premium') lines.push('200 SMS / Əlavə balans imkanı');
-  else lines.push(`${Math.max(0, Math.round(Number(sms_limit)))} SMS / ay`);
 
   if (exam_limit == null) lines.push('Limitsiz imtahan / ay');
   else lines.push(`${Math.max(0, Math.round(Number(exam_limit)))} imtahan / ay`);
@@ -279,45 +270,12 @@ function buildPlanFeaturesFromLimits({
   if (aiG != null && Number.isFinite(aiG)) {
     lines.push(
       planSlug === 'basic'
-        ? `${Math.max(0, Math.round(aiG))} AI Tapşırıq yoxlama`
-        : `${Math.max(0, Math.round(aiG))} AI Tapşırıq yoxlama / ay`,
+        ? `${Math.max(0, Math.round(aiG))} AI ilə yoxlanılan açıq-cavab işi`
+        : `${Math.max(0, Math.round(aiG))} AI ilə yoxlanılan açıq-cavab işi / ay`,
     );
   }
 
-  lines.push('Limitsiz canlı dərslər');
-  lines.push(`İştirakçı: ${liveParticipantLimitLabel(planSlug)}`);
-
-  const hours =
-    recording_hours_monthly == null
-      ? Number(fallback.recording_hours_monthly) || 0
-      : Number(recording_hours_monthly) || 0;
-  const storageBytes =
-    recording_storage_bytes == null
-      ? Number(fallback.recording_storage_bytes) || 0
-      : Number(recording_storage_bytes) || 0;
-  const retention =
-    recording_retention_days == null
-      ? Number(fallback.recording_retention_days) || 0
-      : Number(recording_retention_days) || 0;
-  const maxDur =
-    recording_max_duration_sec == null
-      ? Number(fallback.recording_max_duration_sec) || 0
-      : Number(recording_max_duration_sec) || 0;
-  const quality =
-    recording_max_quality == null || String(recording_max_quality).trim() === ''
-      ? fallback.recording_max_quality
-      : String(recording_max_quality).trim();
-
-  if (hours <= 0 || storageBytes <= 0) {
-    lines.push('Dərs yazısı yoxdur (SADƏ)');
-  } else {
-    const gb = storageBytes / (1024 * 1024 * 1024);
-    const storageLabel = gb % 1 === 0 ? `${Math.round(gb)}` : `${Math.round(gb * 10) / 10}`;
-    const maxMin = Math.round(maxDur / 60);
-    lines.push(
-      `Yazı: ${hours} saat/ay · ${storageLabel} GB · ${retention} gün saxlama · max ${maxMin} dəq · ${quality || '720p'}`,
-    );
-  }
+  lines.push(LIVE_LESSON_FEATURE);
   return lines;
 }
 
@@ -370,7 +328,7 @@ function resolveLimitsFromAdminPayload(payload) {
 
 async function adminListPlans() {
   const { rows } = await db.query(
-    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, ai_question_limit, ai_grading_limit, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, updated_at
+    `SELECT slug, title, price_azn, student_limit, document_limit, storage_gb, storage_limit_bytes, sms_limit, exam_limit, homework_limit, ram_limit_mb, recording_hours_monthly, recording_storage_bytes, recording_retention_days, recording_max_duration_sec, recording_max_quality, ai_question_limit, ai_grading_limit, features, marketing_features, plan_subtitle, plan_cta, popular_label, highlight, is_active, is_public, updated_at
      FROM subscription_plans
      ORDER BY CASE slug WHEN 'basic' THEN 1 WHEN 'pro' THEN 2 WHEN 'growth' THEN 3 WHEN 'premium' THEN 4 WHEN 'business' THEN 4 ELSE 99 END, slug`
   );
@@ -407,6 +365,7 @@ async function adminListPlans() {
     popular_label: r.popular_label == null ? null : String(r.popular_label),
     highlight: Boolean(r.highlight),
     is_active: Boolean(r.is_active),
+    is_public: r.is_public !== false,
     updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : null,
   }));
 }
@@ -477,16 +436,10 @@ async function adminUpsertPlan(payload) {
       slug,
       student_limit,
       document_limit,
-      sms_limit,
       exam_limit,
       homework_limit,
       storage_gb,
       storage_limit_bytes,
-      recording_hours_monthly: payload?.recording_hours_monthly,
-      recording_storage_bytes: payload?.recording_storage_bytes,
-      recording_retention_days: payload?.recording_retention_days,
-      recording_max_duration_sec: payload?.recording_max_duration_sec,
-      recording_max_quality: payload?.recording_max_quality,
     });
   } else {
     student_limit = payload?.student_limit === '' ? null : payload?.student_limit;
@@ -630,6 +583,13 @@ async function adminUpsertPlan(payload) {
     ]
   );
 
+  if (Object.prototype.hasOwnProperty.call(payload || {}, 'is_public')) {
+    await db.query(
+      `UPDATE subscription_plans SET is_public = $2, updated_at = NOW() WHERE slug = $1`,
+      [slug, payload.is_public !== false],
+    );
+  }
+
   // AI limits: optional payload keys; preserve existing when omitted.
   if (
     Object.prototype.hasOwnProperty.call(payload || {}, 'ai_question_limit') ||
@@ -676,8 +636,10 @@ async function adminUpsertPlan(payload) {
 
 module.exports = {
   getActivePlansList,
+  getPublicPlansList,
   getActivePlansMap,
   getPlanOrThrow,
+  LIVE_LESSON_FEATURE,
   adminListPlans,
   adminUpsertPlan,
   buildPlanFeaturesFromLimits,

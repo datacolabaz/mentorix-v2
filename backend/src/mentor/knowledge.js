@@ -167,9 +167,9 @@ const FAQ = [
   {
     q: { az: 'telefon sms otp google qeydiyyat', ru: 'телефон смс otp google регистрация', en: 'phone sms otp google signup' },
     a: {
-      az: 'Müəllim Google ilə qeydiyyatda SMS almır. Telefon qrup/imtahan/tələbə əlavə edəndə OTP ilə təsdiqlənir.',
-      ru: 'При Google-регистрации SMS не уходит. Телефон подтверждается OTP при группе, экзамене или добавлении ученика.',
-      en: 'Google signup does not send SMS. Phone OTP is required when creating a group, exam or adding a student.',
+      az: 'Qeydiyyat və giriş Google hesabı ilə olur; telefona kod göndərilmir. Bildirişlər e-poçt və panel vasitəsilə gəlir.',
+      ru: 'Регистрация и вход — через Google-аккаунт; коды на телефон не отправляются. Уведомления приходят по e-mail и в панели.',
+      en: 'Sign-up and sign-in use your Google account; no codes are sent to your phone. Notifications arrive by email and in the dashboard.',
     },
   },
   {

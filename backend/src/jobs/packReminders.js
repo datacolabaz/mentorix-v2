@@ -1,6 +1,6 @@
 const db = require('../utils/db');
-const { sendSms } = require('../services/smsService');
 const { SQL_EXCLUDE_SYSTEM_GROUP_ENROLLMENTS } = require('../services/systemGroupGuards');
+const { notifyBillingOnce } = require('../services/billingNotifications');
 
 function billingLimit(billingType) {
   if (billingType === '8_lessons') return 8;
@@ -14,6 +14,13 @@ function packTriggerAt(limit) {
   return null;
 }
 
+const PACK_MESSAGE = 'Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.';
+
+/**
+ * "Next lesson is the last one of the pack" reminder (lesson-count trigger). Delivered to the student as an
+ * in-app + email payment reminder (SMS retired). Shares the dedupe key with the calendar-based reminder in
+ * jobs/billingNotifications.js, so a student never gets both for the same cycle.
+ */
 async function runPackReminders({ dryRun = false } = {}) {
   const { rows } = await db.query(
     `WITH prog AS (
@@ -24,9 +31,6 @@ async function runPackReminders({ dryRun = false } = {}) {
          e.billing_type,
          e.billing_cycle,
          COALESCE(e.notifications_enabled, TRUE) AS notifications_enabled,
-         COALESCE(u.full_name, '') AS student_name,
-         u.phone AS student_phone,
-         COALESCE(NULLIF(TRIM(sp.parent_phone), ''), pu.phone) AS parent_phone,
          GREATEST(
            COALESCE(att.max_lesson_number, 0),
            COALESCE(les.done_lessons, 0),
@@ -36,8 +40,6 @@ async function runPackReminders({ dryRun = false } = {}) {
          COALESCE(e.pack_reminder_sent_cycle, 0)::int AS pack_reminder_sent_cycle
        FROM enrollments e
        JOIN users u ON u.id = e.student_id
-       LEFT JOIN student_profiles sp ON sp.user_id = e.student_id
-       LEFT JOIN users pu ON pu.id = sp.parent_id
        LEFT JOIN LATERAL (
         SELECT COALESCE(MAX(a.lesson_number) FILTER (WHERE a.attended = TRUE), 0) AS max_lesson_number
          FROM attendance a
@@ -88,17 +90,19 @@ async function runPackReminders({ dryRun = false } = {}) {
       continue;
     }
 
-    const phone = r.parent_phone || r.student_phone;
-    if (!phone) {
-      skipped.push({ enrollment_id: r.enrollment_id, reason: 'no_phone' });
-      continue;
-    }
-
-    const msg =
-      'Mentorix: Növbəti dərsiniz paketinizin son dərsidir. Davam etmək üçün ödənişi nəzərə alın.';
-
     if (!dryRun) {
-      await sendSms({ instructorId: r.instructor_id, phone, message: msg });
+      const cycle = Number(r.billing_cycle || 1) || 1;
+      await notifyBillingOnce({
+        userId: r.student_id,
+        type: 'billing_pkg_last_lesson_student',
+        title: 'Paket bitir',
+        body: PACK_MESSAGE,
+        priority: 'HIGH',
+        meta: { enrollment_id: r.enrollment_id, billing_cycle: cycle },
+        providerWorkspaceId: r.instructor_id || null,
+        dedupeKey: `billing_pkg_last_lesson:${r.enrollment_id}:${cycle}`,
+        email: true,
+      });
       await db.query(
         `UPDATE enrollments
          SET pack_reminder_sent_cycle = billing_cycle
@@ -107,11 +111,10 @@ async function runPackReminders({ dryRun = false } = {}) {
       );
     }
 
-    sent.push({ enrollment_id: r.enrollment_id, phone, n, billing_cycle: r.billing_cycle, dryRun });
+    sent.push({ enrollment_id: r.enrollment_id, n, billing_cycle: r.billing_cycle, dryRun });
   }
 
   return { sent, skipped, dryRun };
 }
 
 module.exports = { runPackReminders };
-

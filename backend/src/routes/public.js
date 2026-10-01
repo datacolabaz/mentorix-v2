@@ -12,7 +12,23 @@ const {
   getServiceAreas,
 } = require('../controllers/publicCategoriesController');
 const { postPublicInquiry } = require('../controllers/studentInquiryController');
-const { getActivePlansList } = require('../services/subscriptionPlansService');
+const { getPublicPlansList } = require('../services/subscriptionPlansService');
+
+const PUBLIC_LIMIT_KEYS = [
+  'students',
+  'storage_limit_bytes',
+  'storage_mb',
+  'exams_monthly',
+  'homeworks_monthly',
+  'ai_questions_monthly',
+  'ai_gradings_monthly',
+];
+
+function publicPlanLimits(limits) {
+  const out = {};
+  for (const k of PUBLIC_LIMIT_KEYS) out[k] = limits?.[k] ?? null;
+  return out;
+}
 const { getPublicJoin } = require('../controllers/joinInvitationController');
 const { getPublicExamInvite, postPublicExamGuestJoin } = require('../controllers/publicExamInviteController');
 const { getPublicTaskInvite, postPublicTaskGuestJoin } = require('../controllers/publicTaskInviteController');
@@ -119,15 +135,14 @@ router.post('/inquiries', marketplaceOn, postPublicInquiry);
 router.post('/marketplace/ai-search', marketplaceOn, postMarketplaceAiSearch);
 router.get('/subscription-plans', async (_req, res) => {
   try {
-    const list = await getActivePlansList();
+    const list = await getPublicPlansList();
     const plans = list.map((p) => ({
       id: p.slug,
       title: p.title,
       price_azn: p.price_azn,
       highlight: p.highlight,
       items: Array.isArray(p.features) ? p.features : null,
-      limits: p.limits,
-      recording_limits: p.recording_limits,
+      limits: publicPlanLimits(p.limits),
       marketing_features: p.marketing_features,
       plan_subtitle: p.plan_subtitle,
       plan_cta: p.plan_cta,

@@ -81,26 +81,6 @@ function enforceStorageLimit(req, _res, next) {
   }
 }
 
-function enforceSmsLimit(req, _res, next) {
-  try {
-    const e = req.entitlements;
-    if (!e) return next();
-    const lim = e.limits?.sms_monthly;
-    const used = e.usage?.sms_monthly ?? 0;
-    if (lim != null && used >= lim) {
-      void logBillingEvent(db, { user_id: req.user?.id || null, event: 'limit_reached_sms', context: { used, limit: lim } });
-      throw httpError(
-        'SMS_LIMIT',
-        429,
-        'SMS limitinə çatdınız — davam etmək üçün daha geniş paket seçin.',
-      );
-    }
-    next();
-  } catch (e) {
-    next(e);
-  }
-}
-
 function enforceExamsLimit(req, _res, next) {
   try {
     if (!req.user?.id || req.user.role === 'admin') return next();
@@ -189,7 +169,6 @@ module.exports = {
   attachEntitlements,
   enforceStudentsLimit,
   enforceStorageLimit,
-  enforceSmsLimit,
   enforceExamsLimit,
   enforceHomeworksLimit,
   enforceActiveSubscription,

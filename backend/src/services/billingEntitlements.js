@@ -8,14 +8,12 @@ const { getActivePlansMap } = require('./subscriptionPlansService');
 const {
   isHighestTierPlan,
   planRank,
-  smsUsageLine,
   storageUsageLine,
   fetchPendingTopups,
   pickLimitCta,
   higherPaidPlansLabel,
   buildUpgradeLabels,
 } = require('./billingAlertHelpers');
-const { countBillableSmsForPeriod } = require('../utils/smsBillableLog');
 const { countInstructorExamsThisMonth, countInstructorHomeworksThisMonth } = require('./examLimitService');
 const { syncUsageStudentsCount } = require('./usageStudentsSync');
 const { expiredBanner, expiredCode, ctaViewPlans } = require('../lib/localeCopy');
@@ -137,46 +135,6 @@ async function ensureUsageRow(dbConn, userId) {
   return ins[0];
 }
 
-async function ensureSmsPeriodUpToDate(dbConn, userId) {
-  const usage = await ensureUsageRow(dbConn, userId);
-  const ym = await currentYmBaku(dbConn);
-  if (String(usage.sms_period_ym || '') === String(ym)) return usage;
-
-  const { rows } = await dbConn.query(
-    `UPDATE usage_counters
-     SET sms_used_monthly = 0,
-         sms_period_ym = $2,
-         updated_at = NOW()
-     WHERE user_id = $1
-     RETURNING user_id, students_count, storage_used_mb, storage_used_bytes, sms_used_monthly, sms_period_ym,
-               COALESCE(extra_sms_balance, 0) AS extra_sms_balance,
-               COALESCE(extra_storage_bytes, 0) AS extra_storage_bytes`,
-    [userId, ym]
-  );
-  return rows[0] || usage;
-}
-
-/** sms_logs (həqiqi göndərişlər) ilə usage_counters.sms_used_monthly sinxronlaşdırır. */
-async function reconcileSmsUsageMonthly(dbConn, userId) {
-  const usage = await ensureSmsPeriodUpToDate(dbConn, userId);
-  const ym = String(usage.sms_period_ym || (await currentYmBaku(dbConn)));
-  const fromLogs = await countBillableSmsForPeriod(dbConn, userId, ym);
-  const counter = Math.max(0, Number(usage.sms_used_monthly) || 0);
-  const reconciled = Math.max(counter, fromLogs);
-  if (reconciled !== counter) {
-    const { rows } = await dbConn.query(
-      `UPDATE usage_counters
-       SET sms_used_monthly = $2,
-           updated_at = NOW()
-       WHERE user_id = $1
-       RETURNING sms_used_monthly`,
-      [userId, reconciled],
-    );
-    return { ...usage, sms_used_monthly: Number(rows[0]?.sms_used_monthly ?? reconciled) };
-  }
-  return usage;
-}
-
 function remaining(limit, used) {
   // Unlimited = null
   if (limit == null) return null;
@@ -225,19 +183,17 @@ function buildStatus({
   if (!is_active) return 'expired';
 
   const reachedStudents = limits.students != null && used.students >= limits.students;
-  const reachedSms = limits.sms_monthly != null && used.sms_monthly >= limits.sms_monthly;
   const reachedStorageMb = limits.storage_mb != null && used.storage_mb >= limits.storage_mb;
   const reachedStorageBytes =
     limits.storage_limit_bytes != null &&
     Number(used.storage_bytes ?? 0) >= Number(limits.storage_limit_bytes);
   const reachedStorage = reachedStorageMb || reachedStorageBytes;
-  if (reachedStudents || reachedStorage || reachedSms) return 'blocked';
+  if (reachedStudents || reachedStorage) return 'blocked';
 
   const warnStudents = isWarnPercent(remainingObj.students, limits.students, 0.2);
-  const warnSms = isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2);
   const warnStorageMb = isWarnPercent(remainingObj.storage_mb, limits.storage_mb, 0.2);
   const warnStorage = warnStorageMb || storageWarn80(limits, used);
-  if (warnStudents || warnSms || warnStorage) return 'warning';
+  if (warnStudents || warnStorage) return 'warning';
 
   return 'active';
 }
@@ -264,21 +220,9 @@ function buildMessages(status, ctx) {
   const locale = normalizeLocale(localeRaw);
 
   const highest = isHighestTierPlan(plan, plansMap);
-  const onlySms =
-    details?.reachedSms && !details?.reachedStudents && !details?.reachedStorage;
-  const onlyStorage =
-    details?.reachedStorage && !details?.reachedStudents && !details?.reachedSms;
+  const onlyStorage = details?.reachedStorage && !details?.reachedStudents;
 
   if (pendingTopup?.hasPendingAny && (status === 'blocked' || status === 'warning')) {
-    if (pendingTopup.hasPendingSms && onlySms) {
-      return {
-        banner:
-          'Ödənişiniz admin təsdiqi gözləyir. Tezliklə SMS balansınız yenilənəcək.',
-        cta: { label: 'Ödəniş tarixçəsi', action: 'OPEN_SETTINGS_PAYMENTS' },
-        suppress_limit_bar: true,
-        tone: 'pending',
-      };
-    }
     if (pendingTopup.hasPendingStorage && onlyStorage) {
       return {
         banner: 'Ödənişiniz admin təsdiqi gözləyir. Tezliklə yaddaş limitiniz artırılacaq.',
@@ -304,10 +248,6 @@ function buildMessages(status, ctx) {
     const parts = [];
     if (limits.students != null && isWarnPercent(remainingObj.students, limits.students, 0.2)) {
       parts.push(`Tələbə limitinə yaxınlasırsınız (${used.students}/${limits.students})`);
-    }
-    const smsLine = smsUsageLine(used.sms_monthly, limits);
-    if (smsLine && limits.sms_monthly != null && isWarnPercent(remainingObj.sms_monthly, limits.sms_monthly, 0.2)) {
-      parts.push(smsLine.warnMessage);
     }
     if (
       limits.exams_monthly != null &&
@@ -350,7 +290,6 @@ function buildMessages(status, ctx) {
     const cta = pickLimitCta({
       plan,
       plansMap,
-      reachedSms: Boolean(smsLine && smsLine.pct >= 80),
       reachedStorage: Boolean(stLine && stLine.pct >= 80),
       reachedStudents: false,
       locale,
@@ -365,13 +304,6 @@ function buildMessages(status, ctx) {
   }
   if (status === 'blocked') {
     const onBasic = normalizePlanSlug(plan) === 'basic';
-    if (onlySms && highest && !onBasic) {
-      return {
-        banner:
-          'Aylıq SMS limitinizə çatdınız. İstifadəyə davam etmək üçün əlavə SMS paketi əldə edə bilərsiniz.',
-        cta: { label: 'SMS Balansı Artır', action: 'OPEN_SMS_TOPUP' },
-      };
-    }
     if (onlyStorage && highest && !onBasic) {
       return {
         banner:
@@ -379,23 +311,21 @@ function buildMessages(status, ctx) {
         cta: { label: 'Yaddaş al', action: 'OPEN_STORAGE_TOPUP' },
       };
     }
-    if (onBasic && (details?.reachedSms || details?.reachedStorage)) {
+    if (onBasic && details?.reachedStorage) {
       return {
-        banner: `SADƏ sınaq limitinə çatdınız. Əlavə SMS/yaddaş bu paketdə mövcud deyil — ${higherPaidPlansLabel(plansMap, plan, locale)} seçin.`,
+        banner: `Pulsuz sınaq limitinə çatdınız. Əlavə yaddaş bu paketdə mövcud deyil — ${higherPaidPlansLabel(plansMap, plan, locale)} seçin.`,
         cta: { label: ctaViewPlans(locale), action: 'OPEN_SETTINGS_PLANS' },
       };
     }
     const reasons = [];
     if (details?.reachedStudents) reasons.push('tələbə limiti');
     if (details?.reachedStorage) reasons.push('yaddaş limiti');
-    if (details?.reachedSms) reasons.push('SMS limiti');
     const detail = reasons.length ? ` (${reasons.join(', ')})` : '';
     return {
       banner: `Limitə çatdınız${detail}. Davam etmək üçün paket seçməlisiniz.`,
       cta: pickLimitCta({
         plan,
         plansMap,
-        reachedSms: details?.reachedSms,
         reachedStorage: details?.reachedStorage,
         reachedStudents: details?.reachedStudents,
         locale,
@@ -460,8 +390,7 @@ async function resolveEntitlements(userId, opts = {}) {
 
   await syncUsageStudentsCount(userId);
 
-  let usage = await ensureSmsPeriodUpToDate(db, userId);
-  usage = await reconcileSmsUsageMonthly(db, userId);
+  const usage = await ensureUsageRow(db, userId);
   await ensureSubscriptionRow(db, userId);
   await reconcileSubscriptionPlanFromLastPaidPlan(db, userId);
   await backfillBasicTrialPeriodIfMissing(db, userId);
@@ -479,7 +408,6 @@ async function resolveEntitlements(userId, opts = {}) {
       students: 5,
       storage_mb: null,
       storage_limit_bytes: 5 * 1024 * 1024,
-      sms_monthly: 5,
       exams_monthly: 2,
       homeworks_monthly: 5,
       ram_limit_mb: null,
@@ -496,11 +424,7 @@ async function resolveEntitlements(userId, opts = {}) {
     aiSnap = null;
   }
 
-  const extraSmsBalance = Number(usage?.extra_sms_balance || 0) || 0;
-  const baseSmsLimit = planLimits.sms_monthly;
-  const effectiveSmsLimit =
-    baseSmsLimit == null ? null : Math.max(0, Number(baseSmsLimit) + extraSmsBalance);
-
+  // SMS is retired: no SMS limit/usage is exposed, so no SMS limit can block or warn.
   const extraStorageBytes = Number(usage?.extra_storage_bytes || 0) || 0;
   const baseStorageBytes =
     planLimits.storage_limit_bytes == null ? null : Number(planLimits.storage_limit_bytes);
@@ -513,9 +437,6 @@ async function resolveEntitlements(userId, opts = {}) {
     storage_limit_bytes: effectiveStorageBytes,
     storage_limit_bytes_plan: baseStorageBytes,
     extra_storage_bytes: extraStorageBytes,
-    sms_monthly: effectiveSmsLimit,
-    sms_monthly_plan: baseSmsLimit,
-    extra_sms_balance: extraSmsBalance,
     ram_limit_mb: planLimits.ram_limit_mb ?? null,
     exams_monthly: planLimits.exams_monthly ?? null,
     homeworks_monthly: planLimits.homeworks_monthly ?? null,
@@ -529,19 +450,16 @@ async function resolveEntitlements(userId, opts = {}) {
     students: Number(usage?.students_count || 0) || 0,
     storage_mb: Number(usage?.storage_used_mb || 0) || 0,
     storage_bytes: Number(usage?.storage_used_bytes ?? 0) || 0,
-    sms_monthly: Number(usage?.sms_used_monthly || 0) || 0,
     exams_monthly: examsUsed,
     homeworks_monthly: homeworksUsed,
     ai_questions_used: Number(aiSnap?.usage?.ai_questions_used || 0) || 0,
     ai_gradings_used: Number(aiSnap?.usage?.ai_gradings_used || 0) || 0,
-    extra_sms_balance: extraSmsBalance,
     extra_storage_bytes: extraStorageBytes,
   };
 
   const rem = {
     students: remaining(limits.students, used.students),
     storage_mb: remaining(limits.storage_mb, used.storage_mb),
-    sms_monthly: remaining(limits.sms_monthly, used.sms_monthly),
     exams_monthly: remaining(limits.exams_monthly, used.exams_monthly),
     homeworks_monthly: remaining(limits.homeworks_monthly, used.homeworks_monthly),
     ai_questions: remaining(limits.ai_questions_monthly, used.ai_questions_used),
@@ -580,7 +498,6 @@ async function resolveEntitlements(userId, opts = {}) {
   const reachedStorageBytes =
     limits.storage_limit_bytes != null && used.storage_bytes >= Number(limits.storage_limit_bytes);
   const reachedStorage = reachedStorageMb || reachedStorageBytes;
-  const reachedSms = limits.sms_monthly != null && used.sms_monthly >= limits.sms_monthly;
   const reachedExams = limits.exams_monthly != null && used.exams_monthly >= limits.exams_monthly;
   const reachedHomeworks =
     limits.homeworks_monthly != null && used.homeworks_monthly >= limits.homeworks_monthly;
@@ -597,7 +514,7 @@ async function resolveEntitlements(userId, opts = {}) {
     limits,
     used,
     remainingObj: rem,
-    details: { reachedStudents, reachedStorage, reachedSms, reachedExams, reachedHomeworks },
+    details: { reachedStudents, reachedStorage, reachedExams, reachedHomeworks },
     plan: planSlug,
     plansMap,
     pendingTopup,
@@ -658,7 +575,7 @@ function downgradePeriodMeta(periodStart) {
 }
 
 /**
- * Aşağı paketə keçid: 1 ay tamam + tələbə/SMS/yaddaş hədəf paketə uyğun.
+ * Aşağı paketə keçid: 1 ay tamam + tələbə/yaddaş hədəf paketə uyğun.
  */
 async function assertDowngradeAllowed(dbConn, userId, targetPlanSlug) {
   const target = normalizePlanSlug(targetPlanSlug);
@@ -691,12 +608,12 @@ async function assertDowngradeAllowed(dbConn, userId, targetPlanSlug) {
  */
 async function assertPlanFitsUsage(dbConn, userId, targetPlanSlug) {
   const slug = normalizePlanSlug(targetPlanSlug);
-  const usage = await ensureSmsPeriodUpToDate(dbConn, userId);
+  const usage = await ensureUsageRow(dbConn, userId);
   const plansMap = await getActivePlansMap();
   const lim =
     plansMap[slug]?.limits ||
     plansMap.basic?.limits ||
-    { students: 5, storage_limit_bytes: 512 * 1024, sms_monthly: 5 };
+    { students: 5, storage_limit_bytes: 512 * 1024 };
 
   const students = Number(usage?.students_count || 0) || 0;
   if (lim.students != null && students > Number(lim.students)) {
@@ -725,14 +642,6 @@ async function assertPlanFitsUsage(dbConn, userId, targetPlanSlug) {
     );
   }
 
-  const smsUsed = Number(usage?.sms_used_monthly || 0) || 0;
-  if (lim.sms_monthly != null && smsUsed > Number(lim.sms_monthly)) {
-    throw httpError(
-      'PLAN_USAGE_EXCEEDS',
-      400,
-      'Bu ay göndərilmiş SMS sayınız hədəf paketin limitindən çoxdur'
-    );
-  }
 }
 
 async function bumpUsageCountersTx(client, userId, patch) {
@@ -760,8 +669,6 @@ module.exports = {
   TZ,
   resolveEntitlements,
   getCurrentPlan,
-  ensureSmsPeriodUpToDate,
-  reconcileSmsUsageMonthly,
   assertPlanFitsUsage,
   assertDowngradeAllowed,
   bumpUsageCountersTx,

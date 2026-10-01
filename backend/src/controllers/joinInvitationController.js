@@ -165,13 +165,9 @@ const joinRequestsCount = async (req, res) => {
 const approveRequest = async (req, res) => {
   try {
     const kind = String(req.body?.kind || req.query?.kind || 'group_join').trim();
-    const sendSms =
-      req.body?.send_sms === true ||
-      req.body?.send_sms === 'true' ||
-      req.body?.send_sms === 1;
     const result =
       kind === 'exam_access'
-        ? await approveExamAccessRequest(req.params.id, req.user.id, { sendSms })
+        ? await approveExamAccessRequest(req.params.id, req.user.id)
         : kind === 'task_access'
           ? await approveTaskAccessRequest(req.params.id, req.user.id)
           : await approveJoinRequest(req.params.id, req.user.id);

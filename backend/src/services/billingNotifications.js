@@ -2,7 +2,8 @@
  * Ödəniş/abunəlik bildirişləri üçün ortaq yazıcı (əvvəl üç faylda ayrı-ayrı `ensureNotificationOnce` var idi).
  * Köhnə davranış saxlanılır: eyni alıcıya eyni tip + mətn son 45 gündə getmişsə, yenisi yazılmır.
  * Əlavə olaraq sabit, obyektə bağlı dedupe açarı (enrollment/payment/cycle) paralel sorğu, replika
- * və təkrar cəhdlərdə ikinci sətrin qarşısını DB səviyyəsində alır. Email yoxdur (əvvəlki kimi).
+ * və təkrar cəhdlərdə ikinci sətrin qarşısını DB səviyyəsində alır. E-poçt yalnız `email: true` verildikdə
+ * (tələbəyə ödəniş xatırlatması; SMS-in yerinə) və alıcının "billing" e-poçt seçimi açıqdırsa.
  */
 const db = require('../utils/db');
 
@@ -11,7 +12,7 @@ const LEGACY_WINDOW_DAYS = 45;
 /**
  * @param {{ userId: string, type: string, title: string, body: string, dedupeKey: string,
  *   priority?: string, meta?: object, relatedEntityType?: string, relatedEntityId?: string,
- *   actorUserId?: string, providerWorkspaceId?: string }} input
+ *   actorUserId?: string, providerWorkspaceId?: string, email?: boolean }} input
  * @returns {Promise<boolean>} yeni bildiriş yazıldımı
  */
 async function notifyBillingOnce(input) {
@@ -43,7 +44,7 @@ async function notifyBillingOnce(input) {
     actorUserId: input.actorUserId || null,
     providerWorkspaceId: input.providerWorkspaceId || null,
     dedupeKey: input.dedupeKey,
-    email: false,
+    email: input.email === true,
   });
   return Boolean(out.created);
 }
