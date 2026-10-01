@@ -25,6 +25,8 @@ export const BILLING_PAYMENT_STATUS_AZ = {
   rejected: 'Rədd edilib',
   failed: 'Uğursuz',
   expired: 'Tamamlanmayıb',
+  refunded: 'Geri qaytarılıb',
+  credited: 'Hesab kreditinə çevrilib',
 }
 
 export function billingPaymentStatusLabel(status) {

@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const { sendRenewalReminderEmail } = require('../services/emailService');
 const { enqueueNotification } = require('../services/notificationQueueService');
 const { getBrand } = require('../config/brand');
+const { releaseCreditForExpiredPayments } = require('../services/billingCreditService');
 
 async function expireAbandonedBillingPayments() {
   // Mark old pending payments as expired to keep DB clean.
@@ -12,6 +13,7 @@ async function expireAbandonedBillingPayments() {
        SET status = 'expired',
            updated_at = NOW()
        WHERE status = 'pending'
+         AND COALESCE(product_type, 'plan') <> 'sms'
          AND (
            (COALESCE(provider, '') = 'manual' AND expires_at IS NOT NULL AND expires_at < NOW())
            OR (
@@ -23,6 +25,7 @@ async function expireAbandonedBillingPayments() {
            )
          )`
     );
+    await releaseCreditForExpiredPayments();
     return rowCount || 0;
   } catch (e) {
     if (/billing_payments/i.test(String(e.message || ''))) return 0;

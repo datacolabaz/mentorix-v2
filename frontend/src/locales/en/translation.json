@@ -2853,7 +2853,9 @@
       "paid": "Paid",
       "rejected": "Rejected",
       "failed": "Failed",
-      "expired": "Incomplete"
+      "expired": "Incomplete",
+      "refunded": "Refunded",
+      "credited": "Converted to account credit"
     },
     "billingTitle": {
       "storageGb": "+{{size}} GB document storage",
@@ -2967,6 +2969,10 @@
     },
     "buyExtraStorage": "Buy extra storage",
     "legacyPlanNote": "Legacy plan — kept for you on the same terms, no longer offered to new subscribers.",
+    "credit": {
+      "balance": "Account credit: {{amount}} AZN — applied automatically to your next plan or storage payment.",
+      "paidWithCredit": "Fully covered by your account credit — activated."
+    },
     "legacyMigration": {
       "noteScheduled": "STANDART is being replaced by PROFESSIONAL. Your current period does not change; the renewal after {{date}} will be PROFESSIONAL (10 AZN/month). There is no automatic charge.",
       "noteExtraRenewal": "STANDART is being replaced by PROFESSIONAL. Because the notice is shorter than 14 days, you can renew once more at 5 AZN (monthly); after that PROFESSIONAL (10 AZN/month).",

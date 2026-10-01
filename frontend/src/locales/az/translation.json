@@ -2863,7 +2863,9 @@
       "paid": "Ödənilib",
       "rejected": "Rədd edilib",
       "failed": "Uğursuz",
-      "expired": "Tamamlanmayıb"
+      "expired": "Tamamlanmayıb",
+      "refunded": "Geri qaytarılıb",
+      "credited": "Hesab kreditinə çevrilib"
     },
     "billingTitle": {
       "storageGb": "+{{size}} GB Sənəd Yaddaşı",
@@ -2977,6 +2979,10 @@
     },
     "buyExtraStorage": "Əlavə yaddaş al",
     "legacyPlanNote": "Köhnə paket — sizin üçün eyni şərtlərlə saxlanılır, yeni abunəliklər üçün təklif olunmur.",
+    "credit": {
+      "balance": "Hesab krediti: {{amount}} AZN — növbəti paket və ya yaddaş ödənişinizə avtomatik tətbiq olunur.",
+      "paidWithCredit": "Ödəniş hesab krediti ilə tam qarşılandı — aktivləşdirildi."
+    },
     "legacyMigration": {
       "noteScheduled": "STANDART paketi PROFESSIONAL ilə əvəz olunur. Cari dövr dəyişmir; {{date}} tarixindən sonrakı yeniləmə PROFESSIONAL (10 AZN/ay) olacaq. Avtomatik ödəniş yoxdur.",
       "noteExtraRenewal": "STANDART paketi PROFESSIONAL ilə əvəz olunur. Bildiriş müddəti 14 gündən az olduğu üçün növbəti yeniləməni bir dəfə də 5 AZN-ə (aylıq) edə bilərsiniz; ondan sonra PROFESSIONAL (10 AZN/ay).",

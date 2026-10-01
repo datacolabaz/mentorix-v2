@@ -68,7 +68,7 @@ function billingPaymentTitleLocalized(p, t) {
 
 function billingStatusLocalized(status, t) {
   const s = String(status || '').toLowerCase()
-  if (['pending', 'paid', 'rejected', 'failed', 'expired'].includes(s)) {
+  if (['pending', 'paid', 'rejected', 'failed', 'expired', 'refunded', 'credited'].includes(s)) {
     return t(`settings.billingStatus.${s}`)
   }
   return status || '—'
@@ -651,6 +651,11 @@ export default function InstructorSettings() {
         })
         const pay = r?.payment
         setCheckout(null)
+        if (pay?.status === 'paid') {
+          toast(t('settings.credit.paidWithCredit'), 'success')
+          void billingQ.refetch?.()
+          return
+        }
         if (paymentMethod === 'cash') {
           const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
           const qs = new URLSearchParams({
@@ -674,6 +679,11 @@ export default function InstructorSettings() {
         })
         const pay = r?.payment
         setCheckout(null)
+        if (pay?.status === 'paid') {
+          toast(t('settings.credit.paidWithCredit'), 'success')
+          void billingQ.refetch?.()
+          return
+        }
         if (paymentMethod === 'cash') {
           const amount = String((Number(pay?.amount_cents || 0) / 100).toFixed(2))
           const qs = new URLSearchParams({
@@ -870,6 +880,14 @@ export default function InstructorSettings() {
         ) : null}
         {billing ? (
           <div className="space-y-2">
+            {Number(billing?.credit_balance_cents) > 0 ? (
+              <p
+                className="text-[11px] text-token-textMain rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 leading-relaxed"
+                data-testid="billing-credit-balance"
+              >
+                {t('settings.credit.balance', { amount: (Number(billing.credit_balance_cents) / 100).toFixed(2) })}
+              </p>
+            ) : null}
             {pendingPlanSlug && pendingPlanSlug !== currentPlanId ? (
               <p className="text-[11px] text-sky-300/95 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 leading-relaxed">
                 {t('settings.pendingPlan', {

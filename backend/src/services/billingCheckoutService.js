@@ -24,6 +24,18 @@ const { logBillingEvent, assertDowngradeAllowed } = require('./billingEntitlemen
 const { getCheckoutDiscountForUser } = require('./partner/partnerCommissionService');
 const { applyDiscountCents } = require('./partner/partnerMath');
 const { LEGACY_PLAN, assertLegacyRenewalAllowed } = require('./legacyPlanMigrationService');
+const { reserveCreditForPayment } = require('./billingCreditService');
+
+/** Account credit covered the whole amount: no card/cash step, activate right away. */
+async function completeWithCredit(paymentId) {
+  await db.query(
+    `UPDATE billing_payments SET provider = 'credit', payment_method = 'credit', expires_at = NULL, updated_at = NOW()
+     WHERE id = $1`,
+    [paymentId]
+  );
+  const { fulfillBillingPayment } = require('./billingActivationService');
+  await fulfillBillingPayment(paymentId);
+}
 
 function yearlyTotalFromMonthly(monthlyAzn, discountPct = 0.2) {
   const m = Number(monthlyAzn || 0) || 0;
@@ -158,6 +170,26 @@ async function createPlanCheckout({
   );
   const paymentId = ins[0]?.id;
 
+  const credit = await reserveCreditForPayment({ userId, paymentId, amountCents });
+  amountCents = credit.amountCents;
+  const creditAppliedCents = credit.appliedCents;
+  if (creditAppliedCents > 0 && amountCents === 0) {
+    await completeWithCredit(paymentId);
+    return {
+      id: paymentId,
+      provider: 'credit',
+      payment_method: 'credit',
+      product_type: 'plan',
+      plan,
+      amount_cents: 0,
+      credit_applied_cents: creditAppliedCents,
+      currency: 'AZN',
+      status: 'paid',
+      billing_interval: billingInterval,
+      partner_discount: partnerDiscount,
+    };
+  }
+
   if (paymentMethod === 'cash') {
     await db.query(
       `UPDATE billing_payments
@@ -189,6 +221,7 @@ async function createPlanCheckout({
       manual_transfer_account: manualAccount,
       description: `Mentorix — ${String(picked?.title || plan).trim()} (${periodLabel})`,
       partner_discount: partnerDiscount,
+      credit_applied_cents: creditAppliedCents,
     };
   }
 
@@ -244,6 +277,7 @@ async function createPlanCheckout({
     payment_url: paymentUrl,
     billing_interval: billingInterval,
     partner_discount: partnerDiscount,
+    credit_applied_cents: creditAppliedCents,
   };
 }
 
@@ -272,7 +306,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
   assertAddonsAllowed(planSlug, plansMap);
 
   const finalPriceAzn = Number(pack.price_azn) || 0;
-  const amountCents = Math.round(finalPriceAzn * 100);
+  let amountCents = Math.round(finalPriceAzn * 100);
   const provider = paymentMethod === 'cash' ? 'manual' : 'payriff';
 
   const { rows: ins } = await db.query(
@@ -285,6 +319,25 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
     [userId, provider, planSlug, amountCents, paymentMethod, pack.quantity_mb]
   );
   const paymentId = ins[0]?.id;
+
+  const credit = await reserveCreditForPayment({ userId, paymentId, amountCents });
+  amountCents = credit.amountCents;
+  const creditAppliedCents = credit.appliedCents;
+  if (creditAppliedCents > 0 && amountCents === 0) {
+    await completeWithCredit(paymentId);
+    return {
+      id: paymentId,
+      provider: 'credit',
+      payment_method: 'credit',
+      product_type: 'storage',
+      storage_mb: pack.quantity_mb,
+      plan: planSlug,
+      amount_cents: 0,
+      credit_applied_cents: creditAppliedCents,
+      currency: 'AZN',
+      status: 'paid',
+    };
+  }
 
   if (paymentMethod === 'cash') {
     await db.query(
@@ -309,6 +362,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
       status: 'pending',
       manual_transfer_account: manualAccount,
       description: `Mentorix — ${pack.label}`,
+      credit_applied_cents: creditAppliedCents,
     };
   }
 
@@ -325,7 +379,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
   );
 
   const order = await createOrder({
-    amount: finalPriceAzn,
+    amount: amountCents / 100,
     currency: 'AZN',
     language: 'AZ',
     description: `Mentorix — ${pack.label}`,
@@ -366,6 +420,7 @@ async function createStorageCheckout({ userId, storageMb, paymentMethod: payment
     status: 'pending',
     external_order_id: orderId,
     payment_url: paymentUrl,
+    credit_applied_cents: creditAppliedCents,
   };
 }
 

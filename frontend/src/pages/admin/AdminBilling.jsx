@@ -4,12 +4,15 @@ import api from '../../lib/api'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
+import SmsTopupDecisions from '../../components/admin/SmsTopupDecisions'
 import { billingPaymentStatusLabel, BANK_CARD_DIGITS, normalizeBankCardDigits } from '../../lib/billingPaymentLabels'
 
 const STATUS_LABEL = {
   pending: 'Gözləyir',
   paid: 'Ödənilib',
   rejected: 'Rədd edilib',
+  refunded: 'Geri qaytarılıb',
+  credited: 'Kreditə çevrilib',
   failed: 'Uğursuz',
   expired: 'Tamamlanmayıb',
 }
@@ -689,6 +692,8 @@ export default function AdminBilling() {
         </Button>
       </Card>
 
+      <SmsTopupDecisions />
+
       <div className="flex gap-2">
         {[
           ['pending', 'Gözləyən köçürmələr'],
@@ -759,7 +764,7 @@ export default function AdminBilling() {
                       {p.created_at ? new Date(p.created_at).toLocaleString('az-AZ') : '—'}
                     </td>
                     <td className="py-3 px-4">
-                      {p.status === 'pending' && p.payment_method === 'cash' ? (
+                      {p.status === 'pending' && p.payment_method === 'cash' && p.product_type !== 'sms' ? (
                         <div className="flex gap-2">
                           <Button size="sm" loading={busyId === p.id} onClick={() => void approve(p.id)}>
                             Təsdiq

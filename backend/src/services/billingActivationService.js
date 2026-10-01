@@ -2,6 +2,14 @@ const db = require('../utils/db');
 const { normalizePlanSlug } = require('../config/plans');
 const { createPartnerCommissionIfEligible } = require('./partner/partnerCommissionService');
 const { onPlanActivated } = require('./legacyPlanMigrationService');
+const { settleCreditForPayment } = require('./billingCreditService');
+
+function smsDecisionRequired() {
+  const err = new Error('SMS xidməti dayandırılıb: bu ödəniş üçün «Geri qaytar» və ya «Kreditə çevir» seçin.');
+  err.statusCode = 409;
+  err.code = 'SMS_TOPUP_NEEDS_DECISION';
+  return err;
+}
 
 function normalizeBillingInterval(raw) {
   const s = String(raw ?? '')
@@ -180,6 +188,7 @@ async function fulfillBillingPayment(paymentId, { reviewedBy = null } = {}) {
       err.statusCode = 400;
       throw err;
     }
+    if (String(payment.product_type || '') === 'sms') throw smsDecisionRequired();
 
     await client.query(
       `UPDATE billing_payments
@@ -193,6 +202,7 @@ async function fulfillBillingPayment(paymentId, { reviewedBy = null } = {}) {
     );
 
     const activation = await activateBillingPayment(client, payment);
+    await settleCreditForPayment(client, paymentId, 'consumed');
 
     if (String(payment.product_type || 'plan') === 'plan') {
       await client.query(
@@ -220,7 +230,7 @@ async function fulfillBillingPayment(paymentId, { reviewedBy = null } = {}) {
 async function rejectBillingPayment(paymentId, { reviewedBy, adminNote } = {}) {
   return db.transaction(async (client) => {
     const { rows } = await client.query(
-      `SELECT id, status, user_id, plan, external_order_id, provider
+      `SELECT id, status, user_id, plan, external_order_id, provider, product_type
        FROM billing_payments WHERE id = $1 FOR UPDATE`,
       [paymentId]
     );
@@ -235,6 +245,7 @@ async function rejectBillingPayment(paymentId, { reviewedBy, adminNote } = {}) {
       err.statusCode = 400;
       throw err;
     }
+    if (String(payment.product_type || '') === 'sms') throw smsDecisionRequired();
 
     await client.query(
       `UPDATE billing_payments
@@ -246,6 +257,7 @@ async function rejectBillingPayment(paymentId, { reviewedBy, adminNote } = {}) {
        WHERE id = $1`,
       [paymentId, adminNote || null, reviewedBy || null]
     );
+    await settleCreditForPayment(client, paymentId, 'released');
 
     await client.query(
       `INSERT INTO billing_history (user_id, action, old_plan, new_plan, amount_cents, currency, status, provider, external_order_id)
