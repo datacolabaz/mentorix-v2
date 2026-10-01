@@ -6,6 +6,7 @@ const { sendFeatureDisabled } = require('../middleware/requireFeature');
 const { FEATURE_FLAGS } = require('../constants/featureFlags');
 const { logAuthEvent } = require('../services/authEventService');
 const { signAccountLinkToken, verifyAccountLinkToken, maskEmail } = require('../lib/googleOnlyAuth');
+const { classifyLoginIdentifier, pickPhoneLoginUser } = require('../lib/loginIdentifier');
 
 /**
  * Sessiya tokeni: tələbələr üçün uzunmüddətli (90 gün) — linklə qoşulan qonaq
@@ -662,21 +663,29 @@ const login = async (req, res) => {
     const pass = password != null ? String(password) : '';
     if (!pass) return res.status(400).json({ success: false, message: 'Şifrə tələb olunur' });
 
-    const clean = normalizePhone(s);
-    const looksPhone = Boolean(clean) && clean.length >= 9;
+    const idf = classifyLoginIdentifier(s);
 
-    const { rows } = looksPhone
-      ? await db.query(
-          `SELECT *
-           FROM users
-           WHERE is_active = TRUE
-             AND ${PHONE_NORM} = $1
-           LIMIT 1`,
-          [clean]
-        )
-      : await db.query('SELECT * FROM users WHERE is_active = TRUE AND lower(trim(email)) = lower(trim($1)) LIMIT 1', [s]);
-
-    const user = rows[0];
+    let user;
+    if (idf.kind === 'phone') {
+      // Predicate mirrors the partial unique index users_phone_norm_unique_not_null (migration 100) so it stays index-backed.
+      const { rows } = await db.query(
+        `SELECT *
+         FROM users
+         WHERE is_active = TRUE
+           AND phone IS NOT NULL
+           AND trim(COALESCE(phone::text, '')) <> ''
+           AND ${PHONE_NORM} = ANY($1::text[])
+         LIMIT 3`,
+        [idf.candidates]
+      );
+      user = pickPhoneLoginUser(rows, idf.candidates);
+    } else {
+      const { rows } = await db.query(
+        'SELECT * FROM users WHERE is_active = TRUE AND lower(trim(email)) = lower(trim($1)) LIMIT 1',
+        [s]
+      );
+      user = rows[0];
+    }
     if (!user || !user.password_hash || !(await bcrypt.compare(pass, user.password_hash)))
       return res.status(401).json({ success: false, message: 'Giriş məlumatları yanlışdır' });
     if (user.role !== 'admin')

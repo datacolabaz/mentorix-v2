@@ -5,13 +5,14 @@ import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Brand from '../../components/common/Brand'
 import Button from '../../components/common/Button'
-import { useToast } from '../../components/common/Toast'
+import PasswordInput from '../../components/common/PasswordInput'
 import LocaleThemeBar from '../../components/LocaleThemeBar'
 import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import { setPageSeo } from '../../lib/pageSeo'
 import { postAuthNavigate, rememberReturnAfterLogin } from '../../lib/postAuth'
 import useUiStore from '../../hooks/useUi'
 import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
+import { isValidAdminIdentifier } from '../../lib/adminLoginIdentifier'
 
 /**
  * Giriş və qeydiyyat (/login, /register): istifadəçilər üçün yalnız «Google ilə davam et».
@@ -21,7 +22,6 @@ export default function AuthPage() {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
-  const toast = useToast()
   const [searchParams] = useSearchParams()
   const nextParam = searchParams.get('next')
   const isRegister = location.pathname === '/register' || searchParams.get('tab') === 'signup'
@@ -34,17 +34,25 @@ export default function AuthPage() {
   const [adminIdentifier, setAdminIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [identifierError, setIdentifierError] = useState('')
+  const [loginError, setLoginError] = useState('')
 
   const handleAdminLogin = async (e) => {
     e.preventDefault()
+    setLoginError('')
+    if (!isValidAdminIdentifier(adminIdentifier)) {
+      setIdentifierError(t('auth.invalidPhoneOrEmail'))
+      return
+    }
+    setIdentifierError('')
     setLoading(true)
     try {
-      const data = await api.post('/auth/login', { identifier: adminIdentifier, password })
-      if (!data?.token || !data?.user) throw new Error(data?.message || 'Server cavabı etibarsızdır')
+      const data = await api.post('/auth/login', { identifier: adminIdentifier.trim(), password })
+      if (!data?.token || !data?.user) throw new Error(data?.message || t('auth.errors.invalidServer'))
       useAuthStore.getState().setSession(data.token, data.user)
       postAuthNavigate(data.user, navigate, nextParam)
     } catch (err) {
-      toast(err.message || t('auth.loginError'), 'error')
+      setLoginError(err?.message || t('auth.loginError'))
     } finally {
       setLoading(false)
     }
@@ -123,15 +131,22 @@ export default function AuthPage() {
             </div>
 
             {isAdmin ? (
-              <form onSubmit={handleAdminLogin} className="mt-6 space-y-4" autoComplete="on">
-                <div
+              <form
+                onSubmit={handleAdminLogin}
+                className="mt-6 space-y-4"
+                autoComplete="on"
+                noValidate
+                aria-describedby="admin-login-notice"
+              >
+                <p
+                  id="admin-login-notice"
                   className={[
-                    'text-center text-xs py-2 px-3 rounded-xl border',
-                    isDark ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-red-700 bg-red-50 border-red-200',
+                    'text-center text-xs leading-relaxed py-2 px-3 rounded-xl border',
+                    isDark ? 'text-gray-300 bg-white/[0.04] border-white/10' : 'text-slate-600 bg-slate-50 border-slate-200',
                   ].join(' ')}
                 >
-                  {t('auth.adminPanel')}
-                </div>
+                  {t('auth.adminPasswordNotice')}
+                </p>
                 <div>
                   <label
                     className={['block text-xs font-semibold uppercase tracking-wider mb-2', muted].join(' ')}
@@ -149,13 +164,24 @@ export default function AuthPage() {
                         : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
                     ].join(' ')}
                     type="text"
-                    inputMode="email"
                     autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     placeholder={t('auth.phoneOrEmail')}
                     value={adminIdentifier}
-                    onChange={(e) => setAdminIdentifier(e.target.value)}
+                    onChange={(e) => {
+                      setAdminIdentifier(e.target.value)
+                      if (identifierError) setIdentifierError('')
+                    }}
+                    aria-invalid={identifierError ? true : undefined}
+                    aria-describedby={identifierError ? 'admin-username-error' : undefined}
                     required
                   />
+                  {identifierError ? (
+                    <p id="admin-username-error" role="alert" className={['mt-1.5 text-xs', isDark ? 'text-red-300' : 'text-red-700'].join(' ')}>
+                      {identifierError}
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <label
@@ -164,7 +190,7 @@ export default function AuthPage() {
                   >
                     {t('auth.password')}
                   </label>
-                  <input
+                  <PasswordInput
                     id="admin-password"
                     name="password"
                     className={[
@@ -173,13 +199,25 @@ export default function AuthPage() {
                         ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
                         : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
                     ].join(' ')}
-                    type="password"
                     autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    aria-describedby={loginError ? 'admin-login-error' : undefined}
                     required
                   />
                 </div>
+                {loginError ? (
+                  <p
+                    id="admin-login-error"
+                    role="alert"
+                    className={[
+                      'text-center text-xs py-2 px-3 rounded-xl border',
+                      isDark ? 'text-red-300 bg-red-500/10 border-red-500/20' : 'text-red-700 bg-red-50 border-red-200',
+                    ].join(' ')}
+                  >
+                    {loginError}
+                  </p>
+                ) : null}
                 <Button type="submit" loading={loading} className="w-full justify-center py-3">
                   {t('auth.login')}
                 </Button>
