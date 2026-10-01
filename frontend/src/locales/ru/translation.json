@@ -72,8 +72,7 @@
     "partnerRole": "Партнёр",
     "adminRole": "Админ",
     "footer": {
-      "copyright": "© 2026 Mentorix. Все права защищены.",
-      "poweredBy": "Работает на"
+      "copyright": "© 2026 Mentorix. Все права защищены."
     }
   },
   "nav": {
@@ -1537,7 +1536,6 @@
     "terms": "Условия использования",
     "tagline": "Mentorix объединяет учителей, учеников и родителей на одной платформе, помогая управлять учебным процессом проще и эффективнее.",
     "copyright": "© 2026 Mentorix.io. Все права защищены.",
-    "byDatacolab": "от Datacolab",
     "links": {
       "universities": "Университеты",
       "imtahanlar": "Экзамены",

@@ -78,7 +78,9 @@ export default function AuthPage() {
   }, [isRegister])
 
   const muted = isDark ? 'text-gray-400' : 'text-slate-500'
-  const linkCls = isDark ? 'text-primary hover:underline' : 'text-emerald-700 hover:underline font-medium'
+  const linkCls = isDark
+    ? 'text-primary underline underline-offset-2 hover:no-underline'
+    : 'text-emerald-700 underline underline-offset-2 hover:no-underline font-medium'
 
   return (
     <div
@@ -161,7 +163,7 @@ export default function AuthPage() {
                       'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
                       isDark
                         ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
-                        : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-500',
                     ].join(' ')}
                     type="text"
                     autoComplete="username"
@@ -197,7 +199,7 @@ export default function AuthPage() {
                       'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
                       isDark
                         ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
-                        : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
+                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-500',
                     ].join(' ')}
                     autoComplete="current-password"
                     value={password}

@@ -1,4 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&subset=latin-ext');
+/* Inter is self-hosted via @fontsource/inter (imported in main.jsx): latin, latin-ext (ə ğ ş ç ö ü ı İ)
+   and cyrillic subsets load on demand through unicode-range. Metric-matched fallback limits layout shift. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 107.4%;
+  ascent-override: 90.2%;
+  descent-override: 22.5%;
+  line-gap-override: 0%;
+}
 
 @tailwind base;
 @tailwind components;
@@ -49,7 +58,7 @@
 
 /* Azerbaijani language support - ensure proper rendering of ə, ö, ü, ğ, ş, ç */
 body {
-  font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', 'Inter Fallback', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -197,12 +206,46 @@ body {
 }
 
 @layer base {
+  /* ------------------------------------------------------------------ *
+   * Design tokens (space-separated RGB so Tailwind can apply alpha).    *
+   * Tailwind names: bg-canvas, bg-canvas-subtle, bg-surface,           *
+   * bg-surface-elevated, border-line, border-line-strong, text-fg,     *
+   * text-fg-secondary, text-fg-muted, bg-brand, hover:bg-brand-hover,  *
+   * text-brand-on, text-brand-text, bg-brand-subtle, text-success …    *
+   * Contrast ratios are documented in specs/site-audit-report.md.      *
+   * Light values live in :root and .theme-light, dark in .theme-dark.  *
+   * ------------------------------------------------------------------ */
   :root {
+    --mx-bg-primary: 243 246 250; /* #F3F6FA */
+    --mx-bg-secondary: 234 239 246; /* #EAEFF6 */
+    --mx-surface: 255 255 255;
+    --mx-surface-elevated: 255 255 255;
+    --mx-border: 217 224 234; /* #D9E0EA */
+    --mx-border-strong: 124 138 160; /* #7C8AA0 — ≥3:1 on surface (inputs) */
+    --mx-text-primary: 15 23 42; /* #0F172A — 17.8:1 on surface */
+    --mx-text-secondary: 51 65 85; /* #334155 — 10.3:1 */
+    --mx-text-muted: 71 85 105; /* #475569 — 7.6:1 */
+    --mx-brand: 0 230 118; /* #00E676 — fills only, never text on light */
+    --mx-brand-hover: 0 204 105; /* #00CC69 */
+    --mx-on-brand: 3 20 11; /* #03140B — 11.4:1 on brand */
+    --mx-brand-text: 4 120 74; /* #04784A — 5.5:1 on surface */
+    --mx-brand-subtle: 230 250 240; /* #E6FAF0 */
+    --mx-success: 4 120 87; /* #047857 */
+    --mx-success-subtle: 236 253 245;
+    --mx-warning: 146 82 6; /* #925206 */
+    --mx-warning-subtle: 255 247 230;
+    --mx-error: 185 28 28; /* #B91C1C */
+    --mx-error-subtle: 254 242 242;
+    --mx-info: 29 78 216; /* #1D4ED8 */
+    --mx-info-subtle: 239 246 255;
+    --mx-focus-ring: 37 99 235; /* #2563EB — 5.2:1 on surface */
+    --mx-shadow-color: 15 23 42;
+
     /* Light defaults (kept subtle, premium) */
-    --surface-main: 244 247 250; /* #F4F7FA */
-    --surface-card: 255 255 255; /* #FFFFFF */
+    --surface-main: var(--mx-bg-primary);
+    --surface-card: var(--mx-surface);
     --primary-accent: 0 230 118; /* #00E676 */
-    --border-subtle: rgba(15, 23, 42, 0.08);
+    --border-subtle: rgb(var(--mx-border));
     --text-main: 11 18 32; /* #0B1220 */
 
     /* Semantic typography + surface tokens (light defaults).
@@ -227,6 +270,11 @@ body {
     overflow-x: hidden;
   }
 
+  :focus-visible {
+    outline: 2px solid rgb(var(--mx-focus-ring));
+    outline-offset: 2px;
+  }
+
   body {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -240,7 +288,7 @@ body {
     @apply font-display;
   }
   h1, h2, h3, h4, h5, h6, p, span, button, a, input, textarea, select, option {
-    font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Inter Fallback', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   }
   /* Headings inherit high-contrast heading token by default so pages that do
      not set an explicit color are always readable in Light Mode. Elements that
@@ -254,8 +302,8 @@ body {
 }
 
 @layer utilities {
-  .font-body { font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
-  .font-display { font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
+  .font-body { font-family: 'Inter', 'Inter Fallback', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
+  .font-display { font-family: 'Inter', 'Inter Fallback', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
   /* iOS Safari: type=password Keychain overlay — mətn kimi maskalanır */
   .mx-login-password-mask {
     -webkit-text-security: disc;
@@ -269,28 +317,26 @@ body {
   .login-wrapper.theme-light,
   .mx-login-bg.theme-light {
     background:
-      radial-gradient(ellipse at 50% 35%, rgba(var(--primary-accent), 0.08) 0%, transparent 60%),
-      #f4f6fb;
+      radial-gradient(ellipse at 50% 35%, rgb(var(--primary-accent) / 0.08) 0%, transparent 60%),
+      rgb(var(--mx-bg-primary));
   }
   .login-wrapper.theme-dark,
   .mx-login-bg.theme-dark {
     background:
-      radial-gradient(ellipse at 50% 35%, rgba(var(--primary-accent), 0.07) 0%, transparent 60%),
-      #0d0d0d;
+      radial-gradient(ellipse at 50% 35%, rgb(var(--primary-accent) / 0.07) 0%, transparent 60%),
+      rgb(var(--mx-bg-primary));
   }
 
-  body:has(.login-wrapper.theme-light) {
-    background: #f4f6fb;
-  }
+  body:has(.login-wrapper.theme-light),
   body:has(.login-wrapper.theme-dark) {
-    background: #0d0d0d;
+    background: rgb(var(--mx-bg-primary));
   }
   .mx-auth-input {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .mx-auth-input:focus {
     border-color: rgb(var(--primary-accent));
-    box-shadow: 0 0 0 3px rgba(var(--primary-accent), 0.12);
+    box-shadow: 0 0 0 3px rgb(var(--primary-accent) / 0.12);
     outline: none;
   }
   .mx-role-selector {
@@ -538,38 +584,88 @@ body {
 }
 
 .theme-dark {
-  --surface-main: 11 11 15; /* #0B0B0F */
-  --surface-card: 26 29 37; /* #1A1D25 */
-  --surface-card-hover: 32 37 49; /* #202531 */
+  /* Soft navy/charcoal — never pure #000. */
+  --mx-bg-primary: 14 21 33; /* #0E1521 */
+  --mx-bg-secondary: 18 27 41; /* #121B29 */
+  --mx-surface: 23 33 49; /* #172131 */
+  --mx-surface-elevated: 30 42 61; /* #1E2A3D */
+  --mx-border: 43 58 82; /* #2B3A52 */
+  --mx-border-strong: 100 116 143; /* #64748F — ≥3:1 on bg */
+  --mx-text-primary: 241 245 249; /* #F1F5F9 — 14.8:1 on surface */
+  --mx-text-secondary: 203 213 225; /* #CBD5E1 — 10.9:1 */
+  --mx-text-muted: 163 177 196; /* #A3B1C4 — 7.4:1 */
+  --mx-brand: 0 230 118;
+  --mx-brand-hover: 74 237 155; /* #4AED9B */
+  --mx-on-brand: 3 20 11;
+  --mx-brand-text: 74 222 159; /* #4ADE9F — 9.4:1 on surface */
+  --mx-brand-subtle: 16 52 44; /* #10342C */
+  --mx-success: 74 222 128; /* #4ADE80 */
+  --mx-success-subtle: 16 48 36;
+  --mx-warning: 251 191 36; /* #FBBF24 */
+  --mx-warning-subtle: 52 40 14;
+  --mx-error: 248 113 113; /* #F87171 */
+  --mx-error-subtle: 58 24 28;
+  --mx-info: 125 180 250; /* #7DB4FA */
+  --mx-info-subtle: 20 36 66;
+  --mx-focus-ring: 125 180 250;
+  --mx-shadow-color: 2 6 14;
+
+  --surface-main: var(--mx-bg-primary);
+  --surface-card: var(--mx-surface);
+  --surface-card-hover: var(--mx-surface-elevated);
   --primary-accent: 0 230 118; /* #00E676 */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --text-main: 255 255 255;
-  --text-muted: 148 163 184; /* slate-400 */
+  --border-subtle: rgb(var(--mx-border));
+  --text-main: var(--mx-text-primary);
+  --text-muted: var(--mx-text-muted);
   --field-bg: 19 17 46; /* #13112e */
   --field-text: 255 255 255;
   --field-border: rgba(99, 102, 241, 0.28);
   --field-placeholder: 148 163 184;
 
-  /* Semantic tokens — Dark Mode (contrast preserved / unchanged from prior look) */
+  /* Semantic tokens — Dark Mode (aliases of the --mx-* design tokens) */
   --heading-primary: 255 255 255; /* #FFFFFF */
   --heading-secondary: 226 232 240; /* slate-200 */
-  --text-primary: 248 250 252; /* #F8FAFC */
-  --text-secondary: 203 213 225; /* slate-300 */
-  --text-muted: 148 163 184; /* slate-400 */
+  --text-primary: var(--mx-text-primary);
+  --text-secondary: var(--mx-text-secondary);
   --text-disabled: 100 116 139; /* slate-500 */
-  --surface-primary: 26 29 37; /* #1A1D25 */
-  --surface-secondary: 11 11 15; /* #0B0B0F */
-  --border-color: rgba(255, 255, 255, 0.08);
+  --surface-primary: var(--mx-surface);
+  --surface-secondary: var(--mx-bg-primary);
+  --border-color: rgb(var(--mx-border));
 }
 
 .theme-light {
-  --surface-main: 244 247 250;
-  --surface-card: 255 255 255;
+  --mx-bg-primary: 243 246 250;
+  --mx-bg-secondary: 234 239 246;
+  --mx-surface: 255 255 255;
+  --mx-surface-elevated: 255 255 255;
+  --mx-border: 217 224 234;
+  --mx-border-strong: 124 138 160;
+  --mx-text-primary: 15 23 42;
+  --mx-text-secondary: 51 65 85;
+  --mx-text-muted: 71 85 105;
+  --mx-brand: 0 230 118;
+  --mx-brand-hover: 0 204 105;
+  --mx-on-brand: 3 20 11;
+  --mx-brand-text: 4 120 74;
+  --mx-brand-subtle: 230 250 240;
+  --mx-success: 4 120 87;
+  --mx-success-subtle: 236 253 245;
+  --mx-warning: 146 82 6;
+  --mx-warning-subtle: 255 247 230;
+  --mx-error: 185 28 28;
+  --mx-error-subtle: 254 242 242;
+  --mx-info: 29 78 216;
+  --mx-info-subtle: 239 246 255;
+  --mx-focus-ring: 37 99 235;
+  --mx-shadow-color: 15 23 42;
+
+  --surface-main: var(--mx-bg-primary);
+  --surface-card: var(--mx-surface);
   --surface-card-hover: 248 250 252; /* #F8FAFC */
   --primary-accent: 0 230 118;
-  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-subtle: rgb(var(--mx-border));
   --text-main: 11 18 32;
-  --text-muted: 71 85 105; /* slate-600 — daha oxunaqlı */
+  --text-muted: var(--mx-text-muted); /* slate-600 — daha oxunaqlı */
   --field-bg: 255 255 255;
   --field-text: 11 18 32;
   --field-border: rgba(15, 23, 42, 0.14);
@@ -583,8 +679,8 @@ body {
   --text-muted: 71 85 105; /* slate-600 — ~7.4:1 */
   --text-disabled: 100 116 139; /* slate-500 — ~4.9:1 */
   --surface-primary: 255 255 255;
-  --surface-secondary: 244 247 250;
-  --border-color: rgba(15, 23, 42, 0.1);
+  --surface-secondary: var(--mx-bg-primary);
+  --border-color: rgb(var(--mx-border));
 }
 
 /* Form controls: gündüz = ağ fon + tünd mətn (bütün panel).
@@ -693,33 +789,76 @@ body {
   box-shadow: 0 0 0 1000px #161616 inset !important;
 }
 
-/* Public marketing canvas follows night/day */
-.mx-public-page.theme-dark {
-  background-color: #0b0b0b;
-  color: #e2e8f0;
-}
-.mx-public-page.theme-light {
-  background-color: #f4f6fb;
+/* Public marketing canvas follows night/day.
+   Legacy bridge: public pages not yet migrated to token classes still use slate/white utilities;
+   these remaps keep them on the token palette in dark mode. New code should use token classes. */
+.mx-public-page {
+  background-color: rgb(var(--mx-bg-primary));
+  color: rgb(var(--mx-text-secondary));
 }
 .mx-public-page.theme-dark .text-slate-900,
 .mx-public-page.theme-dark .text-slate-800 {
-  color: #f8fafc;
+  color: rgb(var(--mx-text-primary));
 }
 .mx-public-page.theme-dark .text-slate-700,
 .mx-public-page.theme-dark .text-slate-600 {
-  color: #cbd5e1;
+  color: rgb(var(--mx-text-secondary));
 }
-.mx-public-page.theme-dark .text-slate-500 {
-  color: #94a3b8;
+.mx-public-page.theme-dark .text-slate-500,
+.mx-public-page.theme-dark .text-gray-500 {
+  color: rgb(var(--mx-text-muted));
 }
 .mx-public-page.theme-dark .bg-white {
-  background-color: #161616;
+  background-color: rgb(var(--mx-surface));
 }
-.mx-public-page.theme-dark .border-slate-200 {
-  border-color: rgba(255, 255, 255, 0.12);
+.mx-public-page.theme-dark :is(.bg-slate-50, .bg-slate-100) {
+  background-color: rgb(var(--mx-surface-elevated));
+}
+.mx-public-page.theme-dark :is(.bg-slate-200, .bg-slate-200\/80, .bg-slate-300) {
+  background-color: rgb(var(--mx-bg-secondary));
+}
+.mx-public-page.theme-dark .hover\:text-slate-900:hover {
+  color: rgb(var(--mx-text-primary));
+}
+.mx-public-page.theme-dark :is(.border-slate-200, .border-slate-100, .border-slate-300) {
+  border-color: rgb(var(--mx-border));
 }
 .mx-public-page.theme-dark .hover\:bg-slate-50:hover {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgb(var(--mx-surface-elevated));
+}
+.mx-public-page.theme-dark :is(.text-emerald-600, .text-emerald-700, .text-emerald-800) {
+  color: rgb(var(--mx-brand-text));
+}
+.mx-public-page.theme-dark :is(.bg-emerald-50, .bg-emerald-100) {
+  background-color: rgb(var(--mx-brand-subtle));
+}
+.mx-public-page.theme-dark :is(.border-emerald-200, .border-emerald-300) {
+  border-color: rgb(var(--mx-brand-text) / 0.4);
+}
+.mx-public-page.theme-light .text-slate-500 {
+  color: rgb(var(--mx-text-muted));
+}
+.mx-public-page.theme-light .text-emerald-600 {
+  color: rgb(var(--mx-brand-text));
+}
+
+/* Long Azerbaijani compounds must wrap inside cards and buttons instead of overflowing. */
+.mx-public-page :is(h1, h2, h3, p, li, a, button, summary) {
+  overflow-wrap: break-word;
+}
+.mx-public-page :is(h1, h2) {
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer components {

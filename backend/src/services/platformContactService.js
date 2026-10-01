@@ -1,7 +1,7 @@
 const db = require('../utils/db');
 
 const SETTING_KEY = 'public_whatsapp_msisdn';
-const DEFAULT_MSISDN = '994553775770';
+const DEFAULT_MSISDN = '994503066626';
 
 async function readSetting(key) {
   const { rows } = await db.query(`SELECT value FROM billing_settings WHERE key = $1 LIMIT 1`, [key]);
@@ -68,7 +68,7 @@ async function adminUpdatePlatformContact({ whatsapp_phone, whatsapp_msisdn }) {
   const raw = whatsapp_msisdn != null ? whatsapp_msisdn : whatsapp_phone;
   const d = normalizeMsisdn(raw);
   if (d.length < 12 || !d.startsWith('994')) {
-    const err = new Error('Düzgün Azərbaycan mobil nömrəsi daxil edin (məs: +994553775770)');
+    const err = new Error('Düzgün Azərbaycan mobil nömrəsi daxil edin (məs: +994503066626)');
     err.statusCode = 400;
     throw err;
   }

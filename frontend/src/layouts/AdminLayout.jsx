@@ -202,7 +202,7 @@ export default function AdminLayout() {
           {navSections.map((section) => (
             <div key={section.title} className="space-y-2">
               <div className="px-1 pt-2">
-                <div className={`text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}>
+                <div className={`text-xs uppercase tracking-wider text-token-textMuted`}>
                   {section.title}
                 </div>
               </div>

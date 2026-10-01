@@ -81,7 +81,7 @@ export default function CertifiedExamDetailPage() {
   }
 
   return (
-    <div className={`mx-public-page theme-${theme} min-h-screen flex flex-col ${isDark ? 'bg-[#0b0b0b] text-gray-100' : 'bg-[#f4f6fb] text-slate-900'}`}>
+    <div className={`mx-public-page theme-${theme} min-h-screen flex flex-col bg-canvas text-fg`}>
       <PublicMarketingNav />
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8 space-y-6">

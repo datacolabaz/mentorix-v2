@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
-import Button from '../../components/common/Button'
 import PublicPageTopBar from '../../components/public/PublicPageTopBar'
 import { formatNamedDate } from '../../lib/azMonths'
 
@@ -67,7 +66,7 @@ export default function CertificateVerify() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f6fb] text-gray-900">
       <PublicPageTopBar />
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-10">
+      <main id="main" className="flex-1 max-w-xl w-full mx-auto px-4 py-10">
         <Card className="p-6 sm:p-8 bg-white border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-6">
             <h1 className="text-xl font-bold text-gray-900">{t('certificates.verify.title', 'Sertifikat doğrulama')}</h1>
@@ -158,8 +157,11 @@ export default function CertificateVerify() {
           ) : null}
 
           <div className="mt-8">
-            <Link to="/">
-              <Button variant="secondary">{t('certificates.verify.backHome', 'Ana səhifə')}</Button>
+            <Link
+              to="/"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            >
+              {t('certificates.verify.backHome', 'Ana səhifə')}
             </Link>
           </div>
         </Card>

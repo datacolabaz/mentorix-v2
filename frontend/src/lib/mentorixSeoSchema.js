@@ -1,7 +1,8 @@
-import { MENTORIX_SEO_DESCRIPTION, MENTORIX_SEO_TITLE } from './mentorixPublicMarketing'
+import { MENTORIX_CONTACT, MENTORIX_SEO_DESCRIPTION, MENTORIX_SEO_TITLE } from './mentorixPublicMarketing'
 import { PLAN_TITLES_SEO_FALLBACK } from './subscriptionPlanGuards'
+import { BRAND } from './brand'
 
-export const SITE_ORIGIN = 'https://mentorix.io'
+export const SITE_ORIGIN = `https://${BRAND.domain}`
 
 /** Google sitelink və footer naviqasiyası üçün əsas bölmələr */
 export const MENTORIX_SITE_NAV = [
@@ -106,8 +107,8 @@ export function buildOrganizationSchema() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer support',
-      telephone: '+994-50-306-66-26',
-      url: 'https://wa.me/994553775770',
+      telephone: MENTORIX_CONTACT.phoneDisplay,
+      url: MENTORIX_CONTACT.whatsappUrl,
       availableLanguage: ['az'],
     },
   }

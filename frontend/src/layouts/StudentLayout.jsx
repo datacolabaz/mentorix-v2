@@ -303,7 +303,7 @@ function StudentLayoutInner() {
               {navGroups.map((g) => (
                 <div key={g.label} className="space-y-2">
                   <div
-                    className={`px-2 text-xs uppercase tracking-wider ${theme === 'dark' ? 'text-token-textMuted/80' : 'text-slate-400'}`}
+                    className={`px-2 text-xs uppercase tracking-wider text-token-textMuted`}
                   >
                     {g.label}
                   </div>

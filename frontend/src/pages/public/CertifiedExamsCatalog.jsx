@@ -56,7 +56,7 @@ export default function CertifiedExamsCatalog() {
     count === 1 ? t('certifiedExams.assessmentOne', { count }) : t('certifiedExams.assessmentOther', { count })
 
   return (
-    <div className={`mx-public-page theme-${theme} min-h-screen flex flex-col ${isDark ? 'bg-[#0b0b0b] text-gray-100' : 'bg-[#f4f6fb] text-slate-900'}`}>
+    <div className={`mx-public-page theme-${theme} min-h-screen flex flex-col bg-canvas text-fg`}>
       <PublicPageTopBar
         backTo="/"
         title={t('certifiedExams.catalogTitle')}

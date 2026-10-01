@@ -72,8 +72,7 @@
     "partnerRole": "Partner",
     "adminRole": "Admin",
     "footer": {
-      "copyright": "© 2026 Mentorix. All rights reserved.",
-      "poweredBy": "Powered by"
+      "copyright": "© 2026 Mentorix. All rights reserved."
     }
   },
   "nav": {
@@ -1523,7 +1522,6 @@
     "terms": "Terms of Service",
     "tagline": "Mentorix brings teachers, students, and parents together on one platform so you can run teaching more smoothly and effectively.",
     "copyright": "© 2026 Mentorix.io. All rights reserved.",
-    "byDatacolab": "By Datacolab",
     "links": {
       "universities": "Universities",
       "imtahanlar": "Exams",

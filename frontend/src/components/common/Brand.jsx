@@ -1,3 +1,5 @@
+import { BRAND } from '../../lib/brand'
+
 const SIZE_CLASSES = {
   login: 'text-[1.65rem] sm:text-[1.85rem]',
   sidebar: 'text-[1.45rem] sm:text-[1.65rem]',
@@ -5,14 +7,23 @@ const SIZE_CLASSES = {
   md: 'text-[1.05rem] sm:text-xl',
 }
 
+/** "Mentorix" + ".io" when the domain is the brand name plus a TLD; otherwise the name alone. */
+export function brandWordmarkParts(brand = BRAND) {
+  const name = String(brand?.name || '').trim()
+  const domain = String(brand?.domain || '').trim()
+  const suffix = domain.toLowerCase().startsWith(`${name.toLowerCase()}.`) ? domain.slice(name.length) : ''
+  return { name, suffix }
+}
+
+// Suffix colours must keep ≥4.5:1 on header/sidebar backgrounds.
 function wordmarkTone(tone) {
   if (tone === 'light') {
-    return { main: 'text-slate-900', io: 'opacity-50' }
+    return { main: 'text-slate-900', io: 'text-slate-600' }
   }
   if (tone === 'inherit') {
-    return { main: 'text-inherit', io: 'opacity-50' }
+    return { main: 'text-inherit', io: 'opacity-80' }
   }
-  return { main: 'text-white', io: 'opacity-45' }
+  return { main: 'text-white', io: 'text-slate-300' }
 }
 
 function BrandWordmark({
@@ -24,6 +35,7 @@ function BrandWordmark({
   showDot = false,
 }) {
   const colors = wordmarkTone(tone)
+  const { name, suffix } = brandWordmarkParts()
 
   return (
     <div
@@ -41,8 +53,8 @@ function BrandWordmark({
           textClassName,
         ].join(' ')}
       >
-        Mentorix
-        <span className={`${colors.io} text-[0.72em] font-semibold`}>.io</span>
+        {name}
+        {suffix ? <span className={`${colors.io} text-[0.72em] font-semibold`}>{suffix}</span> : null}
       </span>
       {showDot ? (
         <span className="mx-nav-live-dot h-1.5 w-1.5 rounded-full bg-primary shrink-0" aria-hidden />

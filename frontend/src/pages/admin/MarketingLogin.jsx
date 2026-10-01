@@ -166,7 +166,7 @@ export default function MarketingLogin() {
           <label className={lbl}>WhatsApp nömrəsi</label>
           <input
             className={inp}
-            placeholder="+994553775770"
+            placeholder="+994503066626"
             value={contactPhone}
             onChange={(e) => setContactPhone(e.target.value)}
           />

@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import PublicMarketingNav from '../../components/public/PublicMarketingNav'
 import PublicSeoFooter from '../../components/public/PublicSeoFooter'
 import api from '../../lib/api'
+import usePublicPageTheme from '../../hooks/usePublicPageTheme'
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const pageTheme = usePublicPageTheme()
 
   useEffect(() => {
     let cancelled = false
@@ -33,7 +35,7 @@ export default function Favorites() {
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#f4f6fb] text-slate-800 flex flex-col">
+    <div className={`${pageTheme.className} min-h-[100svh] flex flex-col`}>
       <PublicMarketingNav />
       <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-10 sm:py-14">
         <Link to="/search" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">← Axtarışa qayıt</Link>
