@@ -114,7 +114,7 @@ export default function LanguageSwitcher({
             'absolute z-[120] min-w-[13.5rem] overflow-hidden rounded-2xl border py-1.5 shadow-xl',
             openUp ? 'bottom-full mb-2' : 'top-full mt-2',
             comfortable ? 'left-0 right-0' : hAlign === 'end' ? 'right-0' : 'left-0',
-            isDark ? 'border-white/10 bg-[#1c1c1c] text-white' : 'border-slate-200 bg-white text-slate-900',
+            isDark ? 'border-white/10 bg-surface-3 text-white' : 'border-slate-200 bg-white text-slate-900',
           ].join(' ')}
         >
           {UI_LOCALES.map((loc) => {

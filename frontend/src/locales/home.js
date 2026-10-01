@@ -17,6 +17,11 @@ export const homeAz = {
   },
   skipLink: 'Əsas məzmuna keç',
   sampleLabel: 'Nümunə interfeys · illüstrativ məlumat',
+  nav: {
+    howItWorks: 'Necə işləyir',
+    homeLabel: '{{brand}} — ana səhifə',
+    preferences: 'Dil və görünüş',
+  },
   hero: {
     eyebrow: 'Müəllimlər üçün AI əsaslı qiymətləndirmə platforması',
     title: 'Dəqiqələr içində ağıllı testlər yaradın',
@@ -279,6 +284,11 @@ export const homeEn = {
   },
   skipLink: 'Skip to main content',
   sampleLabel: 'Sample interface · illustrative data',
+  nav: {
+    howItWorks: 'How it works',
+    homeLabel: '{{brand}} — home',
+    preferences: 'Language and appearance',
+  },
   hero: {
     eyebrow: 'AI-powered assessment platform for teachers',
     title: 'Create smart tests in minutes',
@@ -541,6 +551,11 @@ export const homeRu = {
   },
   skipLink: 'Перейти к основному содержанию',
   sampleLabel: 'Пример интерфейса · иллюстративные данные',
+  nav: {
+    howItWorks: 'Как это работает',
+    homeLabel: '{{brand}} — главная',
+    preferences: 'Язык и оформление',
+  },
   hero: {
     eyebrow: 'Платформа оценивания с ИИ для учителей',
     title: 'Создавайте умные тесты за считанные минуты',

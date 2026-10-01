@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { MENTORIX_SITE_NAV } from '../../lib/mentorixSeoSchema'
 import { searchLandings } from '../../lib/publicSeoLandings'
+import { MENTORIX_CONTACT } from '../../lib/mentorixPublicMarketing'
+import { FEATURE_FLAGS, filterNavItemsByFlags, useFeatureFlags } from '../../lib/featureFlags'
+import { BRAND } from '../../lib/brand'
 
 const SOCIAL_LINKS = [
   {
@@ -24,146 +26,162 @@ const SOCIAL_LINKS = [
   },
 ]
 
+const PRODUCT_LINKS = [
+  { to: '/muellimler-ucun', key: 'publicFooter.links.muellimler-ucun' },
+  { to: '/imtahanlar', key: 'publicFooter.links.imtahanlar' },
+  { to: '/tapshiriqlar', key: 'publicFooter.links.tapshiriqlar' },
+  { to: '/kurslar-ve-qruplar', key: 'publicFooter.links.kurslar-ve-qruplar' },
+  { to: '/telebeler-ucun', key: 'publicFooter.links.telebeler-ucun' },
+  { to: '/sertifikatli-imtahanlar', key: 'home.footer.certifiedExams' },
+  { to: '/mentorship', key: 'landing.nav.mentorship' },
+  { to: '/qiymetler', key: 'publicFooter.links.qiymetler' },
+]
+
+const COMPANY_LINKS = [
+  { to: '/haqqimizda', key: 'publicFooter.links.haqqimizda' },
+  { to: '/elaqe', key: 'publicFooter.links.elaqe' },
+  { to: '/partner', key: 'publicFooter.partnerProgram' },
+  { to: '/login', key: 'publicFooter.loginRegister' },
+]
+
+const LEGAL_LINKS = [
+  { to: '/privacy', key: 'publicFooter.privacy' },
+  { to: '/terms', key: 'publicFooter.terms' },
+]
+
+const LINK =
+  'rounded-sm text-body-sm text-fg-secondary underline-offset-4 hover:text-fg hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus'
+
 function pathToKey(path) {
   return String(path || '').replace(/^\//, '') || 'root'
 }
 
-function footerNavLabel(item, t) {
-  const key = pathToKey(item.path)
-  return t(`publicFooter.links.${key}`, { defaultValue: item.name })
+function footerSearchLabel(landing, t) {
+  const fallback = String(landing.h1 || '').replace(' tap', '')
+  return t(`publicFooter.searchLinks.${pathToKey(landing.path)}`, { defaultValue: fallback })
 }
 
-function footerSearchLabel(landing, t) {
-  const key = pathToKey(landing.path)
-  const fallback = String(landing.h1 || '').replace(' tap', '')
-  return t(`publicFooter.searchLinks.${key}`, { defaultValue: fallback })
+function FooterColumn({ id, title, children }) {
+  return (
+    <div>
+      <h2 id={id} className="mb-3 text-caption font-semibold uppercase tracking-wider text-fg-muted">
+        {title}
+      </h2>
+      <ul className="space-y-2.5" aria-labelledby={id}>
+        {children}
+      </ul>
+    </div>
+  )
 }
 
 export default function PublicSeoFooter({ className = '' }) {
   const { t } = useTranslation()
-  const searchPages = searchLandings()
-  const platformNav = MENTORIX_SITE_NAV.filter((n) => n.path !== '/search')
+  const { flags } = useFeatureFlags()
+  const productLinks = filterNavItemsByFlags(PRODUCT_LINKS, flags)
+  const marketplaceOn = flags?.[FEATURE_FLAGS.MARKETPLACE] === true
+  const universitiesOn = flags?.[FEATURE_FLAGS.UNIVERSITY_SEARCH] === true
+  const discoverLinks = [
+    ...(marketplaceOn ? [{ to: '/search', label: t('publicFooter.mapSearch') }] : []),
+    ...(universitiesOn ? [{ to: '/universities', label: t('publicFooter.universityPrograms') }] : []),
+    ...(marketplaceOn ? searchLandings().map((l) => ({ to: l.path, label: footerSearchLabel(l, t) })) : []),
+  ]
+  const year = new Date().getFullYear()
 
   return (
-    <footer
-      className={`border-t border-slate-200 bg-white text-slate-600 ${className}`.trim()}
-      aria-label={t('publicFooter.ariaLabel')}
-    >
-      <div className="max-w-5xl mx-auto px-4 py-10 sm:py-12 space-y-8">
-        <nav className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('publicFooter.navAriaLabel')}>
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
-              {t('publicFooter.findTeacher')}
-            </p>
-            <ul className="space-y-3 text-base">
-              <li>
-                <Link to="/search" className="text-slate-800 hover:text-emerald-700 transition-colors">
-                  {t('publicFooter.mapSearch')}
-                </Link>
-              </li>
-              <li>
-                <Link to="/universities" className="text-slate-800 hover:text-emerald-700 transition-colors">
-                  {t('publicFooter.universityPrograms')}
-                </Link>
-              </li>
-            </ul>
-            {searchPages.length ? (
-              <details className="mt-4">
-                <summary className="cursor-pointer text-base font-semibold text-slate-500">
-                  {t('publicFooter.moreSearch')}
-                </summary>
-                <ul className="mt-3 space-y-2 text-sm">
-                  {searchPages.map((l) => (
-                    <li key={l.path}>
-                      <Link to={l.path} className="text-slate-600 hover:text-emerald-700 transition-colors">
-                        {footerSearchLabel(l, t)}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </details>
+    <footer className={`border-t border-line bg-surface text-fg-secondary ${className}`.trim()}>
+      <div className="mx-auto max-w-6xl space-y-10 px-4 py-12 sm:px-6">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_2fr]">
+          <div className="max-w-sm space-y-4">
+            <p className="text-body-sm leading-relaxed">{t('home.footer.tagline', { brand: BRAND.name })}</p>
+            <div className="flex items-center gap-2">
+              {SOCIAL_LINKS.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  aria-label={item.label}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-line text-fg-secondary transition-colors hover:bg-canvas-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  {item.icon}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <nav
+            aria-label={t('publicFooter.navAriaLabel')}
+            className="grid grid-cols-2 gap-8 sm:grid-cols-4"
+          >
+            <FooterColumn id="mx-footer-product" title={t('home.footer.product')}>
+              {productLinks.map((item) => (
+                <li key={item.to}>
+                  <Link to={item.to} className={LINK}>
+                    {t(item.key)}
+                  </Link>
+                </li>
+              ))}
+            </FooterColumn>
+            <FooterColumn id="mx-footer-company" title={t('home.footer.company')}>
+              {COMPANY_LINKS.map((item) => (
+                <li key={item.to}>
+                  <Link to={item.to} className={LINK}>
+                    {t(item.key)}
+                  </Link>
+                </li>
+              ))}
+            </FooterColumn>
+            <FooterColumn id="mx-footer-legal" title={t('home.footer.legal')}>
+              {LEGAL_LINKS.map((item) => (
+                <li key={item.to}>
+                  <Link to={item.to} className={LINK}>
+                    {t(item.key)}
+                  </Link>
+                </li>
+              ))}
+            </FooterColumn>
+            <FooterColumn id="mx-footer-contact" title={t('home.footer.contact')}>
+              {MENTORIX_CONTACT.whatsappUrl ? (
+                <li>
+                  <a href={MENTORIX_CONTACT.whatsappUrl} target="_blank" rel="noreferrer noopener" className={LINK}>
+                    {t('home.footer.whatsapp')}
+                  </a>
+                </li>
+              ) : null}
+              {MENTORIX_CONTACT.email ? (
+                <li>
+                  <a href={`mailto:${MENTORIX_CONTACT.email}`} className={`${LINK} break-all`}>
+                    {MENTORIX_CONTACT.email}
+                  </a>
+                </li>
+              ) : null}
+            </FooterColumn>
+            {discoverLinks.length ? (
+              <FooterColumn id="mx-footer-discover" title={t('home.footer.discover')}>
+                {discoverLinks.map((item) => (
+                  <li key={item.to}>
+                    <Link to={item.to} className={LINK}>
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </FooterColumn>
             ) : null}
-          </div>
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
-              {t('publicFooter.platform')}
-            </p>
-            <ul className="space-y-3 text-base">
-              {platformNav.slice(0, 5).map((item) => (
-                <li key={item.path}>
-                  <Link to={item.path} className="text-slate-800 hover:text-emerald-700 transition-colors">
-                    {footerNavLabel(item, t)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
-              {t('publicFooter.info')}
-            </p>
-            <ul className="space-y-3 text-base">
-              {platformNav.slice(5).map((item) => (
-                <li key={item.path}>
-                  <Link to={item.path} className="text-slate-800 hover:text-emerald-700 transition-colors">
-                    {footerNavLabel(item, t)}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <Link to="/partner" className="text-slate-800 font-semibold hover:text-emerald-700 transition-colors">
-                  {t('publicFooter.partnerProgram', { defaultValue: 'Partner proqramı' })}
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-slate-800 hover:text-emerald-700 transition-colors">
-                  {t('publicFooter.privacy', { defaultValue: 'Məxfilik siyasəti' })}
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-slate-800 hover:text-emerald-700 transition-colors">
-                  {t('publicFooter.terms', { defaultValue: 'İstifadə şərtləri' })}
-                </Link>
-              </li>
-              <li>
-                <Link to="/login" className="text-slate-800 font-semibold hover:text-emerald-700 transition-colors">
-                  {t('publicFooter.loginRegister')}
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </nav>
+          </nav>
+        </div>
 
-        <p className="text-base text-slate-600 font-medium leading-relaxed">{t('publicFooter.tagline')}</p>
-
-        <div className="border-t border-slate-200 pt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1 text-center sm:text-left">
-            <p className="text-sm text-slate-500">{t('publicFooter.copyright')}</p>
-            <p className="text-sm text-slate-400">
-              <a
-                href="https://datacolab.az"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-slate-600 transition-colors"
-              >
-                {t('publicFooter.byDatacolab')}
-              </a>
-            </p>
-          </div>
-          <div className="flex items-center justify-center sm:justify-end gap-2">
-            {SOCIAL_LINKS.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                target="_blank"
-                rel="noreferrer noopener"
-                aria-label={item.label}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-              >
-                {item.icon}
-              </a>
-            ))}
-          </div>
+        <div className="flex flex-col gap-2 border-t border-line pt-6 text-caption text-fg-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>{t('home.footer.copyright', { year, brand: BRAND.name })}</p>
+          <p>
+            <a
+              href="https://datacolab.az"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="rounded-sm underline-offset-4 hover:text-fg hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              {t('publicFooter.byDatacolab')}
+            </a>
+          </p>
         </div>
       </div>
     </footer>
