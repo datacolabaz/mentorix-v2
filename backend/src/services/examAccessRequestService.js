@@ -7,14 +7,25 @@ const {
 const normHex = (id) =>
   id == null ? '' : String(id).trim().toLowerCase().replace(/-/g, '');
 
-async function insertUserNotification(userId, title, body, type, meta = {}) {
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, $4, FALSE, $5::jsonb)`,
-      [userId, title, body, type, JSON.stringify(meta)],
-    )
-    .catch((e) => console.error('insertUserNotification', type, e.message));
+/**
+ * Tələbəyə sorğunun nəticəsi. Təsdiq emaili hələ ayrıca (sendExamAccessApprovedEmail — müəllim UI-ı
+ * nəticəsini göstərir), ona görə burada email: false.
+ */
+async function notifyStudentExamAccessResolved({ studentId, instructorId, examId, examTitle, requestId, approved }) {
+  const { createNotificationSafe } = require('./notificationService');
+  const eventType = approved ? 'exam_access_approved' : 'exam_access_rejected';
+  return createNotificationSafe({
+    recipientId: studentId,
+    category: 'assessment',
+    eventType,
+    params: { examTitle: examTitle || 'İmtahan' },
+    meta: { exam_id: examId, request_id: requestId },
+    relatedEntityType: 'exam',
+    relatedEntityId: examId,
+    actorUserId: instructorId,
+    dedupeKey: `${eventType}:${requestId}`,
+    email: false,
+  });
 }
 
 const { assertStudentProfileComplete } = require('../controllers/studentProfileController');
@@ -289,13 +300,14 @@ async function approveExamAccessRequest(requestId, instructorId, options = {}) {
 
   const examTitle = req.exam_title || 'İmtahan';
   const instructorName = req.instructor_name || 'Müəlliminiz';
-  await insertUserNotification(
-    req.student_id,
-    'İmtahana giriş təsdiqləndi',
-    `«${examTitle}» üçün müəlliminiz icazə verdi. İndi imtahana başlaya bilərsiniz.`,
-    'exam_access_approved',
-    { exam_id: req.exam_id },
-  );
+  await notifyStudentExamAccessResolved({
+    studentId: req.student_id,
+    instructorId,
+    examId: req.exam_id,
+    examTitle,
+    requestId,
+    approved: true,
+  });
 
   const { sendExamAccessApprovedEmail } = require('./studentNotificationEmailService');
   const emailResult = await sendExamAccessApprovedEmail({
@@ -380,13 +392,14 @@ async function rejectExamAccessRequest(requestId, instructorId) {
   );
 
   if (row.student_id) {
-    await insertUserNotification(
-      row.student_id,
-      'İmtahana giriş rədd edildi',
-      `«${row.exam_title || 'İmtahan'}» üçün müəllim sorğunuzu rədd etdi.`,
-      'exam_access_rejected',
-      { exam_id: row.exam_id },
-    );
+    await notifyStudentExamAccessResolved({
+      studentId: row.student_id,
+      instructorId,
+      examId: row.exam_id,
+      examTitle: row.exam_title,
+      requestId,
+      approved: false,
+    });
   }
 
   return { message: 'Sorğu rədd edildi' };

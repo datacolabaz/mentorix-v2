@@ -71,13 +71,20 @@ async function notifyInstructorLimitBlocked(instructorId, limit) {
     [instructorId],
   );
   if (rows[0]) return;
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, 'student_limit_block', FALSE, $4::jsonb)`,
-      [instructorId, title, body, JSON.stringify({ limit })],
-    )
-    .catch(() => {});
+  const { createNotificationSafe } = require('./notificationService');
+  const bucket = Math.floor(Date.now() / (6 * 3600 * 1000));
+  await createNotificationSafe({
+    recipientId: instructorId,
+    category: 'billing',
+    eventType: 'student_limit_block',
+    priority: 'HIGH',
+    title,
+    body,
+    meta: { limit },
+    providerWorkspaceId: instructorId,
+    dedupeKey: `student_limit_block:${bucket}`,
+    email: false,
+  });
 }
 
 /**

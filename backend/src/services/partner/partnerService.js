@@ -253,7 +253,7 @@ async function applyAsPartner({ userId, displayName, phone, note, city }) {
 
   const campaign = await getDefaultCampaign();
 
-  return db.transaction(async (client) => {
+  const out = await db.transaction(async (client) => {
     const { rows } = await client.query(
       `INSERT INTO partners (user_id, status, default_campaign_id, apply_note)
        VALUES ($1, 'pending', $2, $3)
@@ -282,7 +282,59 @@ async function applyAsPartner({ userId, displayName, phone, note, city }) {
       client
     );
     const full = await getPartnerByUserId(userId, client);
-    return { partner: full, created: true };
+    return { partner: full, created: true, partnerId: partner.id };
+  });
+
+  const { deferNotification } = require('../notificationService');
+  deferNotification('partner_application_submitted', () =>
+    notifyAdminsPartnerApplication({ partnerId: out.partnerId, userId, displayName }),
+  );
+  return { partner: out.partner, created: true };
+}
+
+/** Bütün aktiv adminlərə: yeni partnyor müraciəti (müraciət başına bir dəfə). */
+async function notifyAdminsPartnerApplication({ partnerId, userId, displayName }) {
+  let name = String(displayName || '').trim();
+  if (!name) {
+    const { rows } = await db.query(`SELECT full_name FROM users WHERE id = $1 LIMIT 1`, [userId]);
+    name = String(rows[0]?.full_name || '').trim() || 'Partnyor';
+  }
+  const { notifyAdmins } = require('../notificationService');
+  return notifyAdmins({
+    category: 'partner',
+    eventType: 'partner_application_submitted',
+    priority: 'HIGH',
+    params: { partnerName: name.slice(0, 120) },
+    meta: { partner_id: partnerId, href: '/admin/partners' },
+    relatedEntityType: 'partner',
+    relatedEntityId: partnerId,
+    actorUserId: userId,
+    dedupeKey: `partner_application_submitted:${partnerId}`,
+    email: true,
+  });
+}
+
+const PARTNER_STATUS_EVENTS = Object.freeze({
+  approved: 'partner_application_approved',
+  rejected: 'partner_application_rejected',
+  suspended: 'partner_suspended',
+});
+
+/** Partnyora statusun dəyişməsi (admin qeydi bildirişə yazılmır). */
+async function notifyPartnerStatusChanged(partner, status) {
+  const eventType = PARTNER_STATUS_EVENTS[status];
+  if (!eventType || !partner?.user_id) return null;
+  const { createNotificationSafe } = require('../notificationService');
+  return createNotificationSafe({
+    recipientId: partner.user_id,
+    category: 'partner',
+    eventType,
+    priority: status === 'approved' ? 'NORMAL' : 'HIGH',
+    meta: { partner_id: partner.id, href: '/partner/dashboard' },
+    relatedEntityType: 'partner',
+    relatedEntityId: partner.id,
+    dedupeKey: `${eventType}:${partner.id}:${new Date(partner.updated_at || Date.now()).getTime()}`,
+    email: true,
   });
 }
 
@@ -294,13 +346,15 @@ async function adminSetPartnerStatus({ partnerId, status, adminUserId, adminNote
     throw err;
   }
 
-  return db.transaction(async (client) => {
+  let previousStatus = null;
+  const updated = await db.transaction(async (client) => {
     const { rows: cur } = await client.query(`SELECT * FROM partners WHERE id = $1 FOR UPDATE`, [partnerId]);
     if (!cur[0]) {
       const err = new Error('Partner tapılmadı');
       err.statusCode = 404;
       throw err;
     }
+    previousStatus = cur[0].status;
 
     const { rows } = await client.query(
       `UPDATE partners
@@ -334,6 +388,11 @@ async function adminSetPartnerStatus({ partnerId, status, adminUserId, adminNote
 
     return rows[0];
   });
+
+  if (updated && previousStatus !== status) {
+    await notifyPartnerStatusChanged(updated, status);
+  }
+  return updated;
 }
 
 async function listPartnersAdmin({ status, limit = 50, offset = 0 } = {}) {

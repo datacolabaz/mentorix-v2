@@ -816,61 +816,30 @@ async function loadExamAssignmentContacts(examId) {
   return rows || [];
 }
 
-async function insertStudentExamInAppNotification(studentId, exam, examLink) {
-  const title = 'Yeni imtahan';
-  const body = examLink
-    ? `«${String(exam.title || 'İmtahan').trim()}» üçün təyin edildiniz. Link: ${examLink}`
-    : `«${String(exam.title || 'İmtahan').trim()}» üçün təyin edildiniz. Mentorix → İmtahanlar.`;
-  await db
-    .query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read)
-       VALUES ($1, $2, $3, 'exam', FALSE)`,
-      [studentId, title, body]
-    )
-    .catch(() => {});
-}
-
-async function enqueueExamPlacedEmails(exam, assignments, examLink) {
-  const { enqueueNotification } = require('./notificationQueueService');
-  const brand = require('../config/brand').getBrand().name;
-  const when = formatExamScheduleAz(exam);
-  const mins = Number(exam.duration_minutes) || 60;
-  const title = String(exam.title || 'İmtahan').trim();
-  const subject = `${brand} — Yeni imtahan: ${title}`;
-  let queued = 0;
-
-  for (const s of assignments) {
-    const email = s.email != null ? String(s.email).trim() : '';
-    if (!email || !email.includes('@')) continue;
-    const firstName = String(s.full_name || 'Tələbə').trim().split(/\s+/)[0] || 'Tələbə';
-    const body =
-      `Salam, ${firstName}!\n\n` +
-      `«${title}» imtahanı sizin üçün planlaşdırılıb.\n` +
-      `Aktivlik: ${when}\n` +
-      `Müddət: ${mins} dəqiqə\n\n` +
-      (examLink
-        ? `İmtahana keçid (giriş tələb olunur):\n${examLink}\n\n`
-        : `${brand} tətbiqində «İmtahanlar» bölməsinə daxil olun.\n\n`) +
-      `Hörmətlə,\n${brand}`;
-
-    try {
-      await enqueueNotification({
-        channel: 'email',
-        event_type: 'exam_placed',
-        unique_key: `exam_placed_email_${exam.id}_${s.student_id}`,
-        user_id: s.student_id,
-        instructor_id: exam.instructor_id,
-        to_addr: email,
-        subject,
-        body,
-        context: { exam_id: exam.id, exam_link: examLink },
-      });
-      queued += 1;
-    } catch (e) {
-      console.error('exam placed email enqueue failed', s.student_id, e?.message);
-    }
-  }
-  return queued;
+/**
+ * Yeni imtahan bildirişi (in-app + email bildiriş servisindən; email seçim/siyasətə tabedir).
+ * @returns {Promise<{ created: boolean, emailQueued: boolean }>}
+ */
+async function notifyStudentExamAssigned(studentId, exam, { email = true } = {}) {
+  const { createNotificationSafe } = require('./notificationService');
+  const schedule = formatExamScheduleAz(exam);
+  const out = await createNotificationSafe({
+    recipientId: studentId,
+    category: 'assessment',
+    eventType: 'exam_assigned',
+    params: {
+      examTitle: String(exam.title || 'İmtahan').trim(),
+      schedule: schedule === '—' ? '' : schedule,
+      minutes: Number(exam.duration_minutes) || 60,
+    },
+    meta: { exam_id: exam.id, href: '/student/exams' },
+    relatedEntityType: 'exam',
+    relatedEntityId: exam.id,
+    actorUserId: exam.instructor_id || null,
+    dedupeKey: `exam_assigned:${exam.id}`,
+    email,
+  });
+  return { created: Boolean(out.created), emailQueued: Boolean(out.emailQueued) };
 }
 
 /**
@@ -909,14 +878,14 @@ const sendExamPlacedNotifications = async (examId, options = {}) => {
   const examLink = buildStudentExamUrl(exam.id);
   const linkHint = examLink ? `\nLink: ${examLink}` : '';
 
-  const emails = skipPlacementEmail ? 0 : await enqueueExamPlacedEmails(exam, assignments, examLink);
-
+  let emails = 0;
   let sent = 0;
   let skipped = 0;
 
   if (!skipPlacementInApp) {
     for (const s of assignments) {
-      await insertStudentExamInAppNotification(s.student_id, exam, examLink);
+      const r = await notifyStudentExamAssigned(s.student_id, exam, { email: !skipPlacementEmail });
+      if (r.emailQueued) emails += 1;
     }
   }
 

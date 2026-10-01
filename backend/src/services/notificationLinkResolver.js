@@ -224,6 +224,7 @@ async function resolveNotificationLink(notification, user, opts = {}) {
       return NONE;
     case 'partner':
     case 'partner_payout':
+      if (user.role === 'admin') return ok('/admin/partners');
       return resolvePartner(q, user);
     case 'billing':
       return resolveBilling(user);

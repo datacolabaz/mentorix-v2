@@ -236,6 +236,12 @@ async function createCourseMaterial({
       [material.id, normalizedGroupIds],
     );
   }
+  if (normalizedGroupIds.length || material.assignment_id) {
+    require('./materialShareNotifications').notifyMaterialShared(instructorId, material, {
+      groupIds: normalizedGroupIds,
+      assignmentId: material.assignment_id || null,
+    });
+  }
   return material;
 }
 
@@ -598,6 +604,7 @@ async function linkMaterialToTarget(instructorId, materialId, targetType, target
        ON CONFLICT (assignment_id, material_id) DO NOTHING`,
       [tid, materialId],
     );
+    require('./materialShareNotifications').notifyMaterialShared(instructorId, material, { assignmentId: tid });
     return { target_type: 'assignment', target_id: tid };
   }
 
@@ -631,6 +638,7 @@ async function linkMaterialToTarget(instructorId, materialId, targetType, target
         [materialId, instructorId, targetIds[0], subjectId],
       );
     });
+    require('./materialShareNotifications').notifyMaterialShared(instructorId, material, { groupIds: targetIds });
     return { target_type: 'group', target_ids: targetIds };
   }
 
@@ -672,6 +680,7 @@ async function linkMaterialToTarget(instructorId, materialId, targetType, target
        ON CONFLICT DO NOTHING`,
       [materialId, tid],
     );
+    require('./materialShareNotifications').notifyMaterialShared(instructorId, material, { studentIds: [tid] });
     return { target_type: 'student', target_id: tid };
   }
 

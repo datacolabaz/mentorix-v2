@@ -145,6 +145,15 @@ async function recordAssignmentActivity(studentAssignmentId, eventType, { metada
       late: result.state.is_late,
     });
   }
+  if (result && event === 'graded' && result.sa.reviewed_at) {
+    hooks.onAssignmentGraded({
+      studentAssignmentId,
+      assignmentId: result.sa.assignment_id,
+      studentId: result.sa.student_id,
+      instructorId: result.sa.instructor_id,
+      reviewedAt: result.sa.reviewed_at,
+    });
+  }
   return result ? result.state : null;
 }
 

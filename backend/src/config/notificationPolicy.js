@@ -56,13 +56,17 @@ const OPT_IN_EMAIL_EVENT_TYPES = new Set([
  * Events that emailed instructors through the old SMTP path before the notification outbox.
  * While real notification sending is not live, their email still goes through that legacy
  * path (if SMTP is configured); once live, only through the outbox. Decided in one place:
- * notificationEmailGate.emailRoute().
+ * notificationEmailGate.emailRoute(). The first four are the instructor request/grading emails;
+ * exam_assigned and catalog_exam_* replaced their own legacy queue emails in Phase F.
  */
 const LEGACY_EMAIL_FALLBACK_EVENT_TYPES = new Set([
   'join_request',
   'exam_access_request',
   'task_access_request',
   'open_grading_pending',
+  'exam_assigned',
+  'catalog_exam_approved',
+  'catalog_exam_rejected',
 ]);
 
 function hasLegacyEmailFallback(eventType) {

@@ -213,19 +213,19 @@ const sendEnrollmentProfileCompletionEmail = async (req, res) => {
       });
     }
 
-    try {
-      await db.query(
-        `INSERT INTO notifications (user_id, title, body, type, is_read)
-         VALUES ($1, $2, $3, 'profile_completion', FALSE)`,
-        [
-          enr.student_id,
-          'Qeydiyyatı tamamlayın',
-          `Müəlliminiz profil məlumatlarınızı (ad, soyad, mobil telefon) tamamlamağınızı xahiş edir. Link: ${completionUrl}`,
-        ],
-      );
-    } catch {
-      /* ignore */
-    }
+    const { createNotificationSafe } = require('../services/notificationService');
+    await createNotificationSafe({
+      recipientId: enr.student_id,
+      category: 'system',
+      eventType: 'profile_completion',
+      priority: 'LOW',
+      params: { url: completionUrl || '' },
+      meta: { enrollment_id: enr.id || null },
+      actorUserId: req.user.id,
+      providerWorkspaceId: enr.instructor_id || null,
+      dedupeKey: `profile_completion:${enr.student_id}:${enr.instructor_id || 'x'}:${new Date().toISOString().slice(0, 16)}`,
+      email: false,
+    });
 
     res.json({
       success: true,

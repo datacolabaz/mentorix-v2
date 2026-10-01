@@ -505,34 +505,6 @@ const submitMyAssignment = async (req, res) => {
     );
     if (!rows.length) return res.json({ success: true, already: true });
 
-    const { createNotificationSafe } = require('../services/notificationService');
-    const { rows: inst } = await db.query(
-      `SELECT t.id AS assignment_id, t.instructor_id, t.title, t.group_id, u.full_name AS student_name
-       FROM student_assignments a
-       JOIN assignments t ON t.id = a.assignment_id
-       JOIN users u ON u.id = a.student_id
-       WHERE a.id = $1`,
-      [id],
-    );
-    if (inst[0]) {
-      await createNotificationSafe({
-        recipientId: inst[0].instructor_id,
-        category: 'assignment',
-        eventType: 'assignment_submitted',
-        title: 'Tapşırıq təslim edildi',
-        body: `${inst[0].student_name} «${inst[0].title}» tapşırığını təslim etdi.`,
-        params: { studentName: inst[0].student_name, assignmentTitle: inst[0].title },
-        meta: { assignment_id: inst[0].assignment_id, late: nextStatus === 'late' },
-        relatedEntityType: 'student_assignment',
-        relatedEntityId: id,
-        actorUserId: studentId,
-        providerWorkspaceId: inst[0].instructor_id,
-        groupId: inst[0].group_id || null,
-        dedupeKey: `assignment_submitted:${id}`,
-        email: true,
-      });
-    }
-
     try {
       const { rows: meta } = await db.query(
         `SELECT assignment_id FROM student_assignments WHERE id = $1 LIMIT 1`,
@@ -755,22 +727,6 @@ const reviewInstructorAssignment = async (req, res) => {
        RETURNING *`,
       [score, feedback, lateDecision, nextStatus, id],
     );
-
-    if (score != null || feedback) {
-      const { notifyStudent } = require('../services/assignmentHomeworkService');
-      const scoreLine =
-        score != null && cur[0].max_score != null
-          ? ` Bal: ${score} / ${cur[0].max_score}.`
-          : score != null
-            ? ` Bal: ${score}.`
-            : '';
-      await notifyStudent(
-        cur[0].student_id,
-        'Tapşırıq yoxlanıldı',
-        `«${cur[0].title}» üçün müəllim rəy bildirdi.${scoreLine}`,
-        'assignment_reviewed',
-      );
-    }
 
     trackStudentAssignmentEvent(id, 'assignment_graded');
     res.json({ success: true, review: rows[0] });

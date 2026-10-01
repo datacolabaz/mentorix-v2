@@ -282,8 +282,10 @@ async function approveTaskAccessRequest(requestId, instructorId) {
 
 async function rejectTaskAccessRequest(requestId, instructorId) {
   const { rows } = await db.query(
-    `SELECT id, status FROM task_access_requests
-     WHERE id = $1::uuid AND instructor_id = $2::uuid LIMIT 1`,
+    `SELECT tar.id, tar.status, tar.student_id, tar.assignment_id, a.title AS task_title
+     FROM task_access_requests tar
+     LEFT JOIN assignments a ON a.id = tar.assignment_id
+     WHERE tar.id = $1::uuid AND tar.instructor_id = $2::uuid LIMIT 1`,
     [requestId, instructorId],
   );
   const req = rows[0];
@@ -303,6 +305,19 @@ async function rejectTaskAccessRequest(requestId, instructorId) {
      WHERE id = $1::uuid`,
     [requestId, instructorId],
   );
+  if (req.student_id) {
+    const { createNotificationSafe } = require('./notificationService');
+    await createNotificationSafe({
+      recipientId: req.student_id,
+      category: 'assignment',
+      eventType: 'task_access_rejected',
+      params: { assignmentTitle: req.task_title || 'Tapşırıq' },
+      meta: { assignment_id: req.assignment_id, request_id: requestId },
+      actorUserId: instructorId,
+      dedupeKey: `task_access_rejected:${requestId}`,
+      email: false,
+    });
+  }
   return { message: 'Sorğu rədd edildi' };
 }
 

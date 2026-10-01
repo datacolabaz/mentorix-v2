@@ -56,39 +56,13 @@ function normalizeStatus(row) {
   return 'pending';
 }
 
-async function notifyStudent(userId, title, body, type = 'assignment', meta = {}) {
-  if (!userId) return false;
-  try {
-    await db.query(
-      `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-       VALUES ($1, $2, $3, $4, FALSE, $5::jsonb)`,
-      [userId, title, body, type, JSON.stringify(meta || {})],
-    );
-    return true;
-  } catch (err) {
-    const msg = String(err?.message || '');
-    if (/meta|column/i.test(msg)) {
-      try {
-        await db.query(
-          `INSERT INTO notifications (user_id, title, body, type, is_read)
-           VALUES ($1, $2, $3, $4, FALSE)`,
-          [userId, title, body, type],
-        );
-        return true;
-      } catch (err2) {
-        console.error('[notifyStudent]', err2?.message || err2);
-        return false;
-      }
-    }
-    console.error('[notifyStudent]', msg);
-    return false;
-  }
-}
-
+/**
+ * Yeni tapşırıq: in-app notificationService-dən; email hələ ayrıca şablonlu göndərişdir
+ * (sendAssignmentNewEmail — seçim yoxlaması orada), ona görə bildirişdə email: false.
+ */
 async function notifyStudentsOfNewAssignment(task, studentIds, instructorName = '') {
-  const title = 'Yeni tapşırıq';
-  const due = task.due_date ? ` Son tarix: ${String(task.due_date).slice(0, 10)}.` : '';
-  const body = `«${task.title}» — ${instructorName || 'Müəllim'} təyin etdi.${due}`;
+  const { createNotificationSafe } = require('./notificationService');
+  const dueDate = task.due_date ? String(task.due_date).slice(0, 10) : '';
   const meta = {
     assignment_id: task.id,
     due_date: task.due_date || null,
@@ -97,11 +71,26 @@ async function notifyStudentsOfNewAssignment(task, studentIds, instructorName = 
   };
 
   for (const sid of studentIds) {
-    await notifyStudent(sid, title, body, 'assignment_new', meta);
+    if (!sid) continue;
+    const out = await createNotificationSafe({
+      recipientId: sid,
+      category: 'assignment',
+      eventType: 'assignment_new',
+      params: { assignmentTitle: task.title, instructorName: instructorName || 'Müəllim', dueDate },
+      meta,
+      relatedEntityType: 'assignment',
+      relatedEntityId: task.id,
+      actorUserId: task.instructor_id || null,
+      providerWorkspaceId: task.instructor_id || null,
+      groupId: task.group_id || null,
+      dedupeKey: `assignment_new:${task.id}`,
+      email: false,
+    });
+    if (out.deduped) continue;
     sendAssignmentNewEmail({
       userId: sid,
       title: task.title,
-      body: task.description || body,
+      body: task.description || task.title,
       dueDate: task.due_date,
       instructorName,
       assignmentId: task.id,
@@ -132,7 +121,6 @@ module.exports = {
   isSubmissionLate,
   isDueWithinHours,
   normalizeStatus,
-  notifyStudent,
   notifyStudentsOfNewAssignment,
   resolveGroupStudentIds,
 };

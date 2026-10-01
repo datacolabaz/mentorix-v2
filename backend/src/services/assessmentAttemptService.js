@@ -292,7 +292,13 @@ function createAssessmentAttemptService(overrides = {}) {
       return { exam, res };
     });
     if (out) {
-      const payload = { examId, examResultId: resultId, studentId, instructorId: out.exam.instructor_id };
+      const payload = {
+        examId,
+        examResultId: resultId,
+        studentId,
+        instructorId: out.exam.instructor_id,
+        gradingPending: Boolean(gradingPending),
+      };
       if (auto) hooks().onAssessmentAutoSubmitted(payload);
       else hooks().onAssessmentSubmitted(payload);
       if (out.res.status === 'result_released') hooks().onResultReleased(payload);
@@ -445,7 +451,7 @@ function createAssessmentAttemptService(overrides = {}) {
       };
       if (out.outcome === 'expired_auto_submitted') {
         dep('afterAutoSubmit')({ ...payload, needsAi: out.needsAi });
-        hooks().onAssessmentAutoSubmitted(payload);
+        hooks().onAssessmentAutoSubmitted({ ...payload, gradingPending: Boolean(out.gradingPending) });
         if (out.released) hooks().onResultReleased(payload);
       } else {
         hooks().onAssessmentExpiredNoAnswers(payload);

@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const { normalizeLocale } = require('../lib/userLocale');
 const { sendCompleteProfileEmail } = require('../services/instructorCompleteProfileEmail');
 const { maskEmail } = require('../services/email/emailTransport');
+const { createNotificationSafe } = require('../services/notificationService');
 
 const RESEND_AFTER = "INTERVAL '7 days'";
 const MAX_SENDS = 2;
@@ -95,18 +96,18 @@ async function runInstructorCompleteProfileReminders() {
         [row.id],
       );
 
-      await db
-        .query(
-          `INSERT INTO notifications (user_id, title, body, type, is_read, meta)
-           VALUES ($1, $2, $3, 'instructor_complete_profile', FALSE, $4::jsonb)`,
-          [
-            row.id,
-            r.subject,
-            r.text.slice(0, 1500),
-            JSON.stringify({ kind: 'instructor_complete_profile', lang: r.lang }),
-          ],
-        )
-        .catch((e) => console.error('instructor complete-profile notify insert', e.message));
+      await createNotificationSafe({
+        recipientId: row.id,
+        category: 'system',
+        eventType: 'instructor_complete_profile',
+        priority: 'LOW',
+        title: r.subject,
+        body: String(r.text || '').slice(0, 1500),
+        meta: { kind: 'instructor_complete_profile', lang: r.lang },
+        providerWorkspaceId: row.id,
+        dedupeKey: `instructor_complete_profile:${row.id}:${Number(row.email_count || 0) + 1}`,
+        email: false,
+      });
 
       sent += 1;
     } catch (e) {
