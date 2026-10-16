@@ -19,6 +19,7 @@ import { normalizeTeachingSubjects } from '../../lib/teachingSubjects'
 import { useBillingStatus } from '../../hooks/useBillingStatus'
 import { useSubscriptionPlans } from '../../hooks/useSubscriptionPlans'
 import { basicTrialExpiredMessage } from '../../lib/subscriptionPlanGuards'
+import GroupInvitesModal from '../../components/instructor/GroupInvitesModal'
 function formatIncomeAzn(n) {
   const v = Number(n)
   if (!Number.isFinite(v) || v <= 0) return '0 ₼'
@@ -53,6 +54,7 @@ export default function InstructorTeachingGroups() {
   const [busy, setBusy] = useState({})
   const [qrOpen, setQrOpen] = useState(false)
   const [qrGroup, setQrGroup] = useState(null)
+  const [invitesGroup, setInvitesGroup] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   const safeSubjects = useMemo(
@@ -468,6 +470,14 @@ export default function InstructorTeachingGroups() {
                                 >
                                   {t('teachingGroups.package')}
                                 </button>
+                                <button
+                                  type="button"
+                                  data-testid="group-invites-button"
+                                  className={[groupActionBtnCls, theme === 'dark' ? 'text-amber-300' : 'text-amber-700'].join(' ')}
+                                  onClick={() => setInvitesGroup(g)}
+                                >
+                                  {t('teachingGroups.timedLinks', { defaultValue: 'Müddətli linklər' })}
+                                </button>
                                 {g.join_code ? (
                                   <>
                                     <button
@@ -717,6 +727,7 @@ export default function InstructorTeachingGroups() {
         ) : null}
       </Modal>
 
+      <GroupInvitesModal open={Boolean(invitesGroup)} onClose={() => setInvitesGroup(null)} group={invitesGroup} />
       <Modal open={qrOpen} onClose={() => setQrOpen(false)} title={t('teachingGroups.qrModal.title')} size="sm">
         <div className="space-y-4">
           <div className="text-sm text-gray-400 text-center">

@@ -14,6 +14,7 @@ import NotificationBell from '../components/notifications/NotificationBell'
 const NAV_DEFS = [
   { to: '/parent', key: 'children', labelKey: 'nav.parent.children', label: 'Uşaqlarım', icon: 'children', end: true },
   { to: '/parent/assignments', key: 'assignments', labelKey: 'nav.parent.assignments', label: 'Ev tapşırıqları', icon: 'tasks' },
+  { to: '/parent/results', key: 'results', labelKey: 'nav.parent.results', label: 'Nəticələr', icon: 'exams' },
   { to: '/parent/payments', key: 'payments', labelKey: 'nav.parent.payments', label: 'Ödəniş', icon: 'payments' },
   { to: '/parent/notifications', key: 'notifications', labelKey: 'nav.parent.notifications', label: 'Bildirişlər', icon: 'notifications' },
 ]

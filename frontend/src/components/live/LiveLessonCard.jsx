@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import Button from '../common/Button'
 import { useToast } from '../common/Toast'
 import PlatformIcon, { ExternalLinkIcon } from './PlatformIcon'
@@ -72,6 +73,11 @@ export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance 
         </div>
       </div>
 
+      {lesson.topic ? (
+        <p className="mt-3 text-sm text-token-textMain">
+          <span className="text-token-textMuted">{t('liveLessons.fields.topic', { defaultValue: 'Mövzu' })}:</span> {lesson.topic}
+        </p>
+      ) : null}
       {lesson.description ? <p className="mt-3 whitespace-pre-line text-sm text-token-textMain">{lesson.description}</p> : null}
 
       {lesson.materials?.length ? (
@@ -124,6 +130,14 @@ export default function LiveLessonCard({ lesson, onEdit, onCancel, onAttendance 
           <Button type="button" variant="ghost" onClick={() => onAttendance?.(lesson)}>
             {t('liveLessons.attendanceCta')}
           </Button>
+        ) : null}
+        {canManage && lesson.state !== 'upcoming' && onAttendance && lesson.room_code ? (
+          <Link
+            to={`/live/${encodeURIComponent(lesson.room_code)}`}
+            className="inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold text-token-textMain hover:bg-canvas-subtle"
+          >
+            {t('liveLessons.followupsCta', { defaultValue: 'Material / tapşırıq / imtahan əlavə et' })}
+          </Link>
         ) : null}
         {canManage && lesson.state !== 'ended' ? (
           <Button type="button" variant="ghost" className="text-error" onClick={() => onCancel?.(lesson)}>

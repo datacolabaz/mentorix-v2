@@ -24,6 +24,7 @@ export function emptyLessonForm(now = Date.now()) {
   const s = bakuParts(start)
   return {
     title: '',
+    topic: '',
     description: '',
     target: 'group',
     group_id: '',
@@ -47,6 +48,7 @@ export function lessonToForm(lesson) {
   return {
     ...emptyLessonForm(),
     title: lesson.title || '',
+    topic: lesson.topic || '',
     description: lesson.description || '',
     target: lesson.student_id ? 'student' : 'group',
     group_id: lesson.group_id || '',
@@ -101,6 +103,7 @@ export function validateLessonForm(form, { isEdit = false, now = Date.now() } = 
 export function buildLessonPayload(form, { isEdit = false } = {}) {
   const body = {
     title: String(form.title || '').trim(),
+    topic: String(form.topic || '').trim(),
     description: String(form.description || '').trim(),
     date: form.date,
     start_time: form.start_time,

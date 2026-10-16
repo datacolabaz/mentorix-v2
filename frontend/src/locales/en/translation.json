@@ -4722,9 +4722,11 @@
     "createdSeries": "Series of {{n}} lessons scheduled",
     "updated": "Live lesson updated",
     "fields": {
-      "title": "Topic",
+      "title": "Title",
       "titlePlaceholder": "e.g. Maths — quadratic equations",
-      "description": "Short description (optional)",
+      "topic": "Topic",
+      "topicPlaceholder": "e.g. Applications of derivatives",
+      "description": "Note (optional)",
       "target": "For",
       "target_group": "Group",
       "target_student": "Individual student",

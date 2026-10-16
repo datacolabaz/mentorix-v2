@@ -116,7 +116,13 @@ export default function JoinClass() {
         const d = await api.get(`/public/join/${encodeURIComponent(initialCode)}`)
         if (!cancelled) setJoinInfo(d)
       } catch (err) {
-        if (!cancelled) setInfoError(err?.message || 'Dəvət linki tapılmadı')
+        if (!cancelled) {
+          setInfoError(
+            err?.code === 'INVITE_INACTIVE'
+              ? `${err?.message || 'Bu dəvət linki artıq aktiv deyil.'} Müəllimdən yeni link istəyin.`
+              : err?.message || 'Dəvət linki tapılmadı',
+          )
+        }
       } finally {
         if (!cancelled) setInfoLoading(false)
       }
@@ -276,6 +282,10 @@ export default function JoinClass() {
         err?.code === 'INSTRUCTOR_STUDENT_LIMIT'
           ? err?.message || 'Bu müəllimin pulsuz tələbə limiti dolub.'
           : err?.message || 'Xəta'
+      if (err?.code === 'INVITE_INACTIVE') {
+        // Expired / full / revoked while the form was open: no registration, just the notice.
+        setInfoError(`${err?.message || 'Bu dəvət linki artıq aktiv deyil.'} Müəllimdən yeni link istəyin.`)
+      }
       toast(msg, 'error')
     } finally {
       setBusy(false)

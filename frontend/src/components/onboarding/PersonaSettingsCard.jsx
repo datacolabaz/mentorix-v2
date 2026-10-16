@@ -24,7 +24,7 @@ export default function PersonaSettingsCard({ className = '' }) {
   const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
-  const { user, setSession } = useAuthStore()
+  const { user, setSession, mergeUser } = useAuthStore()
   const current = resolveUserPersona(user)
   const [picked, setPicked] = useState(current)
   const [busy, setBusy] = useState(false)
@@ -65,6 +65,13 @@ export default function PersonaSettingsCard({ className = '' }) {
     try {
       const existing = user?.persona_profile?.[picked] || {}
       const r = await api.patch('/auth/persona', { persona: picked, profile: existing })
+      if (r?.pending_approval) {
+        // Teacher / education-centre access is granted by an admin or organization — not by this switch.
+        if (r.user) mergeUser(r.user)
+        setPicked(current)
+        toast(r.message || t('personaSettings.approvalPending', { defaultValue: 'Müəllim icazəsi sorğunuz göndərildi.' }), 'success')
+        return
+      }
       if (!r?.token || !r?.user) throw new Error(r?.message || t('auth.errors.invalidServer'))
       setSession(r.token, r.user)
       toast(t('personaSettings.saved'), 'success')
@@ -115,6 +122,19 @@ export default function PersonaSettingsCard({ className = '' }) {
           )
         })}
       </div>
+      {user?.teacher_request?.status === 'pending' ? (
+        <p className="text-xs rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-300">
+          {t('personaSettings.teacherPending', {
+            defaultValue: 'Müəllim icazəsi sorğunuz admin və ya təşkilat təsdiqini gözləyir.',
+          })}
+        </p>
+      ) : null}
+      {user?.teacher_request?.status === 'rejected' ? (
+        <p className="text-xs rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-600 dark:text-red-300">
+          {t('personaSettings.teacherRejected', { defaultValue: 'Müəllim icazəsi sorğunuz rədd edildi.' })}
+          {user.teacher_request.review_reason ? ` ${user.teacher_request.review_reason}` : ''}
+        </p>
+      ) : null}
       <Button disabled={!picked} loading={busy} onClick={() => void save()}>
         {t('personaSettings.save')}
       </Button>

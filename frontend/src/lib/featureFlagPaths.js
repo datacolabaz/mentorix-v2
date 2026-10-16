@@ -4,6 +4,7 @@ export const FEATURE_FLAGS = Object.freeze({
   LIVE_ROOM: 'feature.live_room.enabled',
   EXAM_RESULT_MODES: 'feature.exam_result_modes.enabled',
   PROCTORING: 'feature.proctoring.enabled',
+  TEACHER_ROLE_APPROVAL: 'access.teacher_role_approval.enabled',
 })
 
 /** Backend `constants/featureFlags.js` ilə eyni olmalıdır. */
@@ -13,6 +14,7 @@ export const FEATURE_FLAG_DEFAULTS = Object.freeze({
   [FEATURE_FLAGS.LIVE_ROOM]: false,
   [FEATURE_FLAGS.EXAM_RESULT_MODES]: true,
   [FEATURE_FLAGS.PROCTORING]: false,
+  [FEATURE_FLAGS.TEACHER_ROLE_APPROVAL]: true,
 })
 
 /** Naviqasiya linki / route prefiksi → onu idarə edən flag. */

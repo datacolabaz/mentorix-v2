@@ -43,6 +43,7 @@ export const ORG_NAV_SECTIONS = [
     title: 'TƏŞKİLAT',
     items: [
       { to: '/org/members', key: 'members', labelKey: 'nav.org.members', label: 'Üzvlər', icon: 'instructors', permission: 'organization.manage' },
+      { to: '/org/role-requests', key: 'roleRequests', labelKey: 'nav.org.roleRequests', label: 'Müəllim sorğuları', icon: 'shield', permission: 'organization.manage' },
       { to: '/org/roles', key: 'roles', labelKey: 'nav.org.roles', label: 'Rollar və icazələr', icon: 'settings', permission: 'roles.manage' },
       { to: '/org/profile', key: 'profile', labelKey: 'nav.org.profile', label: 'Təşkilat profili', icon: 'building', permission: 'organization.manage' },
       { to: '/org/branding', key: 'branding', labelKey: 'nav.org.branding', label: 'Brendinq', icon: 'presentations', permission: 'organization.manage' },
