@@ -104,7 +104,11 @@ async function recomputeInstructorStorageUsageMb(instructorId, opts = {}) {
 
   const examBytes = await sumExamMaterialUrlsBytes(examUrls);
   const assignmentBytes = sumUrlsBytes(assignmentUrls);
-  const totalBytes = examBytes + assignmentBytes;
+  const { rows: answerFiles } = await db.query(
+    `SELECT COALESCE(SUM(f.byte_size),0) AS total FROM exam_answer_files f
+     JOIN exam_results r ON r.id=f.attempt_id JOIN exams e ON e.id=r.exam_id WHERE e.instructor_id=$1`, [instructorId],
+  );
+  const totalBytes = examBytes + assignmentBytes + Number(answerFiles[0]?.total || 0);
   const storage_used_mb = bytesToMbInt(totalBytes);
 
   if (persist) {

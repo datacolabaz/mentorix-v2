@@ -21,7 +21,9 @@ function normalizeResultMode(raw) {
 }
 
 function effectiveResultMode(exam, { modesEnabled = true } = {}) {
-  if (modesEnabled) {
+  // The canonical bank engine requires its explicit policy even when the legacy
+  // rollout flag is disabled. Never expose a pending/delayed bank score via old lists.
+  if (modesEnabled || exam?.question_bank_enabled === true) {
     const mode = normalizeResultMode(exam?.result_visibility_mode);
     if (mode) return mode;
   }

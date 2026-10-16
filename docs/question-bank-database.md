@@ -1,8 +1,10 @@
 # Sual Bankı və İmtahan Sistemi — mərhələ 1 (database)
 
-Bu dəyişiklik **yalnız schema** hazırlayır. Yeni API, frontend, avtomatik
-qiymətləndirmə alqoritmi, PDF-dən AI çıxarışı və production migration icrası daxil deyil.
-Mövcud təşkilat `/course/questions` görünüşü dəyişmir.
+Bu sənəd mərhələ 1-in **schema** qərarlarını təsvir edir. Mərhələ 2 API və
+qiymətləndirmə artıq həmin backend branch-ına əlavə edilib:
+[API müqaviləsi və yoxlamalar](question-bank-api.md). Frontend, PDF-dən AI çıxarışı
+və production migration icrası daxil deyil. Mövcud təşkilat `/course/questions`
+görünüşü dəyişmir.
 
 ## Mövcud modellərlə uyğunluq
 
@@ -23,10 +25,10 @@ Mövcud təşkilat `/course/questions` görünüşü dəyişmir.
 Mövcud `exam_student_progress` tələbə × imtahan aqreqatı olaraq qalır.
 İkinci `users`, `exams`, `exam_attempts` və ya alternativ login sistemi yaradılmır.
 
-SourcePDF-nin `file_url` və `file_name` sahələri API-də `course_materials.file_url`
-və `COALESCE(original_filename, title)` ilə oxunacaq. Fayl ikinci dəfə saxlanmır və
+SourcePDF-nin `file_url`-i protected source endpoint-inə yönəlir, `file_name`
+`COALESCE(original_filename, title)` ilə mövcud materialdan oxunur. Fayl ikinci dəfə saxlanmır və
 avtomatik tələbəyə paylaşılmır. Mənbə PDF ilə imtahan attachment-i fərqli anlayışlardır.
-PDF səhifə sayı/sərhəd yoxlaması gələcək upload API-də olacaq; DB `source_page > 0`
+PDF səhifə sayı/sərhəd yoxlaması mərhələ 2 API-də edilir; DB `source_page > 0`
 və mənbə əlaqəsini qoruyur.
 
 ## Uyğunluq və təhlükəsizlik
@@ -59,12 +61,13 @@ və mənbə əlaqəsini qoruyur.
   Fayl ölçüsü BYTEA ilə tutuşdurulur. API deadline, finalizasiya və fayl təhlükəsizliyi
   yoxlamalarını ayrıca etməlidir.
 
-## Növbəti backend mərhələsi üçün vacib sərhədlər
+## Backend inteqrasiyası üçün vacib sərhədlər
 
 Schema özü istifadəçi səlahiyyəti vermir və qiymətləndirmə alqoritmi deyil.
 Yeni endpoint-lər mövcud `authenticate`/`authorize`, müəllim ownership,
-qrup/tələbə təyinatı və storage quota middleware-lərindən istifadə etməlidir.
-İndiki mərhələdə bu cədvəllərə istifadəçi trafiki yazılmamalıdır.
+qrup/tələbə təyinatı və storage quota qaydalarından istifadə etməlidir.
+Aşağıdakı 1–5-ci tələblər mərhələ 2-də qurulub; detalları API sənədindədir.
+Frontend və staging yoxlamaları tamamlanmadan production trafiki açılmamalıdır.
 
 1. Bütün type-specific answer-key/option strukturları publish vaxtı yoxlanmalıdır
    (tək/çox seçim, qəbul edilən qısa/numeric cavablar, matching və ordering).
@@ -77,7 +80,8 @@ qrup/tələbə təyinatı və storage quota middleware-lərindən istifadə etm�
    `is_correct` option-ları, source PDF və tam snapshot tələbəyə imtahan zamanı verilməməlidir.
 5. Auto/manual grading cavabları, cəhdin raw/legacy balı və progress aqreqatı eyni
    transaction-da yenilənməlidir. Nəticə görünüşündə mövcud release qaydaları saxlanmalıdır.
-6. AZ/EN/RU UI, filtrlər, səhifələmə və mövzu/tip analitikası sonrakı mərhələlərdir.
+6. Filter/səhifələmə və mövzu/tip analitika API-ləri hazırdır; AZ/EN/RU UI
+   ayrıca frontend branch-ında sonrakı mərhələdir.
 
 ## Migration və rollout
 

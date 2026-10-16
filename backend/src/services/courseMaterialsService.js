@@ -20,17 +20,21 @@ const {
 } = require('../constants/materialsPlanLimits');
 const { supportPhoneDisplay } = require('../lib/storageLimitCopy');
 
-async function getInstructorMaterialsUsage(instructorId) {
+async function getInstructorMaterialsUsage(instructorId, client = db) {
   try {
-    const { rows } = await db.query(
+    const { rows } = await client.query(
       `SELECT
          (
            COALESCE((SELECT SUM(file_size) FROM course_materials WHERE instructor_id = $1), 0)
            + COALESCE((SELECT SUM(file_size) FROM presentations WHERE instructor_id = $1), 0)
+           + COALESCE((SELECT SUM(f.byte_size) FROM exam_answer_files f
+               JOIN exam_results r ON r.id=f.attempt_id JOIN exams e ON e.id=r.exam_id WHERE e.instructor_id=$1), 0)
          )::bigint AS used_bytes,
          (
            COALESCE((SELECT COUNT(*) FROM course_materials WHERE instructor_id = $1), 0)
            + COALESCE((SELECT COUNT(*) FROM presentations WHERE instructor_id = $1), 0)
+           + COALESCE((SELECT COUNT(*) FROM exam_answer_files f
+               JOIN exam_results r ON r.id=f.attempt_id JOIN exams e ON e.id=r.exam_id WHERE e.instructor_id=$1), 0)
          )::int AS file_count`,
       [instructorId],
     );
@@ -39,11 +43,13 @@ async function getInstructorMaterialsUsage(instructorId) {
       file_count: Number(rows[0]?.file_count) || 0,
     };
   } catch {
-    const { rows } = await db.query(
-      `SELECT COALESCE(SUM(file_size), 0)::bigint AS used_bytes,
-              COUNT(*)::int AS file_count
-       FROM course_materials
-       WHERE instructor_id = $1`,
+    const { rows } = await client.query(
+      `SELECT (COALESCE((SELECT SUM(file_size) FROM course_materials WHERE instructor_id=$1),0) +
+         COALESCE((SELECT SUM(f.byte_size) FROM exam_answer_files f JOIN exam_results r ON r.id=f.attempt_id
+           JOIN exams e ON e.id=r.exam_id WHERE e.instructor_id=$1),0))::bigint AS used_bytes,
+        ((SELECT COUNT(*) FROM course_materials WHERE instructor_id=$1) +
+         (SELECT COUNT(*) FROM exam_answer_files f JOIN exam_results r ON r.id=f.attempt_id
+           JOIN exams e ON e.id=r.exam_id WHERE e.instructor_id=$1))::int AS file_count`,
       [instructorId],
     );
     return {
@@ -53,11 +59,11 @@ async function getInstructorMaterialsUsage(instructorId) {
   }
 }
 
-async function getMaterialsQuota(instructorId) {
-  const plan = await getCurrentPlan(db, instructorId);
+async function getMaterialsQuota(instructorId, { client = db } = {}) {
+  const plan = await getCurrentPlan(client, instructorId);
   const planSlug = plan?.plan || 'basic';
   const limits = materialsLimitsForPlan(planSlug);
-  const usage = await getInstructorMaterialsUsage(instructorId);
+  const usage = await getInstructorMaterialsUsage(instructorId, client);
   const limitBytes = limits.storageBytes;
   const remainingBytes =
     limitBytes == null ? null : Math.max(0, limitBytes - usage.used_bytes);
