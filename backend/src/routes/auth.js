@@ -28,9 +28,16 @@ const {
 } = require('../controllers/instructorPhoneController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { attachEntitlements, enforceStudentsLimit } = require('../middleware/entitlements');
+const { userRateLimit } = require('../middleware/userRateLimit');
+
+const loginLimiter = userRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  name: 'auth:login',
+});
 
 // Admin-only password login (controller rejects non-admin roles); not behind googleOnlyGate so admins can't be locked out.
-router.post('/login', login);
+router.post('/login', loginLimiter, login);
 router.post('/google/login', googleLogin);
 router.post('/google/complete', googleComplete);
 router.post('/google/link/confirm', googleLinkConfirm);

@@ -123,7 +123,7 @@ describe('examController.createExam', () => {
 
     // 1. Verify column count equals values count
     assert.equal(columns.length, values.length, `Column count (${columns.length}) must equal VALUES count (${values.length})`);
-    assert.equal(columns.length, 26, 'Should have exactly 26 columns');
+    assert.equal(columns.length, 28, 'Should have exactly 28 columns');
 
     // 2. Verify is_verified column maps to FALSE
     const isVerifiedIdx = columns.indexOf('is_verified');
@@ -137,7 +137,7 @@ describe('examController.createExam', () => {
 
     // 4. Verify parameter 24 ($24, array index 23) is the generated exam slug string
     const params = insertQuery.params;
-    assert.equal(params.length, 24, 'Parameter array must contain exactly 24 elements');
+    assert.equal(params.length, 26, 'Parameter array must contain exactly 26 elements');
     const examSlug = params[23];
     assert.match(examSlug, /^sinaq-imtahani-1/);
   });

@@ -1,14 +1,28 @@
 const { Pool } = require('pg');
 
+function resolveSsl(connectionString) {
+  if (process.env.DATABASE_SSL === 'false' || process.env.DATABASE_SSL === '0') return false;
+  if (process.env.DATABASE_SSL === 'true' || process.env.DATABASE_SSL === '1') return { rejectUnauthorized: false };
+  if (!connectionString) return false;
+  const u = String(connectionString).toLowerCase();
+  if (u.includes('localhost') || u.includes('127.0.0.1')) return false;
+  return { rejectUnauthorized: false };
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: resolveSsl(process.env.DATABASE_URL),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 20000,
 });
 
+pool.on('error', (err) => {
+  console.error('[db:pool] Unexpected error on idle client:', err.message);
+});
+
 const db = {
+  pool,
   query: (text, params) => pool.query(text, params),
 
   transaction: async (callback) => {
@@ -25,6 +39,8 @@ const db = {
       client.release();
     }
   },
+
+  close: () => pool.end(),
 };
 
 module.exports = db;

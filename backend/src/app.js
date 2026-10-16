@@ -61,8 +61,16 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
     maxAge: 86400,
   })
-);
-app.use(express.json());
+// Basic security headers
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Upload faylları yalnız autentifikasiyalı route-lar vasitəsilə verilir:
 // - exams: GET /api/exams/material-file/:filename
@@ -121,9 +129,45 @@ app.get('/api/meta', (req, res) =>
   })
 );
 
+app.use('/api', (_req, res) => {
+  res.status(404).json({ success: false, message: 'Endpoint tapılmadı', code: 'NOT_FOUND' });
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
+
+function setupGracefulShutdown(server) {
+  const shutdown = async (signal) => {
+    console.log(`[process] Received ${signal}, shutting down gracefully...`);
+    try {
+      if (server) {
+        await new Promise((resolve) => server.close(resolve));
+        console.log('[process] HTTP server closed');
+      }
+      const db = require('./utils/db');
+      if (db.close) {
+        await db.close();
+        console.log('[process] Database pool closed');
+      }
+      process.exit(0);
+    } catch (err) {
+      console.error('[process] Error during shutdown:', err);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[process] Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('[process] Uncaught Exception:', err);
+  });
+}
 
 async function boot() {
   try {
@@ -133,7 +177,7 @@ async function boot() {
     process.exit(1);
   }
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log('Mentorix API running on port', PORT);
     console.log('[email] config', JSON.stringify(describeEmailConfig()));
     ensureCertificateIssueWorker();
@@ -160,6 +204,8 @@ async function boot() {
       );
     }, 15000);
   });
+
+  setupGracefulShutdown(server);
 }
 
 boot().catch((e) => {

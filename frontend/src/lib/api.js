@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { readStoredLocale } from '../i18n'
 import { normalizeApiBaseUrl } from './apiBase'
+import { safeLocalStorage } from './safeStorage'
 
 const parsedTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS)
 
@@ -86,7 +87,7 @@ function isPublicAuthPath(config) {
 }
 
 api.interceptors.request.use((config) => {
-  const token = isPublicAuthPath(config) ? null : localStorage.getItem('mx_token')
+  const token = isPublicAuthPath(config) ? null : safeLocalStorage.getItem('mx_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   else delete config.headers.Authorization
   const locale = readStoredLocale()
@@ -122,9 +123,11 @@ api.interceptors.response.use(
   (res) => res.data,
   (err) => {
     if (err.response?.status === 401 && !isAuthAttemptConfig(err.config)) {
-      localStorage.removeItem('mx_token')
-      localStorage.removeItem('mx_user')
-      window.location.href = '/login'
+      safeLocalStorage.removeItem('mx_token')
+      safeLocalStorage.removeItem('mx_user')
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
+      }
     }
     const data = err.response?.data
     const status = err.response?.status

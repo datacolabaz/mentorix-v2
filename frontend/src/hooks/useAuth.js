@@ -2,26 +2,23 @@ import { create } from 'zustand'
 import api from '../lib/api'
 import { trackLogout } from '../lib/analytics'
 import { consumeReturnAfterLogin } from '../lib/inviteReturn'
+import { safeLocalStorage, safeSessionStorage } from '../lib/safeStorage'
 
 function clearDiscoverReminderOnAuth(user) {
   const id = user?.id
   if (!id) return
-  try {
-    sessionStorage.removeItem(`mx_discover_modal_v1_${id}`)
-  } catch {
-    /* ignore */
-  }
+  safeSessionStorage.removeItem(`mx_discover_modal_v1_${id}`)
 }
 
 const useAuthStore = create((set) => ({
-  user: JSON.parse(localStorage.getItem('mx_user') || 'null'),
-  token: localStorage.getItem('mx_token'),
+  user: safeLocalStorage.getJSON('mx_user', null),
+  token: safeLocalStorage.getItem('mx_token'),
 
   /** Token varsa /auth/me ilə təsdiq; yalnız 401/403-da yaddaşı təmizlə (şəbəkə xətasında girişi sındırma) */
   bootstrapSession: async () => {
-    const token = localStorage.getItem('mx_token')
+    const token = safeLocalStorage.getItem('mx_token')
     if (!token) {
-      localStorage.removeItem('mx_user')
+      safeLocalStorage.removeItem('mx_user')
       set({ user: null, token: null })
       return
     }
@@ -29,8 +26,8 @@ const useAuthStore = create((set) => ({
       const data = await api.get('/auth/me')
       if (data?.user) {
         const nextToken = data.token || token
-        if (data.token) localStorage.setItem('mx_token', data.token)
-        localStorage.setItem('mx_user', JSON.stringify(data.user))
+        if (data.token) safeLocalStorage.setItem('mx_token', data.token)
+        safeLocalStorage.setJSON('mx_user', data.user)
         set({ user: data.user, token: nextToken })
       } else {
         throw new Error('no user')
@@ -38,8 +35,8 @@ const useAuthStore = create((set) => ({
     } catch (e) {
       const st = e?.status ?? e?.response?.status
       if (st === 401 || st === 403) {
-        localStorage.removeItem('mx_token')
-        localStorage.removeItem('mx_user')
+        safeLocalStorage.removeItem('mx_token')
+        safeLocalStorage.removeItem('mx_user')
         set({ user: null, token: null })
       }
     }
@@ -47,8 +44,8 @@ const useAuthStore = create((set) => ({
 
   setSession: (token, user) => {
     if (!token || !user) return
-    localStorage.setItem('mx_token', token)
-    localStorage.setItem('mx_user', JSON.stringify(user))
+    safeLocalStorage.setItem('mx_token', token)
+    safeLocalStorage.setJSON('mx_user', user)
     clearDiscoverReminderOnAuth(user)
     set({ user, token })
   },
@@ -58,34 +55,28 @@ const useAuthStore = create((set) => ({
     if (!data?.token || !data?.user) {
       throw new Error(data?.message || 'Kabinet dəyişdirilə bilmədi')
     }
-    localStorage.setItem('mx_token', data.token)
-    localStorage.setItem('mx_user', JSON.stringify(data.user))
-    localStorage.setItem('mx_active_workspace', String(target || '').toLowerCase())
-    window.dispatchEvent(new CustomEvent('mx:workspace-switched', { detail: String(target || '').toLowerCase() }))
+    safeLocalStorage.setItem('mx_token', data.token)
+    safeLocalStorage.setJSON('mx_user', data.user)
+    safeLocalStorage.setItem('mx_active_workspace', String(target || '').toLowerCase())
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mx:workspace-switched', { detail: String(target || '').toLowerCase() }))
+    }
     set({ user: data.user, token: data.token })
     return data
   },
 
   logout: () => {
     trackLogout()
-    const uid = JSON.parse(localStorage.getItem('mx_user') || 'null')?.id
+    const uid = safeLocalStorage.getJSON('mx_user', null)?.id
     if (uid) {
-      try {
-        sessionStorage.removeItem(`mx_discover_modal_v1_${uid}`)
-      } catch {
-        /* ignore */
-      }
+      safeSessionStorage.removeItem(`mx_discover_modal_v1_${uid}`)
     }
     // Sticky ?next= / return URL (məs. /partner/dashboard) növbəti girişdə digər persona-ya yapışmasın.
     consumeReturnAfterLogin()
-    try {
-      sessionStorage.removeItem('mx_role_panel_override')
-    } catch {
-      /* ignore */
-    }
-    localStorage.removeItem('mx_token')
-    localStorage.removeItem('mx_user')
-    localStorage.removeItem('mx_active_workspace')
+    safeSessionStorage.removeItem('mx_role_panel_override')
+    safeLocalStorage.removeItem('mx_token')
+    safeLocalStorage.removeItem('mx_user')
+    safeLocalStorage.removeItem('mx_active_workspace')
     set({ user: null, token: null })
   },
 
@@ -93,7 +84,7 @@ const useAuthStore = create((set) => ({
     set((state) => {
       if (!state.user || !patch || typeof patch !== 'object') return state
       const user = { ...state.user, ...patch }
-      localStorage.setItem('mx_user', JSON.stringify(user))
+      safeLocalStorage.setJSON('mx_user', user)
       return { user }
     }),
 }))
