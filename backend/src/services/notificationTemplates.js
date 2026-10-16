@@ -449,6 +449,11 @@ const TEMPLATES = Object.freeze({
     en: { title: 'Live lesson cancelled', body: 'The live lesson “{{lessonTitle}}” scheduled for {{startsAt}} was cancelled.' },
     ru: { title: 'Онлайн-урок отменён', body: 'Онлайн-урок «{{lessonTitle}}», запланированный на {{startsAt}}, отменён.' },
   },
+  live_lesson_followup: {
+    az: { title: 'Dərsə yeni {{itemKind}} əlavə olundu', body: '«{{lessonTitle}}» canlı dərsinə {{itemKind}} əlavə edildi: «{{itemTitle}}».' },
+    en: { title: 'New item for your lesson', body: 'A new {{itemKind}} was added to the live lesson “{{lessonTitle}}”: “{{itemTitle}}”.' },
+    ru: { title: 'Новое к уроку', body: 'К онлайн-уроку «{{lessonTitle}}» добавлено ({{itemKind}}): «{{itemTitle}}».' },
+  },
   live_lesson_reminder: {
     az: { title: 'Canlı dərs xatırlatması', body: '«{{lessonTitle}}» canlı dərsi {{startsAt}} tarixində başlayır ({{platformName}}).' },
     en: { title: 'Live lesson reminder', body: 'The live lesson “{{lessonTitle}}” starts at {{startsAt}} ({{platformName}}).' },

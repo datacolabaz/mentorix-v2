@@ -19,6 +19,13 @@ const {
 const { listInstructorInquiries, revealInquiryContact } = require('../controllers/studentInquiryController');
 const { listClasses, rotateJoinCode } = require('../controllers/instructorClassesController');
 const {
+  listGroupInvites,
+  createGroupInvite,
+  revokeGroupInvite,
+  listGroupInviteRedemptions,
+} = require('../controllers/groupInviteController');
+const { userRateLimit } = require('../middleware/userRateLimit');
+const {
   listJoinRequests,
   joinRequestsDiagnostics,
   joinRequestsCount,
@@ -63,6 +70,13 @@ router.post(
 router.post('/join-requests/:id/reject', authenticate, authorize('instructor'), rejectRequest);
 router.get('/classes', authenticate, authorize('instructor'), listClasses);
 router.post('/classes/:id/rotate-join-code', authenticate, authorize('instructor'), rotateJoinCode);
+
+// Müddətli / limitli qrup dəvət linkləri (token). Müəllim yalnız öz qruplarının linklərini görür və idarə edir.
+const inviteWriteLimit = userRateLimit({ name: 'group-invites-write', windowMs: 10 * 60 * 1000, max: 60 });
+router.get('/invites', authenticate, authorize('instructor'), listGroupInvites);
+router.post('/groups/:groupId/invites', authenticate, authorize('instructor'), inviteWriteLimit, createGroupInvite);
+router.post('/invites/:id/revoke', authenticate, authorize('instructor'), inviteWriteLimit, revokeGroupInvite);
+router.get('/invites/:id/redemptions', authenticate, authorize('instructor'), listGroupInviteRedemptions);
 router.patch('/profile-label', authenticate, authorize('instructor'), patchPublicLabel);
 router.patch('/map-profile', authenticate, authorize('instructor'), patchInstructorMapProfile);
 router.get('/professional-details', authenticate, authorize('instructor'), getProfessionalDetails);

@@ -18,6 +18,10 @@ router.post('/', authenticate, authorize('instructor'), enforceActiveSubscriptio
 router.patch('/:id', authenticate, authorize('instructor'), writeLimit, c.patchLesson);
 router.post('/:id/cancel', authenticate, authorize('instructor'), writeLimit, c.postCancelLesson);
 
+// Dərsdən sonra: material / tapşırıq / imtahan əlavə et (yalnız dərsin müəllimi).
+router.post('/:id/followups', authenticate, authorize('instructor'), writeLimit, c.postFollowup);
+router.delete('/:id/followups/:followupId', authenticate, authorize('instructor'), writeLimit, c.deleteFollowup);
+
 router.get('/:id/attendance', authenticate, authorize('instructor'), c.getAttendance);
 router.put('/:id/attendance', authenticate, authorize('instructor'), writeLimit, c.putAttendance);
 

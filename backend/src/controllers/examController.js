@@ -2907,6 +2907,7 @@ const markExamViewed = async (req, res) => {
 };
 
 module.exports = {
+  applyResultVisibilityToStudentList,
   createExam,
   listExams,
   softDeleteExam,

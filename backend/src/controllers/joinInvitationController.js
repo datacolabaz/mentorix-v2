@@ -1,3 +1,4 @@
+const { clientIp } = require('../utils/clientIp');
 const {
   getPublicJoinInfo,
   createJoinRequest,
@@ -213,6 +214,7 @@ const submitJoinWithProfile = async (req, res) => {
       payment_terms_accepted: Boolean(req.body?.payment_terms_accepted),
       referral_source_id: req.body?.referral_source_id,
       referral_notes: req.body?.referral_notes,
+      requestMeta: { ip: clientIp(req), userAgent: req.get('user-agent') },
     });
     res.status(201).json({ success: true, ...result });
   } catch (err) {

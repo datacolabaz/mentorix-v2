@@ -63,6 +63,12 @@ const {
   isAdminRole,
 } = require('../services/personaOnboardingService');
 const { toOnboardingClientError } = require('../lib/clientSafeError');
+const { authRoleForPersona } = require('../config/personas');
+const {
+  getAccessSummary,
+  checkStorageRoleEntry,
+  requestTeacherRole,
+} = require('../services/roleAccessService');
 const {
   findUserByGoogleSub,
   findUserByEmail,
@@ -294,7 +300,58 @@ async function enrichUserForClient(userLite, sessionRole = null) {
   }
   const personaRow = userLite.persona !== undefined ? userLite : await fetchPersonaState(userLite.id);
   out = attachPersonaFields(out, personaRow);
+  try {
+    // Server-derived permissions (never trusted from the client): access_roles, teacher_request, …
+    out = { ...out, ...(await getAccessSummary(userLite.id)) };
+  } catch (err) {
+    console.error('enrichUserForClient access summary', err?.message || err);
+  }
   return out;
+}
+
+/**
+ * Cabinet / persona change guard. A person may only enter a cabinet whose role they already hold.
+ * Teacher (and education-centre) access is granted by an admin or organization: instead of switching,
+ * a pending role request is created. Responds and returns false when the change must not proceed.
+ */
+async function guardRoleEntry(req, res, me, storageRole, { onboarding = false, source = 'settings' } = {}) {
+  if (!storageRole) return true;
+  const check = await checkStorageRoleEntry(me.id, storageRole, { onboarding });
+  if (check.allowed) return true;
+  if (check.approvalRequired) {
+    const out = await requestTeacherRole(me.id, {
+      note: req.body?.note,
+      organizationId: req.body?.organization_id || null,
+      source,
+    });
+    if (out.status === 'already_granted') return true;
+    const fresh = await loadUserLiteById(me.id);
+    const currentRole = onboarding ? null : String(fresh?.role || '').trim().toLowerCase() || null;
+    const userOut = await enrichUserForClient(fresh, currentRole);
+    if (onboarding) userOut.role = null;
+    logAuthEvent(req, { event: 'role_request', userId: me.id, metadata: { role: 'teacher', source } });
+    res.status(202).json({
+      success: true,
+      pending_approval: true,
+      code: 'ROLE_APPROVAL_PENDING',
+      message:
+        'Müəllim icazəsi sorğunuz göndərildi. Admin və ya təşkilat təsdiqlədikdən sonra müəllim kabinetinə keçə biləcəksiniz.',
+      role_request: out.request,
+      user: userOut,
+    });
+    return false;
+  }
+  res.status(403).json({
+    success: false,
+    code: 'ROLE_NOT_GRANTED',
+    message:
+      storageRole === 'student'
+        ? 'İştirakçı kabineti müəllimin dəvət linki ilə qrupa qoşulduqda açılır.'
+        : storageRole === 'parent'
+          ? 'Valideyn kabineti övladınızın hesabı ilə əlaqələndirildikdən sonra açılır.'
+          : 'Bu kabinetə keçid üçün icazəniz yoxdur.',
+  });
+  return false;
 }
 
 async function userNeedsRoleSelection(userId, fallbackRole = null) {
@@ -1171,6 +1228,14 @@ const selectOnboardingRole = async (req, res) => {
     }
 
     const needsOnboarding = await userNeedsRoleSelection(me.id, me.role);
+    if (
+      !(await guardRoleEntry(req, res, me, authRoleForPersona(persona), {
+        onboarding: needsOnboarding,
+        source: needsOnboarding ? 'onboarding' : 'settings',
+      }))
+    ) {
+      return;
+    }
     await applyPersonaSelection({
       userId: me.id,
       persona,
@@ -1207,6 +1272,15 @@ const selectOnboardingPersona = async (req, res) => {
       });
     }
 
+    const firstChoice = rowNeedsOnboarding(me);
+    if (
+      !(await guardRoleEntry(req, res, me, authRoleForPersona(persona), {
+        onboarding: firstChoice,
+        source: firstChoice ? 'onboarding' : 'settings',
+      }))
+    ) {
+      return;
+    }
     await applyPersonaSelection({
       userId: me.id,
       persona,
@@ -1240,6 +1314,7 @@ const updatePersona = async (req, res) => {
     }
 
     const persona = resolvePersonaInput(req.body);
+    if (!(await guardRoleEntry(req, res, me, authRoleForPersona(persona), { source: 'settings' }))) return;
     await applyPersonaSelection({
       userId: me.id,
       persona,
@@ -1277,6 +1352,18 @@ const switchWorkspace = async (req, res) => {
 
     let targetRole = null;
     let targetPersona = null;
+
+    const requestedStorageRole =
+      target === 'teacher' || target === 'instructor'
+        ? 'instructor'
+        : target === 'student' || target === 'course'
+          ? target
+          : null;
+    if (!requestedStorageRole) {
+      return res.status(400).json({ success: false, message: 'Etibarsız kabinet növü' });
+    }
+    // Only cabinets the person already holds; teacher access goes through an approval request.
+    if (!(await guardRoleEntry(req, res, me, requestedStorageRole, { source: 'workspace_switch' }))) return;
 
     if (target === 'teacher' || target === 'instructor') {
       targetRole = 'instructor';

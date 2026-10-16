@@ -277,6 +277,33 @@ async function studentCanAccessMaterial(studentId, material) {
   );
   if (guestRows[0]) return true;
 
+  // Material added to a live lesson the student belongs to (teacher's post-lesson follow-up).
+  try {
+    const { rows: lessonRows } = await db.query(
+      `SELECT 1
+       FROM live_lesson_followups f
+       JOIN live_rooms lr ON lr.id = f.room_id AND lr.status <> 'cancelled'
+       WHERE f.kind = 'material' AND f.ref_id = $1::uuid
+         AND lr.instructor_id = $3::uuid
+         AND EXISTS (
+           SELECT 1 FROM enrollments e
+           WHERE e.student_id = $2::uuid AND e.instructor_id = lr.instructor_id
+             AND e.deleted_at IS NULL
+             AND COALESCE(LOWER(TRIM(e.status)), 'active') IN ('active', 'pending_setup')
+             AND (
+               (lr.student_id IS NOT NULL AND lr.student_id = $2::uuid)
+               OR (lr.student_id IS NULL AND lr.group_id IS NOT NULL AND e.group_id = lr.group_id)
+               OR (lr.student_id IS NULL AND lr.group_id IS NULL)
+             )
+         )
+       LIMIT 1`,
+      [material.id, studentId, material.instructor_id],
+    );
+    if (lessonRows[0]) return true;
+  } catch (err) {
+    if (err?.code !== '42P01') throw err; // migration 237 not applied yet
+  }
+
   if (material.assignment_id) {
     const { rows } = await db.query(
       `SELECT 1 FROM student_assignments sa
