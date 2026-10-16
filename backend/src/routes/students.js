@@ -22,6 +22,8 @@ const { attachEntitlements, enforceStudentsLimit, enforceActiveSubscription } = 
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { createJoinRequest } = require('../services/joinInvitationService');
 const { submitJoinWithProfile, getStudentJoinState } = require('../controllers/joinInvitationController');
+const { looksLikeInviteToken } = require('../services/groupInviteService');
+const { clientIp } = require('../utils/clientIp');
 const {
   patchMyContactProfile,
   sendEnrollmentProfileCompletionEmail,
@@ -1557,6 +1559,7 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
         payment_terms_accepted: Boolean(req.body?.payment_terms_accepted),
         referral_source_id: req.body?.referral_source_id,
         referral_notes: req.body?.referral_notes,
+        requestMeta: { ip: clientIp(req), userAgent: req.get('user-agent') },
       });
       const enrollments = await listActiveEnrollmentsForStudent(req.user.id);
       return res.status(201).json({ ...result, success: true, enrollments });
@@ -1565,6 +1568,10 @@ router.post('/my/join', authenticate, authorize('student'), async (req, res) => 
     const raw = String(req.body?.code || '').trim().toUpperCase();
     const code = raw.replace(/\s+/g, '');
     if (!code) return res.status(400).json({ success: false, message: 'Join kodu tələb olunur' });
+    if (looksLikeInviteToken(code)) {
+      // Token joins always go through the join request (limit, expiry and the join log are enforced there).
+      return res.status(400).json({ success: false, code: 'PROFILE_REQUIRED', message: 'Ad və soyad tələb olunur' });
+    }
 
     // If student account has no phone yet, allow setting it at join time (student-provided).
     const joinPhone = canonicalPhoneForJoin(req.body?.phone);

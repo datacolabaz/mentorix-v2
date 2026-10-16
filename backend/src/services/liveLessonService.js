@@ -168,6 +168,10 @@ function validateLessonInput(body = {}, { now = Date.now(), partial = false, cur
     const description = cleanText(body.description, 5000);
     out.description = description || null;
   }
+  if (!partial || has('topic')) {
+    const topic = cleanText(body.topic, 255);
+    out.topic = topic || null;
+  }
 
   if (!partial || has('group_id') || has('student_id')) {
     const groupId = body.group_id ? String(body.group_id).trim() : null;
@@ -313,6 +317,7 @@ function mapLesson(row, { canSeeLink = false, isOwner = false, attendance = null
     room_code: row.room_code,
     title: row.title,
     description: row.description || null,
+    topic: row.topic || null,
     platform: row.provider || LEGACY_PROVIDER,
     platform_name: state === 'legacy' ? 'Mentorix Live' : platformName(row.provider, row.join_url),
     starts_at: row.scheduled_at || row.started_at || null,
@@ -338,6 +343,7 @@ function mapLesson(row, { canSeeLink = false, isOwner = false, attendance = null
     join_url: showLink ? row.join_url || null : null,
     ...(isOwner && showLink && row.start_url && row.start_url !== row.join_url ? { start_url: row.start_url } : {}),
     ...(attendance ? { my_attendance: attendance } : {}),
+    ...(Array.isArray(row.followups) ? { followups: row.followups } : {}),
   };
 }
 
@@ -479,7 +485,11 @@ async function getLessonForUser(user, { id, roomCode }) {
   const allowed = await canViewLesson(user, row);
   if (!allowed) throw new LessonError('Canlı dərs tapılmadı və ya bu dərsə giriş icazəniz yoxdur.', 404, 'NOT_FOUND');
   const attendance = user.role === 'student' ? await myAttendance(row.id, user.id) : null;
-  return mapLesson(row, { canSeeLink: true, isOwner: isOwner(user, row), attendance });
+  const followups = await listFollowupsForUser(user, row).catch((e) => {
+    logLessonError('followups', e);
+    return [];
+  });
+  return mapLesson({ ...row, followups }, { canSeeLink: true, isOwner: isOwner(user, row), attendance });
 }
 
 async function listLessonsForUser(user, { scope = 'upcoming', limit = 100 } = {}) {
@@ -649,9 +659,9 @@ async function createLessons(instructorId, body, { now = Date.now(), createMeeti
            room_code, instructor_id, group_id, student_id, title, description, status, scheduled_at, ends_at,
            duration_minutes, provider, join_url, link_source, reminder_offset_minutes, notify_email,
            recurrence_rule, series_id, materials, reminder_sent_at,
-           start_url, passcode, provider_meeting_id, provider_payload, connection_id, updated_at
+           start_url, passcode, provider_meeting_id, provider_payload, connection_id, topic, updated_at
          ) VALUES ($1, $2, $3, $4, $5, $6, 'waiting', $7, $8, $9, $10, $11, $17, $12, $13, $14::jsonb, $15, $16::jsonb, $18,
-                   $19, $20, $21, $22::jsonb, $23::uuid, NOW())
+                   $19, $20, $21, $22::jsonb, $23::uuid, $24, NOW())
          RETURNING *`,
         [
           code,
@@ -678,6 +688,7 @@ async function createLessons(instructorId, body, { now = Date.now(), createMeeti
           providerFields?.provider_meeting_id ?? null,
           JSON.stringify(providerFields?.provider_payload || {}),
           providerFields?.connection_id ?? null,
+          v.topic ?? null,
         ],
       );
       inserted.push(r[0]);
@@ -754,6 +765,7 @@ async function updateLesson(instructorId, id, body, { scope = 'single', now = Da
            notify_email = COALESCE($14, notify_email),
            materials = COALESCE($15::jsonb, materials),
            reminder_sent_at = CASE WHEN $16::boolean OR $13::int IS NOT NULL THEN NULL ELSE reminder_sent_at END,
+           topic = CASE WHEN $17::boolean THEN $18 ELSE topic END,
            updated_at = NOW()
          WHERE id = $1
          RETURNING *`,
@@ -774,6 +786,8 @@ async function updateLesson(instructorId, id, body, { scope = 'single', now = Da
           v.notify_email ?? null,
           v.materials ? JSON.stringify(v.materials) : null,
           timeChanged,
+          v.topic !== undefined,
+          v.topic ?? null,
         ],
       );
       out.push(rows[0]);
@@ -903,6 +917,139 @@ async function setAttendance(instructorId, id, records) {
   return getAttendance(instructorId, id);
 }
 
+/* ------------------------------------------------------------------ after the lesson: material / task / exam */
+
+const FOLLOWUP_KINDS = Object.freeze(['material', 'task', 'exam']);
+const FOLLOWUP_KIND_LABELS = Object.freeze({ material: 'material', task: 'tapşırıq', exam: 'imtahan' });
+const MAX_FOLLOWUPS = 30;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The referenced item must belong to the lesson's teacher. Returns its title. */
+async function assertFollowupRefOwned(instructorId, kind, refId, client = db) {
+  if (!FOLLOWUP_KINDS.includes(kind)) throw new LessonError('Növ düzgün deyil (material, tapşırıq və ya imtahan).', 400, 'VALIDATION', ['kind']);
+  if (!UUID_RE.test(String(refId || ''))) throw new LessonError('Seçim düzgün deyil.', 400, 'VALIDATION', ['ref_id']);
+  const sql = {
+    material: `SELECT COALESCE(NULLIF(TRIM(title), ''), original_filename, 'Material') AS title FROM course_materials WHERE id = $1 AND instructor_id = $2`,
+    task: `SELECT title FROM assignments WHERE id = $1 AND instructor_id = $2`,
+    exam: `SELECT title FROM exams WHERE id = $1 AND instructor_id = $2 AND COALESCE(is_deleted, FALSE) = FALSE`,
+  }[kind];
+  const { rows } = await client.query(`${sql} LIMIT 1`, [refId, instructorId]);
+  if (!rows[0]) {
+    const label = { material: 'Material', task: 'Tapşırıq', exam: 'İmtahan' }[kind];
+    throw new LessonError(`${label} tapılmadı.`, 404, 'REF_NOT_FOUND', ['ref_id']);
+  }
+  return rows[0].title || '';
+}
+
+const FOLLOWUP_SELECT = `SELECT f.id, f.kind, f.ref_id, f.created_at,
+    CASE f.kind
+      WHEN 'material' THEN (SELECT COALESCE(NULLIF(TRIM(cm.title), ''), cm.original_filename, 'Material') FROM course_materials cm WHERE cm.id = f.ref_id)
+      WHEN 'task' THEN (SELECT a.title FROM assignments a WHERE a.id = f.ref_id)
+      WHEN 'exam' THEN (SELECT e.title FROM exams e WHERE e.id = f.ref_id AND COALESCE(e.is_deleted, FALSE) = FALSE)
+    END AS title
+  FROM live_lesson_followups f`;
+
+function mapFollowup(r) {
+  return { id: r.id, kind: r.kind, ref_id: r.ref_id, title: r.title || null, created_at: r.created_at };
+}
+
+/**
+ * Owner and admins see every follow-up. A student sees materials attached to a lesson they can view, and
+ * tasks / exams only once they are actually assigned to them (no access is widened by listing).
+ */
+async function listFollowupsForUser(user, room) {
+  if (!user || !room) return [];
+  if (user.role === 'admin' || isOwner(user, room)) {
+    const { rows } = await db.query(`${FOLLOWUP_SELECT} WHERE f.room_id = $1 ORDER BY f.created_at`, [room.id]);
+    return rows.filter((r) => r.title != null).map(mapFollowup);
+  }
+  if (user.role !== 'student') return [];
+  const { rows } = await db.query(
+    `${FOLLOWUP_SELECT}
+     WHERE f.room_id = $1
+       AND (
+         f.kind = 'material'
+         OR (f.kind = 'task' AND EXISTS (SELECT 1 FROM student_assignments sa WHERE sa.assignment_id = f.ref_id AND sa.student_id = $2))
+         OR (f.kind = 'exam' AND EXISTS (SELECT 1 FROM exam_assignments ea WHERE ea.exam_id = f.ref_id AND ea.student_id = $2))
+       )
+     ORDER BY f.created_at`,
+    [room.id, user.id],
+  );
+  return rows.filter((r) => r.title != null).map(mapFollowup);
+}
+
+/**
+ * Teacher adds a material, task or exam to a lesson (typically after it).
+ * assign=true (default) also assigns a task/exam to the lesson's students, the same way access-request
+ * approval does (ON CONFLICT DO NOTHING — never duplicates, never removes).
+ */
+async function addFollowup(instructorId, lessonId, { kind, ref_id: refId, assign = true } = {}) {
+  const room = await loadOwnedLesson(instructorId, lessonId);
+  if (room.status === 'cancelled') throw new LessonError('Ləğv edilmiş dərsə əlavə etmək olmaz.', 409, 'CANCELLED');
+  const k = String(kind || '').trim().toLowerCase();
+  const itemTitle = await assertFollowupRefOwned(instructorId, k, refId);
+  const { rows: countRows } = await db.query(`SELECT COUNT(*)::int AS n FROM live_lesson_followups WHERE room_id = $1`, [room.id]);
+  if ((countRows[0]?.n || 0) >= MAX_FOLLOWUPS) {
+    throw new LessonError(`Bir dərsə ən çoxu ${MAX_FOLLOWUPS} element əlavə etmək olar.`, 400, 'VALIDATION', ['ref_id']);
+  }
+  const roster = await rosterStudentIds(room);
+  const shouldAssign = assign !== false && assign !== 'false' && (k === 'task' || k === 'exam');
+  const { addStudentToExamParticipantGroup, addStudentToAssignmentParticipantGroup } = require('./participantGroupService');
+  const created = await db.transaction(async (client) => {
+    const { rows } = await client.query(
+      `INSERT INTO live_lesson_followups (room_id, kind, ref_id, added_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (room_id, kind, ref_id) DO NOTHING
+       RETURNING id`,
+      [room.id, k, refId, instructorId],
+    );
+    if (shouldAssign) {
+      for (const sid of roster) {
+        if (k === 'exam') {
+          // eslint-disable-next-line no-await-in-loop
+          await client.query(`INSERT INTO exam_assignments (exam_id, student_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [refId, sid]);
+          // eslint-disable-next-line no-await-in-loop
+          await addStudentToExamParticipantGroup(client, refId, sid);
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          await client.query(
+            `INSERT INTO student_assignments (assignment_id, student_id, status)
+             VALUES ($1, $2, 'pending')
+             ON CONFLICT (assignment_id, student_id) DO NOTHING`,
+            [refId, sid],
+          );
+          // eslint-disable-next-line no-await-in-loop
+          await addStudentToAssignmentParticipantGroup(client, refId, sid);
+        }
+      }
+    }
+    return rows[0] || null;
+  });
+  if (created) {
+    try {
+      await notifyRoster('live_lesson_followup', room, {
+        recipients: roster,
+        extra: { itemKind: FOLLOWUP_KIND_LABELS[k], itemTitle: String(itemTitle || '').slice(0, 200) },
+        dedupeSuffix: `:${created.id}`,
+      });
+    } catch (e) {
+      logLessonError('notify followup', e);
+    }
+  }
+  const followups = await listFollowupsForUser({ id: instructorId, role: 'instructor' }, room);
+  return { added: Boolean(created), assigned: shouldAssign ? roster.length : 0, followups };
+}
+
+async function removeFollowup(instructorId, lessonId, followupId) {
+  const room = await loadOwnedLesson(instructorId, lessonId);
+  if (!UUID_RE.test(String(followupId || ''))) throw new LessonError('Element tapılmadı.', 404, 'NOT_FOUND');
+  // Removes the link from the lesson only; assignments already given to students stay.
+  const { rowCount } = await db.query(`DELETE FROM live_lesson_followups WHERE id = $1 AND room_id = $2`, [followupId, room.id]);
+  if (!rowCount) throw new LessonError('Element tapılmadı.', 404, 'NOT_FOUND');
+  const followups = await listFollowupsForUser({ id: instructorId, role: 'instructor' }, room);
+  return { removed: true, followups };
+}
+
 /* ------------------------------------------------------------------ calendar + reminders */
 
 async function getLessonIcs(user, id) {
@@ -976,4 +1123,8 @@ module.exports = {
   getLessonIcs,
   runLiveLessonReminders,
   notifyRoster,
+  FOLLOWUP_KINDS,
+  listFollowupsForUser,
+  addFollowup,
+  removeFollowup,
 };

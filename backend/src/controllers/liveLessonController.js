@@ -124,7 +124,30 @@ const getCalendarFile = async (req, res) => {
   }
 };
 
+const postFollowup = async (req, res) => {
+  try {
+    const out = await lessons.addFollowup(req.user.id, req.params.id, {
+      kind: req.body?.kind,
+      ref_id: req.body?.ref_id,
+      assign: req.body?.assign,
+    });
+    res.status(out.added ? 201 : 200).json({ success: true, ...out });
+  } catch (e) {
+    sendError(res, e, 'followup-add');
+  }
+};
+
+const deleteFollowup = async (req, res) => {
+  try {
+    res.json({ success: true, ...(await lessons.removeFollowup(req.user.id, req.params.id, req.params.followupId)) });
+  } catch (e) {
+    sendError(res, e, 'followup-remove');
+  }
+};
+
 module.exports = {
+  postFollowup,
+  deleteFollowup,
   listProviders,
   listLessons,
   getLesson,

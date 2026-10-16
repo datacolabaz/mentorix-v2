@@ -49,9 +49,41 @@ function syncInvitationFieldsForGroup(groupId, joinCode) {
   );
 }
 
+const GROUP_BY_ID_SELECT = `SELECT ig.id AS group_id,
+            ig.instructor_id,
+            ig.subject_id,
+            ig.name AS group_name,
+            ig.join_code,
+            ig.invitation_code,
+            ig.invitation_link,
+            ig.join_code_expires_at,
+            COALESCE(NULLIF(TRIM(ist.name), ''), 'Sahəsiz') AS subject_name,
+            iu.full_name AS instructor_name
+     FROM instructor_groups ig
+     LEFT JOIN instructor_subjects ist ON ist.id = ig.subject_id
+     LEFT JOIN users iu ON iu.id = ig.instructor_id`;
+
+/**
+ * Resolves a join code: either a group invite token (INV-…, group_invites) or the group's legacy join code.
+ * For tokens the returned row carries `invite` and the legacy join_code expiry does not apply.
+ */
 async function findGroupByInvitationCode(code) {
   const c = normalizeInvitationCode(code);
   if (!c) return null;
+  const { looksLikeInviteToken, findInviteByToken } = require('./groupInviteService');
+  if (looksLikeInviteToken(c)) {
+    const invite = await findInviteByToken(c);
+    if (!invite) return null;
+    const { rows } = await db.query(`${GROUP_BY_ID_SELECT} WHERE ig.id = $1 LIMIT 1`, [invite.group_id]);
+    if (!rows[0]) return null;
+    return {
+      ...rows[0],
+      join_code_expires_at: null,
+      invitation_code: invite.token,
+      invitation_link: buildInvitationLink(invite.token),
+      invite,
+    };
+  }
   const { rows } = await db.query(
     `SELECT ig.id AS group_id,
             ig.instructor_id,
@@ -87,6 +119,10 @@ async function getPublicJoinInfo(code) {
     err.code = 'EXPIRED_CODE';
     throw err;
   }
+  if (g.invite) {
+    // Expired / full / revoked token: no registration, just "link is no longer active".
+    require('./groupInviteService').assertUsable(g.invite, { role: null });
+  }
   const inviteCode = g.invitation_code || g.join_code;
   const invitation_link = g.invitation_link || buildInvitationLink(inviteCode);
   const defaults = await getGroupInviteDefaults(g.group_id);
@@ -116,6 +152,16 @@ async function getPublicJoinInfo(code) {
     lesson_format_label,
     invite_ready: Boolean(package_offer),
     referral_sources: referralRows || [],
+    ...(g.invite
+      ? {
+          invite: {
+            kind: 'token',
+            expires_at: g.invite.expires_at,
+            remaining_uses: Math.max(0, Number(g.invite.max_uses) - Number(g.invite.used_count)),
+            allowed_role: g.invite.allowed_role,
+          },
+        }
+      : {}),
   };
 }
 
@@ -239,6 +285,7 @@ async function createJoinRequest({
   payment_terms_accepted,
   referral_source_id,
   referral_notes,
+  requestMeta = {},
 }) {
   const g = await findGroupByInvitationCode(code);
   if (!g) {
@@ -253,6 +300,7 @@ async function createJoinRequest({
     err.code = 'EXPIRED_CODE';
     throw err;
   }
+  const inviteSvc = g.invite ? require('./groupInviteService') : null;
 
   const firstName = String(first_name || '').trim();
   const lastName = String(last_name || '').trim();
@@ -330,6 +378,9 @@ async function createJoinRequest({
   });
 
   const result = await db.transaction(async (client) => {
+    // Token joins: lock the invite first so parallel joins serialize and can never pass the limit.
+    const tokenLock = inviteSvc ? await inviteSvc.lockInviteForJoin(client, g.invite.token, studentId) : null;
+
     await client.query(`UPDATE users SET full_name = $1 WHERE id = $2`, [fullName, studentId]);
     if (phoneCanon) await upsertStudentContactPhone(client, studentId, phoneCanon);
 
@@ -420,6 +471,13 @@ async function createJoinRequest({
       };
     }
 
+    if (tokenLock?.alreadyRedeemed) {
+      const err = new Error('Bu dəvət linkindən artıq istifadə etmisiniz.');
+      err.statusCode = 409;
+      err.code = 'INVITE_ALREADY_USED';
+      throw err;
+    }
+
     let enrollmentId = existingEnrollment?.id;
     if (enrollmentId) {
       await client.query(
@@ -490,6 +548,16 @@ async function createJoinRequest({
       { verifiedPhone: phoneCanon || undefined, skipLimitCheck: true },
       client,
     );
+
+    if (tokenLock) {
+      await inviteSvc.recordRedemption(client, tokenLock.invite, {
+        userId: studentId,
+        enrollmentId,
+        joinRequestId: reqRows[0].id,
+        ip: requestMeta.ip,
+        userAgent: requestMeta.userAgent,
+      });
+    }
 
     return {
       enrollment_id: enrollmentId,
