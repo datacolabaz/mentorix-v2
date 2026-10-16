@@ -61,6 +61,7 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
     maxAge: 86400,
   })
+);
 // Basic security headers
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
