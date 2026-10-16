@@ -34,6 +34,7 @@ const {
   serveExamAttachmentByExam,
 } = require('../controllers/examController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { bankExamLegacyGuard } = require('../middleware/bankExamLegacyGuard');
 const { requireInstructorPhoneVerification } = require('../middleware/requireInstructorPhoneVerification');
 const { enforceStorageLimitAfterUpload } = require('../middleware/storageLimit');
 const { enforceActiveSubscription, enforceExamsLimit } = require('../middleware/entitlements');
@@ -149,29 +150,32 @@ router.post(
   '/bulk-delete',
   authenticate,
   authorize('instructor', 'admin'),
+  bankExamLegacyGuard,
   enforceActiveSubscription,
   bulkHardDeleteExams,
 );
 router.get('/:id/assignments', authenticate, authorize('instructor', 'admin'), getExamAssignments);
 router.post('/:id/late-access/:studentId', authenticate, authorize('instructor', 'admin'), grantLateAccess);
-router.get('/:id/review', authenticate, getStudentExamReview);
+router.get('/:id/review', authenticate, bankExamLegacyGuard, getStudentExamReview);
 router.patch(
   '/:id/results/:resultId/open-grading/:questionId',
   authenticate,
   authorize('instructor', 'admin'),
+  bankExamLegacyGuard,
   confirmOpenQuestionGrading,
 );
-router.get('/:id/questions', authenticate, getExamQuestions);
-router.post('/submit', authenticate, authorize('student'), submitExam);
-router.post('/:id/autosave', authenticate, authorize('student'), autosaveExamAnswers);
+router.get('/:id/questions', authenticate, bankExamLegacyGuard, getExamQuestions);
+router.post('/submit', authenticate, authorize('student'), bankExamLegacyGuard, submitExam);
+router.post('/:id/autosave', authenticate, authorize('student'), bankExamLegacyGuard, autosaveExamAnswers);
 router.post('/:id/viewed', authenticate, authorize('student'), markExamViewed);
-router.get('/:id/results', authenticate, getResults);
+router.get('/:id/results', authenticate, bankExamLegacyGuard, getResults);
 router.get('/:id/groups', authenticate, authorize('instructor', 'admin'), getExamGroups);
-router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), getExamTop10);
+router.get('/:id/top10', authenticate, authorize('instructor', 'admin'), bankExamLegacyGuard, getExamTop10);
 router.post(
   '/:id/regrade',
   authenticate,
   authorize('instructor', 'admin'),
+  bankExamLegacyGuard,
   enforceActiveSubscription,
   regradeExamResults,
 );
@@ -180,6 +184,7 @@ router.delete(
   '/:id',
   authenticate,
   authorize('instructor', 'admin'),
+  bankExamLegacyGuard,
   enforceActiveSubscription,
   hardDeleteExam,
 );
@@ -187,6 +192,7 @@ router.delete(
   '/:id/soft',
   authenticate,
   authorize('instructor', 'admin'),
+  bankExamLegacyGuard,
   enforceActiveSubscription,
   softDeleteExam,
 );
@@ -195,6 +201,7 @@ router.patch(
   '/:id/open-model-answers',
   authenticate,
   authorize('instructor', 'admin'),
+  bankExamLegacyGuard,
   enforceActiveSubscription,
   bulkPatchOpenModelAnswers,
 );
@@ -202,6 +209,7 @@ router.patch(
   '/:id',
   authenticate,
   authorize('instructor', 'admin'),
+  bankExamLegacyGuard,
   enforceActiveSubscription,
   patchExam,
 );

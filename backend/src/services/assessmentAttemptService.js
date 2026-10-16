@@ -321,7 +321,8 @@ function createAssessmentAttemptService(overrides = {}) {
       const { rows } = await client.query(
         `SELECT er.id, er.exam_id, er.student_id, er.started_at, er.submitted_at, er.status, er.answers,
                 e.duration_minutes, e.instructor_id, e.wrong_penalty_enabled, e.show_results,
-                e.result_visibility_mode, e.results_release_at, e.available_until
+                e.result_visibility_mode, e.results_release_at, e.available_until,
+                EXISTS(SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=er.exam_id) AS question_bank_enabled
          FROM exam_results er
          JOIN exams e ON e.id = er.exam_id
          WHERE er.id = $1
@@ -330,6 +331,7 @@ function createAssessmentAttemptService(overrides = {}) {
       );
       const r = rows[0];
       if (!r) return { finalized: false, reason: 'not_found' };
+      if (r.question_bank_enabled) return { finalized: false, reason: 'question_bank_api_required' };
       const st = String(r.status || 'in_progress').toLowerCase();
       if (r.submitted_at) return { finalized: false, reason: 'already_final', outcome: 'submitted' };
       if (st === 'expired') return { finalized: false, reason: 'already_final', outcome: 'expired_no_answers' };
@@ -587,6 +589,7 @@ function createAssessmentAttemptService(overrides = {}) {
        FROM exam_results er
        JOIN exams e ON e.id = er.exam_id
        WHERE er.submitted_at IS NULL AND er.status = 'in_progress' AND er.started_at IS NOT NULL
+         AND NOT EXISTS (SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=er.exam_id)
          AND COALESCE(e.duration_minutes, 0) > 0
          AND er.started_at + make_interval(mins => e.duration_minutes) + make_interval(secs => $1) < NOW()
          AND er.started_at > NOW() - make_interval(hours => $3)

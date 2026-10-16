@@ -86,6 +86,7 @@ app.use('/api/students', require('./routes/students'));
 app.use('/api/instructor/students', require('./routes/instructorStudents'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/exams', require('./routes/exams'));
+app.use('/api/question-bank', require('./routes/questionBank'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/teacher-schedules', require('./routes/teacherSchedules'));
 app.use('/api/teacher', require('./routes/teacher'));

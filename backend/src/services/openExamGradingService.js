@@ -111,7 +111,10 @@ async function enqueueOpenGradingJob(examResultId) {
   await db.query(
     `INSERT INTO exam_open_grading_queue (exam_result_id)
      SELECT $1
-     WHERE NOT EXISTS (
+     WHERE EXISTS (
+       SELECT 1 FROM exam_results er WHERE er.id=$1
+         AND NOT EXISTS (SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=er.exam_id)
+     ) AND NOT EXISTS (
        SELECT 1 FROM exam_open_grading_queue
        WHERE exam_result_id = $1 AND processed_at IS NULL
      )`,
@@ -124,7 +127,8 @@ async function recalculateExamResultScore(examResultId, client = db) {
     `SELECT er.exam_id, er.answers, er.grading, e.wrong_penalty_enabled
      FROM exam_results er
      JOIN exams e ON e.id = er.exam_id
-     WHERE er.id = $1`,
+     WHERE er.id = $1
+       AND NOT EXISTS (SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=er.exam_id)`,
     [examResultId],
   );
   const row = rows[0];
@@ -156,7 +160,8 @@ async function processOpenGradingForResult(examResultId) {
     `SELECT er.id, er.exam_id, er.answers, er.grading, e.instructor_id
      FROM exam_results er
      JOIN exams e ON e.id = er.exam_id
-     WHERE er.id = $1 AND er.submitted_at IS NOT NULL`,
+     WHERE er.id = $1 AND er.submitted_at IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=er.exam_id)`,
     [examResultId],
   );
   const result = resultRows[0];

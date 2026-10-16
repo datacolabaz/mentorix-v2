@@ -452,6 +452,7 @@ const listExams = async (req, res) => {
     const isAdmin = req.user.role === 'admin';
     const { rows } = await db.query(
       `SELECT e.*, u.full_name AS instructor_name,
+        EXISTS(SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=e.id) AS question_bank_enabled,
         COUNT(DISTINCT ea.student_id)::int AS student_count,
         COUNT(DISTINCT er.student_id) FILTER (WHERE er.submitted_at IS NOT NULL)::int AS results_count,
         COUNT(DISTINCT er.student_id) FILTER (
@@ -715,17 +716,18 @@ async function applyResultVisibilityToStudentList(rows, sidHex) {
   const modesEnabled = await resultModesEnabled();
   const now = new Date();
   const pendingByExam = new Map();
-  const manualExamIds = modesEnabled
-    ? rows
-        .filter((r) => r.submitted_at && normalizeResultMode(r.result_visibility_mode) === 'after_manual_grading')
-        .map((r) => r.id)
-    : [];
+  const manualExamIds = rows
+    .filter((r) => (modesEnabled || r.question_bank_enabled) && r.submitted_at &&
+      normalizeResultMode(r.result_visibility_mode) === 'after_manual_grading')
+    .map((r) => r.id);
   if (manualExamIds.length) {
     const { hasUnconfirmedOpenGrading } = require('../services/openExamGradingService');
     const [{ rows: qs }, { rows: results }] = await Promise.all([
       db.query('SELECT * FROM exam_questions WHERE exam_id = ANY($1::uuid[])', [manualExamIds]),
       db.query(
-        `SELECT DISTINCT ON (exam_id) exam_id, answers, grading
+        `SELECT DISTINCT ON (exam_id) exam_id, answers, grading,
+           EXISTS(SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=exam_results.exam_id) AS question_bank_enabled,
+           EXISTS(SELECT 1 FROM exam_answers a WHERE a.attempt_id=exam_results.id AND a.status='pending_review') AS question_bank_pending
          FROM exam_results
          WHERE exam_id = ANY($1::uuid[])
            AND REPLACE(LOWER(TRIM(student_id::text)), '-', '') = $2
@@ -743,6 +745,10 @@ async function applyResultVisibilityToStudentList(rows, sidHex) {
       }
     };
     for (const r of results) {
+      if (r.question_bank_enabled) {
+        pendingByExam.set(String(r.exam_id), r.question_bank_pending === true);
+        continue;
+      }
       const questions = qs.filter((q) => String(q.exam_id) === String(r.exam_id));
       pendingByExam.set(String(r.exam_id), hasUnconfirmedOpenGrading(questions, parse(r.answers), parse(r.grading)));
     }
@@ -809,6 +815,7 @@ const studentExams = async (req, res) => {
          WHERE er.submitted_at IS NOT NULL
        )
        SELECT e.*, er.score, er.submitted_at, er.started_at, er.status AS attempt_status,
+         EXISTS(SELECT 1 FROM exam_bank_settings bs WHERE bs.exam_id=e.id) AS question_bank_enabled,
          COALESCE(ig_my.name, NULLIF(TRIM(me.grade), ''), '—') AS my_group,
          lb.rank_in_group,
          eq_count.question_count,
