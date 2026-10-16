@@ -299,9 +299,14 @@ export default function PersonaOnboarding() {
   const { t } = useTranslation()
   const toast = useToast()
   const navigate = useNavigate()
-  const { user, token, setSession, logout } = useAuthStore()
+  const { user, token, setSession, logout, mergeUser } = useAuthStore()
   const [step, setStep] = useState('pick')
   const fromJoinInvite = isInviteResumePath(peekReturnAfterLogin())
+  // Teacher access is granted by an admin / organization: a pending request replaces the picker.
+  const [pendingApproval, setPendingApproval] = useState(
+    () => !fromJoinInvite && user?.teacher_request?.status === 'pending',
+  )
+  const [lastTeacherPayload, setLastTeacherPayload] = useState(null)
   const [picked, setPicked] = useState(fromJoinInvite ? PERSONAS.STUDENT : null)
   const [profile, setProfile] = useState(emptyProfile)
   const [busy, setBusy] = useState(false)
@@ -343,6 +348,13 @@ export default function PersonaOnboarding() {
     setError(null)
     try {
       const r = await api.post('/auth/onboarding/persona', payload)
+      if (r?.pending_approval) {
+        if (r.user) mergeUser(r.user)
+        setLastTeacherPayload(payload)
+        setPendingApproval(true)
+        toast(r.message || t('onboarding.teacherPending.toast', { defaultValue: 'Müəllim icazəsi sorğunuz göndərildi.' }), 'success')
+        return
+      }
       if (!r?.token || !r?.user) throw new Error(r?.message || t('auth.errors.invalidServer'))
       setSession(r.token, r.user)
       toast(t('onboarding.toasts.ready'), 'success')
@@ -389,6 +401,32 @@ export default function PersonaOnboarding() {
     await finishSession({ persona: picked, profile: {} })
   }
 
+  /** After approval the same choice goes through; until then the user may continue as a participant. */
+  const checkApproval = async () => {
+    setBusy(true)
+    try {
+      const me = await api.get('/auth/me')
+      if (me?.user) mergeUser(me.user)
+      const granted = Array.isArray(me?.user?.access_roles) && me.user.access_roles.includes('teacher')
+      if (!granted) {
+        toast(
+          me?.user?.teacher_request?.status === 'rejected'
+            ? t('onboarding.teacherPending.rejected', { defaultValue: 'Sorğunuz rədd edildi. Başqa məqsəd seçə bilərsiniz.' })
+            : t('onboarding.teacherPending.still', { defaultValue: 'Sorğunuz hələ təsdiqlənməyib.' }),
+          'info',
+        )
+        if (me?.user?.teacher_request?.status === 'rejected') setPendingApproval(false)
+        return
+      }
+    } catch (e) {
+      toast(e?.message || t('onboarding.toasts.failed'), 'error')
+      return
+    } finally {
+      setBusy(false)
+    }
+    await finishSession(lastTeacherPayload || { persona: PERSONAS.TEACHER, profile: {} })
+  }
+
   const togglePersona = (id) => {
     if (fromJoinInvite) {
       setPicked(PERSONAS.STUDENT)
@@ -417,7 +455,36 @@ export default function PersonaOnboarding() {
         </div>
 
         <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-9 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-          {step === 'pick' ? (
+          {pendingApproval ? (
+            <div className="text-center max-w-xl mx-auto space-y-4" data-testid="teacher-approval-pending">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                <NavIcon name="shield" className="w-6 h-6" />
+              </div>
+              <h1 className="text-slate-900 font-display font-bold text-2xl leading-tight">
+                {t('onboarding.teacherPending.title', { defaultValue: 'Müəllim icazəsi təsdiq gözləyir' })}
+              </h1>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                {t('onboarding.teacherPending.body', {
+                  defaultValue:
+                    'Müəllim kabineti platforma admini və ya təşkilatınız təsdiqlədikdən sonra açılır. Təsdiq olunanda bildiriş alacaqsınız.',
+                })}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                <Button loading={busy} onClick={() => void checkApproval()}>
+                  {t('onboarding.teacherPending.check', { defaultValue: 'Təsdiqi yoxla' })}
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    void finishSession({ persona: PERSONAS.STUDENT, profile: { education_level: 'other', subject_interest: 'Dərs' } })
+                  }
+                >
+                  {t('onboarding.teacherPending.continueStudent', { defaultValue: 'Hələlik iştirakçı kimi davam et' })}
+                </Button>
+              </div>
+            </div>
+          ) : step === 'pick' ? (
             <>
               <div className="text-center max-w-xl mx-auto">
                 <h1 className="text-slate-900 font-display font-bold text-2xl sm:text-[1.75rem] leading-tight">

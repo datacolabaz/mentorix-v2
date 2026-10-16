@@ -180,6 +180,18 @@ export default function LiveLessonFormModal({ open, onClose, onSaved, lesson = n
           </label>
 
           <label className="block space-y-1">
+            <span className="text-xs font-medium text-token-textMuted">{t('liveLessons.fields.topic', { defaultValue: 'Mövzu' })}</span>
+            <input
+              value={form.topic || ''}
+              onChange={(e) => set('topic', e.target.value)}
+              maxLength={255}
+              placeholder={t('liveLessons.fields.topicPlaceholder', { defaultValue: '' })}
+              className={INPUT}
+              data-testid="live-lesson-topic"
+            />
+          </label>
+
+          <label className="block space-y-1">
             <span className="text-xs font-medium text-token-textMuted">{t('liveLessons.fields.description')}</span>
             <textarea
               value={form.description}

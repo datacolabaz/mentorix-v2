@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LiveLessonCard from '../../components/live/LiveLessonCard'
+import LessonFollowups from '../../components/live/LessonFollowups'
 import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 
@@ -61,6 +62,7 @@ export default function LiveLessonPage() {
         ← {t('liveLessons.title')}
       </Link>
       <LiveLessonCard lesson={state.lesson} />
+      <LessonFollowups lesson={state.lesson} />
     </div>
   )
 }

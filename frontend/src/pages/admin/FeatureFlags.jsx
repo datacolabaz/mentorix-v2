@@ -24,6 +24,10 @@ const FLAG_COPY = {
     title: 'İmtahan nəticə rejimləri',
     hint: 'Söndürüləndə hər imtahan köhnə «Nəticələri göstər» davranışına qayıdır.',
   },
+  [FEATURE_FLAGS.TEACHER_ROLE_APPROVAL]: {
+    title: 'Müəllim icazəsi təsdiqlə',
+    hint: 'Aktiv olanda istifadəçi müəllim kabinetinə sərbəst keçə bilmir: sorğu göndərir, admin və ya təşkilat təsdiqləyir. Söndürüləndə köhnə davranış (dərhal keçid) qayıdır.',
+  },
   [FEATURE_FLAGS.PROCTORING]: {
     title: 'Kamera ilə nəzarət (proctoring)',
     hint: 'Hələ hazır deyil. Məxfilik siyasəti və test mərhələsindən sonra ayrıca açılacaq.',

@@ -50,8 +50,24 @@ const useAuthStore = create((set) => ({
     set({ user, token })
   },
 
+  /** Server-provided user refresh without a new session token (e.g. a role request was created). */
+  mergeUser: (patch) => {
+    if (!patch || typeof patch !== 'object') return
+    set((state) => {
+      if (!state.user) return {}
+      const next = { ...state.user, ...patch, role: state.user.role }
+      safeLocalStorage.setJSON('mx_user', next)
+      return { user: next }
+    })
+  },
+
   switchWorkspace: async (target) => {
     const data = await api.post('/auth/switch-workspace', { target })
+    if (data?.pending_approval) {
+      // Teacher access needs approval: no cabinet switch, only the request status is refreshed.
+      if (data.user) useAuthStore.getState().mergeUser(data.user)
+      return data
+    }
     if (!data?.token || !data?.user) {
       throw new Error(data?.message || 'Kabinet dəyişdirilə bilmədi')
     }

@@ -53,6 +53,8 @@ const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 const AdminMarketingLogin = lazy(() => import('./pages/admin/MarketingLogin'))
 const AdminInstructorNav = lazy(() => import('./pages/admin/InstructorNav'))
 const AdminFeatureFlags = lazy(() => import('./pages/admin/FeatureFlags'))
+const RoleRequestsReview = lazy(() => import('./pages/common/RoleRequestsReview'))
+const ParentResults = lazy(() => import('./pages/parent/Results'))
 const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'))
 const AdminUniversityPrograms = lazy(() => import('./pages/admin/AdminUniversityPrograms'))
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'))
@@ -362,6 +364,7 @@ export default function App() {
         <Route path="marketing/login" element={<AdminMarketingLogin />} />
         <Route path="instructor-nav" element={<AdminInstructorNav />} />
         <Route path="feature-flags" element={<AdminFeatureFlags />} />
+        <Route path="role-requests" element={<RoleRequestsReview scopeHint="platform" />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="university-programs" element={<AdminUniversityPrograms />} />
         <Route path="analytics" element={<AdminAnalytics />} />
@@ -442,6 +445,7 @@ export default function App() {
       <Route path="/parent" element={<ProtectedRoute roles={['parent']}><ParentLayout /></ProtectedRoute>}>
         <Route index element={<ParentDashboard />} />
         <Route path="assignments" element={<ParentAssignments />} />
+        <Route path="results" element={<ParentResults />} />
         <Route path="payments" element={<Placeholder title="Ödəniş" />} />
         <Route path="notifications" element={<ParentNotifications />} />
       </Route>
@@ -466,6 +470,7 @@ export default function App() {
         <Route path="analytics/teams" element={<OrgAnalytics focus="teams" />} />
         <Route path="reports" element={<OrgAnalytics focus="reports" />} />
         <Route path="members" element={<OrgMembers />} />
+        <Route path="role-requests" element={<RoleRequestsReview scopeHint="organization" />} />
         <Route path="roles" element={<OrgRoles />} />
         <Route path="profile" element={<OrgProfile />} />
         <Route path="branding" element={<OrgBranding />} />

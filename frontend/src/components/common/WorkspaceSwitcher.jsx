@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
 import { useToast } from './Toast'
+import { hasAccessRole, teacherRequestStatus } from '../../lib/roleAccess'
 
 export default function WorkspaceSwitcher({ className = '' }) {
   const { t } = useTranslation()
@@ -44,12 +45,32 @@ export default function WorkspaceSwitcher({ className = '' }) {
     activeIcon = '👨‍🏫'
     activeBadge = 'Müəllim'
   }
+  if (currentRole === 'parent') {
+    activeTitle = t('workspace.parent', { defaultValue: 'Valideyn kabineti' })
+    activeIcon = '👪'
+    activeBadge = 'Valideyn'
+  }
+
+  // Only cabinets the server says this person holds. Teacher access is requested, never self-assigned.
+  const canTeacher = hasAccessRole(user, 'teacher')
+  const canStudent = hasAccessRole(user, 'student')
+  const teacherStatus = teacherRequestStatus(user)
 
   const handleSwitch = async (target, path) => {
     try {
       setLoading(true)
-      await switchWorkspace(target)
+      const data = await switchWorkspace(target)
       setIsOpen(false)
+      if (data?.pending_approval) {
+        toast(
+          data.message ||
+            t('workspace.teacherRequestSent', {
+              defaultValue: 'Müəllim icazəsi sorğunuz göndərildi. Təsdiqdən sonra müəllim kabinetinə keçə biləcəksiniz.',
+            }),
+          'success',
+        )
+        return
+      }
       toast(t('workspace.switched', { defaultValue: 'Kabinet dəyişdirildi' }), 'success')
       navigate(path)
     } catch (err) {
@@ -107,7 +128,8 @@ export default function WorkspaceSwitcher({ className = '' }) {
           </div>
 
           <div className="mt-1 space-y-1">
-            {/* Student */}
+            {/* Student — only when the person already has a student membership */}
+            {(canStudent || isStudent) && (
             <button
               type="button"
               disabled={loading}
@@ -129,11 +151,12 @@ export default function WorkspaceSwitcher({ className = '' }) {
               </div>
               {isStudent && <span className="text-xs font-bold text-emerald-500">✓</span>}
             </button>
+            )}
 
-            {/* Teacher */}
+            {/* Teacher — switch when granted, otherwise request approval (or show its status) */}
             <button
               type="button"
-              disabled={loading}
+              disabled={loading || (!canTeacher && teacherStatus === 'pending')}
               onClick={() => handleSwitch('teacher', '/instructor')}
               className={[
                 'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
@@ -150,7 +173,15 @@ export default function WorkspaceSwitcher({ className = '' }) {
                 <span className="text-base">👨‍🏫</span>
                 <div>
                   <div className="font-bold leading-none">{t('workspace.teacher', { defaultValue: 'Müəllim kabineti' })}</div>
-                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">Teacher dashboard</div>
+                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">
+                    {canTeacher || isTeacher
+                      ? 'Teacher dashboard'
+                      : teacherStatus === 'pending'
+                        ? t('workspace.teacherPending', { defaultValue: 'İcazə sorğusu təsdiq gözləyir' })
+                        : teacherStatus === 'rejected'
+                          ? t('workspace.teacherRejected', { defaultValue: 'Sorğu rədd edildi — yenidən istəyin' })
+                          : t('workspace.teacherRequest', { defaultValue: 'Müəllim icazəsi istə (admin təsdiqi)' })}
+                  </div>
                 </div>
               </div>
               {isTeacher && <span className="text-xs font-bold text-blue-500">✓</span>}

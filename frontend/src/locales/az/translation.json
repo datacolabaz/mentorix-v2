@@ -4731,9 +4731,11 @@
     "createdSeries": "{{n}} dərslik seriya planlandı",
     "updated": "Canlı dərs yeniləndi",
     "fields": {
-      "title": "Mövzu",
+      "title": "Başlıq",
       "titlePlaceholder": "Məs.: Riyaziyyat — kvadrat tənliklər",
-      "description": "Qısa təsvir (istəyə bağlı)",
+      "topic": "Mövzu",
+      "topicPlaceholder": "Məs.: Törəmənin tətbiqləri",
+      "description": "Qeyd (istəyə bağlı)",
       "target": "Kimlər üçün",
       "target_group": "Qrup",
       "target_student": "Fərdi tələbə",
