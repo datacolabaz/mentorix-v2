@@ -59,6 +59,14 @@ export async function googleAuthWithAutoRole(credential, forcedRole) {
   throw lastRoleError || new Error(i18n.t('auth.errors.googleSelectRole'))
 }
 
+/**
+ * Portal sign-in (/login/student …): sends only the portal id; the server checks the account's real roles
+ * and either opens that cabinet or answers 403 PORTAL_ROLE_REQUIRED (no token). Never signs up.
+ */
+export async function googlePortalLogin(credential, portal) {
+  return resolveLink(await api.post('/auth/google/login', { credential, portal, intent: 'signin' }))
+}
+
 export async function googleSignup(credential) {
   return resolveLink(
     await api.post('/auth/google/complete', { credential, intent: 'signup' }, { timeout: AUTH_REQUEST_TIMEOUT_MS }),

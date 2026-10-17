@@ -30,9 +30,18 @@ function secret() {
 }
 
 /** Google girişindən sonra köhnə hesabla birləşdirmə təklifi üçün qısa ömürlü token. */
-function signAccountLinkToken({ googleSub, email, name, picture, emailVerified, targetUserId }) {
+function signAccountLinkToken({ googleSub, email, name, picture, emailVerified, targetUserId, portal = null }) {
   return jwt.sign(
-    { purpose: LINK_PURPOSE, sub: googleSub, email, name, picture, ev: Boolean(emailVerified), target: targetUserId },
+    {
+      purpose: LINK_PURPOSE,
+      sub: googleSub,
+      email,
+      name,
+      picture,
+      ev: Boolean(emailVerified),
+      target: targetUserId,
+      ...(portal ? { portal } : {}),
+    },
     secret(),
     { expiresIn: LINK_TOKEN_TTL },
   );

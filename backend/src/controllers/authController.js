@@ -69,6 +69,7 @@ const {
   checkStorageRoleEntry,
   requestTeacherRole,
 } = require('../services/roleAccessService');
+const portalAccess = require('../services/portalAccess');
 const {
   findUserByGoogleSub,
   findUserByEmail,
@@ -696,9 +697,72 @@ async function respondAdminSession(req, res, user) {
   return true;
 }
 
+/** Requested portal from the body (null = legacy login without a portal). Responds 400 on an unknown id. */
+function readPortal(req, res) {
+  try {
+    return { portal: portalAccess.normalizePortal(req.body?.portal), ok: true };
+  } catch (err) {
+    res.status(err.statusCode || 400).json({ success: false, code: err.code, message: err.message });
+    return { portal: null, ok: false };
+  }
+}
+
+function respondPortalDenied(req, res, err, user = null) {
+  logAuthEvent(req, {
+    event: 'login_failed',
+    userId: user?.id || null,
+    metadata: { reason: 'portal_role_required', portal: err?.extra?.portal || null },
+  });
+  return res.status(err.statusCode || 403).json({
+    success: false,
+    code: err.code || 'PORTAL_ROLE_REQUIRED',
+    message: err.message,
+    ...(err.extra || {}),
+  });
+}
+
+/**
+ * Portal login: server-side role check, then the portal's role becomes the active cabinet and the usual
+ * session token is issued. No token is issued when the account lacks the role.
+ */
+async function respondPortalSession(req, res, user, portal) {
+  try {
+    await portalAccess.assertPortalAccess(user.id, portal);
+  } catch (err) {
+    if (err instanceof portalAccess.PortalError) return respondPortalDenied(req, res, err, user);
+    throw err;
+  }
+  if (portal.id === 'admin') {
+    await respondAdminSession(req, res, user);
+    return;
+  }
+  if (!guardEmailVerifiedBeforeToken(res, user)) return;
+  await portalAccess.activatePortalRole(user.id, portal, req);
+  await persistUserLocale(db, user.id, localeFromReq(req)).catch(() => {});
+  const role = portal.storageRole;
+  const token = signRoleSession({ id: user.id, role });
+  logAuthLogin(req, user, role);
+  const fresh = await loadUserLiteById(user.id);
+  const userOut = attachPhoneVerificationFlags(await enrichUserForClient(fresh || user, role));
+  userOut.role = role;
+  res.json({
+    success: true,
+    token,
+    user: userOut,
+    portal: portal.id,
+    redirect: portal.path,
+    needs_role: false,
+    needs_onboarding: false,
+    needs_phone_verification: false,
+    needs_instructor_phone: false,
+  });
+}
+
 const login = async (req, res) => {
   try {
     const { email, phone, identifier, password } = req.body;
+    const { portal, ok: portalOk } = readPortal(req, res);
+    if (!portalOk) return;
     const raw = identifier != null && String(identifier).trim() !== '' ? identifier : email != null ? email : phone;
     const s = raw != null ? String(raw).trim() : '';
     if (!s) return res.status(400).json({ success: false, message: 'Telefon və ya email tələb olunur' });
@@ -732,6 +796,7 @@ const login = async (req, res) => {
       if (user?.password_hash) recordAdminPasswordFailure(req, user);
       return res.status(401).json({ success: false, message: 'Giriş məlumatları yanlışdır' });
     }
+    if (portal) return respondPortalSession(req, res, user, portal);
     if (user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Yalnız admin bu girişlə daxil ola bilər' });
     if (!guardEmailVerifiedBeforeToken(res, user)) return;
@@ -1539,6 +1604,8 @@ const loginWithEmail = async (req, res) => {
     if (!pass) return res.status(400).json({ success: false, message: 'Şifrə tələb olunur' });
 
     const requestedRole = String(roleRaw || '').trim().toLowerCase();
+    const { portal, ok: portalOk } = readPortal(req, res);
+    if (!portalOk) return;
 
     const { rows } = await db.query(
       `SELECT u.*
@@ -1559,6 +1626,8 @@ const loginWithEmail = async (req, res) => {
       if (user.password_hash) recordAdminPasswordFailure(req, user);
       return res.status(401).json(passwordLoginFailureBody(user));
     }
+
+    if (portal) return respondPortalSession(req, res, user, portal);
 
     if (isAdminRole(user)) {
       await respondAdminSession(req, res, user);
@@ -2135,15 +2204,22 @@ const googleLogin = async (req, res) => {
   try {
     const { credential, role: roleHint } = req.body;
     const expectedRole = String(roleHint || '').trim().toLowerCase();
+    const { portal, ok: portalOk } = readPortal(req, res);
+    if (!portalOk) return;
     const g = await verifyGoogleIdTokenOrThrow(credential);
 
     let user = await findUserByGoogleSub(db, g.sub);
 
     if (!user && g.email) {
-      const offer = await legacyAccountLinkOffer(req, g);
+      const offer = await legacyAccountLinkOffer(req, g, portal);
       if (offer) return res.status(offer.status).json(offer.body);
     } else if (user) {
       user = await reactivateAndLinkGoogleUser(user, g);
+    }
+
+    if (!user && portal) {
+      // Portal login never creates an account: new users register through /register (onboarding).
+      return respondPortalDenied(req, res, portalAccess.deniedError(portal, { canRegister: portal.id !== 'admin' }));
     }
 
     if (!user) {
@@ -2159,7 +2235,7 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    return finishGoogleSession(req, res, user, g, expectedRole);
+    return finishGoogleSession(req, res, user, g, expectedRole, portal);
   } catch (err) {
     logAuthEvent(req, { event: 'login_failed', metadata: { stage: 'google_login', message: err?.message } });
     return sendGoogleAuthError(res, err);
@@ -2167,9 +2243,11 @@ const googleLogin = async (req, res) => {
 };
 
 /** Mövcud identity üçün sessiya: Google profil atributlarını yeniləyir, girişi jurnala yazır. */
-async function finishGoogleSession(req, res, user, g, expectedRole) {
+async function finishGoogleSession(req, res, user, g, expectedRole, portal = null) {
   await updateGoogleProfileAttributes(user.id, g);
   logAuthEvent(req, { event: 'google_sign_in', userId: user.id, googleSub: g.sub, email: g.email });
+
+  if (portal) return respondPortalSession(req, res, user, portal);
 
   if (isAdminRole(user)) {
     await respondAdminSession(req, res, user);
@@ -2259,7 +2337,7 @@ async function updateGoogleProfileAttributes(userId, g) {
  * İstifadəçiyə açıq təsdiq üçün qısa ömürlü link token qaytarılır.
  * @returns {null | { status, body }}
  */
-async function legacyAccountLinkOffer(req, g) {
+async function legacyAccountLinkOffer(req, g, portal = null) {
   const existing = await findUserByEmail(db, g.email);
   if (!existing || existing.deleted_at) return null;
   if (existing.google_sub && String(existing.google_sub).trim() !== '') {
@@ -2283,6 +2361,7 @@ async function legacyAccountLinkOffer(req, g) {
         picture: g.picture,
         emailVerified: g.email_verified,
         targetUserId: existing.id,
+        portal: portal?.id || null,
       }),
       account: {
         full_name: existing.full_name || null,
@@ -2338,7 +2417,14 @@ const googleLinkConfirm = async (req, res) => {
 
     const user = await findUserByGoogleSub(db, p.sub);
     if (!user) return res.status(500).json({ success: false, message: 'Hesab bağlanmadı' });
-    return finishGoogleSession(req, res, user, { sub: p.sub, email: p.email, name: p.name, picture: p.picture, email_verified: p.ev }, '');
+    // The portal chosen before the link prompt travels inside the signed link token (server-side value).
+    let linkPortal = null;
+    try {
+      linkPortal = portalAccess.normalizePortal(p.portal);
+    } catch {
+      linkPortal = null;
+    }
+    return finishGoogleSession(req, res, user, { sub: p.sub, email: p.email, name: p.name, picture: p.picture, email_verified: p.ev }, '', linkPortal);
   } catch (err) {
     logAuthEvent(req, { event: 'login_failed', metadata: { stage: 'google_link_confirm', message: err?.message } });
     return sendGoogleAuthError(res, err);
@@ -2544,14 +2630,27 @@ const googleLinkVerify = async (req, res) => {
 const googleComplete = async (req, res) => {
   try {
     const { credential } = req.body;
+    const { portal, ok: portalOk } = readPortal(req, res);
+    if (!portalOk) return;
     const g = await verifyGoogleIdTokenOrThrow(credential);
     const requestedRole = String(req.body?.role || '').trim().toLowerCase();
 
     let user = await findUserByGoogleSub(db, g.sub);
 
     if (!user && g.email) {
-      const offer = await legacyAccountLinkOffer(req, g);
+      const offer = await legacyAccountLinkOffer(req, g, portal);
       if (offer) return res.status(offer.status).json(offer.body);
+    }
+    if (portal) {
+      // Portal login: existing accounts only (no sign-up from a portal page).
+      if (!user) {
+        return respondPortalDenied(req, res, portalAccess.deniedError(portal, { canRegister: portal.id !== 'admin' }));
+      }
+      user = await reactivateAndLinkGoogleUser(user, g);
+      if (!user) {
+        return respondPortalDenied(req, res, portalAccess.deniedError(portal, { canRegister: portal.id !== 'admin' }));
+      }
+      return finishGoogleSession(req, res, user, g, '', portal);
     }
     const isNewIdentity = !user;
 

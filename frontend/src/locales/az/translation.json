@@ -202,6 +202,37 @@
     "createAccount": "Hesab yaradın",
     "loginToAccount": "Hesabınıza daxil olun",
     "backHome": "← Ana səhifəyə qayıt",
+    "portals": {
+      "back": "← Giriş seçimi",
+      "chooserTitle": "Giriş seçimi",
+      "chooserSubtitle": "Hansı kabinetə daxil olmaq istəyirsiniz? Bir hesabla yalnız sizə verilmiş kabinetlər açılır.",
+      "noAccount": "Hesabınız yoxdur?",
+      "haveAccount": "Hesabınız var?",
+      "createAccount": "Hesab yarat",
+      "chooseAnother": "Başqa giriş seçimi",
+      "deniedHint": "Hesabınıza uyğun giriş növünü seçin.",
+      "deniedInstructorHint": "Müəllim icazəsi admin və ya təşkilat təsdiqi ilə verilir. Hesabınızdakı başqa kabinetdən icazə sorğusu göndərə bilərsiniz.",
+      "student": {
+        "card": "Tələbə",
+        "title": "Tələbə kabinetinə giriş",
+        "subtitle": "İmtahanlarınız, tapşırıqlarınız, materiallarınız və nəticələriniz."
+      },
+      "instructor": {
+        "card": "Təlimçi",
+        "title": "Təlimçi kabinetinə giriş",
+        "subtitle": "Qruplarınız, sual bankınız, imtahanlarınız və canlı dərsləriniz."
+      },
+      "organization": {
+        "card": "Təşkilat",
+        "title": "Təşkilat kabinetinə giriş",
+        "subtitle": "Təşkilatın üzvləri, müəllimləri, qrupları və hesabatları."
+      },
+      "admin": {
+        "card": "Admin",
+        "title": "Admin panelinə giriş",
+        "subtitle": "Platformanın idarəetməsi yalnız admin hesabları üçündür."
+      }
+    },
     "googleOnly": {"title": "Mentorix-ə xoş gəlmisiniz", "subtitle": "İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.", "cta": "Google ilə davam et", "legalPrefix": "Davam etməklə", "terms": "İstifadə Şərtləri", "and": "və", "privacy": "Məxfilik Siyasəti", "legalSuffix": "ilə razılaşırsınız."},
     "adminPanel": "Admin panel",
     "adminPasswordNotice": "Şifrə ilə giriş yalnız idarəçi hesabları üçündür. Digər istifadəçilər «Google ilə davam et» düyməsindən istifadə etsin.",

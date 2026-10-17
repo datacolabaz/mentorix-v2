@@ -6,6 +6,8 @@ import AccountLinkHost from './components/auth/AccountLinkHost'
 import { FEATURE_FLAGS } from './lib/featureFlags'
 
 const AuthPage = lazy(() => import('./pages/auth/AuthPage'))
+const LoginChooser = lazy(() => import('./pages/auth/LoginChooser'))
+const PortalLogin = lazy(() => import('./pages/auth/PortalLogin'))
 const Landing = lazy(() => import('./pages/auth/Landing'))
 const PersonaOnboarding = lazy(() => import('./pages/auth/PersonaOnboarding'))
 const GenericAppHome = lazy(() => import('./pages/app/Home'))
@@ -279,8 +281,10 @@ export default function App() {
       <Route path="/partner/apply" element={<Navigate to="/partner/dashboard" replace />} />
       <Route
         path="/login"
-        element={user ? <ResumeAfterAuth /> : <AuthPage />}
+        element={user ? <ResumeAfterAuth /> : <LoginChooser />}
       />
+      {/* Portal girişləri: rol yoxlaması serverdədir; daxil olmuş istifadəçi də başqa öz kabinetinə keçə bilər. */}
+      <Route path="/login/:portal" element={<PortalLogin />} />
       <Route
         path="/register"
         element={user ? <ResumeAfterAuth /> : <AuthPage />}
