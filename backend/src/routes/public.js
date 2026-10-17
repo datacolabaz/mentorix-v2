@@ -70,6 +70,19 @@ const marketplaceOn = requireFeature(FEATURE_FLAGS.MARKETPLACE);
 
 const router = express.Router();
 
+// Giriş səhifələri: email/şifrə formu yalnız köhnə parol girişi açıq olanda göstərilir (admin həmişə).
+router.get('/auth-options', (_req, res) => {
+  const { legacyAuthEnabled } = require('../lib/googleOnlyAuth');
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    success: true,
+    google: true,
+    password_login: legacyAuthEnabled(),
+    admin_password_login: true,
+    portals: ['student', 'instructor', 'organization', 'admin'],
+  });
+});
+
 router.get('/feature-flags', async (_req, res) => {
   try {
     const flags = await getFeatureFlagSnapshot();

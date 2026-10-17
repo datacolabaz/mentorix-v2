@@ -202,6 +202,37 @@
     "createAccount": "Create an account",
     "loginToAccount": "Sign in to your account",
     "backHome": "← Back to home",
+    "portals": {
+      "back": "← Sign-in options",
+      "chooserTitle": "Sign-in options",
+      "chooserSubtitle": "Which workspace do you want to open? One account opens only the workspaces it has been given.",
+      "noAccount": "No account yet?",
+      "haveAccount": "Already have an account?",
+      "createAccount": "Create account",
+      "chooseAnother": "Choose another sign-in",
+      "deniedHint": "Choose the sign-in that matches your account.",
+      "deniedInstructorHint": "Teacher access is granted by an admin or your organization. You can request it from another workspace of your account.",
+      "student": {
+        "card": "Student",
+        "title": "Student sign-in",
+        "subtitle": "Your exams, assignments, materials and results."
+      },
+      "instructor": {
+        "card": "Instructor",
+        "title": "Instructor sign-in",
+        "subtitle": "Your groups, question bank, exams and live lessons."
+      },
+      "organization": {
+        "card": "Organization",
+        "title": "Organization sign-in",
+        "subtitle": "Members, teachers, groups and reports of your organization."
+      },
+      "admin": {
+        "card": "Admin",
+        "title": "Admin panel sign-in",
+        "subtitle": "Platform administration is for admin accounts only."
+      }
+    },
     "googleOnly": {"title": "Welcome to Mentorix", "subtitle": "Manage your exams, materials and results in one place.", "cta": "Continue with Google", "legalPrefix": "By continuing you agree to the", "terms": "Terms of Use", "and": "and", "privacy": "Privacy Policy", "legalSuffix": "."},
     "adminPanel": "Admin panel",
     "adminPasswordNotice": "Password sign-in is for administrator accounts only. Everyone else, please use «Continue with Google».",

@@ -48,6 +48,12 @@ export default function AccountLinkHost() {
       setRequest(null)
       resolve(r)
     } catch (e) {
+      if (e?.code === 'PORTAL_ROLE_REQUIRED') {
+        // Account linked, but this portal is not allowed for it: the portal screen shows the message.
+        setRequest(null)
+        reject(e)
+        return
+      }
       setError(e?.message || 'Hesab bağlanmadı. Yenidən cəhd edin.')
     } finally {
       setBusy(false)

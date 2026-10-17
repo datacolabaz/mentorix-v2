@@ -1,22 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
 import Brand from '../../components/common/Brand'
-import Button from '../../components/common/Button'
-import PasswordInput from '../../components/common/PasswordInput'
-import LocaleThemeBar from '../../components/LocaleThemeBar'
+import AuthShell from '../../components/auth/AuthShell'
+import PasswordLoginForm from '../../components/auth/PasswordLoginForm'
 import PublicGoogleSignIn from '../../components/auth/PublicGoogleSignIn'
 import { setPageSeo } from '../../lib/pageSeo'
 import { postAuthNavigate, rememberReturnAfterLogin } from '../../lib/postAuth'
 import useUiStore from '../../hooks/useUi'
-import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
-import { isValidAdminIdentifier } from '../../lib/adminLoginIdentifier'
 
 /**
- * Giriş və qeydiyyat (/login, /register): istifadəçilər üçün yalnız «Google ilə davam et».
+ * Qeydiyyat (/register) və köhnə ümumi giriş görünüşü: istifadəçilər üçün yalnız «Google ilə davam et».
  * Admin (?admin=true və ya next=/admin...) üçün telefon/email + şifrə formu da göstərilir.
+ * /login indi «Giriş seçimi»dir (LoginChooser); portal girişləri PortalLogin-dədir.
  */
 export default function AuthPage() {
   const { t } = useTranslation()
@@ -30,33 +27,6 @@ export default function AuthPage() {
   const { theme } = useUiStore()
   const isDark = theme === 'dark'
   const tone = isDark ? 'dark' : 'light'
-
-  const [adminIdentifier, setAdminIdentifier] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [identifierError, setIdentifierError] = useState('')
-  const [loginError, setLoginError] = useState('')
-
-  const handleAdminLogin = async (e) => {
-    e.preventDefault()
-    setLoginError('')
-    if (!isValidAdminIdentifier(adminIdentifier)) {
-      setIdentifierError(t('auth.invalidPhoneOrEmail'))
-      return
-    }
-    setIdentifierError('')
-    setLoading(true)
-    try {
-      const data = await api.post('/auth/login', { identifier: adminIdentifier.trim(), password })
-      if (!data?.token || !data?.user) throw new Error(data?.message || t('auth.errors.invalidServer'))
-      useAuthStore.getState().setSession(data.token, data.user)
-      postAuthNavigate(data.user, navigate, nextParam)
-    } catch (err) {
-      setLoginError(err?.message || t('auth.loginError'))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   useEffect(() => {
     const next = String(nextParam || '').trim()
@@ -83,169 +53,59 @@ export default function AuthPage() {
     : 'text-emerald-700 underline underline-offset-2 hover:no-underline font-medium'
 
   return (
-    <div
-      className={[
-        'login-wrapper flex min-h-[100svh] w-full min-w-0 max-w-full flex-col',
-        isDark ? 'theme-dark' : 'theme-light',
-      ].join(' ')}
-    >
-      <header
-        className={[
-          STICKY_TOP_BAR,
-          'shrink-0 w-full px-4 py-3 sm:pt-6 sm:pb-4',
-          isDark ? 'border-white/10' : 'border-slate-200/80',
-        ].join(' ')}
-      >
-        <div className="flex w-full items-center justify-between gap-2 sm:gap-3">
-          <Link
-            to="/"
-            className={[
-              'inline-flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-w-0',
-              isDark ? 'text-gray-400 hover:text-white' : 'text-slate-600 hover:text-slate-900',
-            ].join(' ')}
-          >
-            {t('auth.backHome')}
+    <AuthShell>
+      <div className="text-center space-y-3">
+        <div className="flex justify-center">
+          <Brand size="login" tone={tone} />
+        </div>
+        <div className="h-0.5 w-10 mx-auto rounded-full bg-primary" aria-hidden />
+        <h1 className={['text-lg font-bold', isDark ? 'text-white' : 'text-slate-900'].join(' ')}>
+          {t('auth.googleOnly.title', { defaultValue: 'Mentorix-ə xoş gəlmisiniz' })}
+        </h1>
+        <p className={['text-sm leading-relaxed', muted].join(' ')}>
+          {t('auth.googleOnly.subtitle', {
+            defaultValue: 'İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.',
+          })}
+        </p>
+      </div>
+
+      {isAdmin ? (
+        <PasswordLoginForm
+          mode="admin"
+          idPrefix="admin"
+          notice={t('auth.adminPasswordNotice')}
+          onSuccess={(data) => {
+            useAuthStore.getState().setSession(data.token, data.user)
+            postAuthNavigate(data.user, navigate, nextParam)
+          }}
+        />
+      ) : null}
+
+      <PublicGoogleSignIn
+        className="mt-6"
+        label={t('auth.googleOnly.cta', { defaultValue: 'Google ilə davam et' })}
+        context={isRegister ? 'signup' : 'signin'}
+      />
+
+      <p className={['mt-5 text-center text-xs leading-relaxed', muted].join(' ')}>
+        {t('auth.googleOnly.legalPrefix', { defaultValue: 'Davam etməklə' })}{' '}
+        <Link to="/terms" className={linkCls}>
+          {t('auth.googleOnly.terms', { defaultValue: 'İstifadə Şərtləri' })}
+        </Link>{' '}
+        {t('auth.googleOnly.and', { defaultValue: 'və' })}{' '}
+        <Link to="/privacy" className={linkCls}>
+          {t('auth.googleOnly.privacy', { defaultValue: 'Məxfilik Siyasəti' })}
+        </Link>{' '}
+        {t('auth.googleOnly.legalSuffix', { defaultValue: 'ilə razılaşırsınız.' })}
+      </p>
+      {isRegister ? (
+        <p className={['mt-3 text-center text-xs', muted].join(' ')}>
+          {t('auth.portals.haveAccount', { defaultValue: 'Hesabınız var?' })}{' '}
+          <Link to="/login" className={linkCls}>
+            {t('auth.portals.chooserTitle', { defaultValue: 'Giriş seçimi' })}
           </Link>
-          <LocaleThemeBar tone={tone} />
-        </div>
-      </header>
-      <main className="flex flex-1 items-start sm:items-center justify-center px-4 pb-8 sm:pb-10 min-h-0 overflow-y-auto">
-        <div id="mx-login" className="w-full max-w-sm scroll-mt-6">
-          <div
-            className={[
-              'mx-login-card rounded-2xl border p-6 sm:p-7',
-              isDark ? 'border-white/20 bg-surface-2' : 'border-slate-200 bg-white shadow-sm',
-            ].join(' ')}
-          >
-            <div className="text-center space-y-3">
-              <div className="flex justify-center">
-                <Brand size="login" tone={tone} />
-              </div>
-              <div className="h-0.5 w-10 mx-auto rounded-full bg-primary" aria-hidden />
-              <h1 className={['text-lg font-bold', isDark ? 'text-white' : 'text-slate-900'].join(' ')}>
-                {t('auth.googleOnly.title', { defaultValue: 'Mentorix-ə xoş gəlmisiniz' })}
-              </h1>
-              <p className={['text-sm leading-relaxed', muted].join(' ')}>
-                {t('auth.googleOnly.subtitle', {
-                  defaultValue: 'İmtahanlarınızı, materiallarınızı və nəticələrinizi bir yerdən idarə edin.',
-                })}
-              </p>
-            </div>
-
-            {isAdmin ? (
-              <form
-                onSubmit={handleAdminLogin}
-                className="mt-6 space-y-4"
-                autoComplete="on"
-                noValidate
-                aria-describedby="admin-login-notice"
-              >
-                <p
-                  id="admin-login-notice"
-                  className={[
-                    'text-center text-xs leading-relaxed py-2 px-3 rounded-xl border',
-                    isDark ? 'text-gray-300 bg-white/[0.04] border-white/10' : 'text-slate-600 bg-slate-50 border-slate-200',
-                  ].join(' ')}
-                >
-                  {t('auth.adminPasswordNotice')}
-                </p>
-                <div>
-                  <label
-                    className={['block text-xs font-semibold uppercase tracking-wider mb-2', muted].join(' ')}
-                    htmlFor="admin-username"
-                  >
-                    {t('auth.phoneOrEmail')}
-                  </label>
-                  <input
-                    id="admin-username"
-                    name="username"
-                    className={[
-                      'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
-                      isDark
-                        ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
-                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-500',
-                    ].join(' ')}
-                    type="text"
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    placeholder={t('auth.phoneOrEmail')}
-                    value={adminIdentifier}
-                    onChange={(e) => {
-                      setAdminIdentifier(e.target.value)
-                      if (identifierError) setIdentifierError('')
-                    }}
-                    aria-invalid={identifierError ? true : undefined}
-                    aria-describedby={identifierError ? 'admin-username-error' : undefined}
-                    required
-                  />
-                  {identifierError ? (
-                    <p id="admin-username-error" role="alert" className={['mt-1.5 text-xs', isDark ? 'text-red-300' : 'text-red-700'].join(' ')}>
-                      {identifierError}
-                    </p>
-                  ) : null}
-                </div>
-                <div>
-                  <label
-                    className={['block text-xs font-semibold uppercase tracking-wider mb-2', muted].join(' ')}
-                    htmlFor="admin-password"
-                  >
-                    {t('auth.password')}
-                  </label>
-                  <PasswordInput
-                    id="admin-password"
-                    name="password"
-                    className={[
-                      'mx-auth-input w-full rounded-xl px-4 py-3 text-sm outline-none border',
-                      isDark
-                        ? 'bg-surface-1 border-white/10 text-white placeholder:text-gray-500'
-                        : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-500',
-                    ].join(' ')}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    aria-describedby={loginError ? 'admin-login-error' : undefined}
-                    required
-                  />
-                </div>
-                {loginError ? (
-                  <p
-                    id="admin-login-error"
-                    role="alert"
-                    className={[
-                      'text-center text-xs py-2 px-3 rounded-xl border',
-                      isDark ? 'text-red-300 bg-red-500/10 border-red-500/20' : 'text-red-700 bg-red-50 border-red-200',
-                    ].join(' ')}
-                  >
-                    {loginError}
-                  </p>
-                ) : null}
-                <Button type="submit" loading={loading} className="w-full justify-center py-3">
-                  {t('auth.login')}
-                </Button>
-              </form>
-            ) : null}
-
-            <PublicGoogleSignIn
-              className="mt-6"
-              label={t('auth.googleOnly.cta', { defaultValue: 'Google ilə davam et' })}
-              context={isRegister ? 'signup' : 'signin'}
-            />
-
-            <p className={['mt-5 text-center text-xs leading-relaxed', muted].join(' ')}>
-              {t('auth.googleOnly.legalPrefix', { defaultValue: 'Davam etməklə' })}{' '}
-              <Link to="/terms" className={linkCls}>
-                {t('auth.googleOnly.terms', { defaultValue: 'İstifadə Şərtləri' })}
-              </Link>{' '}
-              {t('auth.googleOnly.and', { defaultValue: 'və' })}{' '}
-              <Link to="/privacy" className={linkCls}>
-                {t('auth.googleOnly.privacy', { defaultValue: 'Məxfilik Siyasəti' })}
-              </Link>{' '}
-              {t('auth.googleOnly.legalSuffix', { defaultValue: 'ilə razılaşırsınız.' })}
-            </p>
-          </div>
-        </div>
-      </main>
-    </div>
+        </p>
+      ) : null}
+    </AuthShell>
   )
 }
