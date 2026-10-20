@@ -4,11 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { format, isValid, parseISO } from 'date-fns'
 import api from '../../lib/api'
-import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ListSkeleton from '../../components/common/ListSkeleton'
-import StatusBadge from '../../components/common/StatusBadge'
 import PresenceDot from '../../components/common/PresenceDot'
 import { useToast } from '../../components/common/Toast'
 import { getWeekdays } from '../../lib/weekdays'
@@ -82,7 +80,7 @@ function GroupColumnLabel({ group, students = [] }) {
   })
   return (
     <span className="inline-flex flex-wrap items-center gap-2 min-w-0">
-      <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-violet-500/35 bg-violet-500/10 text-violet-200">
+      <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-200">
         {cell.badge}
       </span>
       {cell.title ? (
@@ -1036,6 +1034,8 @@ export default function InstructorStudents() {
   const [search, setSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => new Set())
   const [actionMenuId, setActionMenuId] = useState(null)
+  const [groupMenuKey, setGroupMenuKey] = useState(null)
+  const groupMenuAnchorsRef = useRef(new Map())
   const [directChatUpgrade, setDirectChatUpgrade] = useState(null)
   const [transferModal, setTransferModal] = useState(null)
   const [dragOverGroupKey, setDragOverGroupKey] = useState(null)
@@ -1147,9 +1147,12 @@ export default function InstructorStudents() {
     if (cached && Array.isArray(cached.students)) {
       setStudents(cached.students)
       setListLoading(false)
+      // 2) Arxa planda real datanı yenilə
+      void load(true)
+      return
     }
-    // 2) Arxa planda real datanı yenilə
-    void load(true)
+    // Keş yoxdursa: adi yükləmə (skelet → siyahı və ya xəta). Əks halda skelet heç vaxt itmirdi.
+    void load()
   }, [])
 
   useEffect(() => {
@@ -1656,19 +1659,9 @@ export default function InstructorStudents() {
   }
 
   const STUDENT_LIST_GRID =
-    'sm:grid sm:gap-x-3 sm:gap-y-2 sm:grid-cols-[1.25rem_minmax(0,1fr)_2.25rem_9rem_5.5rem_4.5rem_2.25rem]'
+    'sm:grid sm:gap-x-3 sm:grid-cols-[1.25rem_minmax(0,1fr)_2.5rem_8.5rem_8.5rem_5rem_2.5rem]'
   const STUDENT_ROW_GRID =
-    'grid grid-cols-[minmax(0,1fr)_auto] sm:col-span-full sm:grid-cols-subgrid items-center gap-x-2 sm:gap-x-0'
-
-  const badgeTone = (variant) => {
-    if (theme === 'dark') return ''
-    // Light theme: make badges readable on white surfaces
-    if (variant === 'paid') return 'bg-emerald-500/12 text-emerald-700 border-emerald-600/20'
-    if (variant === 'due') return 'bg-amber-500/12 text-amber-700 border-amber-600/20'
-    if (variant === 'pending') return 'bg-sky-500/12 text-sky-700 border-sky-600/20'
-    if (variant === 'danger') return 'bg-red-500/12 text-red-700 border-red-600/20'
-    return 'bg-black/5 text-gray-700 border-black/10'
-  }
+    'grid grid-cols-[minmax(0,1fr)_auto] sm:col-span-full sm:grid-cols-subgrid items-center gap-x-2 sm:gap-x-3'
 
   const fmtNextLesson = (distMin) => {
     if (!Number.isFinite(distMin) || distMin === Number.POSITIVE_INFINITY) return '—'
@@ -2134,180 +2127,205 @@ export default function InstructorStudents() {
     }
   }
 
+  const totalShown = audienceFilter === 'all' ? students.length : audienceStudents.length
+  const showDragHint =
+    !listLoading && !listError && filteredGroups.length > 0 && (audienceFilter === 'all' || audienceFilter === 'group')
+  // Groups with students first; empty groups sink to the bottom (stable sort keeps the lesson order).
+  const orderedGroups = [...filteredGroups].sort(
+    (a, b) => Number(!(a.students?.length > 0)) - Number(!(b.students?.length > 0)),
+  )
+  const fieldCls = [
+    'h-11 w-full rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard text-sm text-token-textMain',
+    'outline-none transition-[box-shadow,border-color] duration-200',
+    'focus:border-primary/50 focus:ring-2 focus:ring-primary/20',
+  ].join(' ')
+  const iconBtnCls = [
+    'inline-flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-[color:var(--border-subtle)]',
+    'bg-token-surfaceCard text-token-textMuted hover:text-token-textMain hover:bg-token-surfaceCardHover transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35',
+  ].join(' ')
+  const pillCls = (tone) =>
+    [
+      'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold',
+      tone === 'success'
+        ? 'bg-success-subtle text-success'
+        : tone === 'warning'
+          ? 'bg-warning-subtle text-warning'
+          : tone === 'info'
+            ? 'bg-info-subtle text-info'
+            : 'bg-canvas-subtle text-token-textMuted border border-[color:var(--border-subtle)]',
+    ].join(' ')
+  const payTone = (variant) => (variant === 'paid' ? 'success' : variant === 'due' ? 'warning' : 'neutral')
+  const payLongLabel = (s) => {
+    if (s?.payment_plan === 'partial') return t('students.payInstallmentLong', { defaultValue: 'Hissəli ödəniş' })
+    if (s?.billing_timing === 'prepaid') return t('students.payPrepaidLong', { defaultValue: 'Öncədən ödəniş' })
+    return t('students.payPostpaidLong', { defaultValue: 'Sonradan ödəniş' })
+  }
+  const payMixText = (mix) =>
+    [
+      mix.prepaid ? t('students.payMixPrepaid', { n: mix.prepaid, defaultValue: '{{n}} öncədən' }) : null,
+      mix.installment ? t('students.payMixInstallment', { n: mix.installment, defaultValue: '{{n}} hissəli' }) : null,
+      mix.postpaid ? t('students.payMixPostpaid', { n: mix.postpaid, defaultValue: '{{n}} sonradan' }) : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  const lessonsText = (p) => t('students.lessonsProgress', { used: p.used, total: p.total, defaultValue: '{{used}}/{{total}} dərs' })
+
   return (
     <div className="p-4 sm:p-6 min-w-0" data-tour-id="page:instructor-students">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
-        <div className="min-w-0">
-          <h1 className="font-display font-bold text-xl sm:text-2xl break-words">{t('students.title')}</h1>
-          <p className="text-gray-500 text-sm mt-1 max-w-xl">
-            {listLoading
-              ? '…'
-              : t('students.countStudents', {
-                  count: audienceFilter === 'all' ? students.length : audienceStudents.length,
-                })}{' '}
-            · {t('students.subtitleFilter')}{' '}
-            <Link to="/instructor/join-requests" className="text-primary hover:underline font-medium">
-              {t('students.joinRequests')}
-            </Link>
-            {t('students.subtitleAfterJoin')}{' '}
-            <Link to="/instructor/teaching-groups" className="text-primary hover:underline font-medium">
-              {t('students.inviteLinkShort')}
-            </Link>
+      {/* Header: title + count, one short line, primary vs secondary action */}
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 sm:flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain break-words">{t('students.title')}</h1>
+            <span
+              className="whitespace-nowrap rounded-full border border-[color:var(--border-subtle)] bg-token-surfaceCard px-2.5 py-0.5 text-xs font-semibold tabular-nums text-token-textMuted"
+              aria-live="polite"
+            >
+              {listLoading ? '…' : t('students.countStudents', { count: totalShown })}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-token-textMuted">
+            {t('students.subtitleShort', { defaultValue: 'Qruplar üzrə tələbələr, dərs gedişatı və ödəniş növü.' })}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto shrink-0">
+        <div className="flex gap-2 sm:flex-none">
           <Link
             to="/instructor/join-requests"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-primary/35 text-primary hover:bg-primary/10 transition-colors"
+            className="flex-1 sm:flex-none whitespace-nowrap inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-4 text-sm font-semibold text-token-textMain transition-colors hover:bg-token-surfaceCardHover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           >
             {t('students.joinRequests')}
             {joinPendingCount > 0 ? (
-              <span className="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-black text-xs font-bold inline-flex items-center justify-center">
+              <span
+                className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary/15 px-1.5 text-xs font-bold text-brand-text"
+                aria-label={t('students.pendingRequestsAria', { count: joinPendingCount, defaultValue: '{{count}} gözləyən sorğu' })}
+              >
                 {joinPendingCount > 99 ? '99+' : joinPendingCount}
               </span>
             ) : null}
           </Link>
           <Link
             to="/instructor/teaching-groups"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-primary text-black hover:brightness-110 transition-colors"
+            className="flex-1 sm:flex-none whitespace-nowrap inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-brand-on transition-[filter] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
           >
             {t('students.inviteLink')}
           </Link>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-          <div className="flex-1 min-w-0">
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-token-textMuted">
-                ⌕
-              </span>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('students.searchPlaceholder')}
-                className={[
-                  'w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none',
-                  'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
-                  'text-token-textMain placeholder:text-token-textMuted',
-                  'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
-                  'transition-[box-shadow,border-color] duration-200',
-                ].join(' ')}
-              />
-            </div>
-          </div>
-          <select
-            className={[
-              'w-full sm:w-56 rounded-xl px-3 py-2.5 text-sm outline-none',
-              'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
-              'text-token-textMain',
-              'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
-              'transition-[box-shadow,border-color] duration-200',
-            ].join(' ')}
-            value={audienceFilter}
-            onChange={(e) => {
-              setAudienceFilter(e.target.value)
-              setSubjectFilter('')
-            }}
+      {/* Filters */}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_13rem_13rem] sm:gap-3">
+        <label className="relative col-span-2 sm:col-span-1">
+          <span className="sr-only">{t('students.searchPlaceholder')}</span>
+          <svg
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-token-textMuted"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            aria-hidden="true"
           >
-            <option value="all">{t('students.filterAll')}</option>
-            <option value="group">{t('students.filterGroup')}</option>
-            <option value="exam">{t('students.filterExam')}</option>
-            <option value="task">{t('students.filterTask')}</option>
-          </select>
-          <select
-            className={[
-              'w-full sm:w-56 rounded-xl px-3 py-2.5 text-sm outline-none',
-              'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
-              'text-token-textMain',
-              'focus:border-primary/40 focus:ring-2 focus:ring-primary/15',
-              'transition-[box-shadow,border-color] duration-200',
-            ].join(' ')}
-            value={subjectFilter}
-            onChange={(e) => setSubjectFilter(e.target.value)}
-          >
-            <option value="">{t('students.filterAllSubjects')}</option>
-            {subjectOptions.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
+            <circle cx="9" cy="9" r="6" />
+            <path d="m13.5 13.5 3.5 3.5" strokeLinecap="round" />
+          </svg>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('students.searchPlaceholder')}
+            className={`${fieldCls} pl-9 pr-3 placeholder:text-token-textMuted`}
+          />
+        </label>
+        <select
+          aria-label={t('students.filterAll')}
+          className={`${fieldCls} px-3`}
+          value={audienceFilter}
+          onChange={(e) => {
+            setAudienceFilter(e.target.value)
+            setSubjectFilter('')
+          }}
+        >
+          <option value="all">{t('students.filterAll')}</option>
+          <option value="group">{t('students.filterGroup')}</option>
+          <option value="exam">{t('students.filterExam')}</option>
+          <option value="task">{t('students.filterTask')}</option>
+        </select>
+        <select
+          aria-label={t('students.filterAllSubjects')}
+          className={`${fieldCls} px-3`}
+          value={subjectFilter}
+          onChange={(e) => setSubjectFilter(e.target.value)}
+        >
+          <option value="">{t('students.filterAllSubjects')}</option>
+          {subjectOptions.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
       </div>
 
+      {/* Students waiting for setup */}
       {!listLoading && pendingStudents.length > 0 && (
-        <Card className="mb-5 p-4 border border-amber-500/35 bg-amber-500/5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-            <div>
-              <h2 className="font-display font-bold text-base text-amber-100">
+        <section
+          className="mb-5 rounded-2xl border border-[color:var(--border-subtle)] bg-warning-subtle p-4"
+          aria-labelledby="students-pending-title"
+        >
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 id="students-pending-title" className="font-display font-bold text-base text-token-textMain">
                 {t('students.pendingTitle')}
               </h2>
-              <p className="text-xs text-amber-200/70 mt-1">{t('students.pendingDesc')}</p>
+              <p className="mt-0.5 text-xs text-token-textMuted">{t('students.pendingDesc')}</p>
             </div>
-            <StatusBadge variant="due">{t('students.pendingCount', { count: pendingStudents.length })}</StatusBadge>
+            <span className={pillCls('warning')}>{t('students.pendingCount', { count: pendingStudents.length })}</span>
           </div>
-          <div className="space-y-2">
+          <ul className="space-y-2">
             {pendingStudents.map((s) => (
-              <div
+              <li
                 key={s.enrollment_id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-black/20 px-3 py-3"
+                className="flex flex-col gap-3 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <div className="font-semibold text-token-textMain flex items-center gap-2">
+                  <div className="flex items-center gap-2 font-semibold text-token-textMain">
                     <PresenceDot user={s} size="md" />
-                    {s.full_name}
+                    <span className="truncate">{s.full_name}</span>
                   </div>
-                  <div className="text-xs text-token-textMuted mt-0.5">
-                    {studentHasContactPhone(s) ? s.phone || s.phone_number : t('students.phonePending')} •{' '}
+                  <div className="mt-0.5 text-xs text-token-textMuted">
+                    {studentHasContactPhone(s) ? s.phone || s.phone_number : t('students.phonePending')} ·{' '}
                     {isSystemGeneratedGroup(s) ? (
                       <GroupColumnLabel group={{ group: resolveStudentGroupLabel(s), is_system_group: true }} students={[s]} />
                     ) : (
                       resolveStudentGroupLabel(s)
                     )}{' '}
-                    •{' '}
-                    {s.enrolled_at
-                      ? new Date(s.enrolled_at).toLocaleDateString(intlLocale(i18n.language))
-                      : '—'}
+                    · {s.enrolled_at ? new Date(s.enrolled_at).toLocaleDateString(intlLocale(i18n.language)) : '—'}
                   </div>
-                  {studentHasContactPhone(s) ? (
-                    <p className="text-[11px] text-emerald-300/90 mt-1">{t('students.phoneReady')}</p>
-                  ) : (
-                    <p className="text-[11px] text-amber-200/80 mt-1">{t('students.phoneMissing')}</p>
-                  )}
+                  <p className={`mt-1 text-[11px] font-medium ${studentHasContactPhone(s) ? 'text-success' : 'text-warning'}`}>
+                    {studentHasContactPhone(s) ? t('students.phoneReady') : t('students.phoneMissing')}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    className={[
-                      'h-9 px-3 rounded-xl border text-xs font-semibold transition-colors',
-                      'border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-200',
-                    ].join(' ')}
-                    onClick={() =>
-                      setCancelPendingModal({
-                        enrollment_id: s.enrollment_id,
-                        full_name: s.full_name,
-                      })
-                    }
-                    title={t('students.cancelPending')}
+                    className="h-9 rounded-xl border border-[color:var(--border-subtle)] px-3 text-xs font-semibold text-error transition-colors hover:bg-error-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40"
+                    onClick={() => setCancelPendingModal({ enrollment_id: s.enrollment_id, full_name: s.full_name })}
                   >
-                    ✕ {t('students.cancelPending')}
+                    {t('students.cancelPending')}
                   </button>
                   <Button size="sm" onClick={() => void openCompleteSetup(s)}>
                     {t('students.completeSetup')}
                   </Button>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
-        </Card>
+          </ul>
+        </section>
       )}
 
-      <div className="space-y-2.5">
-        {!listLoading && !listError && filteredGroups.length > 0 && (audienceFilter === 'all' || audienceFilter === 'group') ? (
-          <p className="text-xs text-token-textMuted px-1 flex items-center gap-2">
-            <span className="text-primary/80" aria-hidden>
+      <div className="space-y-3">
+        {showDragHint ? (
+          <p className="hidden items-center gap-2 px-1 text-xs text-token-textMuted sm:flex">
+            <span className="text-token-textMuted" aria-hidden>
               ⠿
             </span>
             {t('students.dragHint')}
@@ -2315,27 +2333,25 @@ export default function InstructorStudents() {
         ) : null}
         {listLoading && <ListSkeleton message={t('students.loading')} />}
         {!listLoading && listError && (
-          <Card className="p-6 text-center border border-amber-500/30 bg-amber-500/5">
-            <p className="text-amber-200/90 text-sm mb-3">{listError}</p>
-            <p className="text-gray-500 text-xs mb-4">{t('students.networkHint')}</p>
+          <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard p-6 text-center" role="alert">
+            <p className="mb-1 text-sm font-semibold text-error">{listError}</p>
+            <p className="mb-4 text-xs text-token-textMuted">{t('students.networkHint')}</p>
             <Button type="button" variant="secondary" onClick={() => void load()}>
               {t('students.reload')}
             </Button>
-          </Card>
+          </div>
         )}
         {!listLoading &&
           !listError &&
-          filteredGroups.map((g) => {
+          orderedGroups.map((g) => {
             const isOpen = openGroups.has(g.key)
-            const groupStatus = isOpen
-              ? { variant: 'paid', label: t('students.groupOpen') }
-              : { variant: 'neutral', label: t('students.groupClosed') }
             const occupyingStudents = g.group_id
               ? (Array.isArray(g.students) ? g.students : []).filter((s) => occupiesGroup(s, g.group_id))
               : Array.isArray(g.students)
                 ? g.students
                 : []
             const total = occupyingStudents.length
+            const isEmpty = !(g.students?.length > 0)
             const pendingInGroup = occupyingStudents.filter((s) => needsSetup(s) || isPendingApproval(s)).length
             const groupCountLabel =
               pendingInGroup > 0 && pendingInGroup === total
@@ -2343,15 +2359,14 @@ export default function InstructorStudents() {
                 : pendingInGroup > 0
                   ? t('students.groupStudentsAndPending', { count: total - pendingInGroup, pending: pendingInGroup })
                   : t('students.groupStudents', { count: total })
-            const payTop =
-              g.payMix.installment
-                ? { variant: 'due', label: t('students.payInstallmentGroup', { n: g.payMix.installment, total }) }
-                : g.payMix.prepaid
-                  ? { variant: 'paid', label: t('students.payPrepaidGroup', { n: g.payMix.prepaid, total }) }
-                  : { variant: 'pending', label: t('students.payPostpaidGroup', { n: g.payMix.postpaid, total }) }
+            const mixText = total > 0 ? payMixText(g.payMix) : ''
+            const nextLesson = fmtNextLesson(g.nextDistMin)
+            const listId = `students-group-${String(g.key).replace(/[^a-zA-Z0-9_-]/g, '_')}`
+            const manageable = canManageEmptyGroup(g)
 
             const toggleGroup = () => {
               closeStudentMenu()
+              setGroupMenuKey(null)
               setOpenGroups((prev) => {
                 const next = new Set(prev)
                 if (next.has(g.key)) next.delete(g.key)
@@ -2360,383 +2375,397 @@ export default function InstructorStudents() {
               })
             }
             return (
-              <Card
+              <section
                 key={g.key}
-                hover
+                data-testid="students-group"
                 onDragOver={(e) => handleGroupDragOver(e, g)}
                 onDragLeave={(e) => handleGroupDragLeave(e, g)}
                 onDrop={(e) => handleGroupDrop(e, g)}
                 className={[
-                  // NOTE: dropdown needs to escape card bounds (no clipping)
-                  'p-0 overflow-visible border relative z-10 transition-[box-shadow,border-color,transform] duration-200',
-                  'border-[color:var(--border-subtle)] hover:border-primary/20',
-                  isOpen ? 'border-primary/25 bg-token-surfaceCard/20 z-20' : '',
-                  dragOverGroupKey === g.key
-                    ? 'border-primary/60 ring-2 ring-primary/35 scale-[1.01] shadow-lg shadow-primary/10'
-                    : '',
+                  // NOTE: dropdowns render in a portal, the card itself may stay overflow-visible
+                  'relative overflow-visible rounded-2xl border bg-token-surfaceCard',
+                  'shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[box-shadow,border-color] duration-200',
+                  isOpen ? 'border-primary/30 shadow-[0_4px_16px_rgba(15,23,42,0.06)]' : 'border-[color:var(--border-subtle)]',
+                  isEmpty && !isOpen ? 'opacity-80' : '',
+                  dragOverGroupKey === g.key ? 'border-primary/60 ring-2 ring-primary/30' : '',
                 ].join(' ')}
               >
-                <div className="relative">
-                  <div
-                    className={[
-                      'w-full grid grid-cols-12 items-center gap-3 px-4 py-3.5 text-left',
-                      'bg-token-surfaceCard/45 hover:bg-token-surfaceCard/60',
-                      'transition-[background-color,transform] duration-200 ease-out',
-                      'active:scale-[0.997]',
-                    ].join(' ')}
+                {isOpen ? <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-primary" aria-hidden /> : null}
+                <div className="flex items-start gap-2 px-4 py-3.5 sm:items-center">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                    onClick={toggleGroup}
+                    aria-expanded={isOpen}
+                    aria-controls={listId}
                   >
-                    {/* CLICK AREA (LEFT + CENTER) */}
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <span
+                        className="min-w-0 truncate text-[15px] font-semibold text-token-textMain sm:text-base"
+                        title={studentNamesLabel(occupyingStudents) || undefined}
+                      >
+                        <GroupColumnLabel group={g} students={g.students} />
+                      </span>
+                      {g.subject ? <span className={pillCls('neutral')}>{g.subject}</span> : null}
+                    </span>
+                    <span className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-token-textMuted">
+                      <span className="font-medium text-token-textMain">{groupCountLabel}</span>
+                      {total > 0 ? (
+                        <span>
+                          {t('students.nextLesson')}{' '}
+                          <span className="font-semibold tabular-nums text-token-textMain">{nextLesson}</span>
+                        </span>
+                      ) : null}
+                      {mixText ? (
+                        <span>
+                          {t('students.paymentLabel', { defaultValue: 'Ödəniş:' })}{' '}
+                          <span className="font-semibold text-token-textMain">{mixText}</span>
+                        </span>
+                      ) : null}
+                      {g.avgScore != null ? (
+                        <span>
+                          {t('students.avgScore')}{' '}
+                          <span className="font-semibold tabular-nums text-token-textMain">{g.avgScore}%</span>
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {manageable ? (
+                      <>
+                        <button
+                          type="button"
+                          className={iconBtnCls}
+                          aria-label={t('students.groupActions', { defaultValue: 'Qrup əməliyyatları' })}
+                          aria-haspopup="menu"
+                          aria-expanded={groupMenuKey === g.key}
+                          ref={(el) => {
+                            if (el) groupMenuAnchorsRef.current.set(g.key, el)
+                            else groupMenuAnchorsRef.current.delete(g.key)
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            closeStudentMenu()
+                            setGroupMenuKey((prev) => (prev === g.key ? null : g.key))
+                          }}
+                        >
+                          <span aria-hidden>⋯</span>
+                        </button>
+                        <PortalMenu
+                          open={groupMenuKey === g.key}
+                          onClose={() => setGroupMenuKey(null)}
+                          anchorRef={{ current: groupMenuAnchorsRef.current.get(g.key) }}
+                          align="end"
+                          width={196}
+                        >
+                          <div className="py-1" role="menu">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="w-full px-3 py-2.5 text-left text-sm text-token-textMain hover:bg-token-surfaceCardHover"
+                              onClick={() => {
+                                setGroupMenuKey(null)
+                                openRenameGroup(g)
+                              }}
+                            >
+                              {t('students.renameGroup')}
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="w-full px-3 py-2.5 text-left text-sm font-medium text-error hover:bg-error-subtle"
+                              onClick={() => {
+                                setGroupMenuKey(null)
+                                promptDeleteGroup(g)
+                              }}
+                            >
+                              {t('students.deleteEmptyGroup')}
+                            </button>
+                          </div>
+                        </PortalMenu>
+                      </>
+                    ) : null}
                     <button
                       type="button"
-                      className="col-span-12 sm:col-span-9 grid grid-cols-12 items-center gap-3 text-left min-w-0"
-                      onClick={toggleGroup}
+                      className={iconBtnCls}
+                      aria-label={isOpen ? t('students.closeGroup') : t('students.openGroup')}
                       aria-expanded={isOpen}
+                      aria-controls={listId}
+                      onClick={toggleGroup}
                     >
-                      {/* LEFT */}
-                      <div className="col-span-12 sm:col-span-7 min-w-0">
-                        <div
-                          className="text-[15px] sm:text-base font-semibold text-token-textMain truncate cursor-default"
-                          title={studentNamesLabel(occupyingStudents) || undefined}
-                        >
-                          <GroupColumnLabel group={g} students={g.students} />
-                        </div>
-                        <div
-                          className="text-xs text-token-textMuted truncate cursor-default"
-                          title={studentNamesLabel(occupyingStudents) || undefined}
-                        >
-                          {g.subject} · {groupCountLabel}
-                        </div>
-                      </div>
-
-                      {/* CENTER */}
-                      <div className="hidden sm:flex col-span-5 items-center gap-2 min-w-0 justify-end">
-                        <StatusBadge
-                          variant="neutral"
-                          className={['shrink-0', badgeTone('neutral')].join(' ')}
-                        >
-                          {t('students.nextLesson')}{' '}
-                          <span
-                            className={[
-                              'ml-1 tabular-nums',
-                              theme === 'dark' ? 'text-gray-100' : 'text-gray-900',
-                            ].join(' ')}
-                          >
-                            {fmtNextLesson(g.nextDistMin)}
-                          </span>
-                        </StatusBadge>
-                        <StatusBadge
-                          variant={payTop.variant}
-                          className={['shrink-0', badgeTone(payTop.variant)].join(' ')}
-                        >
-                          {payTop.label}
-                        </StatusBadge>
-                        {g.avgScore != null ? (
-                          <StatusBadge
-                            variant="pending"
-                            className={['shrink-0', badgeTone('pending')].join(' ')}
-                          >
-                            {t('students.avgScore')}{' '}
-                            <span
-                              className={[
-                                'ml-1 tabular-nums',
-                                theme === 'dark' ? 'text-gray-100' : 'text-gray-900',
-                              ].join(' ')}
-                            >
-                              {g.avgScore}%
-                            </span>
-                          </StatusBadge>
-                        ) : null}
-                      </div>
-                    </button>
-
-                    {/* ACTIONS (RIGHT) */}
-                    <div className="col-span-12 sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
-                      <StatusBadge variant={groupStatus.variant} className={badgeTone(groupStatus.variant)}>
-                        {groupStatus.label}
-                      </StatusBadge>
-
-                      {canManageEmptyGroup(g) ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            title={t('students.renameGroup')}
-                            className={[
-                              'h-9 px-2.5 rounded-xl border text-xs font-semibold transition-colors',
-                              'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60 text-token-textMain',
-                            ].join(' ')}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openRenameGroup(g)
-                            }}
-                          >
-                            {t('students.renameShort')}
-                          </button>
-                          <button
-                            type="button"
-                            title={t('students.deleteEmptyGroup')}
-                            className={[
-                              'h-9 px-2.5 rounded-xl border text-xs font-semibold transition-colors',
-                              'border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300',
-                            ].join(' ')}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              promptDeleteGroup(g)
-                            }}
-                          >
-                            {t('students.delete')}
-                          </button>
-                        </div>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        className={[
-                          'w-9 h-9 rounded-xl border flex items-center justify-center transition-transform duration-200',
-                          'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
-                          isOpen ? 'rotate-180' : 'rotate-0',
-                        ].join(' ')}
-                        aria-label={isOpen ? t('students.closeGroup') : t('students.openGroup')}
-                        onClick={toggleGroup}
+                      <svg
+                        className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        aria-hidden="true"
                       >
-                        <span className="text-token-textMain/80">⌄</span>
-                      </button>
-                    </div>
+                        <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
                 {isOpen && (
                   <div
-                    className={[
-                      'p-2.5 sm:p-3 bg-token-surfaceMain/40',
-                      g.students.length ? STUDENT_LIST_GRID : '',
-                    ].join(' ')}
+                    id={listId}
+                    className="border-t border-[color:var(--border-subtle)] px-2 pb-2 pt-1 sm:px-3"
                     onDragOver={(e) => handleGroupDragOver(e, g)}
                     onDrop={(e) => handleGroupDrop(e, g)}
                   >
                     {g.students.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-[color:var(--border-subtle)] bg-token-surfaceCard/25 px-4 py-5 text-center space-y-2">
-                        <p className="text-sm text-token-textMuted">{t('students.emptyGroup')}</p>
-                        {canManageEmptyGroup(g) ? (
-                          <p className="text-xs text-token-textMuted/90">{t('students.emptyGroupManage')}</p>
-                        ) : (
-                          <p className="text-xs text-token-textMuted/90">{t('students.emptyGroupDrag')}</p>
-                        )}
+                      <div className="my-2 space-y-1 rounded-xl border border-dashed border-[color:var(--border-subtle)] px-4 py-5 text-center">
+                        <p className="text-sm text-token-textMain">{t('students.emptyGroup')}</p>
+                        <p className="text-xs text-token-textMuted">
+                          {manageable ? t('students.emptyGroupManage') : t('students.emptyGroupDrag')}
+                        </p>
                       </div>
-                    ) : null}
-                    {g.students.map((s) => {
-                      const p = lessonProgress(s)
-                      const pay = paymentBadge(s)
-                      const packLabel = packLabelForStudent(s)
-                      const draggable = canDragStudent(s)
-                      const isDragging = draggingStudentId === s.enrollment_id
-                      return (
-                        <div
-                          key={s.enrollment_id}
-                          draggable={draggable}
-                          onDragStart={(e) => handleStudentDragStart(e, s)}
-                          onDragEnd={handleStudentDragEnd}
-                          className={[
-                            'group',
-                            STUDENT_ROW_GRID,
-                            'rounded-xl px-3 py-2.5 mb-2 sm:mb-0',
-                            'border border-[color:var(--border-subtle)]',
-                            'bg-token-surfaceCard/40 hover:bg-token-surfaceCard/55',
-                            'transition-[background-color,transform,border-color,opacity,box-shadow] duration-200',
-                            'hover:-translate-y-[1px] hover:border-primary/15',
-                            draggable ? 'cursor-grab active:cursor-grabbing' : '',
-                            isDragging ? 'opacity-45 scale-[0.98] shadow-inner' : '',
-                          ].join(' ')}
-                        >
-                          {draggable ? (
-                            <span
-                              className="hidden sm:flex shrink-0 w-5 items-center justify-center text-token-textMuted/50 group-hover:text-primary/70 select-none"
-                              aria-hidden
-                              title={t('students.dragToGroup')}
-                            >
-                              ⠿
-                            </span>
-                          ) : (
-                            <span className="hidden sm:block w-5 shrink-0" aria-hidden />
-                          )}
-                          <div className="min-w-0 flex items-center gap-3 col-start-1 sm:col-start-2 row-start-1">
-                            <div
-                              className={[
-                                'w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-extrabold',
-                                'bg-token-surfaceCard/55 border border-[color:var(--border-subtle)]',
-                                'text-token-textMain',
-                              ].join(' ')}
-                              title={s.full_name}
-                            >
-                              {initials(s.full_name)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="font-semibold text-token-textMain truncate flex items-center gap-2">
-                                <PresenceDot user={s} />
-                                {s.full_name}
-                                {isPendingApproval(s) && (
-                                  <StatusBadge variant="pending" className="text-[10px]">
-                                    {t('students.pendingApprovalBadge')}
-                                  </StatusBadge>
-                                )}
-                                {needsSetup(s) && (
-                                  <StatusBadge variant="due" className="text-[10px]">
-                                    {t('students.setupNeededBadge')}
-                                  </StatusBadge>
-                                )}
-                              </div>
-                              <div className="text-xs text-token-textMuted flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
-                                {s.phone && <span className="break-all">{s.phone}</span>}
-                                {lessonDaysShort(s.lesson_weekdays) ? (
-                                  <span className="w-full sm:w-auto">{t('students.lessonsLabel')} {lessonDaysShort(s.lesson_weekdays)}</span>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="col-start-2 row-start-1 flex items-center justify-end gap-2 sm:contents">
-                            <div className="sm:col-start-3 flex justify-center shrink-0">
-                              <StudentDirectChatButton
-                                active={directChatActive}
-                                locked={!directChatActive}
-                                disabled={blocked}
-                                onClick={() => openDirectChat(s)}
-                                title={
-                                  blocked
-                                    ? t('students.chatDisabled')
-                                    : directChatActive
-                                      ? t('students.chatWithStudent', { name: s.full_name || t('students.defaultStudent') })
-                                      : t('students.chatUpgradeRequired')
-                                }
-                              />
-                            </div>
-
-                            <div className="hidden sm:flex sm:col-start-4 flex-col justify-center min-h-[1.625rem]">
-                              {p ? (
-                                <>
-                                  <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
-                                    <div
-                                      className="h-full bg-primary/70 transition-[width] duration-300"
-                                      style={{ width: `${p.pct}%` }}
-                                    />
-                                  </div>
-                                  <div className="mt-1 text-[11px] text-token-textMuted text-right tabular-nums">
-                                    {`${p.pct}% (${p.used}/${p.total})`}
-                                  </div>
-                                </>
-                              ) : null}
-                            </div>
-
-                            <div className="hidden sm:flex sm:col-start-5 items-center justify-center">
-                              <StatusBadge variant={pay.variant}>{pay.label}</StatusBadge>
-                            </div>
-
-                            <div className="hidden sm:flex sm:col-start-6 items-center justify-center">
-                              {packLabel ? (
-                                <StatusBadge variant="neutral">{packLabel}</StatusBadge>
-                              ) : (
-                                <span className="invisible pointer-events-none" aria-hidden>
-                                  <StatusBadge variant="neutral">{t('students.pack8')}</StatusBadge>
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="relative sm:col-start-7 w-9 shrink-0 justify-self-center">
-                              <button
-                                type="button"
-                                className={[
-                                  'w-9 h-9 rounded-xl border flex items-center justify-center',
-                                  'border-[color:var(--border-subtle)] bg-token-surfaceCard/35 hover:bg-token-surfaceCard/60',
-                                  'text-token-textMain/80',
-                                ].join(' ')}
-                                aria-label="Actions"
-                                ref={(el) => {
-                                  const k = String(s.enrollment_id)
-                                  if (!k) return
-                                  if (el) actionAnchorsRef.current.set(k, el)
-                                  else actionAnchorsRef.current.delete(k)
-                                }}
-                                onClick={() =>
-                                  setActionMenuId((prev) =>
-                                    String(prev) === String(s.enrollment_id) ? null : s.enrollment_id
-                                  )
-                                }
-                              >
-                                ⋯
-                              </button>
-
-                              <PortalMenu
-                                open={String(actionMenuId) === String(s.enrollment_id)}
-                                onClose={closeStudentMenu}
-                                anchorRef={{ current: actionAnchorsRef.current.get(String(s.enrollment_id)) }}
-                                align="end"
-                                width={176}
-                              >
-                                <div className="py-1">
-                                  {needsSetup(s) && (
-                                    <button
-                                      type="button"
-                                      className="w-full text-left px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10 font-semibold"
-                                      onClick={() => openCompleteSetup(s)}
-                                    >
-                                      {t('students.completeSetup')}
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                                    onClick={() => {
-                                      closeStudentMenu()
-                                      openEdit(s)
-                                    }}
-                                  >
-                                    {t('students.edit')}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                                    onClick={() => {
-                                      closeStudentMenu()
-                                      openLessonsModal(s)
-                                    }}
-                                  >
-                                    {t('students.lessons')}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
-                                    onClick={() => {
-                                      closeStudentMenu()
-                                      openRestoreModal(s)
-                                    }}
-                                  >
-                                    {t('students.oldPayments')}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 text-sm text-red-200 hover:bg-red-500/10"
-                                    onClick={() => {
-                                      closeStudentMenu()
-                                      openDeleteConfirm(s)
-                                    }}
-                                  >
-                                    {t('students.delete')}
-                                  </button>
-                                </div>
-                              </PortalMenu>
-                            </div>
-                          </div>
+                    ) : (
+                      <div className={STUDENT_LIST_GRID} role="list">
+                        {/* Column headers (desktop only) */}
+                        <div className="hidden sm:col-span-full sm:grid sm:grid-cols-subgrid px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-token-textMuted" aria-hidden>
+                          <span />
+                          <span>{t('students.colStudent', { defaultValue: 'Tələbə' })}</span>
+                          <span />
+                          <span>{t('students.colLessons', { defaultValue: 'Dərslər' })}</span>
+                          <span>{t('students.colPayment', { defaultValue: 'Ödəniş' })}</span>
+                          <span>{t('students.colPackage', { defaultValue: 'Paket' })}</span>
+                          <span />
                         </div>
-                      )
-                    })}
+                        {g.students.map((s) => {
+                          const p = lessonProgress(s)
+                          const pay = paymentBadge(s)
+                          const packLabel = packLabelForStudent(s)
+                          const draggable = canDragStudent(s)
+                          const isDragging = draggingStudentId === s.enrollment_id
+                          const days = lessonDaysShort(s.lesson_weekdays)
+                          return (
+                            <div
+                              key={s.enrollment_id}
+                              role="listitem"
+                              draggable={draggable}
+                              onDragStart={(e) => handleStudentDragStart(e, s)}
+                              onDragEnd={handleStudentDragEnd}
+                              data-testid="student-row"
+                              className={[
+                                'group',
+                                STUDENT_ROW_GRID,
+                                'rounded-xl px-2 py-2.5 transition-[background-color,opacity] duration-150',
+                                'border-b border-[color:var(--border-subtle)] last:border-b-0 sm:border-b-0',
+                                'hover:bg-token-surfaceCardHover',
+                                draggable ? 'cursor-grab active:cursor-grabbing' : '',
+                                isDragging ? 'opacity-45' : '',
+                              ].join(' ')}
+                            >
+                              {draggable ? (
+                                <span
+                                  className="hidden w-5 shrink-0 select-none items-center justify-center text-token-textMuted/50 group-hover:text-token-textMuted sm:flex"
+                                  aria-hidden
+                                  title={t('students.dragToGroup')}
+                                >
+                                  ⠿
+                                </span>
+                              ) : (
+                                <span className="hidden w-5 shrink-0 sm:block" aria-hidden />
+                              )}
+
+                              <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 sm:col-start-2">
+                                <div
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-canvas-subtle text-xs font-bold text-token-textMain"
+                                  aria-hidden
+                                >
+                                  {initials(s.full_name)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                    <PresenceDot user={s} />
+                                    <span className="truncate text-sm font-semibold text-token-textMain">{s.full_name}</span>
+                                    {isPendingApproval(s) ? (
+                                      <span className={pillCls('info')}>{t('students.pendingApprovalBadge')}</span>
+                                    ) : null}
+                                    {needsSetup(s) ? <span className={pillCls('warning')}>{t('students.setupNeededBadge')}</span> : null}
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-token-textMuted">
+                                    {s.phone ? <span className="tabular-nums">{s.phone}</span> : null}
+                                    {s.phone && days ? <span aria-hidden>·</span> : null}
+                                    {days ? (
+                                      <span>
+                                        {t('students.lessonsLabel')} {days}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  {/* Phones: the desktop columns collapse into one compact line */}
+                                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-token-textMuted sm:hidden">
+                                    {p ? <span className="font-medium text-token-textMain tabular-nums">{lessonsText(p)}</span> : null}
+                                    <span className={pillCls(payTone(pay.variant))}>{payLongLabel(s)}</span>
+                                    {packLabel ? <span>{packLabel}</span> : null}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="col-start-2 row-start-1 flex items-center justify-end gap-1.5 sm:contents">
+                                <div className="flex shrink-0 justify-center sm:col-start-3">
+                                  <StudentDirectChatButton
+                                    active={directChatActive}
+                                    locked={!directChatActive}
+                                    disabled={blocked}
+                                    onClick={() => openDirectChat(s)}
+                                    title={
+                                      blocked
+                                        ? t('students.chatDisabled')
+                                        : directChatActive
+                                          ? t('students.chatWithStudent', { name: s.full_name || t('students.defaultStudent') })
+                                          : t('students.chatUpgradeRequired')
+                                    }
+                                  />
+                                </div>
+
+                                <div className="hidden min-w-0 flex-col justify-center sm:col-start-4 sm:flex">
+                                  {p ? (
+                                    <>
+                                      <div className="flex items-baseline justify-between gap-2 text-xs">
+                                        <span className="font-medium text-token-textMain tabular-nums">{lessonsText(p)}</span>
+                                        <span className="text-[11px] text-token-textMuted tabular-nums">{p.pct}%</span>
+                                      </div>
+                                      <div
+                                        className="mt-1 h-1.5 overflow-hidden rounded-full bg-canvas-subtle"
+                                        role="progressbar"
+                                        aria-valuemin={0}
+                                        aria-valuemax={100}
+                                        aria-valuenow={p.pct}
+                                        aria-label={lessonsText(p)}
+                                      >
+                                        <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${p.pct}%` }} />
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <span className="text-xs text-token-textMuted">—</span>
+                                  )}
+                                </div>
+
+                                <div className="hidden items-center sm:col-start-5 sm:flex">
+                                  <span className={pillCls(payTone(pay.variant))}>{payLongLabel(s)}</span>
+                                </div>
+
+                                <div className="hidden items-center text-xs text-token-textMain sm:col-start-6 sm:flex">
+                                  {packLabel || <span className="text-token-textMuted">—</span>}
+                                </div>
+
+                                <div className="relative shrink-0 justify-self-center sm:col-start-7">
+                                  <button
+                                    type="button"
+                                    className={iconBtnCls}
+                                    aria-label={t('students.studentActions', {
+                                      name: s.full_name || '',
+                                      defaultValue: '{{name}} — əməliyyatlar',
+                                    })}
+                                    aria-haspopup="menu"
+                                    aria-expanded={String(actionMenuId) === String(s.enrollment_id)}
+                                    ref={(el) => {
+                                      const k = String(s.enrollment_id)
+                                      if (!k) return
+                                      if (el) actionAnchorsRef.current.set(k, el)
+                                      else actionAnchorsRef.current.delete(k)
+                                    }}
+                                    onClick={() => {
+                                      setGroupMenuKey(null)
+                                      setActionMenuId((prev) =>
+                                        String(prev) === String(s.enrollment_id) ? null : s.enrollment_id,
+                                      )
+                                    }}
+                                  >
+                                    <span aria-hidden>⋯</span>
+                                  </button>
+
+                                  <PortalMenu
+                                    open={String(actionMenuId) === String(s.enrollment_id)}
+                                    onClose={closeStudentMenu}
+                                    anchorRef={{ current: actionAnchorsRef.current.get(String(s.enrollment_id)) }}
+                                    align="end"
+                                    width={196}
+                                  >
+                                    <div className="py-1" role="menu">
+                                      {needsSetup(s) && (
+                                        <button
+                                          type="button"
+                                          role="menuitem"
+                                          className="w-full px-3 py-2.5 text-left text-sm font-semibold text-warning hover:bg-warning-subtle"
+                                          onClick={() => openCompleteSetup(s)}
+                                        >
+                                          {t('students.completeSetup')}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="w-full px-3 py-2.5 text-left text-sm text-token-textMain hover:bg-token-surfaceCardHover"
+                                        onClick={() => {
+                                          closeStudentMenu()
+                                          openEdit(s)
+                                        }}
+                                      >
+                                        {t('students.edit')}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="w-full px-3 py-2.5 text-left text-sm text-token-textMain hover:bg-token-surfaceCardHover"
+                                        onClick={() => {
+                                          closeStudentMenu()
+                                          openLessonsModal(s)
+                                        }}
+                                      >
+                                        {t('students.lessons')}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="w-full px-3 py-2.5 text-left text-sm text-token-textMain hover:bg-token-surfaceCardHover"
+                                        onClick={() => {
+                                          closeStudentMenu()
+                                          openRestoreModal(s)
+                                        }}
+                                      >
+                                        {t('students.oldPayments')}
+                                      </button>
+                                      <div className="my-1 border-t border-[color:var(--border-subtle)]" />
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="w-full px-3 py-2.5 text-left text-sm font-medium text-error hover:bg-error-subtle"
+                                        onClick={() => {
+                                          closeStudentMenu()
+                                          openDeleteConfirm(s)
+                                        }}
+                                      >
+                                        {t('students.delete')}
+                                      </button>
+                                    </div>
+                                  </PortalMenu>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
-              </Card>
+              </section>
             )
           })}
         {!listLoading && !listError && !students.length && (
-          <div className="text-center py-16 text-token-textMuted">
-            <p className="text-lg mb-2 text-token-textMain">{t('students.emptyTitle')}</p>
-            <p className="text-sm">{t('students.emptyHint')}</p>
+          <div className="rounded-2xl border border-dashed border-[color:var(--border-subtle)] bg-token-surfaceCard px-6 py-14 text-center">
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-canvas-subtle text-token-textMuted" aria-hidden>
+              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <circle cx="10" cy="7" r="3" />
+                <path d="M4 17c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="mb-1 text-base font-semibold text-token-textMain">{t('students.emptyTitle')}</p>
+            <p className="text-sm text-token-textMuted">{t('students.emptyHint')}</p>
           </div>
         )}
       </div>
