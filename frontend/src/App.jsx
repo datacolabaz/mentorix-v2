@@ -77,6 +77,7 @@ const InstructorAnalytics = lazy(() => import('./pages/instructor/Analytics'))
 const InstructorPayments = lazy(() => import('./pages/instructor/Payments'))
 const InstructorSettings = lazy(() => import('./pages/instructor/Settings'))
 const InstructorTeachingGroups = lazy(() => import('./pages/instructor/TeachingGroups'))
+const InstructorTeachingGroupDetail = lazy(() => import('./pages/instructor/TeachingGroupDetail'))
 const InstructorJoinRequests = lazy(() => import('./pages/instructor/JoinRequests'))
 const StudentInquiries = lazy(() => import('./pages/instructor/StudentInquiries'))
 const InstructorTasks = lazy(() => import('./pages/instructor/Tasks'))
@@ -382,6 +383,7 @@ export default function App() {
         <Route index element={<InstructorDashboard />} />
         <Route path="students" element={<InstructorStudents />} />
         <Route path="teaching-groups" element={<InstructorTeachingGroups />} />
+        <Route path="teaching-groups/:groupId" element={<InstructorTeachingGroupDetail />} />
         <Route path="chat" element={<GroupChatPage role="instructor" basePath="/instructor/chat" />} />
         <Route path="direct-chat" element={<DirectChatPage role="instructor" />} />
         <Route path="assignment-chat" element={<AssignmentChatPage role="instructor" />} />

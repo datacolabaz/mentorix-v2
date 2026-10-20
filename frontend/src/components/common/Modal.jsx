@@ -1,6 +1,7 @@
-import { useEffect, useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import useUiStore from '../../hooks/useUi'
+import useDialogFocus from './useDialogFocus'
 
 export default function Modal({
   open,
@@ -13,10 +14,14 @@ export default function Modal({
   scrollBody = false,
   compact = false,
   closeLabel = 'Close',
+  // Opt-in: Escape closes, Tab stays inside, focus returns to the opener.
+  manageFocus = false,
 }) {
   const theme = useUiStore((s) => s.theme)
   const isDark = theme === 'dark'
   const titleId = useId()
+  const panelRef = useRef(null)
+  useDialogFocus(open, panelRef, onClose, { enabled: manageFocus })
 
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
@@ -39,7 +44,10 @@ export default function Modal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={[
+          'outline-none',
           isDark ? 'theme-dark' : 'theme-light',
           'rounded-2xl w-full shadow-2xl flex flex-col overflow-hidden',
           sizes[size],
