@@ -18,7 +18,6 @@ import { studentEnrollmentDisplay } from '../../lib/participantGroupLabels'
 import { useStudentGroups } from '../../contexts/StudentGroupContext'
 import { withEnrollmentQuery } from '../../lib/studentGroupQuery'
 import PersonaHomeLinks from '../../components/onboarding/PersonaHomeLinks'
-import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import DashboardSummary from '../../components/dashboard/DashboardSummary'
 import { summaryEnrollmentId } from '../../lib/dashboardSummary'
 import {
@@ -178,7 +177,6 @@ export default function StudentDashboard() {
         </div>
       </div>
       <PersonaHomeLinks className="mb-6" />
-      <PersonaSettingsCard className="mb-6" />
 
       {!hasGroups && (
         <Card className="p-6 mb-6 border border-dashed border-primary/30 bg-primary/5">

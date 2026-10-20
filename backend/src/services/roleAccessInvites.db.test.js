@@ -169,7 +169,7 @@ test('role approval + invite tokens on real PostgreSQL (isolated local schema)',
 
   await t.test('a student cannot enter the teacher cabinet without approval', async () => {
     assert.deepEqual(await roles.checkStorageRoleEntry(APPLICANT, 'instructor'), { allowed: false, approvalRequired: true });
-    assert.deepEqual(await roles.checkStorageRoleEntry(APPLICANT, 'course'), { allowed: false, approvalRequired: true });
+    assert.deepEqual(await roles.checkStorageRoleEntry(APPLICANT, 'course'), { allowed: false, organizationRequired: true });
     assert.deepEqual(await roles.checkStorageRoleEntry(APPLICANT, 'student'), { allowed: true });
     // parent/student are never self-granted outside the first onboarding choice
     assert.deepEqual(await roles.checkStorageRoleEntry(TEACHER, 'student'), { allowed: false });
@@ -282,8 +282,10 @@ test('role approval + invite tokens on real PostgreSQL (isolated local schema)',
 
     const again = await call('PATCH', '/persona', student, { persona: 'teacher' });
     assert.equal(again.status, 202);
+    // The organization cabinet needs an approved «Təşkilat yarat» request (migration 240), not a teacher request.
     const course = await call('POST', '/switch-workspace', student, { target: 'course' });
-    assert.equal(course.status, 202);
+    assert.equal(course.status, 403);
+    assert.equal(course.body.code, 'ORG_REQUIRED');
     const { rows } = await pool.query(`SELECT role FROM users WHERE id=$1`, [student]);
     assert.equal(rows[0].role, 'student');
     const pending = await pool.query(`SELECT COUNT(*)::int AS n FROM role_requests WHERE user_id=$1 AND status='pending'`, [student]);

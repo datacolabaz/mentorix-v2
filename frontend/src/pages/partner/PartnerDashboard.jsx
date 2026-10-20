@@ -19,7 +19,6 @@ import LocaleThemeBar from '../../components/LocaleThemeBar'
 import { useToast } from '../../components/common/Toast'
 import useAuthStore from '../../hooks/useAuth'
 import useUiStore from '../../hooks/useUi'
-import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import NotificationBell from '../../components/notifications/NotificationBell'
 import { allowRolePanelVisit, secondaryPanelPathForUser } from '../../lib/postAuth'
 import { STICKY_TOP_BAR } from '../../lib/stickyTopBar'
@@ -502,7 +501,6 @@ export default function PartnerDashboard() {
               {applying ? t('common.loading') : t('partner.applyCta')}
             </Button>
           </div>
-          <PersonaSettingsCard />
         </div>
       </PartnerShell>
     )
@@ -519,7 +517,6 @@ export default function PartnerDashboard() {
               {data.partner?.status}
             </span>
           </div>
-          <PersonaSettingsCard />
         </div>
       </PartnerShell>
     )
@@ -571,7 +568,6 @@ export default function PartnerDashboard() {
         </div>
       ) : null}
 
-      <PersonaSettingsCard />
 
       <section className="rounded-2xl border border-token-border bg-token-surface/60 p-5 sm:p-6">
         <h2 className="font-semibold text-token-textMain">{t('partner.yourLink')}</h2>

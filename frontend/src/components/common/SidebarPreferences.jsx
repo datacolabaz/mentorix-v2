@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import useUiStore from '../../hooks/useUi'
 import LocaleThemeBar from '../LocaleThemeBar'
 import WorkspaceSwitcher from './WorkspaceSwitcher'
@@ -16,18 +15,7 @@ export default function SidebarPreferences({ onLogout, className = '' }) {
         <div className="text-xs font-semibold text-token-textMuted px-1">{t('layout.language')}</div>
         <LocaleThemeBar className="justify-end" menuPlacement="top" />
       </div>
-      <div className={['mt-2 flex items-center justify-between gap-1 border-t pt-2', isDark ? 'border-white/10' : 'border-black/[0.06]'].join(' ')}>
-        <Link
-          to="/partner/dashboard"
-          className={[
-            'flex min-w-0 items-center text-sm font-semibold leading-5 transition-colors px-2 py-2 rounded-lg',
-            isDark
-              ? 'text-primary/90 hover:text-primary hover:bg-primary/10'
-              : 'text-emerald-800 hover:text-emerald-900 hover:bg-emerald-50',
-          ].join(' ')}
-        >
-          <span className="truncate">{t('nav.partnerCabinet', { defaultValue: 'Partner kabineti' })}</span>
-        </Link>
+      <div className={['mt-2 flex items-center justify-end gap-1 border-t pt-2', isDark ? 'border-white/10' : 'border-black/[0.06]'].join(' ')}>
         <button
           type="button"
           onClick={onLogout}

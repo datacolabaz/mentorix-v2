@@ -44,7 +44,6 @@ import { useBillingConfig } from '../../hooks/useBillingConfig'
 import { openBillingReceiptWhatsApp } from '../../lib/billingPaymentLabels'
 import Modal from '../../components/common/Modal'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
-import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import { DISCOVER_SUBJECT_INPUT_ID, scheduleScrollToId } from '../../lib/scrollIntoAppView'
 import { FEATURE_FLAGS, useFeatureFlag } from '../../lib/featureFlags'
 
@@ -782,8 +781,6 @@ export default function InstructorSettings() {
           </a>
         </nav>
       </div>
-
-      <PersonaSettingsCard />
 
       <Card id="google-meet-settings" className={settingsCardCls}>
         <h2 className={cardTitleCls}>

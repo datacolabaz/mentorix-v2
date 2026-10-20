@@ -1,7 +1,6 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Brand from '../../components/common/Brand'
-import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import useAuthStore from '../../hooks/useAuth'
 import { dashboardPathForUser, isPartnerPersona } from '../../lib/postAuth'
 
@@ -34,7 +33,6 @@ export default function GenericAppHome() {
             </h1>
             <p className="mt-2 text-sm text-gray-400 leading-relaxed">{t('appHome.subtitle')}</p>
           </div>
-          <PersonaSettingsCard />
         </div>
       </main>
     </div>

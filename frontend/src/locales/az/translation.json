@@ -213,8 +213,8 @@
       "deniedHint": "Hesabınıza uyğun giriş növünü seçin.",
       "deniedInstructorHint": "Müəllim icazəsi admin və ya təşkilat təsdiqi ilə verilir. Hesabınızdakı başqa kabinetdən icazə sorğusu göndərə bilərsiniz.",
       "student": {
-        "card": "Tələbə",
-        "title": "Tələbə kabinetinə giriş",
+        "card": "İştirakçı",
+        "title": "İştirakçı kabinetinə giriş",
         "subtitle": "İmtahanlarınız, tapşırıqlarınız, materiallarınız və nəticələriniz."
       },
       "instructor": {
