@@ -42,7 +42,22 @@ const {
   serveCourseLogo,
 } = require('../controllers/courseController');
 
-const course = [authenticate, authorize('course')];
+// Organization cabinet: the active 'course' role AND an organization the caller owns or belongs to.
+// Organizations are never created implicitly here (only by an approved «Təşkilat yarat» request).
+const requireOrgAccess = async (req, res, next) => {
+  try {
+    const { userHasOrgAccess } = require('../services/courseOrgService');
+    if (await userHasOrgAccess(req.user.id)) return next();
+    return res.status(403).json({
+      success: false,
+      code: 'ORG_REQUIRED',
+      message: 'Təşkilat tapılmadı. «Kabinetlərim» bölməsindən «Təşkilat yarat» sorğusu göndərin.',
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Server xətası' });
+  }
+};
+const course = [authenticate, authorize('course'), requireOrgAccess];
 
 router.get('/me', ...course, getMe);
 router.get('/settings', ...course, getSettings);

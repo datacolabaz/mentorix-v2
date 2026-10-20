@@ -7,6 +7,7 @@ import FilterTabs from '../../components/common/FilterTabs'
 import { useToast } from '../../components/common/Toast'
 import { fmtAzBakuYmdHm } from '../../lib/azDatetime'
 import { ROLE_REQUEST_STATUS_LABELS } from '../../lib/roleAccess'
+import OrganizationRequestsReview from './OrganizationRequestsReview'
 
 const STATUS_TABS = [
   { id: 'pending', label: 'Gözləyən' },
@@ -33,7 +34,62 @@ const SOURCE_LABELS = {
  * Teacher permission requests. Platform admins see every request; organization admins see only requests
  * addressed to their organization (the API enforces the scope — this page only renders what it gets).
  */
+const KIND_TABS = [
+  { id: 'teachers', label: 'Müəllim icazələri' },
+  { id: 'organizations', label: 'Təşkilat sorğuları' },
+]
+
+function initialKind() {
+  try {
+    return new URLSearchParams(window.location.search).get('tab') === 'organizations' ? 'organizations' : 'teachers'
+  } catch {
+    return 'teachers'
+  }
+}
+
+/** Platform admins also review «Təşkilat yarat» requests here (?tab=organizations). */
 export default function RoleRequestsReview({ scopeHint = 'platform' }) {
+  const [kind, setKind] = useState(scopeHint === 'platform' ? initialKind : 'teachers')
+  const changeKind = (next) => {
+    setKind(next)
+    try {
+      const url = new URL(window.location.href)
+      if (next === 'organizations') url.searchParams.set('tab', 'organizations')
+      else url.searchParams.delete('tab')
+      window.history.replaceState(window.history.state, '', url)
+    } catch {
+      /* ignore */
+    }
+  }
+  if (scopeHint !== 'platform') return <TeacherRequestsReview scopeHint={scopeHint} />
+  return (
+    <div className="p-4 sm:p-6 space-y-5 min-w-0">
+      <div>
+        <h1 className="font-display font-bold text-2xl text-token-textMain">İcazə sorğuları</h1>
+      </div>
+      <div className="inline-flex rounded-xl border border-[color:var(--border-subtle)] p-1 gap-1" role="tablist" aria-label="Sorğu növü">
+        {KIND_TABS.map((k) => (
+          <button
+            key={k.id}
+            type="button"
+            role="tab"
+            aria-selected={kind === k.id}
+            onClick={() => changeKind(k.id)}
+            className={[
+              'px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors min-h-[36px]',
+              kind === k.id ? 'bg-primary/12 text-brand-text' : 'text-token-textMuted hover:text-token-textMain',
+            ].join(' ')}
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
+      {kind === 'organizations' ? <OrganizationRequestsReview /> : <TeacherRequestsReview scopeHint={scopeHint} embedded />}
+    </div>
+  )
+}
+
+function TeacherRequestsReview({ scopeHint = 'platform', embedded = false }) {
   const toast = useToast()
   const [status, setStatus] = useState('pending')
   const [requests, setRequests] = useState([])
@@ -91,9 +147,9 @@ export default function RoleRequestsReview({ scopeHint = 'platform' }) {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 min-w-0">
+    <div className={embedded ? 'space-y-5 min-w-0' : 'p-4 sm:p-6 space-y-5 min-w-0'}>
       <div>
-        <h1 className="font-display font-bold text-2xl text-token-textMain">Müəllim icazəsi sorğuları</h1>
+        {embedded ? null : <h1 className="font-display font-bold text-2xl text-token-textMain">Müəllim icazəsi sorğuları</h1>}
         <p className="text-token-textMuted text-sm mt-1 max-w-2xl">
           {scopeHint === 'organization'
             ? 'Təşkilatınıza müəllim kimi qoşulmaq istəyənlər. Təsdiqlənən istifadəçi müəllim kabinetinə keçə bilir və təşkilata müəllim kimi əlavə olunur.'

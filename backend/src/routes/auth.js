@@ -8,6 +8,7 @@ const {
   selectOnboardingPersona,
   updatePersona,
   switchWorkspace,
+  listMyWorkspaces,
   signup,
   loginWithEmail,
   resendVerificationEmail,
@@ -62,6 +63,7 @@ router.post('/onboarding/role', authenticate, selectOnboardingRole);
 router.post('/onboarding/persona', authenticate, selectOnboardingPersona);
 router.patch('/persona', authenticate, updatePersona);
 router.post('/switch-workspace', authenticate, switchWorkspace);
+router.get('/workspaces', authenticate, listMyWorkspaces);
 router.get('/me', authenticate, me);
 router.patch('/profile', authenticate, patchMyProfile);
 router.get('/instructor/phone-status', authenticate, instructorPhoneStatus);

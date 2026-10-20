@@ -319,6 +319,42 @@ async function guardRoleEntry(req, res, me, storageRole, { onboarding = false, s
   if (!storageRole) return true;
   const check = await checkStorageRoleEntry(me.id, storageRole, { onboarding });
   if (check.allowed) return true;
+  if (check.organizationRequired) {
+    // Education-centre persona (onboarding / old clients): becomes a «Təşkilat yarat» request.
+    const profile = req.body?.profile && typeof req.body.profile === 'object' ? req.body.profile : {};
+    const orgName = String(profile.center_name || req.body?.organization_name || '').trim();
+    if (!orgName) {
+      res.status(403).json({
+        success: false,
+        code: 'ORG_REQUIRED',
+        message: 'Təşkilat kabineti yalnız təşkilat sahibi və ya admini üçündür. «Kabinetlərim» bölməsindən «Təşkilat yarat» sorğusu göndərin.',
+      });
+      return false;
+    }
+    const orgReq = require('../services/organizationRequestService');
+    try {
+      const out = await orgReq.createOrganizationRequest(
+        me.id,
+        { name: orgName, org_type: 'education_center', description: profile.exam_purpose || null },
+        { source: onboarding ? 'onboarding' : 'workspace' },
+      );
+      if (out.created) logAuthEvent(req, { event: 'organization_request', userId: me.id, metadata: { source } });
+      const fresh = await loadUserLiteById(me.id);
+      const userOut = await enrichUserForClient(fresh, onboarding ? null : String(fresh?.role || '').trim().toLowerCase() || null);
+      if (onboarding) userOut.role = null;
+      res.status(202).json({
+        success: true,
+        pending_approval: true,
+        code: 'ORG_REQUEST_PENDING',
+        message: 'Təşkilat sorğunuz göndərildi. Platforma admini təsdiqlədikdən sonra təşkilat kabinetinə keçə biləcəksiniz.',
+        organization_request: out.request,
+        user: userOut,
+      });
+    } catch (err) {
+      res.status(err.statusCode || 500).json({ success: false, code: err.code || 'ERROR', message: err.message });
+    }
+    return false;
+  }
   if (check.approvalRequired) {
     const out = await requestTeacherRole(me.id, {
       note: req.body?.note,
@@ -1413,7 +1449,12 @@ const switchWorkspace = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Hədəf kabinet təyin olunmayıb' });
     }
     // Retired persona ids from older clients resolve to their current cabinet.
-    const target = normalizePersonaId(rawTarget) === PERSONAS.TEACHER ? 'teacher' : rawTarget;
+    const target =
+      normalizePersonaId(rawTarget) === PERSONAS.TEACHER
+        ? 'teacher'
+        : rawTarget === 'organization'
+          ? 'course'
+          : rawTarget;
 
     let targetRole = null;
     let targetPersona = null;
@@ -1421,7 +1462,7 @@ const switchWorkspace = async (req, res) => {
     const requestedStorageRole =
       target === 'teacher' || target === 'instructor'
         ? 'instructor'
-        : target === 'student' || target === 'course'
+        : target === 'student' || target === 'course' || target === 'parent'
           ? target
           : null;
     if (!requestedStorageRole) {
@@ -1429,6 +1470,15 @@ const switchWorkspace = async (req, res) => {
     }
     // Only cabinets the person already holds; teacher access goes through an approval request.
     if (!(await guardRoleEntry(req, res, me, requestedStorageRole, { source: 'workspace_switch' }))) return;
+
+    // Organization cabinet: which organization (server-validated: owner / org_admin of it).
+    if (target === 'course' && req.body?.organization_id) {
+      try {
+        await require('../services/workspaceService').setActiveOrganization(me.id, req.body.organization_id);
+      } catch (err) {
+        return res.status(err.statusCode || 403).json({ success: false, code: err.code, message: err.message });
+      }
+    }
 
     if (target === 'teacher' || target === 'instructor') {
       targetRole = 'instructor';
@@ -1466,6 +1516,17 @@ const switchWorkspace = async (req, res) => {
         requireComplete: false,
         merge: true,
       });
+    } else if (target === 'parent') {
+      targetRole = 'parent';
+      targetPersona = 'parent';
+      await applyPersonaSelection({
+        userId: me.id,
+        persona: 'parent',
+        profile: req.body?.profile || {},
+        req,
+        requireComplete: false,
+        merge: true,
+      });
     } else {
       return res.status(400).json({ success: false, message: 'Etibarsız kabinet növü' });
     }
@@ -1486,6 +1547,19 @@ const switchWorkspace = async (req, res) => {
   } catch (err) {
     console.error('switchWorkspace error:', err);
     return res.status(500).json({ success: false, message: err.message || 'Kabinet dəyişdirilə bilmədi' });
+  }
+};
+
+/** «Kabinetlərim»: server-decided cabinet list for the current account. */
+const listMyWorkspaces = async (req, res) => {
+  try {
+    const out = await require('../services/workspaceService').listWorkspaces(req.user.id);
+    if (!out) return res.status(404).json({ success: false, message: 'Tapılmadı' });
+    res.set('Cache-Control', 'no-store');
+    return res.json({ success: true, ...out });
+  } catch (err) {
+    console.error('listMyWorkspaces', err);
+    return res.status(500).json({ success: false, message: 'Kabinetlər yüklənmədi' });
   }
 };
 
@@ -2772,6 +2846,7 @@ module.exports = {
   selectOnboardingPersona,
   updatePersona,
   switchWorkspace,
+  listMyWorkspaces,
   signup,
   loginWithEmail,
   resendVerificationEmail,

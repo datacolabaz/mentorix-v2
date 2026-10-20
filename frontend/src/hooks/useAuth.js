@@ -61,8 +61,9 @@ const useAuthStore = create((set) => ({
     })
   },
 
-  switchWorkspace: async (target) => {
-    const data = await api.post('/auth/switch-workspace', { target })
+  switchWorkspace: async (target, { organizationId } = {}) => {
+    const body = organizationId ? { target, organization_id: organizationId } : { target }
+    const data = await api.post('/auth/switch-workspace', body)
     if (data?.pending_approval) {
       // Teacher access needs approval: no cabinet switch, only the request status is refreshed.
       if (data.user) useAuthStore.getState().mergeUser(data.user)

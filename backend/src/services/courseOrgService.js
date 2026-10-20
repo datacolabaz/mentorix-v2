@@ -43,103 +43,126 @@ async function adoptOrgCourse(row, ownerUserId, name) {
   return updated[0];
 }
 
-async function ensureOrgCourseForOwner(ownerUserId) {
-  const { rows: prof } = await db.query(
-    `SELECT course_name FROM course_profiles WHERE user_id = $1`,
-    [ownerUserId],
-  );
-  const { rows: userRows } = await db.query(`SELECT full_name FROM users WHERE id = $1`, [ownerUserId]);
-  const profileName = prof[0]?.course_name ? String(prof[0].course_name).trim() : '';
-  const fullName = userRows[0]?.full_name || '';
-  const name = profileName || fullName || 'Kursum';
-
-  const existing = await selectOrgCourseForOwner(ownerUserId);
-  if (existing) return adoptOrgCourse(existing, ownerUserId, name);
-
-  try {
-    const { rows: inserted } = await db.query(
-      `INSERT INTO courses (owner_user_id, name, is_organization)
-       VALUES ($1, $2, TRUE)
-       ON CONFLICT (owner_user_id)
-         WHERE (COALESCE(is_organization, FALSE) = TRUE AND owner_user_id IS NOT NULL)
-       DO UPDATE SET
-         name = COALESCE(NULLIF(TRIM(EXCLUDED.name), ''), courses.name),
-         updated_at = NOW()
-       RETURNING id, owner_user_id, name`,
-      [ownerUserId, name],
-    );
-    if (inserted[0]) {
-      await ensureOwnerMembership(inserted[0].id, ownerUserId);
-      return inserted[0];
-    }
-  } catch (err) {
-    if (err?.code !== '23505') throw err;
-  }
-
-  const afterRace = await selectOrgCourseForOwner(ownerUserId);
-  if (afterRace) return adoptOrgCourse(afterRace, ownerUserId, name);
-  throw new Error('Təşkilat kursu yaradıla bilmədi');
+function orgRequiredError() {
+  const err = new Error('Təşkilat tapılmadı. «Kabinetlərim» bölməsindən «Təşkilat yarat» sorğusu göndərin.');
+  err.statusCode = 403;
+  err.code = 'ORG_REQUIRED';
+  return err;
 }
 
-async function getOrgWorkspace(userId) {
+/** The user's active organization id (users.active_organization_id), if the column exists. */
+async function activeOrganizationId(userId) {
+  try {
+    const { rows } = await db.query(`SELECT active_organization_id FROM users WHERE id = $1`, [userId]);
+    return rows[0]?.active_organization_id || null;
+  } catch (err) {
+    if (err?.code === '42703') return null;
+    throw err;
+  }
+}
+
+/**
+ * Organization the caller manages (owner first, then org_admin membership; the active organization wins).
+ * Organizations are created only by an approved «Təşkilat yarat» request — never here.
+ */
+async function ensureOrgCourseForOwner(ownerUserId) {
+  const active = await activeOrganizationId(ownerUserId);
   const { rows: owned } = await db.query(
     `SELECT id, owner_user_id, name FROM courses
      WHERE owner_user_id = $1 AND COALESCE(is_organization, FALSE) = TRUE
-     ORDER BY created_at ASC LIMIT 1`,
+     ORDER BY (id = $2::uuid) DESC, created_at ASC`,
+    [ownerUserId, active],
+  );
+  const { rows: managed } = await db.query(
+    `SELECT c.id, c.owner_user_id, c.name
+     FROM org_memberships m
+     JOIN courses c ON c.id = m.course_id AND COALESCE(c.is_organization, FALSE) = TRUE
+     WHERE m.user_id = $1 AND m.role_key IN ('owner', 'org_admin')
+     ORDER BY (c.id = $2::uuid) DESC, CASE WHEN m.role_key = 'owner' THEN 0 ELSE 1 END, m.created_at ASC`,
+    [ownerUserId, active],
+  );
+  const preferred = [...owned, ...managed].find((r) => active && String(r.id) === String(active));
+  if (preferred) {
+    if (String(preferred.owner_user_id) === String(ownerUserId)) await ensureOwnerMembership(preferred.id, ownerUserId);
+    return preferred;
+  }
+  if (owned[0]) {
+    const { rows: prof } = await db.query(`SELECT course_name FROM course_profiles WHERE user_id = $1`, [ownerUserId]);
+    const name = prof[0]?.course_name ? String(prof[0].course_name).trim() : '';
+    return adoptOrgCourse(owned[0], ownerUserId, name);
+  }
+  if (managed[0]) return managed[0];
+  throw orgRequiredError();
+}
+
+/** Cheap guard for /course routes: owner of, or member of, at least one organization. */
+async function userHasOrgAccess(userId) {
+  const { rows } = await db.query(
+    `SELECT 1
+     FROM courses c
+     WHERE COALESCE(c.is_organization, FALSE) = TRUE
+       AND (c.owner_user_id = $1 OR EXISTS (SELECT 1 FROM org_memberships m WHERE m.course_id = c.id AND m.user_id = $1))
+     LIMIT 1`,
     [userId],
   );
-  if (owned[0]) {
-    await ensureOwnerMembership(owned[0].id, userId);
+  return Boolean(rows[0]);
+}
+
+async function getOrgWorkspace(userId) {
+  const active = await activeOrganizationId(userId);
+  const { rows: owned } = await db.query(
+    `SELECT id, owner_user_id, name FROM courses
+     WHERE owner_user_id = $1 AND COALESCE(is_organization, FALSE) = TRUE
+     ORDER BY created_at ASC`,
+    [userId],
+  );
+  const { rows: membership } = await db.query(
+    `SELECT m.course_id, m.role_key, c.owner_user_id, c.name
+     FROM org_memberships m
+     JOIN courses c ON c.id = m.course_id
+     WHERE m.user_id = $1 AND COALESCE(c.is_organization, FALSE) = TRUE
+     ORDER BY CASE WHEN m.role_key = 'owner' THEN 0 ELSE 1 END, m.created_at ASC`,
+    [userId],
+  );
+  const activeOwned = active ? owned.find((r) => String(r.id) === String(active)) : null;
+  const activeMember = active ? membership.find((m) => String(m.course_id) === String(active)) : null;
+  const ownedRow = activeOwned || (activeMember ? null : owned[0]);
+
+  if (ownedRow) {
+    await ensureOwnerMembership(ownedRow.id, userId);
     const { rows: teachers } = await db.query(
       `SELECT instructor_user_id FROM course_teachers WHERE course_id = $1 AND is_active = TRUE`,
-      [owned[0].id],
+      [ownedRow.id],
     );
     for (const row of teachers) {
       if (String(row.instructor_user_id) === String(userId)) continue;
-      await ensureStaffMembership(owned[0].id, row.instructor_user_id, ORG_ROLE_KEYS.INSTRUCTOR);
+      await ensureStaffMembership(ownedRow.id, row.instructor_user_id, ORG_ROLE_KEYS.INSTRUCTOR);
     }
     const { rows: mem } = await db.query(
       `SELECT role_key FROM org_memberships WHERE course_id = $1 AND user_id = $2 LIMIT 1`,
-      [owned[0].id, userId],
+      [ownedRow.id, userId],
     );
     const roleKey = mem[0]?.role_key || ORG_ROLE_KEYS.OWNER;
     return {
-      course: owned[0],
+      course: ownedRow,
       roleKey,
       permissions: permissionsForRole(roleKey),
       isOwner: true,
     };
   }
 
-  const { rows: membership } = await db.query(
-    `SELECT m.course_id, m.role_key, c.owner_user_id, c.name
-     FROM org_memberships m
-     JOIN courses c ON c.id = m.course_id
-     WHERE m.user_id = $1 AND COALESCE(c.is_organization, FALSE) = TRUE
-     ORDER BY CASE WHEN m.role_key = 'owner' THEN 0 ELSE 1 END, m.created_at ASC
-     LIMIT 1`,
-    [userId],
-  );
-  if (membership[0]) {
+  const m = activeMember || membership[0];
+  if (m) {
     return {
-      course: {
-        id: membership[0].course_id,
-        owner_user_id: membership[0].owner_user_id,
-        name: membership[0].name,
-      },
-      roleKey: membership[0].role_key,
-      permissions: permissionsForRole(membership[0].role_key),
-      isOwner: String(membership[0].owner_user_id) === String(userId),
+      course: { id: m.course_id, owner_user_id: m.owner_user_id, name: m.name },
+      roleKey: m.role_key,
+      permissions: permissionsForRole(m.role_key),
+      isOwner: String(m.owner_user_id) === String(userId),
     };
   }
 
-  const course = await ensureOrgCourseForOwner(userId);
-  return {
-    course,
-    roleKey: ORG_ROLE_KEYS.OWNER,
-    permissions: permissionsForRole(ORG_ROLE_KEYS.OWNER),
-    isOwner: true,
-  };
+  // No organization: it is created only by an approved «Təşkilat yarat» request.
+  throw orgRequiredError();
 }
 
 async function assertOrgCourseOwner(courseId, ownerUserId) {
@@ -721,6 +744,7 @@ async function removeOrgTeacher(courseId, trainerUserId, actorUserId) {
 }
 
 module.exports = {
+  userHasOrgAccess,
   LEAD_STATUSES,
   TEACHER_STATUSES,
   INSTRUCTOR_NOT_FOUND_MSG,

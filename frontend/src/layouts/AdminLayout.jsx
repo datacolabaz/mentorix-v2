@@ -21,7 +21,7 @@ const NAV_SECTION_DEFS = [
       { to: '/admin/analytics', key: 'analytics', labelKey: 'nav.admin.analytics', label: 'Analitika', icon: 'analytics' },
       { to: '/admin/instructors', key: 'instructors', labelKey: 'nav.admin.instructors', label: 'Müəllimlər', icon: 'instructors' },
       { to: '/admin/students', key: 'students', labelKey: 'nav.admin.students', label: 'Tələbələr', icon: 'students' },
-      { to: '/admin/role-requests', key: 'roleRequests', labelKey: 'nav.admin.roleRequests', label: 'Müəllim icazələri', icon: 'shield' },
+      { to: '/admin/role-requests', key: 'roleRequests', labelKey: 'nav.admin.roleRequests', label: 'İcazə sorğuları', icon: 'shield' },
       { to: '/admin/classes', key: 'classes', labelKey: 'nav.admin.classes', label: 'Kurslar / Qruplar', icon: 'courses' },
       { to: '/admin/payments', key: 'payments', labelKey: 'nav.admin.payments', label: 'Ödənişlər', icon: 'payments' },
       { to: '/admin/inventory', key: 'inventory', labelKey: 'nav.admin.inventory', label: 'Ehtiyat', icon: 'notifications' },

@@ -1,214 +1,341 @@
-import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
+import api from '../../lib/api'
 import useAuthStore from '../../hooks/useAuth'
-import useUiStore from '../../hooks/useUi'
 import { useToast } from './Toast'
-import { hasAccessRole, teacherRequestStatus } from '../../lib/roleAccess'
+import CreateOrganizationModal from './CreateOrganizationModal'
 
+const ICONS = { student: '🎓', teacher: '👨‍🏫', organization: '🏫', parent: '👪', partner: '🤝', admin: '🛡️' }
+const ORG_ROLE_LABELS = { owner: 'Sahib', org_admin: 'Admin' }
+const PARTNER_STATUS_LABELS = { pending: 'Təsdiq gözləyir', approved: 'Təsdiqlənib', rejected: 'Rədd edilib' }
+
+const ROLE_TO_CABINET = { instructor: 'teacher', course: 'organization', student: 'student', parent: 'parent' }
+const FALLBACK_LABELS = {
+  student: 'İştirakçı kabineti',
+  teacher: 'Müəllim kabineti',
+  organization: 'Təşkilat kabineti',
+  parent: 'Valideyn kabineti',
+}
+
+function useIsPhone() {
+  const query = '(max-width: 639px)'
+  const get = () => (typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false)
+  const [phone, setPhone] = useState(get)
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined
+    const mq = window.matchMedia(query)
+    const on = () => setPhone(mq.matches)
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  return phone
+}
+
+function cabinetSubtitle(c) {
+  if (c.type === 'organization') return ORG_ROLE_LABELS[c.role_key] || 'Təşkilat'
+  if (c.type === 'partner') return PARTNER_STATUS_LABELS[c.status] || 'Partner'
+  return null
+}
+
+/**
+ * «Kabinetlərim»: the cabinets this account really holds (GET /auth/workspaces decides; nothing is inferred here).
+ * Switching keeps the session — the server swaps the active cabinet and returns a new token.
+ */
 export default function WorkspaceSwitcher({ className = '' }) {
-  const { t } = useTranslation()
   const navigate = useNavigate()
   const toast = useToast()
-  const { user, switchWorkspace } = useAuthStore()
-  const { theme } = useUiStore()
-  const isDark = theme === 'dark'
+  const user = useAuthStore((s) => s.user)
+  const switchWorkspace = useAuthStore((s) => s.switchWorkspace)
+  const isPhone = useIsPhone()
 
-  const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const menuRef = useRef(null)
+  const [open, setOpen] = useState(false)
+  const [data, setData] = useState(null)
+  const [loadError, setLoadError] = useState('')
+  const [busyKey, setBusyKey] = useState(null)
+  const [orgModal, setOrgModal] = useState(false)
+  const rootRef = useRef(null)
+  const sheetRef = useRef(null)
+
+  const userId = user?.id
+  const role = String(user?.role || '').toLowerCase()
+
+  const load = useCallback(async () => {
+    setLoadError('')
+    try {
+      const d = await api.get('/auth/workspaces')
+      setData(d && Array.isArray(d.cabinets) ? d : { cabinets: [], actions: [], active: null })
+    } catch (e) {
+      setLoadError(e?.message || 'Kabinetlər yüklənmədi')
+    }
+  }, [])
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setIsOpen(false)
-      }
+    if (userId && role !== 'admin') void load()
+  }, [userId, role, load])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onDown = (e) => {
+      if (rootRef.current?.contains(e.target) || sheetRef.current?.contains(e.target)) return
+      setOpen(false)
     }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+    const onKey = (e) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen])
+  }, [open])
 
-  if (!user || user.role === 'admin') return null
+  if (!user || role === 'admin') return null
 
-  const currentRole = String(user.role || '').toLowerCase()
-  const isTeacher = currentRole === 'instructor'
-  const isStudent = currentRole === 'student'
+  const cabinets = data?.cabinets || []
+  const actions = data?.actions || []
+  const active = cabinets.find((c) => c.active)
+  const activeType = active?.type || ROLE_TO_CABINET[role] || 'student'
+  const activeLabel = active?.label || FALLBACK_LABELS[activeType] || 'Kabinet'
 
-  let activeTitle = t('workspace.student', { defaultValue: 'İştirakçı kabineti' })
-  let activeIcon = '🎓'
-  let activeBadge = 'İştirakçı'
-
-  if (isTeacher) {
-    activeTitle = t('workspace.teacher', { defaultValue: 'Müəllim kabineti' })
-    activeIcon = '👨‍🏫'
-    activeBadge = 'Müəllim'
-  }
-  if (currentRole === 'parent') {
-    activeTitle = t('workspace.parent', { defaultValue: 'Valideyn kabineti' })
-    activeIcon = '👪'
-    activeBadge = 'Valideyn'
-  }
-
-  // Only cabinets the server says this person holds. Teacher access is requested, never self-assigned.
-  const canTeacher = hasAccessRole(user, 'teacher')
-  const canStudent = hasAccessRole(user, 'student')
-  const teacherStatus = teacherRequestStatus(user)
-
-  const handleSwitch = async (target, path) => {
+  const openCabinet = async (c) => {
+    if (busyKey) return
+    if (c.active || c.type === 'partner') {
+      setOpen(false)
+      navigate(c.path)
+      return
+    }
+    setBusyKey(c.key)
     try {
-      setLoading(true)
-      const data = await switchWorkspace(target)
-      setIsOpen(false)
-      if (data?.pending_approval) {
-        toast(
-          data.message ||
-            t('workspace.teacherRequestSent', {
-              defaultValue: 'Müəllim icazəsi sorğunuz göndərildi. Təsdiqdən sonra müəllim kabinetinə keçə biləcəksiniz.',
-            }),
-          'success',
-        )
+      const res = await switchWorkspace(c.type, c.type === 'organization' ? { organizationId: c.organization_id } : undefined)
+      if (res?.pending_approval) {
+        toast(res.message || 'Sorğunuz göndərildi.', 'success')
+        await load()
         return
       }
-      toast(t('workspace.switched', { defaultValue: 'Kabinet dəyişdirildi' }), 'success')
-      navigate(path)
-    } catch (err) {
-      toast(err.message || t('workspace.switchError', { defaultValue: 'Keçid zamanı xəta baş verdi' }), 'error')
+      setOpen(false)
+      toast(`${c.label} açıldı`, 'success')
+      await load()
+      navigate(c.path)
+    } catch (e) {
+      toast(e?.message || 'Kabinetə keçid alınmadı', 'error')
     } finally {
-      setLoading(false)
+      setBusyKey(null)
     }
   }
 
+  const requestTeacher = async () => {
+    if (busyKey) return
+    setBusyKey('request_teacher')
+    try {
+      const res = await switchWorkspace('teacher')
+      if (res?.pending_approval) {
+        toast(res.message || 'Müəllim icazəsi sorğunuz göndərildi.', 'success')
+      } else {
+        setOpen(false)
+        navigate('/instructor')
+      }
+      await load()
+    } catch (e) {
+      toast(e?.message || 'Sorğu göndərilmədi', 'error')
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  const rowClass = (isActive) =>
+    [
+      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm transition-colors min-h-[44px]',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35',
+      isActive ? 'bg-primary/10 text-token-textMain' : 'text-token-textMain hover:bg-token-surfaceCardHover',
+    ].join(' ')
+
+  const panel = (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between px-3 pt-1 pb-1.5">
+        <span id="mx-workspaces-title" className="text-[11px] font-bold uppercase tracking-wider text-token-textMuted">
+          Kabinetlərim
+        </span>
+        {isPhone ? (
+          <button type="button" onClick={() => setOpen(false)} className="text-xs font-semibold text-token-textMuted px-2 py-1">
+            Bağla
+          </button>
+        ) : null}
+      </div>
+
+      {loadError ? (
+        <div className="px-3 py-2 text-xs text-error flex items-center justify-between gap-2">
+          <span>{loadError}</span>
+          <button type="button" className="font-semibold underline" onClick={() => void load()}>
+            Yenidən
+          </button>
+        </div>
+      ) : !data ? (
+        <div className="space-y-1 px-1" role="status" aria-label="Yüklənir">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-11 rounded-xl bg-token-surfaceCardHover animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <ul className="space-y-0.5" aria-labelledby="mx-workspaces-title">
+          {cabinets.map((c) => {
+            const sub = cabinetSubtitle(c)
+            return (
+              <li key={c.key}>
+                <button
+                  type="button"
+                  className={rowClass(c.active)}
+                  aria-current={c.active ? 'true' : undefined}
+                  disabled={Boolean(busyKey)}
+                  data-testid={`cabinet-${c.key}`}
+                  onClick={() => void openCabinet(c)}
+                >
+                  <span className="text-base shrink-0 w-5 text-center" aria-hidden="true">
+                    {ICONS[c.type] || '•'}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold leading-snug break-words line-clamp-2">{c.label}</span>
+                    {sub ? <span className="block text-[11px] text-token-textMuted leading-snug">{sub}</span> : null}
+                  </span>
+                  {busyKey === c.key ? (
+                    <span className="text-[11px] text-token-textMuted">…</span>
+                  ) : c.active ? (
+                    <span className="text-sm font-bold text-brand-text shrink-0" title="Aktiv kabinet">
+                      ✓<span className="sr-only"> Aktiv</span>
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {data && actions.length ? (
+        <div className="mt-1 pt-2 border-t border-[color:var(--border-subtle)] space-y-0.5">
+          {actions.map((a) => {
+            if (a.key === 'request_teacher') {
+              const pending = a.status === 'pending'
+              return (
+                <button
+                  key={a.key}
+                  type="button"
+                  className={rowClass(false)}
+                  disabled={pending || Boolean(busyKey)}
+                  onClick={() => void requestTeacher()}
+                  data-testid="action-request_teacher"
+                >
+                  <span className="text-base shrink-0 w-5 text-center" aria-hidden="true">
+                    {ICONS.teacher}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold leading-snug">Müəllim icazəsi istə</span>
+                    <span className="block text-[11px] text-token-textMuted leading-snug">
+                      {pending
+                        ? 'Sorğu təsdiq gözləyir'
+                        : a.status === 'rejected'
+                          ? `Rədd edildi${a.review_reason ? `: ${a.review_reason}` : ''} — yenidən istəyin`
+                          : 'Admin təsdiqindən sonra müəllim kabineti açılır'}
+                    </span>
+                  </span>
+                </button>
+              )
+            }
+            if (a.key === 'create_organization') {
+              const pending = a.status === 'pending'
+              return (
+                <button
+                  key={a.key}
+                  type="button"
+                  className={rowClass(false)}
+                  disabled={pending || Boolean(busyKey)}
+                  onClick={() => {
+                    setOpen(false)
+                    setOrgModal(true)
+                  }}
+                  data-testid="action-create_organization"
+                >
+                  <span className="text-base shrink-0 w-5 text-center" aria-hidden="true">
+                    ＋
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold leading-snug">Təşkilat yarat</span>
+                    <span className="block text-[11px] text-token-textMuted leading-snug truncate">
+                      {pending
+                        ? `«${a.request?.name || 'Sorğu'}» təsdiq gözləyir`
+                        : a.status === 'rejected'
+                          ? 'Əvvəlki sorğu rədd edilib — yenidən göndərin'
+                          : 'Təhsil mərkəzi, məktəb və ya şirkət üçün'}
+                    </span>
+                  </span>
+                </button>
+              )
+            }
+            return null
+          })}
+        </div>
+      ) : null}
+    </div>
+  )
+
   return (
-    <div className={`relative ${className}`} ref={menuRef}>
+    <div className={`relative ${className}`} ref={rootRef}>
       <button
         type="button"
-        disabled={loading}
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={[
-          'w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all duration-200',
-          isDark
-            ? 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-gray-200'
-            : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-sm text-slate-800',
-        ].join(' ')}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-[color:var(--border-subtle)] bg-token-surfaceCard hover:bg-token-surfaceCardHover text-left transition-colors min-h-[44px]"
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base shrink-0">{activeIcon}</span>
-          <div className="min-w-0">
-            <div className="truncate text-xs font-bold leading-snug">{activeTitle}</div>
-            <div className="text-[10px] text-token-textMuted font-normal">
-              {t('workspace.switchPrompt', { defaultValue: 'Profil/Kabineti dəyiş' })}
-            </div>
-          </div>
-        </div>
-        <span
-          className={[
-            'text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md border shrink-0',
-            isTeacher
-              ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
-              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400',
-          ].join(' ')}
-        >
-          {activeBadge}
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="text-base shrink-0 w-5 text-center" aria-hidden="true">
+            {ICONS[activeType] || '•'}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-xs font-bold text-token-textMain leading-snug">{activeLabel}</span>
+            <span className="block text-[10px] text-token-textMuted">Kabinetlərim</span>
+          </span>
+        </span>
+        <span className="text-token-textMuted text-xs shrink-0" aria-hidden="true">
+          {open ? '▾' : '▴'}
         </span>
       </button>
 
-      {isOpen && (
+      {open && !isPhone ? (
         <div
-          className={[
-            'absolute bottom-full left-0 right-0 mb-2 p-2 rounded-2xl border shadow-xl z-[1200] backdrop-blur-md transition-all',
-            isDark
-              ? 'bg-[#12161f]/95 border-white/10 text-gray-100 shadow-black/50'
-              : 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-200/70',
-          ].join(' ')}
+          role="dialog"
+          aria-label="Kabinetlərim"
+          className="absolute bottom-full left-0 right-0 mb-2 p-2 rounded-2xl border border-[color:var(--border-subtle)] bg-token-surfaceCard shadow-xl z-[1200] max-h-[70vh] overflow-y-auto"
         >
-          <div className="px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-gray-400">
-            {t('workspace.selectRole', { defaultValue: 'İş Rejimi / Kabinet' })}
-          </div>
-
-          <div className="mt-1 space-y-1">
-            {/* Student — only when the person already has a student membership */}
-            {(canStudent || isStudent) && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleSwitch('student', '/student')}
-              className={[
-                'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
-                isStudent
-                  ? isDark
-                    ? 'bg-primary/15 text-primary'
-                    : 'bg-primary/10 text-slate-900'
-                  : isDark
-                    ? 'hover:bg-white/5 text-gray-300'
-                    : 'hover:bg-slate-50 text-slate-700',
-              ].join(' ')}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">🎓</span>
-                <span>{t('workspace.student', { defaultValue: 'İştirakçı kabineti' })}</span>
-              </div>
-              {isStudent && <span className="text-xs font-bold text-emerald-500">✓</span>}
-            </button>
-            )}
-
-            {/* Teacher — switch when granted, otherwise request approval (or show its status) */}
-            <button
-              type="button"
-              disabled={loading || (!canTeacher && teacherStatus === 'pending')}
-              onClick={() => handleSwitch('teacher', '/instructor')}
-              className={[
-                'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
-                isTeacher
-                  ? isDark
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-blue-50 text-blue-800'
-                  : isDark
-                    ? 'hover:bg-white/5 text-gray-300'
-                    : 'hover:bg-slate-50 text-slate-700',
-              ].join(' ')}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">👨‍🏫</span>
-                <div>
-                  <div className="font-bold leading-none">{t('workspace.teacher', { defaultValue: 'Müəllim kabineti' })}</div>
-                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">
-                    {canTeacher || isTeacher
-                      ? 'Teacher dashboard'
-                      : teacherStatus === 'pending'
-                        ? t('workspace.teacherPending', { defaultValue: 'İcazə sorğusu təsdiq gözləyir' })
-                        : teacherStatus === 'rejected'
-                          ? t('workspace.teacherRejected', { defaultValue: 'Sorğu rədd edildi — yenidən istəyin' })
-                          : t('workspace.teacherRequest', { defaultValue: 'Müəllim icazəsi istə (admin təsdiqi)' })}
-                  </div>
-                </div>
-              </div>
-              {isTeacher && <span className="text-xs font-bold text-blue-500">✓</span>}
-            </button>
-
-            {/* Partner */}
-            <Link
-              to="/partner/dashboard"
-              onClick={() => setIsOpen(false)}
-              className={[
-                'w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs font-semibold transition-colors',
-                isDark
-                  ? 'hover:bg-white/5 text-gray-300'
-                  : 'hover:bg-slate-50 text-slate-700',
-              ].join(' ')}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">🤝</span>
-                <div>
-                  <div className="font-bold leading-none">{t('nav.partnerCabinet', { defaultValue: 'Partner kabineti' })}</div>
-                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">Partner dashboard</div>
-                </div>
-              </div>
-            </Link>
-          </div>
+          {panel}
         </div>
-      )}
+      ) : null}
+
+      {open && isPhone
+        ? createPortal(
+            <div className="fixed inset-0 z-[10050] flex items-end bg-black/40" data-testid="workspaces-sheet">
+              <div
+                ref={sheetRef}
+                role="dialog"
+                aria-label="Kabinetlərim"
+                className="w-full rounded-t-2xl border-t border-[color:var(--border-subtle)] bg-token-surfaceCard p-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] max-h-[80vh] overflow-y-auto shadow-2xl"
+              >
+                {panel}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      <CreateOrganizationModal
+        open={orgModal}
+        previous={actions.find((a) => a.key === 'create_organization')?.request || null}
+        onClose={() => setOrgModal(false)}
+        onCreated={() => {
+          setOrgModal(false)
+          toast('Təşkilat sorğunuz göndərildi. Admin təsdiqindən sonra təşkilat kabineti açılacaq.', 'success')
+          void load()
+        }}
+      />
     </div>
   )
 }

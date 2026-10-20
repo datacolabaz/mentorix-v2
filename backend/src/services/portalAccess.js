@@ -14,7 +14,7 @@ const PORTALS = Object.freeze({
     storageRole: 'student',
     persona: 'student',
     path: '/student',
-    deniedMessage: 'Bu hesabda tələbə girişi üçün icazə yoxdur.',
+    deniedMessage: 'Bu hesabda iştirakçı girişi üçün icazə yoxdur.',
   }),
   instructor: Object.freeze({
     id: 'instructor',

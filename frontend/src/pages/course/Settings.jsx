@@ -1,5 +1,4 @@
 import CourseBrandingForm from '../../components/course/CourseBrandingForm'
-import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 
 export default function CourseSettings() {
   return (
@@ -8,7 +7,6 @@ export default function CourseSettings() {
         <h1 className="font-display font-bold text-xl sm:text-2xl text-token-textMain tracking-tight">Parametrlər</h1>
         <p className="text-token-textMuted text-sm mt-1">Kurs adı, loqo və filial məlumatları</p>
       </div>
-      <PersonaSettingsCard />
       <CourseBrandingForm />
     </div>
   )

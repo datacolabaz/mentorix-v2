@@ -93,7 +93,7 @@ describe('sign-in screens', () => {
   })
 
   describe.each([
-    ['student', 'Tələbə kabinetinə giriş'],
+    ['student', 'İştirakçı kabinetinə giriş'],
     ['instructor', 'Təlimçi kabinetinə giriş'],
     ['organization', 'Təşkilat kabinetinə giriş'],
     ['admin', 'Admin panelinə giriş'],
@@ -113,7 +113,7 @@ describe('sign-in screens', () => {
   describe('email/password form', () => {
     it('is hidden on user portals while password login is switched off', async () => {
       renderAt('/login/student')
-      await screen.findByRole('heading', { name: 'Tələbə kabinetinə giriş' })
+      await screen.findByRole('heading', { name: 'İştirakçı kabinetinə giriş' })
       expect(passwordField('student')).toBeNull()
     })
 
@@ -243,7 +243,7 @@ describe('sign-in screens', () => {
     })
 
     it.each([
-      ['student', 'Bu hesabda tələbə girişi üçün icazə yoxdur.'],
+      ['student', 'Bu hesabda iştirakçı girişi üçün icazə yoxdur.'],
       ['instructor', 'Bu hesabda təlimçi girişi üçün icazə yoxdur.'],
       ['organization', 'Bu hesabda təşkilat girişi üçün icazə yoxdur.'],
       ['admin', 'Bu hesabda admin girişi üçün icazə yoxdur.'],

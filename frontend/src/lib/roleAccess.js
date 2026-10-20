@@ -18,7 +18,7 @@ export const ACCESS_ROLE_LABELS = Object.freeze({
   organization_admin: 'Təşkilat admini',
   corporate_manager: 'Korporativ menecer',
   teacher: 'Müəllim',
-  student: 'Tələbə',
+  student: 'İştirakçı',
   parent: 'Valideyn',
 })
 

@@ -30,6 +30,7 @@ function withRouter(node) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  window.history.replaceState(null, '', '/')
   useAuthStore.setState({ user: student, token: 't' })
 })
 
@@ -43,8 +44,27 @@ describe('role access helpers', () => {
   })
 })
 
-describe('WorkspaceSwitcher — no free role switching', () => {
-  it('a student without teacher access requests approval instead of switching', async () => {
+function workspaces(over = {}) {
+  return {
+    success: true,
+    active: { cabinet: 'student', organization_id: null },
+    cabinets: [{ key: 'student', type: 'student', label: 'İştirakçı kabineti', path: '/student', active: true }],
+    actions: [
+      { key: 'request_teacher', status: 'available' },
+      { key: 'create_organization', status: 'available', request: null },
+    ],
+    ...over,
+  }
+}
+
+async function openCabinets() {
+  await userEvent.click(await screen.findByRole('button', { name: /Kabinetlərim/ }))
+  return screen.findByRole('dialog', { name: 'Kabinetlərim' })
+}
+
+describe('Kabinetlərim — server-listed cabinets only', () => {
+  it('shows only what the server lists, marks the active one, and requests teacher access instead of switching', async () => {
+    api.get.mockResolvedValue(workspaces())
     api.post.mockResolvedValue({
       success: true,
       pending_approval: true,
@@ -53,26 +73,131 @@ describe('WorkspaceSwitcher — no free role switching', () => {
       user: { ...student, teacher_request: { status: 'pending' } },
     })
     render(withRouter(<WorkspaceSwitcher />))
-    await userEvent.click(screen.getByRole('button', { name: /Profil\/Kabineti dəyiş/ }))
-    expect(screen.getByText('Müəllim icazəsi istə (admin təsdiqi)')).toBeTruthy()
-    await userEvent.click(screen.getByText('Müəllim kabineti'))
+    const dialog = await openCabinets()
+    expect(api.get).toHaveBeenCalledWith('/auth/workspaces')
+    expect(within(dialog).getByTestId('cabinet-student').getAttribute('aria-current')).toBe('true')
+    expect(within(dialog).queryByText('Müəllim kabineti')).toBeNull()
+    expect(within(dialog).queryByText('Partner kabineti')).toBeNull()
+    await userEvent.click(within(dialog).getByTestId('action-request_teacher'))
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/auth/switch-workspace', { target: 'teacher' }))
     expect(toast).toHaveBeenCalledWith('Müəllim icazəsi sorğunuz göndərildi.', 'success')
     const state = useAuthStore.getState()
     expect(state.user.role).toBe('student')
-    expect(state.user.teacher_request.status).toBe('pending')
     expect(state.token).toBe('t')
   })
 
-  it('pending request: teacher option is disabled; student option hidden when not held', async () => {
-    useAuthStore.setState({
-      user: { ...student, role: 'parent', access_roles: ['parent'], teacher_request: { status: 'pending' } },
-    })
+  it('switches between two organizations by id without logging out', async () => {
+    useAuthStore.setState({ user: { ...student, role: 'course', access_roles: ['organization_admin', 'teacher'] }, token: 't' })
+    api.get.mockResolvedValue(
+      workspaces({
+        active: { cabinet: 'organization', organization_id: 'o1' },
+        cabinets: [
+          { key: 'teacher', type: 'teacher', label: 'Müəllim kabineti', path: '/instructor', active: false },
+          { key: 'organization:o1', type: 'organization', organization_id: 'o1', label: 'Akademiya A', role_key: 'owner', path: '/org', active: true },
+          { key: 'organization:o2', type: 'organization', organization_id: 'o2', label: 'Mərkəz B', role_key: 'org_admin', path: '/org', active: false },
+        ],
+        actions: [],
+      }),
+    )
+    api.post.mockResolvedValue({ success: true, token: 't2', user: { ...student, role: 'course' } })
     render(withRouter(<WorkspaceSwitcher />))
-    await userEvent.click(screen.getByRole('button', { name: /Profil\/Kabineti dəyiş/ }))
-    expect(screen.getByText('İcazə sorğusu təsdiq gözləyir')).toBeTruthy()
-    expect(screen.getByText('Müəllim kabineti').closest('button').disabled).toBe(true)
-    expect(screen.queryByText('İştirakçı kabineti', { selector: 'span' })).toBeNull()
+    expect(await screen.findByText('Akademiya A')).toBeTruthy()
+    const dialog = await openCabinets()
+    expect(within(dialog).getByText('Sahib')).toBeTruthy()
+    expect(within(dialog).queryByText('Təşkilat yarat')).toBeNull()
+    await userEvent.click(within(dialog).getByTestId('cabinet-organization:o2'))
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith('/auth/switch-workspace', { target: 'organization', organization_id: 'o2' }),
+    )
+    await waitFor(() => expect(useAuthStore.getState().token).toBe('t2'))
+  })
+
+  it('pending states are shown and disabled; admins see no switcher', async () => {
+    api.get.mockResolvedValue(
+      workspaces({
+        actions: [
+          { key: 'request_teacher', status: 'pending' },
+          { key: 'create_organization', status: 'pending', request: { id: 'q', name: 'Gələcək', status: 'pending' } },
+        ],
+      }),
+    )
+    const { unmount } = render(withRouter(<WorkspaceSwitcher />))
+    const dialog = await openCabinets()
+    expect(within(dialog).getByText('Sorğu təsdiq gözləyir')).toBeTruthy()
+    expect(within(dialog).getByText('«Gələcək» təsdiq gözləyir')).toBeTruthy()
+    expect(within(dialog).getByTestId('action-request_teacher').disabled).toBe(true)
+    expect(within(dialog).getByTestId('action-create_organization').disabled).toBe(true)
+    unmount()
+    useAuthStore.setState({ user: { ...student, role: 'admin' } })
+    const { container } = render(withRouter(<WorkspaceSwitcher />))
+    expect(container.textContent).toBe('')
+  })
+
+  it('«Təşkilat yarat» sends a request (name, type, description) and refreshes the list', async () => {
+    api.get.mockResolvedValue(workspaces())
+    api.post.mockResolvedValue({ success: true, created: true, request: { id: 'q1', status: 'pending', name: 'Gələcək Akademiyası' } })
+    render(withRouter(<WorkspaceSwitcher />))
+    const dialog = await openCabinets()
+    await userEvent.click(within(dialog).getByTestId('action-create_organization'))
+    const modal = await screen.findByRole('dialog', { name: 'Təşkilat yarat' })
+    const send = within(modal).getByRole('button', { name: 'Sorğu göndər' })
+    expect(send.disabled).toBe(true)
+    await userEvent.type(within(modal).getByLabelText('Təşkilatın adı'), 'Gələcək Akademiyası')
+    await userEvent.selectOptions(within(modal).getByLabelText('Növü'), 'school')
+    await userEvent.type(within(modal).getByLabelText(/Qısa təsvir/), 'Hazırlıq kursları')
+    await userEvent.click(send)
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith('/organization-requests', {
+        name: 'Gələcək Akademiyası',
+        org_type: 'school',
+        description: 'Hazırlıq kursları',
+      }),
+    )
+    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/Təşkilat sorğunuz göndərildi/), 'success')
+    await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2))
+  })
+
+  it('server refusal is shown inside the modal', async () => {
+    api.get.mockResolvedValue(workspaces())
+    api.post.mockRejectedValue({ status: 409, code: 'ALREADY_HAS_ORGANIZATION', message: 'Sizin artıq təşkilatınız var.' })
+    render(withRouter(<WorkspaceSwitcher />))
+    const dialog = await openCabinets()
+    await userEvent.click(within(dialog).getByTestId('action-create_organization'))
+    const modal = await screen.findByRole('dialog', { name: 'Təşkilat yarat' })
+    await userEvent.type(within(modal).getByLabelText('Təşkilatın adı'), 'İkinci')
+    await userEvent.click(within(modal).getByRole('button', { name: 'Sorğu göndər' }))
+    expect((await within(modal).findByRole('alert')).textContent).toBe('Sizin artıq təşkilatınız var.')
+  })
+})
+
+describe('OrganizationRequestsReview', () => {
+  it('platform admin approves an organization request from the second tab', async () => {
+    api.get.mockImplementation(async (url) =>
+      url.startsWith('/organization-requests')
+        ? {
+            requests: [
+              {
+                id: 'q1',
+                name: 'Gələcək Akademiyası',
+                org_type: 'education_center',
+                status: 'pending',
+                source: 'onboarding',
+                created_at: '2026-10-20T08:00:00Z',
+                user: { full_name: 'Leyla', email: 'l@x.az' },
+              },
+            ],
+          }
+        : { requests: [] },
+    )
+    api.post.mockResolvedValue({ success: true, organization: { id: 'o1' } })
+    render(<RoleRequestsReview />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Təşkilat sorğuları' }))
+    const row = await screen.findByTestId('org-request-row')
+    expect(within(row).getByText('Tədris mərkəzi')).toBeTruthy()
+    expect(within(row).getByText(/Leyla/)).toBeTruthy()
+    await userEvent.click(within(row).getByRole('button', { name: 'Təsdiqlə' }))
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/organization-requests/q1/approve', {}))
+    expect(api.get).toHaveBeenCalledWith('/organization-requests?status=pending')
   })
 })
 

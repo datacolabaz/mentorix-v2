@@ -164,6 +164,12 @@ async function getAccessSummary(userId) {
 async function checkStorageRoleEntry(userId, storageRole, { onboarding = false } = {}) {
   const role = String(storageRole || '').trim().toLowerCase();
   if (!role) return { allowed: false };
+  if (role === 'course') {
+    // Organization cabinet: only owners / admins of an organization. The 'course' panel role every teacher
+    // holds is not enough; organizations come from an approved «Təşkilat yarat» request.
+    const roles = await resolveAccessRoles(userId);
+    return roles.includes('organization_admin') ? { allowed: true } : { allowed: false, organizationRequired: true };
+  }
   if (await userHoldsStorageRole(userId, role)) return { allowed: true };
   if (requiresApproval(role)) {
     if (!(await isTeacherApprovalRequired())) return { allowed: true };

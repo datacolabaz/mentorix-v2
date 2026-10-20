@@ -307,6 +307,8 @@ export default function PersonaOnboarding() {
     () => !fromJoinInvite && user?.teacher_request?.status === 'pending',
   )
   const [lastTeacherPayload, setLastTeacherPayload] = useState(null)
+  // 'teacher' (müəllim icazəsi) or 'organization' («Təşkilat yarat» sorğusu) — both wait for an admin.
+  const [pendingKind, setPendingKind] = useState('teacher')
   const [picked, setPicked] = useState(fromJoinInvite ? PERSONAS.STUDENT : null)
   const [profile, setProfile] = useState(emptyProfile)
   const [busy, setBusy] = useState(false)
@@ -350,9 +352,17 @@ export default function PersonaOnboarding() {
       const r = await api.post('/auth/onboarding/persona', payload)
       if (r?.pending_approval) {
         if (r.user) mergeUser(r.user)
+        const isOrg = r.code === 'ORG_REQUEST_PENDING'
+        setPendingKind(isOrg ? 'organization' : 'teacher')
         setLastTeacherPayload(payload)
         setPendingApproval(true)
-        toast(r.message || t('onboarding.teacherPending.toast', { defaultValue: 'Müəllim icazəsi sorğunuz göndərildi.' }), 'success')
+        toast(
+          r.message ||
+            (isOrg
+              ? t('onboarding.orgPending.toast', { defaultValue: 'Təşkilat yaratma sorğunuz göndərildi.' })
+              : t('onboarding.teacherPending.toast', { defaultValue: 'Müəllim icazəsi sorğunuz göndərildi.' })),
+          'success',
+        )
         return
       }
       if (!r?.token || !r?.user) throw new Error(r?.message || t('auth.errors.invalidServer'))
@@ -407,8 +417,13 @@ export default function PersonaOnboarding() {
     try {
       const me = await api.get('/auth/me')
       if (me?.user) mergeUser(me.user)
-      const granted = Array.isArray(me?.user?.access_roles) && me.user.access_roles.includes('teacher')
+      const needed = pendingKind === 'organization' ? 'organization_admin' : 'teacher'
+      const granted = Array.isArray(me?.user?.access_roles) && me.user.access_roles.includes(needed)
       if (!granted) {
+        if (pendingKind === 'organization') {
+          toast(t('onboarding.orgPending.still', { defaultValue: 'Təşkilat sorğunuz hələ təsdiqlənməyib.' }), 'info')
+          return
+        }
         toast(
           me?.user?.teacher_request?.status === 'rejected'
             ? t('onboarding.teacherPending.rejected', { defaultValue: 'Sorğunuz rədd edildi. Başqa məqsəd seçə bilərsiniz.' })
@@ -461,13 +476,20 @@ export default function PersonaOnboarding() {
                 <NavIcon name="shield" className="w-6 h-6" />
               </div>
               <h1 className="text-slate-900 font-display font-bold text-2xl leading-tight">
-                {t('onboarding.teacherPending.title', { defaultValue: 'Müəllim icazəsi təsdiq gözləyir' })}
+                {pendingKind === 'organization'
+                  ? t('onboarding.orgPending.title', { defaultValue: 'Təşkilat sorğusu təsdiq gözləyir' })
+                  : t('onboarding.teacherPending.title', { defaultValue: 'Müəllim icazəsi təsdiq gözləyir' })}
               </h1>
               <p className="text-sm text-slate-600 leading-relaxed">
-                {t('onboarding.teacherPending.body', {
-                  defaultValue:
-                    'Müəllim kabineti platforma admini və ya təşkilatınız təsdiqlədikdən sonra açılır. Təsdiq olunanda bildiriş alacaqsınız.',
-                })}
+                {pendingKind === 'organization'
+                  ? t('onboarding.orgPending.body', {
+                      defaultValue:
+                        'Təşkilat kabineti platforma admini sorğunuzu təsdiqlədikdən sonra açılır. Təsdiq olunanda bildiriş alacaqsınız. Hələlik iştirakçı kimi davam edə bilərsiniz.',
+                    })
+                  : t('onboarding.teacherPending.body', {
+                      defaultValue:
+                        'Müəllim kabineti platforma admini və ya təşkilatınız təsdiqlədikdən sonra açılır. Təsdiq olunanda bildiriş alacaqsınız.',
+                    })}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
                 <Button loading={busy} onClick={() => void checkApproval()}>

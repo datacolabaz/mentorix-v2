@@ -213,8 +213,8 @@
       "deniedHint": "Choose the sign-in that matches your account.",
       "deniedInstructorHint": "Teacher access is granted by an admin or your organization. You can request it from another workspace of your account.",
       "student": {
-        "card": "Student",
-        "title": "Student sign-in",
+        "card": "Participant",
+        "title": "Participant sign-in",
         "subtitle": "Your exams, assignments, materials and results."
       },
       "instructor": {

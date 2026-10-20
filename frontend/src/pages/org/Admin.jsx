@@ -6,7 +6,6 @@ import { useToast } from '../../components/common/Toast'
 import { useOrgWorkspace } from '../../hooks/useOrgWorkspace'
 import OrgPage, { OrgPanel, OrgEmpty, OrgTable } from '../../components/org/OrgPage'
 import CourseBrandingForm from '../../components/course/CourseBrandingForm'
-import PersonaSettingsCard from '../../components/onboarding/PersonaSettingsCard'
 import { formatOrgDateTime, orgAuditAction, orgRoleName } from '../../lib/orgI18n'
 
 export function OrgMembers() {
@@ -221,7 +220,6 @@ export function OrgSettings() {
   const { t } = useTranslation()
   return (
     <OrgPage title={t('org.settings.title')} description={t('org.settings.desc')}>
-      <PersonaSettingsCard />
       <CourseBrandingForm />
     </OrgPage>
   )
