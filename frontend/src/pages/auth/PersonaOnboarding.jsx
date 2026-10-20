@@ -484,7 +484,7 @@ export default function PersonaOnboarding() {
                 {pendingKind === 'organization'
                   ? t('onboarding.orgPending.body', {
                       defaultValue:
-                        'Təşkilat kabineti platforma admini sorğunuzu təsdiqlədikdən sonra açılır. Təsdiq olunanda bildiriş alacaqsınız. Hələlik iştirakçı kimi davam edə bilərsiniz.',
+                        'Təşkilat kabineti platforma admini sorğunuzu təsdiqlədikdən sonra açılır. Təsdiq olunanda bildiriş alacaqsınız. Hələlik tələbə kimi davam edə bilərsiniz.',
                     })
                   : t('onboarding.teacherPending.body', {
                       defaultValue:
@@ -502,7 +502,7 @@ export default function PersonaOnboarding() {
                     void finishSession({ persona: PERSONAS.STUDENT, profile: { education_level: 'other', subject_interest: 'Dərs' } })
                   }
                 >
-                  {t('onboarding.teacherPending.continueStudent', { defaultValue: 'Hələlik iştirakçı kimi davam et' })}
+                  {t('onboarding.teacherPending.continueStudent', { defaultValue: 'Hələlik tələbə kimi davam et' })}
                 </Button>
               </div>
             </div>

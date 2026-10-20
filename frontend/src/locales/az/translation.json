@@ -6,7 +6,7 @@
     "dashboard": "Kabinetə keç"
   },
   "workspace": {
-    "student": "İştirakçı kabineti",
+    "student": "Tələbə kabineti",
     "teacher": "Müəllim kabineti",
     "switchPrompt": "Profil/Kabineti dəyiş",
     "selectRole": "İş Rejimi / Kabinet",
@@ -73,7 +73,7 @@
     "teacher": "Müəllim",
     "trainer": "Təlimçi",
     "parentRole": "Valideyn",
-    "studentRole": "İştirakçı",
+    "studentRole": "Tələbə",
     "partnerRole": "Partner",
     "adminRole": "Admin",
     "footer": {
@@ -213,8 +213,8 @@
       "deniedHint": "Hesabınıza uyğun giriş növünü seçin.",
       "deniedInstructorHint": "Müəllim icazəsi admin və ya təşkilat təsdiqi ilə verilir. Hesabınızdakı başqa kabinetdən icazə sorğusu göndərə bilərsiniz.",
       "student": {
-        "card": "İştirakçı",
-        "title": "İştirakçı kabinetinə giriş",
+        "card": "Tələbə",
+        "title": "Tələbə kabinetinə giriş",
         "subtitle": "İmtahanlarınız, tapşırıqlarınız, materiallarınız və nəticələriniz."
       },
       "instructor": {
@@ -286,7 +286,7 @@
       "invalidServer": "Server cavabı etibarsızdır"
     },
     "toasts": {
-      "loggedInStudent": "İştirakçı kimi daxil oldunuz",
+      "loggedInStudent": "Tələbə kimi daxil oldunuz",
       "loggedInPartner": "Partner kimi daxil oldunuz",
       "loggedInTeacher": "Müəllim kimi daxil oldunuz",
       "loggedInParent": "Valideyn kimi daxil oldunuz",
@@ -336,14 +336,14 @@
     "personas": {
       "teacher": {
         "title": "Müəllim / Təlimçi",
-        "desc": "Testlər və imtahanlar yaradın, iştirakçıları və nəticələri idarə edin."
+        "desc": "Testlər və imtahanlar yaradın, tələbələri və nəticələri idarə edin."
       },
       "education_center": {
         "title": "Təşkilat",
         "desc": "Qiymətləndirmə proseslərini komanda və qruplar üzrə idarə edin."
       },
       "student": {
-        "title": "İştirakçı",
+        "title": "Tələbə",
         "desc": "İmtahanlara qoşulun və nəticələrinizi izləyin."
       },
       "parent": {
@@ -368,11 +368,11 @@
       "subject": "Fənn / istiqamət",
       "subjectPlaceholder": "Məsələn: Riyaziyyat, SAT, İngilis dili",
       "teachingFormat": "Tədris formatı",
-      "studentCount": "Təxmini iştirakçı sayı",
+      "studentCount": "Təxmini tələbə sayı",
       "centerName": "Təşkilatın adı",
       "centerNamePlaceholder": "Təşkilatınızın adı",
       "teacherCount": "Təxmini təlimçi sayı",
-      "centerStudentCount": "Təxmini iştirakçı sayı",
+      "centerStudentCount": "Təxmini tələbə sayı",
       "centerExamPurpose": "İmtahan və test istifadəsi məqsədi",
       "centerExamPurposePlaceholder": "Məsələn: daxili imtahanlar, qəbul, sertifikasiya",
       "educationLevel": "Təhsil səviyyəsi",
@@ -449,14 +449,14 @@
     "teacher": {
       "createExam": "İmtahan yarat",
       "tests": "Testlər",
-      "students": "İştirakçılar",
+      "students": "Tələbələr",
       "groups": "Qruplar",
       "results": "Nəticələr"
     },
     "education_center": {
       "teachers": "Təlimçilər",
       "groups": "Qruplar",
-      "students": "İştirakçılar",
+      "students": "Tələbələr",
       "exams": "İmtahanlar",
       "reports": "Hesabatlar"
     },
@@ -1101,7 +1101,7 @@
         {
           "emoji": "👨‍🏫",
           "title": "Fərdi müəllim / Repetitor / Təlimçi",
-          "body": "Dərs, test və imtahanlarınızı yaradın, iştirakçıları və nəticələri idarə edin."
+          "body": "Dərs, test və imtahanlarınızı yaradın, tələbələri və nəticələri idarə edin."
         },
         {
           "emoji": "👤",
@@ -1130,8 +1130,8 @@
           "a": "Paketlər və limitlər Qiymətlər səhifəsindədir."
         },
         {
-          "q": "İştirakçılar necə qoşulur?",
-          "a": "Müəllim və ya təlimçi dəvət linki və ya QR ilə qoşur. İştirakçı kabineti pulsuzdur."
+          "q": "Tələbələr necə qoşulur?",
+          "a": "Müəllim və ya təlimçi dəvət linki və ya QR ilə qoşur. Tələbə kabineti pulsuzdur."
         }
       ]
     },

@@ -11,11 +11,11 @@ export const LOGIN_PORTALS = Object.freeze({
     cabinetPath: '/student',
     icon: 'students',
     titleKey: 'auth.portals.student.title',
-    title: 'İştirakçı kabinetinə giriş',
+    title: 'Tələbə kabinetinə giriş',
     subtitleKey: 'auth.portals.student.subtitle',
     subtitle: 'İmtahanlarınız, tapşırıqlarınız, materiallarınız və nəticələriniz.',
     cardKey: 'auth.portals.student.card',
-    card: 'İştirakçı',
+    card: 'Tələbə',
     passwordAlways: false,
     accent: {
       chip: 'bg-emerald-100 text-emerald-700',

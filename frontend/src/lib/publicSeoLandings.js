@@ -163,7 +163,7 @@ export const PUBLIC_SEO_LANDINGS = [
       `Mentorix qiymətləri: ${PLAN_TITLES_SEO_FALLBACK}. 21 günlük pulsuz sınaq, aylıq paketlər, bulud yaddaşı, AI limitləri və Google Meet / Zoom link dəstəyi ilə canlı dərs planlama.`,
     h1: 'Qiymətlər',
     intro: [
-      'Paketlər auditoriyaya görə qruplaşdırılıb: müəllim / təlimçi və təşkilat. İştirakçı hesabları pulsuzdur.',
+      'Paketlər auditoriyaya görə qruplaşdırılıb: müəllim / təlimçi və təşkilat. Tələbə hesabları pulsuzdur.',
       MENTORIX_SEO_DESCRIPTION,
     ],
     bullets: [],

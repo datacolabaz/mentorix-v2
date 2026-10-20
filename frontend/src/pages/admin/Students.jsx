@@ -12,7 +12,7 @@ const inputClass =
   'w-full border border-[color:var(--border-subtle)] rounded-xl px-4 py-2.5 text-token-textMain text-sm outline-none focus:border-primary/40 bg-token-surfaceCard/60'
 
 const ROLE_LABEL = {
-  student: 'İştirakçı',
+  student: 'Tələbə',
   instructor: 'Müəllim',
   course: 'Təşkilat',
   parent: 'Valideyn',
