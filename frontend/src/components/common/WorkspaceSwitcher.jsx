@@ -12,7 +12,7 @@ const PARTNER_STATUS_LABELS = { pending: 'Təsdiq gözləyir', approved: 'Təsdi
 
 const ROLE_TO_CABINET = { instructor: 'teacher', course: 'organization', student: 'student', parent: 'parent' }
 const FALLBACK_LABELS = {
-  student: 'İştirakçı kabineti',
+  student: 'Tələbə kabineti',
   teacher: 'Müəllim kabineti',
   organization: 'Təşkilat kabineti',
   parent: 'Valideyn kabineti',

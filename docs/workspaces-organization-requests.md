@@ -47,7 +47,7 @@ Təsdiq bir tranzaksiyada icra olunur: sorğu `FOR UPDATE` ilə kilidlənir, tə
 - `CreateOrganizationModal.jsx` — ad, növ, istəyə bağlı təsvir.
 - `/admin/role-requests?tab=organizations` — «Təşkilat sorğuları» (təsdiq / rədd).
 - Silinənlər: idarə panellərindəki «İstifadə məqsədi» kartı (`PersonaSettingsCard`) və yan menyunun altındakı ayrıca «Partner kabineti» linki. Partner kabineti yalnız partner qeydi olduqda «Kabinetlərim» siyahısında görünür.
-- «Tələbə» girişi hər yerdə «İştirakçı» adlanır. URL dəyişmir: `/login/student`.
+- Tələbə girişi «Tələbə kabinetinə giriş» adlanır (`/login/student`).
 
 ## Deploy qeydi
 

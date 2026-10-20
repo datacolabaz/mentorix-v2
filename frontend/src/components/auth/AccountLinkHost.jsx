@@ -6,7 +6,7 @@ import { ACCOUNT_LINK_EVENT } from '../../lib/googleAuth'
 
 const ROLE_LABEL = {
   instructor: 'Müəllim',
-  student: 'İştirakçı',
+  student: 'Tələbə',
   course: 'Tədris mərkəzi',
   parent: 'Valideyn',
   admin: 'Admin',

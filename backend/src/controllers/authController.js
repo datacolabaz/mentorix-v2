@@ -383,7 +383,7 @@ async function guardRoleEntry(req, res, me, storageRole, { onboarding = false, s
     code: 'ROLE_NOT_GRANTED',
     message:
       storageRole === 'student'
-        ? 'İştirakçı kabineti müəllimin dəvət linki ilə qrupa qoşulduqda açılır.'
+        ? 'Tələbə kabineti müəllimin dəvət linki ilə qrupa qoşulduqda açılır.'
         : storageRole === 'parent'
           ? 'Valideyn kabineti övladınızın hesabı ilə əlaqələndirildikdən sonra açılır.'
           : 'Bu kabinetə keçid üçün icazəniz yoxdur.',

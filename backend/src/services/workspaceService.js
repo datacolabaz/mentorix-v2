@@ -48,7 +48,7 @@ async function listWorkspaces(userId) {
 
   const cabinets = [];
   if (roles.includes('student')) {
-    cabinets.push({ key: 'student', type: 'student', label: 'İştirakçı kabineti', path: '/student', active: activeRole === 'student' });
+    cabinets.push({ key: 'student', type: 'student', label: 'Tələbə kabineti', path: '/student', active: activeRole === 'student' });
   }
   if (roles.includes('teacher')) {
     cabinets.push({ key: 'teacher', type: 'teacher', label: 'Müəllim kabineti', path: '/instructor', active: activeRole === 'instructor' });

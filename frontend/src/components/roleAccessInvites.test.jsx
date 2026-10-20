@@ -48,7 +48,7 @@ function workspaces(over = {}) {
   return {
     success: true,
     active: { cabinet: 'student', organization_id: null },
-    cabinets: [{ key: 'student', type: 'student', label: 'İştirakçı kabineti', path: '/student', active: true }],
+    cabinets: [{ key: 'student', type: 'student', label: 'Tələbə kabineti', path: '/student', active: true }],
     actions: [
       { key: 'request_teacher', status: 'available' },
       { key: 'create_organization', status: 'available', request: null },

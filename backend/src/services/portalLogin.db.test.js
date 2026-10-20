@@ -163,11 +163,11 @@ test('portal logins on real PostgreSQL', { skip: !URL_VALUE && 'TEST_DATABASE_UR
 
   await t.test('missing role → 403 with the portal message and NO token (all four portals)', async () => {
     const cases = [
-      [TEACHER, 'student', 'Bu hesabda iştirakçı girişi üçün icazə yoxdur.'],
+      [TEACHER, 'student', 'Bu hesabda tələbə girişi üçün icazə yoxdur.'],
       [STUDENT, 'instructor', 'Bu hesabda təlimçi girişi üçün icazə yoxdur.'],
       [TEACHER, 'organization', 'Bu hesabda təşkilat girişi üçün icazə yoxdur.'],
       [STUDENT, 'admin', 'Bu hesabda admin girişi üçün icazə yoxdur.'],
-      [ADMIN, 'student', 'Bu hesabda iştirakçı girişi üçün icazə yoxdur.'],
+      [ADMIN, 'student', 'Bu hesabda tələbə girişi üçün icazə yoxdur.'],
     ];
     for (const [uid, portal, message] of cases) {
       const before = await activeRole(uid);
