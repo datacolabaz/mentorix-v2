@@ -33,6 +33,18 @@ export function bakuLocalToIso(value) {
  * the server inside the join transaction; this modal only creates, lists and revokes the teacher's own links.
  */
 export default function GroupInvitesModal({ open, onClose, group }) {
+  return (
+    <Modal open={open} onClose={onClose} title={`Dəvət linkləri — ${group?.name || 'Qrup'}`} size="lg" scrollBody>
+      <GroupTimedInvites active={open} group={group} />
+    </Modal>
+  )
+}
+
+/**
+ * The timed-link body (create, list, copy, journal, revoke) — shared by the modal above and the
+ * «Dəvət et» panel. `active` (re)loads the list for the given group id only.
+ */
+export function GroupTimedInvites({ active = true, group, compactIntro = false }) {
   const toast = useToast()
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(false)
@@ -63,11 +75,12 @@ export default function GroupInvitesModal({ open, onClose, group }) {
   }, [group?.id])
 
   useEffect(() => {
-    if (open) {
+    if (active) {
       setLogFor(null)
+      setInvites([])
       void load()
     }
-  }, [open, load])
+  }, [active, load])
 
   const create = async (e) => {
     e?.preventDefault?.()
@@ -145,13 +158,14 @@ export default function GroupInvitesModal({ open, onClose, group }) {
 
   return (
     <>
-      <Modal open={open} onClose={onClose} title={`Dəvət linkləri — ${group?.name || 'Qrup'}`} size="lg" scrollBody>
+      <div>
         <form onSubmit={create} className="space-y-3" data-testid="invite-create-form">
           <p className="text-sm text-token-textMuted">
-            Müddətli və limitli link. Müddət bitəndə, limit dolanda və ya ləğv edəndə link açılır, amma qoşulma olmur —
-            «Bu dəvət linki artıq aktiv deyil» yazılır. Hər şəxs bir linkdən yalnız bir dəfə istifadə edə bilər.
+            {compactIntro
+              ? 'Müddət və ya limit bitəndə link qoşulmanı dayandırır. Hər şəxs bir linkdən bir dəfə istifadə edə bilər.'
+              : 'Müddətli və limitli link. Müddət bitəndə, limit dolanda və ya ləğv edəndə link açılır, amma qoşulma olmur — «Bu dəvət linki artıq aktiv deyil» yazılır. Hər şəxs bir linkdən yalnız bir dəfə istifadə edə bilər.'}
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className={compactIntro ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'grid grid-cols-1 sm:grid-cols-3 gap-3'}>
             <label className="text-sm">
               <span className="block text-token-textMuted mb-1">Müddət</span>
               <select
@@ -272,7 +286,7 @@ export default function GroupInvitesModal({ open, onClose, group }) {
             </ul>
           )}
         </div>
-      </Modal>
+      </div>
       <ConfirmDialog
         open={Boolean(revoking)}
         onClose={() => setRevoking(null)}
