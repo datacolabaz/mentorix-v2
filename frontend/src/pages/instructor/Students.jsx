@@ -2163,14 +2163,23 @@ export default function InstructorStudents() {
     if (s?.billing_timing === 'prepaid') return t('students.payPrepaidLong', { defaultValue: 'Öncədən ödəniş' })
     return t('students.payPostpaidLong', { defaultValue: 'Sonradan ödəniş' })
   }
-  const payMixText = (mix) =>
-    [
+  const payMixText = (mix) => {
+    const parts = [
+      ['prepaid', mix.prepaid, 'öncədən'],
+      ['installment', mix.installment, 'hissəli'],
+      ['postpaid', mix.postpaid, 'sonradan'],
+    ].filter(([, n]) => n > 0)
+    if (parts.length === 1) {
+      return t(`students.payAll_${parts[0][0]}`, { defaultValue: `hamısı ${parts[0][2]}` })
+    }
+    return [
       mix.prepaid ? t('students.payMixPrepaid', { n: mix.prepaid, defaultValue: '{{n}} öncədən' }) : null,
       mix.installment ? t('students.payMixInstallment', { n: mix.installment, defaultValue: '{{n}} hissəli' }) : null,
       mix.postpaid ? t('students.payMixPostpaid', { n: mix.postpaid, defaultValue: '{{n}} sonradan' }) : null,
     ]
       .filter(Boolean)
-      .join(' · ')
+      .join(', ')
+  }
   const lessonsText = (p) => t('students.lessonsProgress', { used: p.used, total: p.total, defaultValue: '{{used}}/{{total}} dərs' })
 
   return (
@@ -2355,13 +2364,19 @@ export default function InstructorStudents() {
             const total = occupyingStudents.length
             const isEmpty = !(g.students?.length > 0)
             const pendingInGroup = occupyingStudents.filter((s) => needsSetup(s) || isPendingApproval(s)).length
-            const groupCountLabel =
-              pendingInGroup > 0 && pendingInGroup === total
-                ? t('students.groupStudentsPending', { count: pendingInGroup })
-                : pendingInGroup > 0
-                  ? t('students.groupStudentsAndPending', { count: total - pendingInGroup, pending: pendingInGroup })
-                  : t('students.groupStudents', { count: total })
             const mixText = total > 0 ? payMixText(g.payMix) : ''
+            const setupInGroup = occupyingStudents.filter((s) => needsSetup(s)).length
+            const approvalInGroup = occupyingStudents.filter((s) => isPendingApproval(s)).length
+            const systemSample = (Array.isArray(g.students) ? g.students : []).find((s) => isSystemGeneratedGroup(s))
+            const isSystemGroup = Boolean(g.is_system_group || systemSample)
+            const groupTitle = {
+              system: isSystemGroup,
+              text: String(
+                (isSystemGroup ? renderSystemGroupCell({ ...systemSample, group: g.group, track_group_name: g.group }).title : null) ||
+                  g.group ||
+                  '—',
+              ),
+            }
             const nextLesson = fmtNextRelative(g.nextDistMin)
             const listId = `students-group-${String(g.key).replace(/[^a-zA-Z0-9_-]/g, '_')}`
             const manageable = canManageEmptyGroup(g)
@@ -2395,38 +2410,41 @@ export default function InstructorStudents() {
                 <div className="flex items-start gap-2 px-4 py-3.5 sm:items-center">
                   <button
                     type="button"
-                    className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                    className="min-w-0 flex-1 rounded-lg text-left outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50"
                     onClick={toggleGroup}
                     aria-expanded={isOpen}
                     aria-controls={listId}
                   >
-                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
+                      {groupTitle.system ? (
+                        <span className="shrink-0 text-sm text-token-textMuted" title="Link ilə qoşulanlar" aria-label="Link ilə qoşulanlar">
+                          🔗
+                        </span>
+                      ) : null}
                       <span
-                        className="min-w-0 truncate text-[15px] font-semibold text-token-textMain sm:text-base"
-                        title={studentNamesLabel(occupyingStudents) || undefined}
+                        className="min-w-0 break-words text-[15px] font-semibold text-token-textMain sm:truncate sm:text-base"
+                        title={studentNamesLabel(occupyingStudents) || groupTitle.text}
                       >
-                        <GroupColumnLabel group={g} students={g.students} />
+                        {groupTitle.text}
                       </span>
-                      {g.subject ? <span className={pillCls('neutral')}>{g.subject}</span> : null}
+                      {setupInGroup > 0 ? (
+                        <span className={`${pillCls('warning')} shrink-0`}>
+                          {t('students.groupSetupPending', { count: setupInGroup, defaultValue: '{{count}} quraşdırma gözləyir' })}
+                        </span>
+                      ) : approvalInGroup > 0 ? (
+                        <span className={`${pillCls('info')} shrink-0`}>
+                          {t('students.groupApprovalPending', { count: approvalInGroup, defaultValue: '{{count}} təsdiq gözləyir' })}
+                        </span>
+                      ) : null}
                     </span>
-                    <span className="mt-1 flex flex-col gap-0.5 text-[13px] text-token-textMuted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
-                      <span className="font-medium text-token-textMain">{groupCountLabel}</span>
-                      {total > 0 && nextLesson ? (
-                        <>
-                          <span className="hidden sm:inline" aria-hidden>·</span>
-                          <span>
-                            {t('students.nextLesson')} <span className="text-token-textMain">{nextLesson}</span>
-                          </span>
-                        </>
-                      ) : null}
-                      {mixText ? (
-                        <>
-                          <span className="hidden sm:inline" aria-hidden>·</span>
-                          <span>
-                            {t('students.paymentLabel', { defaultValue: 'Ödəniş:' })} <span className="text-token-textMain">{mixText}</span>
-                          </span>
-                        </>
-                      ) : null}
+                    <span className="mt-0.5 block text-[13px] text-token-textMuted sm:truncate">
+                      {[
+                        g.subject && g.subject !== t('students.noSubject') && !groupTitle.text.includes(g.subject) ? g.subject : null,
+                        t('students.groupStudents', { count: total }),
+                        total > 0 && nextLesson ? `${t('students.nextLesson')} ${nextLesson}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </span>
                   </button>
 
@@ -2523,9 +2541,18 @@ export default function InstructorStudents() {
                       </div>
                     ) : (
                       <>
-                      {g.avgScore != null ? (
-                        <p className="px-2 pt-2 text-xs text-token-textMuted">
-                          {t('students.avgScore')} <span className="font-semibold tabular-nums text-token-textMain">{g.avgScore}%</span>
+                      {mixText || g.avgScore != null ? (
+                        <p className="flex flex-wrap gap-x-4 gap-y-0.5 px-2 pt-2 text-xs text-token-textMuted">
+                          {mixText ? (
+                            <span>
+                              {t('students.paymentLabel', { defaultValue: 'Ödəniş:' })} <span className="font-medium text-token-textMain">{mixText}</span>
+                            </span>
+                          ) : null}
+                          {g.avgScore != null ? (
+                            <span>
+                              {t('students.avgScore')} <span className="font-semibold tabular-nums text-token-textMain">{g.avgScore}%</span>
+                            </span>
+                          ) : null}
                         </p>
                       ) : null}
                       <div className={STUDENT_LIST_GRID} role="list">
