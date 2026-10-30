@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
+import useUiStore from '../../hooks/useUi'
 import { copyStudentTaskLink } from '../../lib/taskShare'
 import api from '../../lib/api'
 import Card from '../../components/common/Card'
-import Button from '../../components/common/Button'
+import Button, { buttonClassName } from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { useToast } from '../../components/common/Toast'
@@ -119,6 +120,7 @@ export default function InstructorTasks() {
   const cardRefs = useRef({})
   const [highlightId, setHighlightId] = useState(null)
   const queryClient = useQueryClient()
+  const theme = useUiStore((st) => st.theme)
   const billingQ = useBillingStatus()
   const billing = billingQ.data || null
   const plansQ = useSubscriptionPlans()
@@ -127,6 +129,7 @@ export default function InstructorTasks() {
   const homeworksLimitReached = isHomeworksMonthlyLimitReached(billing)
   const createBlocked = blocked || homeworksLimitReached
   const blockMessage = billing?.messages?.banner || basicTrialExpiredMessage(plans)
+  const createBlockedReason = blocked ? blockMessage : homeworksLimitReached ? HOMEWORK_MONTHLY_LIMIT_MESSAGE : ''
 
   const [form, setForm] = useState({
     title: '',
@@ -573,14 +576,14 @@ export default function InstructorTasks() {
         <div className="flex flex-wrap gap-2 shrink-0">
           <Link
             to="/instructor/tasks/analytics"
-            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-500/30 text-indigo-200 hover:bg-indigo-500/10"
+            className={buttonClassName({ variant: 'secondary', size: 'sm', theme })}
           >
             {t('tasks.analytics')}
           </Link>
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
             {t('tasks.refresh')}
           </Button>
-          <Button size="sm" disabled={createBlocked} onClick={openCreate}>
+          <Button size="sm" disabled={createBlocked} disabledReason={createBlockedReason} onClick={openCreate}>
             {t('tasks.newTask')}
           </Button>
         </div>
