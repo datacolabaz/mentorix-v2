@@ -26,7 +26,7 @@ const student = (i, extra = {}) => ({
   billing_timing: i ? 'prepaid' : 'postpaid',
   payment_plan: 'full',
   lesson_weekdays: [1, 3],
-  lesson_times: ['15:00'],
+  lesson_times: { 1: '15:00', 3: '15:00' },
   calendar_used_lessons: 5,
   calendar_total_lessons: 8,
   ...extra,
@@ -111,5 +111,21 @@ describe('Tələbələrim — redesigned list keeps every action', () => {
     await userEvent.type(screen.getByRole('searchbox'), 'Tural')
     await waitFor(() => expect(screen.getAllByTestId('student-row')).toHaveLength(1))
     expect(screen.getAllByTestId('students-group')).toHaveLength(1)
+  })
+  it('calm card: no green frame when open, relative next lesson, chat sits in the actions cell', async () => {
+    setup()
+    const groups = await screen.findAllByTestId('students-group')
+    const card = groups[0]
+    expect(card.textContent).toMatch(/Növbəti dərs:?\s*\d+ (dəq|saat|gün) sonra/)
+    expect(card.textContent).not.toMatch(/Orta bal/)
+    await userEvent.click(within(card).getByRole('button', { name: 'Qrupu aç' }))
+    expect(card.className).not.toMatch(/border-primary/)
+    expect(card.querySelector('.bg-primary.absolute')).toBeNull()
+    expect(within(card).getByText('Əməliyyatlar')).toBeTruthy()
+    const row = within(card).getAllByTestId('student-row')[0]
+    const menuBtn = within(row).getByRole('button', { name: 'Aysel Babayeva — əməliyyatlar' })
+    const actionsCell = menuBtn.parentElement.parentElement
+    expect(actionsCell.querySelectorAll('button').length).toBeGreaterThanOrEqual(2)
+    expect(row.textContent).not.toMatch(/—/)
   })
 })

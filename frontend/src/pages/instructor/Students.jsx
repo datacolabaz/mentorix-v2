@@ -1659,16 +1659,18 @@ export default function InstructorStudents() {
   }
 
   const STUDENT_LIST_GRID =
-    'sm:grid sm:gap-x-3 sm:grid-cols-[1.25rem_minmax(0,1fr)_2.5rem_8.5rem_8.5rem_5rem_2.5rem]'
+    'sm:grid sm:gap-x-4 sm:grid-cols-[1.25rem_minmax(0,1fr)_8.5rem_8.5rem_4.5rem_6.5rem]'
   const STUDENT_ROW_GRID =
     'grid grid-cols-[minmax(0,1fr)_auto] sm:col-span-full sm:grid-cols-subgrid items-center gap-x-2 sm:gap-x-3'
 
-  const fmtNextLesson = (distMin) => {
-    if (!Number.isFinite(distMin) || distMin === Number.POSITIVE_INFINITY) return '—'
-    if (distMin < 60) return `${distMin} ${t('live.minuteShort')}`
-    const h = Math.floor(distMin / 60)
-    const m = distMin % 60
-    return m ? `${h}${t('live.hourShort')} ${m}${t('live.minuteShort')}` : `${h}${t('live.hourShort')}`
+  /** «28 saat sonra», «45 dəq sonra», «3 gün sonra»; empty when no lesson is scheduled. */
+  const fmtNextRelative = (distMin) => {
+    if (!Number.isFinite(distMin) || distMin === Number.POSITIVE_INFINITY || distMin < 0) return ''
+    if (distMin < 1) return t('students.nextNow', { defaultValue: 'indi' })
+    if (distMin < 60) return t('students.inMinutes', { n: distMin, defaultValue: '{{n}} dəq sonra' })
+    const h = Math.round(distMin / 60)
+    if (h < 48) return t('students.inHours', { n: h, defaultValue: '{{n}} saat sonra' })
+    return t('students.inDays', { n: Math.round(distMin / 1440), defaultValue: '{{n}} gün sonra' })
   }
 
   const closeStudentMenu = () => setActionMenuId(null)
@@ -2360,7 +2362,7 @@ export default function InstructorStudents() {
                   ? t('students.groupStudentsAndPending', { count: total - pendingInGroup, pending: pendingInGroup })
                   : t('students.groupStudents', { count: total })
             const mixText = total > 0 ? payMixText(g.payMix) : ''
-            const nextLesson = fmtNextLesson(g.nextDistMin)
+            const nextLesson = fmtNextRelative(g.nextDistMin)
             const listId = `students-group-${String(g.key).replace(/[^a-zA-Z0-9_-]/g, '_')}`
             const manageable = canManageEmptyGroup(g)
 
@@ -2385,12 +2387,11 @@ export default function InstructorStudents() {
                   // NOTE: dropdowns render in a portal, the card itself may stay overflow-visible
                   'relative overflow-visible rounded-2xl border bg-token-surfaceCard',
                   'shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[box-shadow,border-color] duration-200',
-                  isOpen ? 'border-primary/30 shadow-[0_4px_16px_rgba(15,23,42,0.06)]' : 'border-[color:var(--border-subtle)]',
+                  'border-[color:var(--border-subtle)]',
                   isEmpty && !isOpen ? 'opacity-80' : '',
                   dragOverGroupKey === g.key ? 'border-primary/60 ring-2 ring-primary/30' : '',
                 ].join(' ')}
               >
-                {isOpen ? <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-primary" aria-hidden /> : null}
                 <div className="flex items-start gap-2 px-4 py-3.5 sm:items-center">
                   <button
                     type="button"
@@ -2408,25 +2409,23 @@ export default function InstructorStudents() {
                       </span>
                       {g.subject ? <span className={pillCls('neutral')}>{g.subject}</span> : null}
                     </span>
-                    <span className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-token-textMuted">
+                    <span className="mt-1 flex flex-col gap-0.5 text-[13px] text-token-textMuted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
                       <span className="font-medium text-token-textMain">{groupCountLabel}</span>
-                      {total > 0 ? (
-                        <span>
-                          {t('students.nextLesson')}{' '}
-                          <span className="font-semibold tabular-nums text-token-textMain">{nextLesson}</span>
-                        </span>
+                      {total > 0 && nextLesson ? (
+                        <>
+                          <span className="hidden sm:inline" aria-hidden>·</span>
+                          <span>
+                            {t('students.nextLesson')} <span className="text-token-textMain">{nextLesson}</span>
+                          </span>
+                        </>
                       ) : null}
                       {mixText ? (
-                        <span>
-                          {t('students.paymentLabel', { defaultValue: 'Ödəniş:' })}{' '}
-                          <span className="font-semibold text-token-textMain">{mixText}</span>
-                        </span>
-                      ) : null}
-                      {g.avgScore != null ? (
-                        <span>
-                          {t('students.avgScore')}{' '}
-                          <span className="font-semibold tabular-nums text-token-textMain">{g.avgScore}%</span>
-                        </span>
+                        <>
+                          <span className="hidden sm:inline" aria-hidden>·</span>
+                          <span>
+                            {t('students.paymentLabel', { defaultValue: 'Ödəniş:' })} <span className="text-token-textMain">{mixText}</span>
+                          </span>
+                        </>
                       ) : null}
                     </span>
                   </button>
@@ -2523,16 +2522,21 @@ export default function InstructorStudents() {
                         </p>
                       </div>
                     ) : (
+                      <>
+                      {g.avgScore != null ? (
+                        <p className="px-2 pt-2 text-xs text-token-textMuted">
+                          {t('students.avgScore')} <span className="font-semibold tabular-nums text-token-textMain">{g.avgScore}%</span>
+                        </p>
+                      ) : null}
                       <div className={STUDENT_LIST_GRID} role="list">
                         {/* Column headers (desktop only) */}
                         <div className="hidden sm:col-span-full sm:grid sm:grid-cols-subgrid px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-token-textMuted" aria-hidden>
                           <span />
                           <span>{t('students.colStudent', { defaultValue: 'Tələbə' })}</span>
-                          <span />
                           <span>{t('students.colLessons', { defaultValue: 'Dərslər' })}</span>
                           <span>{t('students.colPayment', { defaultValue: 'Ödəniş' })}</span>
                           <span>{t('students.colPackage', { defaultValue: 'Paket' })}</span>
-                          <span />
+                          <span className="text-right">{t('students.colActions', { defaultValue: 'Əməliyyatlar' })}</span>
                         </div>
                         {g.students.map((s) => {
                           const p = lessonProgress(s)
@@ -2606,23 +2610,7 @@ export default function InstructorStudents() {
                               </div>
 
                               <div className="col-start-2 row-start-1 flex items-center justify-end gap-1.5 sm:contents">
-                                <div className="flex shrink-0 justify-center sm:col-start-3">
-                                  <StudentDirectChatButton
-                                    active={directChatActive}
-                                    locked={!directChatActive}
-                                    disabled={blocked}
-                                    onClick={() => openDirectChat(s)}
-                                    title={
-                                      blocked
-                                        ? t('students.chatDisabled')
-                                        : directChatActive
-                                          ? t('students.chatWithStudent', { name: s.full_name || t('students.defaultStudent') })
-                                          : t('students.chatUpgradeRequired')
-                                    }
-                                  />
-                                </div>
-
-                                <div className="hidden min-w-0 flex-col justify-center sm:col-start-4 sm:flex">
+                                <div className="hidden min-w-0 flex-col justify-center sm:col-start-3 sm:flex">
                                   {p ? (
                                     <>
                                       <div className="flex items-baseline justify-between gap-2 text-xs">
@@ -2640,20 +2628,35 @@ export default function InstructorStudents() {
                                         <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${p.pct}%` }} />
                                       </div>
                                     </>
-                                  ) : (
-                                    <span className="text-xs text-token-textMuted">—</span>
-                                  )}
+                                  ) : null}
                                 </div>
 
-                                <div className="hidden items-center sm:col-start-5 sm:flex">
+                                <div className="hidden items-center sm:col-start-4 sm:flex">
                                   <span className={pillCls(payTone(pay.variant))}>{payLongLabel(s)}</span>
                                 </div>
 
-                                <div className="hidden items-center text-xs text-token-textMain sm:col-start-6 sm:flex">
-                                  {packLabel || <span className="text-token-textMuted">—</span>}
+                                <div className="hidden items-center text-xs text-token-textMain sm:col-start-5 sm:flex">
+                                  {packLabel || null}
                                 </div>
 
-                                <div className="relative shrink-0 justify-self-center sm:col-start-7">
+                                <div className="flex shrink-0 items-center justify-end gap-1.5 sm:col-start-6">
+                                  <div className="flex shrink-0 justify-center">
+                                  <StudentDirectChatButton
+                                    active={directChatActive}
+                                    locked={!directChatActive}
+                                    disabled={blocked}
+                                    onClick={() => openDirectChat(s)}
+                                    title={
+                                      blocked
+                                        ? t('students.chatDisabled')
+                                        : directChatActive
+                                          ? t('students.chatWithStudent', { name: s.full_name || t('students.defaultStudent') })
+                                          : t('students.chatUpgradeRequired')
+                                    }
+                                  />
+                                </div>
+
+                                <div className="relative shrink-0">
                                   <button
                                     type="button"
                                     className={iconBtnCls}
@@ -2745,11 +2748,13 @@ export default function InstructorStudents() {
                                     </div>
                                   </PortalMenu>
                                 </div>
+                                </div>
                               </div>
                             </div>
                           )
                         })}
                       </div>
+                      </>
                     )}
                   </div>
                 )}
